@@ -1,0 +1,240 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Linkedin, CheckCircle2, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+
+interface LinkedInAccount {
+  connected: boolean;
+  profileName?: string;
+  profileUrl?: string;
+  email?: string;
+  connectedAt?: string;
+}
+
+export const LinkedInIntegration: React.FC = () => {
+  const [linkedInAccount, setLinkedInAccount] = useState<LinkedInAccount>({
+    connected: false
+  });
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    checkLinkedInConnection();
+  }, []);
+
+  const checkLinkedInConnection = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/linkedin/status`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to check LinkedIn status');
+      }
+      
+      const data = await response.json();
+      setLinkedInAccount(data);
+    } catch (error) {
+      console.error('Error checking LinkedIn connection:', error);
+      // Set mock data for demo
+      setLinkedInAccount({
+        connected: false
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectLinkedIn = () => {
+    setConnecting(true);
+    
+    // Redirect to LinkedIn OAuth
+    const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID || 'demo_client_id';
+    const redirectUri = encodeURIComponent(`${window.location.origin}/settings/linkedin/callback`);
+    const state = Math.random().toString(36).substring(7);
+    const scope = encodeURIComponent('r_liteprofile r_emailaddress w_member_social');
+    
+    // Store state for verification
+    sessionStorage.setItem('linkedin_oauth_state', state);
+    
+    const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&scope=${scope}`;
+    
+    window.location.href = authUrl;
+  };
+
+  const disconnectLinkedIn = async () => {
+    if (!confirm('Are you sure you want to disconnect your LinkedIn account?')) {
+      return;
+    }
+
+    setDisconnecting(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/linkedin/disconnect`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to disconnect LinkedIn');
+      }
+
+      setLinkedInAccount({
+        connected: false
+      });
+
+      alert('LinkedIn account disconnected successfully');
+    } catch (error) {
+      console.error('Error disconnecting LinkedIn:', error);
+      alert('Failed to disconnect LinkedIn account');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex items-center">
+          <div className="bg-blue-100 p-3 rounded-lg mr-4">
+            <Linkedin className="h-6 w-6 text-blue-700" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">LinkedIn</h3>
+            <p className="text-sm text-gray-600">
+              Connect your LinkedIn account for automated lead enrichment and outreach
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center">
+          {linkedInAccount.connected ? (
+            <div className="flex items-center text-green-600">
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              <span className="font-medium">Connected</span>
+            </div>
+          ) : (
+            <div className="flex items-center text-gray-400">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <span className="font-medium">Not Connected</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {linkedInAccount.connected && linkedInAccount.profileName ? (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-900">{linkedInAccount.profileName}</p>
+              {linkedInAccount.email && (
+                <p className="text-sm text-gray-600">{linkedInAccount.email}</p>
+              )}
+              {linkedInAccount.profileUrl && (
+                <a
+                  href={linkedInAccount.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center mt-1"
+                >
+                  View Profile
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              )}
+              {linkedInAccount.connectedAt && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Connected on {new Date(linkedInAccount.connectedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="space-y-4">
+        <div className="border-t border-gray-200 pt-4">
+          <h4 className="font-medium text-gray-900 mb-3">Features</h4>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li className="flex items-start">
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>Automatically enrich leads with LinkedIn profile data</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>Extract decision maker information and contact details</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>Access to company employee lists and org charts</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>Send automated connection requests and messages</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>Track engagement and response rates</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          {linkedInAccount.connected ? (
+            <button
+              onClick={disconnectLinkedIn}
+              disabled={disconnecting}
+              className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {disconnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Disconnecting...
+                </>
+              ) : (
+                'Disconnect LinkedIn'
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={connectLinkedIn}
+              disabled={connecting}
+              className="w-full bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {connecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Linkedin className="h-4 w-4 mr-2" />
+                  Connect LinkedIn Account
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-yellow-800">
+              <p className="font-medium mb-1">Important Note</p>
+              <p>
+                LinkedIn has strict rate limits and usage policies. Automated actions should be used 
+                responsibly to avoid account restrictions. We recommend limiting connection requests 
+                to 50-100 per day.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

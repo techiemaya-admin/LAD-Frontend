@@ -1,0 +1,36 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  experimental: {
+    turbo: {
+      rules: {
+        // Disable eslint for faster builds
+      },
+    },
+  },
+  // Skip static generation for dynamic pages
+  generateBuildId: async () => {
+    return 'production-build'
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "agent.techiemaya.com",
+        pathname: "/assets/**",
+      },
+    ],
+  },
+  env: {
+    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3004",
+  },
+};
+
+export default nextConfig;
