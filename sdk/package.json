@@ -1,0 +1,41 @@
+{
+  "name": "@LAD/frontend-features",
+  "version": "1.0.0",
+  "description": "Frontend Feature SDK for LAD SaaS Platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./ai-icp-assistant": {
+      "types": "./features/ai-icp-assistant/index.ts",
+      "default": "./features/ai-icp-assistant/index.ts"
+    },
+    "./campaigns": {
+      "types": "./features/campaigns/index.ts",
+      "default": "./features/campaigns/index.ts"
+    },
+    "./pipeline": {
+      "types": "./features/pipeline/index.ts",
+      "default": "./features/pipeline/index.ts"
+    },
+    "./voice-agent": {
+      "types": "./features/voice-agent/index.ts",
+      "default": "./features/voice-agent/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "frontend",
+    "features",
+    "sdk",
+    "maya",
+    "campaigns",
+    "pipeline",
+    "voice-agent"
+  ],
+  "author": "LAD Team",
+  "license": "MIT"
+}

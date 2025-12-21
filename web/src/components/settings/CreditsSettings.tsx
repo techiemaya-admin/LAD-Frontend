@@ -1,0 +1,323 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Wallet, Plus, X, Loader2 } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api-utils';
+
+export const CreditsSettings: React.FC = () => {
+  const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [balance, setBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<string>('Just now');
+
+  const presetAmounts = [
+    { value: 29, label: 'Starter Pack' },
+    { value: 129, label: 'Professional' },
+    { value: 349, label: 'Business' },
+    { value: 999, label: 'Enterprise' },
+  ];
+
+  // Fetch wallet balance on component mount
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsLoadingBalance(false);
+          return;
+        }
+
+        const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setBalance(data.balance || 0);
+          setLastUpdated('Just now');
+        } else {
+          setBalance(0);
+        }
+      } catch (error) {
+        console.error('Error fetching balance:', error);
+        setBalance(0);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+
+    // Check URL parameters to auto-open Add Credits modal
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'add') {
+        setShowAddCreditsModal(true);
+        // Clean URL after opening modal
+        window.history.replaceState({}, '', window.location.pathname + '?tab=credits');
+      }
+    }
+  }, []);
+
+  const handleProceedToPayment = async () => {
+    const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
+    if (!amount || amount <= 0) {
+      alert('Please select or enter a valid amount');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Create Stripe checkout session for credit purchase
+      const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-credits-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount,
+          successUrl: `${window.location.origin}/settings?tab=credits&payment=success`,
+          cancelUrl: `${window.location.origin}/settings?tab=credits&payment=cancelled`,
+          metadata: {
+            credits: amount,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSelectAmount = (amount: number) => {
+    setSelectedAmount(amount);
+    setCustomAmount(''); // Clear custom amount when preset is selected
+  };
+
+  const handleCustomAmountChange = (value: string) => {
+    setCustomAmount(value);
+    setSelectedAmount(null); // Clear preset selection when custom amount is entered
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Wallet Balance Card */}
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-lg shadow-lg text-white">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Wallet className="h-6 w-6 mr-3" />
+            <h3 className="text-xl font-bold">Wallet Balance</h3>
+          </div>
+          <button
+            onClick={() => setShowAddCreditsModal(true)}
+            className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center text-sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Credits
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-blue-100 text-sm mb-1">Available Credits</p>
+            {isLoadingBalance ? (
+              <div className="flex items-center">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+              </div>
+            ) : (
+              <p className="text-4xl font-bold">${balance.toFixed(2)}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-blue-100 text-xs">Last updated</p>
+            <p className="text-white text-sm font-medium">{lastUpdated}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Credits Modal */}
+      {showAddCreditsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddCreditsModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Add Credits</h3>
+              <button
+                onClick={() => setShowAddCreditsModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {presetAmounts.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => handleSelectAmount(preset.value)}
+                    className={`p-4 border-2 rounded-lg transition-colors ${
+                      selectedAmount === preset.value
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-400'
+                    }`}
+                  >
+                    <p className="text-2xl font-bold text-gray-900">${preset.value}</p>
+                    <p className="text-sm text-gray-600 mt-1">{preset.label}</p>
+                  </button>
+                ))}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Custom Amount</label>
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={customAmount}
+                  onChange={(e) => handleCustomAmountChange(e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent ${
+                    customAmount ? 'border-blue-600' : 'border-gray-300'
+                  }`}
+                  min="1"
+                />
+              </div>
+              {(selectedAmount || customAmount) && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-semibold">Total: </span>
+                    ${customAmount || selectedAmount}
+                  </p>
+                </div>
+              )}
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddCreditsModal(false);
+                    setSelectedAmount(null);
+                    setCustomAmount('');
+                  }}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleProceedToPayment}
+                  disabled={(!selectedAmount && !customAmount) || isProcessing}
+                  className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
+                    (selectedAmount || customAmount) && !isProcessing
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Proceed to Payment'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credits Information */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">How Credits Work</h3>
+        <div className="space-y-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+              1
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-1">Purchase Credits</h4>
+              <p className="text-sm text-gray-600">
+                Add credits to your wallet at any time. Credits never expire and can be used across all services.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+              2
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-1">Use for Services</h4>
+              <p className="text-sm text-gray-600">
+                Credits are automatically deducted when you use services like voice calls, SMS messages, and lead generation.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+              3
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-1">Track Usage</h4>
+              <p className="text-sm text-gray-600">
+                Monitor your credit usage and remaining balance in real-time from your wallet dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Credit Pricing Guide */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Credit Pricing</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Voice Calls</span>
+              <span className="text-blue-600 font-semibold">$0.015/min</span>
+            </div>
+            <p className="text-xs text-gray-600">Per minute of call time</p>
+          </div>
+          
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">SMS Messages</span>
+              <span className="text-blue-600 font-semibold">$0.0075/msg</span>
+            </div>
+            <p className="text-xs text-gray-600">Per SMS message sent</p>
+          </div>
+          
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Lead Credits</span>
+              <span className="text-blue-600 font-semibold">$79/2,500</span>
+            </div>
+            <p className="text-xs text-gray-600">Credits for lead generation</p>
+          </div>
+          
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Data Enrichment</span>
+              <span className="text-blue-600 font-semibold">Variable</span>
+            </div>
+            <p className="text-xs text-gray-600">Based on data type and volume</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

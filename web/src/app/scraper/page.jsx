@@ -1,0 +1,6663 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Box, Card, CardContent, Typography, Chip, Avatar, CircularProgress,
+  Alert, Button, Collapse, Table, TableHead, TableRow, TableCell, TableBody,
+  Stack, IconButton, Checkbox, Tooltip, Divider, TextField, InputAdornment, Link,
+  Dialog, DialogTitle, DialogContent, DialogActions, Menu, MenuItem
+} from '@mui/material';
+import { ChevronLeft, ChevronRight, SmartToy, HelpOutline, Chat, KeyboardArrowDown, KeyboardArrowUp, ChevronRight as ChevronRightIcon, Home, Message, Assignment, ArrowBack, MoreVert, Send, Lock, LinkedIn as LinkedInIcon, Person, Email, Phone, LocationOn, Public, CheckCircle, People, Facebook, Instagram, Article, Clear } from '@mui/icons-material';
+import { Fade } from '@mui/material';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import Business from '@mui/icons-material/Business';
+import CompanyDataTable from '@/components/CompanyDataTable';
+import AIChatSection from '@/components/AIChatSection';
+import { FloatingAIIcon } from '@/components/FloatingAIIcon';
+import { apolloLeadsService } from '@/features/apollo-leads';
+import linkedinLeadsService from '@/services/linkedinLeadsService';
+import { mayaAIService } from '@/services/mayaAIService';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+
+import { useToast } from '@/components/ui/app-toaster';
+import { useRouter } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth';
+
+export default function Scraper() {
+  const { push } = useToast();
+  const router = useRouter();
+  const [authed, setAuthed] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await getCurrentUser();
+        setAuthed(true);
+      } catch {
+        setAuthed(false);
+        const redirect = encodeURIComponent('/scraper');
+        router.replace(`/login?redirect_url=${redirect}`);
+      }
+    })();
+  }, [router]);
+  
+  const [commonParams, setCommonParams] = useState({
+    keywords: '',
+    location: '',
+    platforms: ['apollo'],
+  });
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState(new Set());
+  const [aiResponse, setAiResponse] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [lastSuggestedParams, setLastSuggestedParams] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastSearchParams, setLastSearchParams] = useState(null); // Store last search query/location
+  const [isFromCache, setIsFromCache] = useState(false);
+  const [employeeSearchResults, setEmployeeSearchResults] = useState([]);
+  const [employeeSearchLoading, setEmployeeSearchLoading] = useState(false);
+  const [lastSearchTimestamp, setLastSearchTimestamp] = useState({ company: null, employee: null }); // Track last search time for each type
+  const [hasMorePages, setHasMorePages] = useState(true); // Track if there are more pages available
+  const [isLastPageEmpty, setIsLastPageEmpty] = useState(false); // Track if last page had no results
+  // Employee pagination state
+  const [currentEmployeePage, setCurrentEmployeePage] = useState(1);
+  const [hasMoreEmployeePages, setHasMoreEmployeePages] = useState(true);
+  const [isLastEmployeePageEmpty, setIsLastEmployeePageEmpty] = useState(false);
+  const [lastEmployeeSearchParams, setLastEmployeeSearchParams] = useState(null); // Store last employee search params (titles, location, etc.)
+  const [activeResultsTab, setActiveResultsTab] = useState(0); // Track which tab is active: 0 = Companies, 1 = Employees
+  
+  // Memoize the callback to prevent infinite loops
+  const handleActiveTabChange = useCallback((tabIndex) => {
+    console.log('🎯 Parent handleActiveTabChange called with tabIndex:', tabIndex);
+    // Always update to ensure tab switching works
+    setActiveResultsTab(tabIndex);
+    console.log('✅ Parent state updated to:', tabIndex);
+  }, []);
+  const employeeSearchParamsRef = useRef(null); // Store employee search params to execute after company search
+  const resultsContainerRef = useRef(null); // Ref to track results container for scroll preservation
+  const scrollPositionRef = useRef(0); // Store scroll position during pagination
+  const companyResultsRef = useRef(null); // Ref for company results section
+  const employeeResultsRef = useRef(null); // Ref for employee results section
+  const [selectedEmployees, setSelectedEmployees] = useState(new Set());
+  const [unlockingContacts, setUnlockingContacts] = useState({}); // Track unlocking status per employee
+  const [revealedContacts, setRevealedContacts] = useState({}); // Track revealed emails/phones
+  const [emailNotFound, setEmailNotFound] = useState({}); // Track emails marked as not available
+  const [phoneNotFound, setPhoneNotFound] = useState({}); // Track phones marked as not found
+  const [selectedEmployeeDetail, setSelectedEmployeeDetail] = useState(null); // Track selected employee for detail view
+  const [employeeDetailDialogOpen, setEmployeeDetailDialogOpen] = useState(false); // Track employee detail dialog state
+  const [companyDetailDialogOpen, setCompanyDetailDialogOpen] = useState(false); // Track company detail dialog state
+  const [selectedCompanyDetail, setSelectedCompanyDetail] = useState(null); // Company data from employee card click
+  // Employee filter menu state
+  const [employeeFilterAnchorEl, setEmployeeFilterAnchorEl] = useState(null);
+  const employeeFilterOpen = Boolean(employeeFilterAnchorEl);
+  const [employeeFilterSelections, setEmployeeFilterSelections] = useState({ linkedin: false, phone: false, summary: false });
+  const [filteredEmployeeResults, setFilteredEmployeeResults] = useState([]); // Store filtered results
+
+  // Topic filtering state
+  const [filterTopic, setFilterTopic] = useState('');
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [filteredCompanies, setFilteredCompanies] = useState([]);
+  const [companySummaries, setCompanySummaries] = useState({}); // company_id -> summary
+  const [showFilteredOnly, setShowFilteredOnly] = useState(false);
+  
+  // Restore results from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedCompanyResults = localStorage.getItem('scraper_company_results');
+      const savedEmployeeResults = localStorage.getItem('scraper_employee_results');
+      const savedCompanySummaries = localStorage.getItem('scraper_company_summaries');
+      const savedLastSearchParams = localStorage.getItem('scraper_last_search_params');
+      const savedLastEmployeeParams = localStorage.getItem('scraper_last_employee_params');
+      const savedActiveTab = localStorage.getItem('scraper_active_tab');
+      
+      if (savedCompanyResults) {
+        const parsed = JSON.parse(savedCompanyResults);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSearchResults(parsed);
+          console.log('✅ Restored company results from localStorage:', parsed.length);
+        }
+      }
+      
+      if (savedEmployeeResults) {
+        const parsed = JSON.parse(savedEmployeeResults);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEmployeeSearchResults(parsed);
+          console.log('✅ Restored employee results from localStorage:', parsed.length);
+        }
+      }
+      
+      if (savedCompanySummaries) {
+        const parsed = JSON.parse(savedCompanySummaries);
+        if (parsed && typeof parsed === 'object') {
+          setCompanySummaries(parsed);
+          console.log('✅ Restored company summaries from localStorage');
+        }
+      }
+      
+      if (savedLastSearchParams) {
+        const parsed = JSON.parse(savedLastSearchParams);
+        setLastSearchParams(parsed);
+        console.log('✅ Restored last search params from localStorage');
+      }
+      
+      if (savedLastEmployeeParams) {
+        const parsed = JSON.parse(savedLastEmployeeParams);
+        setLastEmployeeSearchParams(parsed);
+        console.log('✅ Restored last employee params from localStorage');
+      }
+      
+      if (savedActiveTab) {
+        const tabIndex = parseInt(savedActiveTab, 10);
+        if (tabIndex === 0 || tabIndex === 1) {
+          setActiveResultsTab(tabIndex);
+          console.log('✅ Restored active tab from localStorage:', tabIndex);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error restoring results from localStorage:', error);
+    }
+  }, []); // Only run on mount
+
+  // Save results to localStorage when they change
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      try {
+        localStorage.setItem('scraper_company_results', JSON.stringify(searchResults));
+      } catch (error) {
+        console.error('❌ Error saving company results to localStorage:', error);
+      }
+    }
+  }, [searchResults]);
+
+  useEffect(() => {
+    if (employeeSearchResults.length > 0) {
+      try {
+        localStorage.setItem('scraper_employee_results', JSON.stringify(employeeSearchResults));
+      } catch (error) {
+        console.error('❌ Error saving employee results to localStorage:', error);
+      }
+    }
+  }, [employeeSearchResults]);
+
+  useEffect(() => {
+    if (Object.keys(companySummaries).length > 0) {
+      try {
+        localStorage.setItem('scraper_company_summaries', JSON.stringify(companySummaries));
+      } catch (error) {
+        console.error('❌ Error saving company summaries to localStorage:', error);
+      }
+    }
+  }, [companySummaries]);
+
+  useEffect(() => {
+    if (lastSearchParams) {
+      try {
+        localStorage.setItem('scraper_last_search_params', JSON.stringify(lastSearchParams));
+      } catch (error) {
+        console.error('❌ Error saving last search params to localStorage:', error);
+      }
+    }
+  }, [lastSearchParams]);
+
+  useEffect(() => {
+    if (lastEmployeeSearchParams) {
+      try {
+        localStorage.setItem('scraper_last_employee_params', JSON.stringify(lastEmployeeSearchParams));
+      } catch (error) {
+        console.error('❌ Error saving last employee params to localStorage:', error);
+      }
+    }
+  }, [lastEmployeeSearchParams]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('scraper_active_tab', String(activeResultsTab));
+    } catch (error) {
+      console.error('❌ Error saving active tab to localStorage:', error);
+    }
+  }, [activeResultsTab]);
+
+  // Clear all results function
+  const handleClearResults = () => {
+    if (window.confirm('Are you sure you want to clear all search results? This action cannot be undone.')) {
+      setSearchResults([]);
+      setEmployeeSearchResults([]);
+      setFilteredCompanies([]);
+      setFilteredEmployeeResults([]);
+      setCompanySummaries({});
+      setLastSearchParams(null);
+      setLastEmployeeSearchParams(null);
+      setSelectedCompanyIds(new Set());
+      setSelectedEmployees(new Set());
+      setActiveResultsTab(0);
+      setCurrentPage(1);
+      setCurrentEmployeePage(1);
+      
+      // Clear localStorage
+      try {
+        localStorage.removeItem('scraper_company_results');
+        localStorage.removeItem('scraper_employee_results');
+        localStorage.removeItem('scraper_company_summaries');
+        localStorage.removeItem('scraper_last_search_params');
+        localStorage.removeItem('scraper_last_employee_params');
+        localStorage.removeItem('scraper_active_tab');
+        console.log('✅ Cleared all results from localStorage');
+      } catch (error) {
+        console.error('❌ Error clearing localStorage:', error);
+      }
+    }
+  };
+
+  // Sync activeResultsTab when employee results are restored or when tab changes in CompanyDataTable
+  // This ensures pagination buttons show correctly
+  useEffect(() => {
+    // If we have employee results and employee search params, prioritize Employees tab
+    // This handles the case when restoring employee search results
+    if (employeeSearchResults.length > 0 && lastEmployeeSearchParams) {
+      // If we just restored employee search (no company search params) OR
+      // if we have both but employee search was more recent (based on timestamps)
+      if (!lastSearchParams || (lastSearchTimestamp.employee && lastSearchTimestamp.company && lastSearchTimestamp.employee > lastSearchTimestamp.company)) {
+        if (activeResultsTab !== 1) {
+          setActiveResultsTab(1);
+        }
+      }
+    }
+    // If we have company results and company search params, but no employee results, default to Companies tab
+    else if ((searchResults.length > 0 || filteredCompanies.length > 0) && lastSearchParams && employeeSearchResults.length === 0) {
+      if (activeResultsTab !== 0) {
+        setActiveResultsTab(0);
+      }
+    }
+  }, [employeeSearchResults.length, lastEmployeeSearchParams, lastSearchParams, searchResults.length, filteredCompanies.length, activeResultsTab, lastSearchTimestamp]);
+  
+  // Apply employee filters based on selections
+  const applyEmployeeFilters = React.useCallback((selections) => {
+    console.log('🔍 Applying employee filters:', selections);
+    
+    // If no filters are selected, show all results
+    const hasAnyFilter = selections.linkedin || selections.phone || selections.summary;
+    if (!hasAnyFilter) {
+      setFilteredEmployeeResults([]);
+      return;
+    }
+    
+    // Filter employees based on selections
+    // AND logic: Employee must match ALL selected filters
+    const filtered = employeeSearchResults.filter((employee, idx) => {
+      let matches = true; // Start with true, set to false if any filter doesn't match
+      const filterReasons = []; // Track why employee doesn't match
+      
+      // Check LinkedIn filter
+      if (selections.linkedin) {
+        const hasLinkedIn = employee.linkedin_url || 
+                           employee.organization?.linkedin_url || 
+                           employee.company_linkedin_url;
+        if (!hasLinkedIn) {
+          matches = false;
+          filterReasons.push('no LinkedIn');
+        }
+      }
+      
+      // Check Phone filter - must have a valid phone number
+      if (selections.phone) {
+        const employeeId = employee.id || `${employee.first_name}_${employee.last_name}`;
+        const revealed = revealedContacts[employeeId];
+        
+        // Check employee phone (same logic as display code)
+        const employeePhone = employee.phone || '';
+        const hasValidPhone = employeePhone && 
+                             employeePhone !== '🔒 Locked' &&
+                             employeePhone.trim().length > 0 &&
+                             employeePhone !== 'null' &&
+                             employeePhone !== 'undefined';
+        
+        // Check company phone - use same logic as display code
+        // Try to parse employee_data JSON if available (contains full Apollo response)
+        let fullEmployeeData = null;
+        if (employee.employee_data) {
+          try {
+            fullEmployeeData = typeof employee.employee_data === 'string' 
+              ? JSON.parse(employee.employee_data) 
+              : employee.employee_data;
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Extract from employee_data.organization first, then fallback to employee.organization
+        const org = fullEmployeeData?.organization || employee.organization || {};
+        
+        // Check all possible phone field names (same as display code)
+        const companyPhone = org.phone_number || 
+                            org.phone || 
+                            org.sanitized_phone ||
+                            org.primary_phone?.number ||
+                            employee.organization?.phone_number ||
+                            employee.organization?.phone ||
+                            employee.organization?.primary_phone?.number ||
+                            employee.organization?.sanitized_phone ||
+                            null;
+        const hasCompanyPhone = companyPhone && 
+                               companyPhone.trim().length > 0 &&
+                               companyPhone !== 'null' &&
+                               companyPhone !== 'undefined';
+        
+        // Check revealed phone
+        const hasRevealedPhone = revealed && 
+                                revealed.phone && 
+                                revealed.phone.trim().length > 0 &&
+                                revealed.phone !== 'null' &&
+                                revealed.phone !== 'undefined';
+        
+        if (!hasValidPhone && !hasCompanyPhone && !hasRevealedPhone) {
+          matches = false;
+          filterReasons.push('no Phone');
+        }
+      }
+      
+      // Check Summary filter - company must have a valid sales summary with business trip data
+      // Exclude "not related", "No business trip" messages, and summaries without travel information
+      if (selections.summary) {
+        const companyId = employee.organization?.id || employee.company_id;
+        const summary = companyId ? companySummaries[companyId] : null;
+        
+        // First check: Summary must exist and not be null/empty
+        if (!summary || summary === null || typeof summary !== 'string' || summary.trim().length === 0) {
+          matches = false;
+          filterReasons.push('no Summary (null/empty)');
+        } else {
+          const summaryLower = summary.toLowerCase().trim();
+          
+          // Second check: Exclude "not related" and "no business trip" messages
+          const noSummaryPhrases = [
+            'not related',
+            'no business trip',
+            'no.*travel.*posts found',
+            'no.*posts found',
+            'may not have posted about travel',
+            'no travel-related posts',
+            'no business trip or travel',
+            'no travel activity',
+            'no travel data',
+            'the company may not have posted',
+            'no business trip or travel-related posts found',
+            'no business trip.*travel-related posts',
+            'company may not have posted'
+          ];
+          
+          const isNoSummaryMessage = noSummaryPhrases.some(phrase => {
+            const regex = new RegExp(phrase.replace(/\*/g, '.*'), 'i');
+            return regex.test(summaryLower);
+          });
+          
+          if (isNoSummaryMessage) {
+            matches = false;
+            filterReasons.push('no Summary (no travel posts message)');
+          } else {
+            // Third check: Summary must contain business trip/travel keywords
+            const travelKeywords = [
+              'travel', 'trip', 'business trip', 'traveling', 'travelling',
+              'visit', 'visiting', 'destination', 'flight', 'hotel',
+              'conference', 'meeting', 'event', 'exhibition', 'trade show',
+              'client visit', 'site visit', 'project visit', 'business travel',
+              'international travel', 'domestic travel', 'corporate travel',
+              'travel activity', 'travel summary', 'travel insights'
+            ];
+            
+            const hasTravelContent = travelKeywords.some(keyword => summaryLower.includes(keyword));
+            
+            // If summary doesn't contain travel-related content, filter it out
+            if (!hasTravelContent) {
+              matches = false;
+              filterReasons.push('no Summary (no travel keywords)');
+            }
+          }
+        }
+      }
+      
+      // Log first few employees for debugging
+      if (idx < 3) {
+        console.log(`   Employee ${idx}: ${matches ? '✅ MATCH' : '❌ NO MATCH'} - ${filterReasons.length > 0 ? filterReasons.join(', ') : 'all criteria met'}`);
+      }
+      
+      return matches;
+    });
+    
+    console.log(`✅ Filtered ${employeeSearchResults.length} employees to ${filtered.length} matching filters`);
+    setFilteredEmployeeResults(filtered);
+  }, [employeeSearchResults, companySummaries, revealedContacts]);
+  
+  // Reset filtered results when employee search results change
+  // Note: We only auto-reapply filters when results change, not when user manually toggles filters
+  useEffect(() => {
+    // Only auto-reapply if filters were already active and results changed
+    const hasAnyFilter = employeeFilterSelections.linkedin || 
+                        employeeFilterSelections.phone || 
+                        employeeFilterSelections.summary;
+    if (hasAnyFilter && employeeSearchResults.length > 0 && filteredEmployeeResults.length === 0) {
+      // Only auto-apply if we have results, filters are active, but no filtered results yet
+      // This handles the case when new results arrive and filters should be reapplied
+      console.log('🔄 Auto-reapplying filters due to new results');
+      applyEmployeeFilters(employeeFilterSelections);
+    } else if (!hasAnyFilter) {
+      // Clear filtered results if no filters are active
+      setFilteredEmployeeResults([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeSearchResults, companySummaries]); // Only re-filter when results or summaries change
+  
+  // Track employeeSearchResults changes
+  useEffect(() => {
+    console.log('👥 employeeSearchResults state changed:', {
+      length: employeeSearchResults.length,
+      isArray: Array.isArray(employeeSearchResults),
+      type: typeof employeeSearchResults,
+      firstItem: employeeSearchResults[0],
+      timestamp: new Date().toISOString()
+    });
+  }, [employeeSearchResults]);
+  
+  // Filter and analyze companies by topic
+  const handleFilterAndAnalyze = async () => {
+    if (!filterTopic.trim()) {
+      alert('Please enter a topic to filter by (e.g., "oil and gas")');
+      return;
+    }
+    
+    if (searchResults.length === 0) {
+      alert('No companies to filter. Please search for companies first.');
+      return;
+    }
+    
+    setIsFiltering(true);
+    setError(null);
+    
+    try {
+      const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+      
+      console.log(`🔍 Filtering ${searchResults.length} companies by topic: "${filterTopic}"`);
+      
+      // Prepare companies data with website URLs
+      const companiesToFilter = searchResults.map(company => ({
+        id: company.id || company.company_id,
+        companyName: company.companyName || company.name || company.username,
+        website: company.website || company.website_url || company.domain,
+        linkedinProfile: company.linkedinProfile || company.linkedin_url,
+        ...company
+      }));
+      
+      const response = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          companies: companiesToFilter,
+          topic: filterTopic.trim(),
+          skipFilter: true // For company searches: skip filtering, only find posts and generate summaries
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to filter companies');
+      }
+      
+      if (data.success) {
+        console.log(`✅ Filtered to ${data.total_filtered} companies`);
+        console.log(`✅ Generated ${Object.keys(data.summaries).length} summaries`);
+        
+        // Store filtered companies and summaries
+        setFilteredCompanies(data.filtered_companies || []);
+        setCompanySummaries(data.summaries || {});
+        setShowFilteredOnly(true);
+        
+        // Show success message
+        alert(`✅ Filtered to ${data.total_filtered} companies matching "${filterTopic}"\n✅ Generated ${Object.keys(data.summaries).length} summaries`);
+      } else {
+        throw new Error(data.error || 'Filtering failed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Filter error:', error);
+      setError(error.message);
+      alert(`❌ Error filtering companies: ${error.message}`);
+    } finally {
+      setIsFiltering(false);
+    }
+  };
+  
+  // Extract topic from keywords dynamically (works for any topic)
+  // Examples: "oil and gas companies" -> "oil and gas"
+  //           "technology startups" -> "technology"
+  //           "healthcare providers" -> "healthcare"
+  const extractTopicFromKeywords = (keywords) => {
+    if (!keywords) return null;
+    
+    const lowerKeywords = keywords.toLowerCase().trim();
+    
+    // Remove location if it's at the end (e.g., "oil and gas in dubai" -> "oil and gas")
+    const locationPattern = /\s+(in|at|from|near)\s+[a-z\s]+$/i;
+    let cleanedKeywords = lowerKeywords.replace(locationPattern, '').trim();
+    
+    // Remove common business terms at the end
+    const businessTerms = [
+      'companies', 'company', 'business', 'businesses', 'firm', 'firms',
+      'organization', 'organizations', 'industry', 'industries',
+      'startups', 'startup', 'providers', 'provider', 'services', 'service'
+    ];
+    
+    // Remove business terms from the end
+    for (const term of businessTerms) {
+      const regex = new RegExp(`\\s+${term}\\s*$`, 'i');
+      cleanedKeywords = cleanedKeywords.replace(regex, '').trim();
+    }
+    
+    // Keep "and" for phrases like "oil and gas", "real estate and property"
+    // Just remove standalone stop words
+    const stopWords = ['in', 'at', 'for', 'the', 'a', 'an', 'or', 'of', 'to'];
+    
+    // Split and filter, but keep "and" if it's between two words
+    let words = cleanedKeywords
+      .split(/[\s,]+/)
+      .map(w => w.trim())
+      .filter(w => w.length > 0);
+    
+    // Reconstruct preserving "and" in phrases
+    if (words.length > 0) {
+      const result = [];
+      for (let i = 0; i < words.length; i++) {
+        if (words[i] === 'and' && i > 0 && i < words.length - 1) {
+          // Keep "and" if it's between two words
+          result.push('and');
+        } else if (!stopWords.includes(words[i])) {
+          result.push(words[i]);
+        }
+      }
+      
+      // Take first 2-4 words (to handle "oil and gas", "real estate and property")
+      const topic = result.slice(0, 4).join(' ').trim();
+      
+      return topic || null;
+    }
+    
+    return null;
+  };
+  
+  // Get companies to display (filtered or all)
+  const getDisplayCompanies = () => {
+    if (showFilteredOnly && filteredCompanies.length > 0) {
+      return filteredCompanies;
+    }
+    // Always return searchResults - never return employee data
+    console.log('📊 getDisplayCompanies returning:', searchResults.length, 'companies');
+    return searchResults;
+  };
+
+
+
+
+
+  const handleSendPrompt = async (prompt) => {
+    setAiLoading(true);
+    
+    // Add user message to chat history
+    const userMessage = { role: 'user', content: prompt };
+    setChatHistory(prev => [...prev, userMessage]);
+    
+    // If user confirms (yes/start/go ahead) and we have params queued, run immediately without asking backend
+    const confirmationWords = ['yes', 'yup', 'yeah', 'start', 'run', 'go ahead', 'please start', 'please run', 'proceed', 'do it'];
+    const normalized = prompt.trim().toLowerCase();
+    if (lastSuggestedParams && confirmationWords.some(w => normalized === w || normalized.includes(w))) {
+      try {
+        await handleApplyAIParams(lastSuggestedParams);
+      } finally {
+        setAiLoading(false);
+      }
+      return;
+    }
+
+    try {
+      // Determine if this is a NEW search query or an ACTION on existing results
+      const lowerPrompt = prompt.toLowerCase();
+      const hasSearchKeywords = lowerPrompt.includes('scrap') || 
+                               lowerPrompt.includes('find') || 
+                               lowerPrompt.includes('search') ||
+                               lowerPrompt.includes('get');
+      
+      // Check if query contains both keywords (industry/company type) AND location (new search)
+      // vs just job title (action on existing results)
+      const hasCompanyKeywords = /\b(oil|gas|technology|cleaning|restaurant|saas|company|companies|business|firm|organization)\b/i.test(prompt);
+      const hasLocation = /\b(dubai|uae|india|new york|san francisco|location|in [a-z]+|at [a-z]+)\b/i.test(prompt);
+      const isNewSearch = hasSearchKeywords && hasCompanyKeywords && hasLocation;
+      
+      // For NEW searches: Don't pass searchResults (let AI search Apollo with new parameters)
+      // For ACTIONS on existing: Pass selected companies or all results
+      let companiesToUse = [];
+      if (!isNewSearch) {
+        // This is an action on existing results - use selected companies or all results
+        companiesToUse = selectedCompanyIds.size > 0
+        ? searchResults.filter(company => selectedCompanyIds.has(company.id))
+        : searchResults;
+      console.log(`📋 Using ${companiesToUse.length} companies for AI (${selectedCompanyIds.size} selected out of ${searchResults.length} total)`);
+      } else {
+        console.log(`🔍 New search query detected - will search Apollo with new parameters (not using existing results)`);
+      }
+      
+      // Send message to Maya AI
+      // For new searches: pass empty array (AI will search Apollo)
+      // For actions: pass selected companies or all results
+      const response = await mayaAIService.chat(prompt, chatHistory, companiesToUse);
+      
+      // Handle action results (e.g., navigate page, collect numbers, filter, call)
+      if (response.actionResult) {
+        console.log('🎯 Action result received:', response.actionResult);
+        
+        // Handle selected/filtered companies
+        if (response.actionResult.type === 'select_companies' && response.actionResult.filteredCompanies) {
+          console.log(`✅ Selected ${response.actionResult.filteredCompanies.length} companies (${response.actionResult.filterType})`);
+          // Store selected companies - they can be used for calling, export, etc.
+          // Optionally update displayed results to show only selected ones
+          // setSearchResults(response.actionResult.filteredCompanies);
+        }
+        
+        // Handle start calling action
+        if (response.actionResult.type === 'start_calling' && response.actionResult.companiesToCall) {
+          console.log(`🚀 Starting calling process for ${response.actionResult.companiesToCall.length} companies`);
+          // Trigger calling functionality here
+          // You can integrate with your calling service/API
+        }
+        
+        // Handle filtered companies for calling
+        if (response.actionResult.type === 'filter_and_select_for_calling') {
+          console.log('📞 Companies ready for calling:', response.actionResult.filteredCompanies);
+          // Store filtered companies for calling
+          if (response.actionResult.filteredCompanies && response.actionResult.filteredCompanies.length > 0) {
+            console.log(`✅ ${response.actionResult.filteredCompanies.length} companies ready for AI calling`);
+          }
+        }
+        
+        // Handle filtered companies
+        if (response.actionResult.type === 'filter_companies' && response.actionResult.filteredCompanies) {
+          console.log('🔍 Filtered companies:', response.actionResult.filteredCompanies);
+          // Optionally filter the displayed results
+          // setSearchResults(response.actionResult.filteredCompanies);
+        }
+        
+        // Handle page navigation
+        if (response.actionResult.type === 'navigate_page') {
+          const targetPage = response.actionResult.page;
+          if (targetPage === 'next') {
+            handlePageChange('next');
+          } else if (targetPage === 'prev') {
+            handlePageChange('prev');
+          } else if (targetPage === 'last') {
+            // Navigate to last page - we'll need to determine the actual last page
+            // For now, just go to next page and let the system determine if there are more
+            handlePageChange('next');
+          } else if (typeof targetPage === 'number') {
+            // Direct page number navigation - not currently supported, use next/prev
+            if (targetPage > currentPage) {
+              handlePageChange('next');
+            } else if (targetPage < currentPage) {
+              handlePageChange('prev');
+            }
+          }
+        }
+        
+        // Handle employee search
+        if (response.actionResult && response.actionResult.type === 'search_employees') {
+          console.log('🔍 Employee search requested:', response.actionResult);
+          const { company_ids, person_titles, include_similar_titles, per_page } = response.actionResult;
+          
+          console.log('📊 Employee search params:', {
+            company_ids,
+            person_titles,
+            include_similar_titles,
+            per_page
+          });
+          
+          // STEP 1: Check database first
+          setEmployeeSearchLoading(true);
+          // DON'T clear company search results - they should remain visible
+          // Only clear filteredCompanies if it was set from employee search (not from company search)
+          // We'll keep searchResults intact so company results remain visible
+          try {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+            console.log('📦 Step 1: Checking employees_cache database first...');
+            
+            // First check database
+            const dbResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-from-db`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                person_titles: person_titles,
+                company_keywords: '', // Not used in this flow
+                location: '', // Not used in this flow
+                company_ids: company_ids // Use provided company IDs
+              })
+            });
+            
+            const dbData = await dbResponse.json();
+            console.log('📦 Database response:', dbData);
+            
+            // If found in database, use it
+            if (dbData.success && dbData.employees && dbData.employees.length > 0) {
+              console.log(`✅ Found ${dbData.employees.length} employees in database (from cache)`);
+              const employeesArray = Array.isArray(dbData.employees) ? dbData.employees : [];
+              setEmployeeSearchResults(employeesArray);
+              setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+              // Auto-switch to Employees tab when employee search completes
+              setActiveResultsTab(1);
+              // Store search params for pagination
+              setLastEmployeeSearchParams({
+                person_titles: person_titles,
+                location: '',
+                company_keywords: '',
+                company_ids: company_ids,
+                include_similar_titles: include_similar_titles || false
+              });
+              setCurrentEmployeePage(1); // Reset to page 1 for new search
+              setHasMoreEmployeePages(dbData.hasMorePages !== false); // Set based on response
+              setEmployeeSearchLoading(false);
+              
+              // Add employee search to history - Store results (no filtering for this path)
+              const searchHistoryEntry = {
+                id: Date.now() + Math.random(),
+                type: 'employee',
+                timestamp: new Date().toISOString(),
+                keyword: person_titles.join(', '),
+                keywords: person_titles.join(', '),
+                location: 'N/A',
+                platforms: ['apollo'],
+                person_titles: person_titles,
+                company_count: company_ids.length,
+                results: employeesArray.length,
+                resultCount: employeesArray.length,
+                searchResults: employeesArray,
+                companySummaries: {}, // No summaries for this path
+                filterTopic: null,
+                params: {
+                  person_titles: person_titles,
+                  include_similar_titles: include_similar_titles,
+                  company_ids: company_ids
+                }
+              };
+              setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+              
+              const aiMessage = {
+                role: 'assistant',
+                content: `✅ **Found ${employeesArray.length} Employees from Database!**
+
+I found ${employeesArray.length} employees matching your search criteria in the database.
+
+**Titles searched:**
+${person_titles.map(t => `• ${t}`).join('\n')}
+
+The results are displayed below.`
+              };
+              setChatHistory(prev => [...prev, aiMessage]);
+              return; // Exit early, don't call Apollo
+            }
+            
+            // STEP 2: If not in database, call Apollo API
+            console.log('📦 No results in database, calling Apollo API...');
+            const API_BASE_URL_APOLLO = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://sts-service-zfrsrcuvna-uc.a.run.app';
+            console.log('🌐 Calling employee search API...');
+            console.log('   URL:', `${API_BASE_URL_APOLLO}/api/apollo-leads/search-employees-by-title`);
+            console.log('   Body:', JSON.stringify({
+              company_ids,
+              person_titles,
+              include_similar_titles,
+              per_page
+            }, null, 2));
+            
+            const searchResponse = await fetch(`${API_BASE_URL_APOLLO}/api/apollo-leads/search-employees-by-title`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                company_ids,
+                person_titles,
+                include_similar_titles,
+                per_page
+              })
+            });
+            
+            console.log('📥 API Response status:', searchResponse.status);
+            console.log('📥 API Response ok:', searchResponse.ok);
+            
+            if (!searchResponse.ok) {
+              const errorText = await searchResponse.text();
+              console.error('❌ API Error Response:', errorText);
+              throw new Error(`API returned ${searchResponse.status}: ${errorText}`);
+            }
+            
+            const searchData = await searchResponse.json();
+            console.log('📥 API Response data:', searchData);
+            
+            if (searchData.success && searchData.employees) {
+              console.log(`✅ Found ${searchData.count} employees`);
+              console.log('👥 Employees:', searchData.employees);
+              console.log('👥 Employees array check:', Array.isArray(searchData.employees), 'Length:', searchData.employees?.length);
+              // Ensure employees is an array
+              const employeesArray = Array.isArray(searchData.employees) 
+                ? searchData.employees 
+                : (searchData.employees?.data || []);
+              console.log('👥 Setting employeeSearchResults with', employeesArray.length, 'employees');
+              setEmployeeSearchResults(employeesArray);
+              setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() })); // Track employee search timestamp
+              // Auto-switch to Employees tab when employee search completes
+              setActiveResultsTab(1);
+              // Store search params for pagination
+              setLastEmployeeSearchParams({
+                person_titles: person_titles,
+                location: '',
+                company_keywords: '',
+                company_ids: company_ids,
+                include_similar_titles: include_similar_titles || false
+              });
+              setCurrentEmployeePage(1); // Reset to page 1 for new search
+              setHasMoreEmployeePages(true); // Assume more pages available
+              
+              // Add employee search to history - Store results (no filtering for this path)
+              const searchHistoryEntry = {
+                id: Date.now() + Math.random(),
+                type: 'employee', // Mark as employee search
+                timestamp: new Date().toISOString(),
+                keyword: person_titles.join(', '),
+                keywords: person_titles.join(', '),
+                location: 'N/A', // Employee searches don't have location
+                platforms: ['apollo'],
+                person_titles: person_titles,
+                company_count: company_ids.length,
+                results: searchData.count || searchData.employees.length,
+                resultCount: searchData.count || searchData.employees.length,
+                searchResults: searchData.employees, // Store actual employee results
+                companySummaries: {}, // No summaries for this path
+                filterTopic: null,
+                params: {
+                  person_titles: person_titles,
+                  include_similar_titles: include_similar_titles,
+                  company_ids: company_ids
+                }
+              };
+              setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+              
+              // Add AI response about the results
+              const aiMessage = {
+                role: 'assistant',
+                content: `✅ **Found ${searchData.count} Employees!**
+
+I found ${searchData.count} employees matching your search criteria across ${company_ids.length} companies.
+
+**Titles searched:**
+${person_titles.map(t => `• ${t}`).join('\n')}
+
+The results are displayed below. You can view their contact information and reveal phone numbers/emails.`
+              };
+              setChatHistory(prev => [...prev, aiMessage]);
+            } else {
+              console.warn('⚠️ API returned success=false or no employees:', searchData);
+              throw new Error(searchData.error || 'No employees found or API returned error');
+            }
+          } catch (error) {
+            console.error('❌ Employee search error:', error);
+            console.error('   Error details:', {
+              message: error.message,
+              stack: error.stack,
+              name: error.name
+            });
+            const errorMessage = {
+              role: 'assistant',
+              content: `❌ **Employee Search Failed**
+
+Error: ${error.message}
+
+Please try again or check if the companies have valid IDs.`
+            };
+            setChatHistory(prev => [...prev, errorMessage]);
+          } finally {
+            setEmployeeSearchLoading(false);
+          }
+        } else {
+          console.log('⚠️ No employee search action result found in response:', response);
+        }
+        
+        // Handle "start calling" confirmation
+        if (response.actionResult.action === 'calling_ready') {
+          // Check if user confirms "start calling"
+          const lowerMessage = prompt.toLowerCase();
+          if (lowerMessage.includes('start calling') || lowerMessage.includes('yes') || lowerMessage.includes('proceed')) {
+            console.log('🚀 Starting AI calling process...');
+            // Trigger calling functionality
+            // This would integrate with your calling service
+          }
+        }
+      }
+      
+      // Check if auto-search was executed
+      if (response.autoSearchExecuted && response.searchResults) {
+        console.log('Auto-search executed, updating results:', response.searchResults);
+        // Sort results: companies with phone numbers first
+        const sortedResults = [...response.searchResults].sort((a, b) => {
+          const getPhone = (company) => {
+            const phone = company.phone || company.phoneNumber || company.Phone_Number || '';
+            if (!phone || phone === 'N/A' || phone.trim() === '' || phone === 'null' || phone === 'undefined') {
+              return null;
+            }
+            return phone.trim();
+          };
+          
+          const aPhone = getPhone(a);
+          const bPhone = getPhone(b);
+          const aHasPhone = !!aPhone;
+          const bHasPhone = !!bPhone;
+          
+          if (aHasPhone && !bHasPhone) return -1;
+          if (!aHasPhone && bHasPhone) return 1;
+          return 0;
+        });
+        setSearchResults(sortedResults);
+        
+        // Save auto-search results to localStorage for ContactsPage
+        localStorage.setItem('scrapingResults', JSON.stringify(response.searchResults));
+        
+        // Add successful search to history
+        const searchHistoryEntry = {
+          id: Date.now(),
+          type: 'company', // Mark as company search
+          timestamp: new Date().toISOString(),
+          keyword: response.suggestedParams?.keywords || 'Auto-search',
+          keywords: response.suggestedParams?.keywords || 'Auto-search',
+          location: response.suggestedParams?.location || 'Various',
+          platforms: response.suggestedParams?.platforms || ['Auto'],
+          results: response.searchResults.length,
+          resultCount: response.searchResults.length,
+          searchResults: response.searchResults, // Store actual results
+          params: response.suggestedParams || {},
+          mayaAIInitiated: true
+        };
+        setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+      }
+      
+      // Do NOT auto-execute; require explicit confirmation from the user
+      console.log('⏸️ Maya AI response (no auto-exec):', { 
+        shouldScrape: response.shouldScrape, 
+        autoSearchExecuted: response.autoSearchExecuted,
+        hasSuggestedParams: !!response.suggestedParams,
+        actionResult: response.actionResult
+      });
+
+      // Add Maya's response to chat history
+      // Support both old format (response.response) and new AI ICP Assistant format (response.message)
+      const assistantMessage = response.response || response.message;
+      const mayaMessage = { 
+        role: 'assistant', 
+        content: assistantMessage,
+        suggestedParams: response.suggestedParams || (response.searchReady ? response.searchParams : null),
+        shouldScrape: response.shouldScrape,
+        autoSearchExecuted: response.autoSearchExecuted,
+        autoExecute: response.autoExecute, // Check if auto-execution is requested
+        actionResult: response.actionResult,  // Include action result in chat
+        icpData: response.icpData, // Include ICP data from AI assistant
+        searchReady: response.searchReady // Include search ready flag
+      };
+      setChatHistory(prev => [...prev, mayaMessage]);
+      setAiResponse(assistantMessage);
+      
+      // Handle suggested params from both old and new AI formats
+      const suggestedParams = response.suggestedParams || (response.searchReady ? response.searchParams : null);
+      if (suggestedParams) {
+        setLastSuggestedParams(suggestedParams);
+        // Always show parameters first - user must click "Apply & Run" to execute
+        // Removed auto-execution - user must confirm parameters before search
+      }
+      
+    } catch (error) {
+      console.error('Maya AI error:', error);
+      const errorMessage = {
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Please try again."
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
+      setAiResponse(errorMessage.content);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplyAIParams = async (suggestedParams) => {
+    console.log('🔄 handleApplyAIParams called with:', suggestedParams);
+    
+    // Check if user explicitly asked for employees/people/job titles
+    // Only treat as employee search if searchType is explicitly 'employee' 
+    // AND person_titles exist AND user query likely mentioned employees
+    const hasPersonTitles = suggestedParams.person_titles && suggestedParams.person_titles.length > 0;
+    const isExplicitEmployeeSearch = suggestedParams.searchType === 'employee';
+    
+    // If searchType is 'company' or undefined/null, treat as company search (ignore person_titles)
+    const isCompanySearch = suggestedParams.searchType === 'company' || !suggestedParams.searchType;
+    
+    // Only do employee search if explicitly requested AND has person titles
+    const isEmployeeSearch = isExplicitEmployeeSearch && hasPersonTitles;
+    
+    if (isEmployeeSearch) {
+      console.log('👥 Employee search detected - checking database first');
+      console.log('   • Search Type:', suggestedParams.searchType);
+      console.log('   • Person Titles:', suggestedParams.person_titles);
+      console.log('   • Company Keywords:', suggestedParams.company_keywords || 'N/A');
+      console.log('   • Location:', suggestedParams.location || 'N/A');
+      
+      setEmployeeSearchLoading(true);
+      
+      const confirmMessage = {
+        role: 'assistant',
+        content: `✅ **Search Started!**
+
+I'm searching for **${suggestedParams.person_titles.join(', ')}** in **${suggestedParams.company_keywords}** companies in **${suggestedParams.location}**.
+
+**Step 1:** Checking database...
+**Step 2:** If not found, searching external sources...
+
+This may take a moment...`
+      };
+      setChatHistory(prev => [...prev, confirmMessage]);
+      
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+        
+        // STEP 1: Check database first
+        // DON'T clear company search results - they should remain visible in Companies tab
+        // The Companies tab already filters to only show actual company objects, not employee-related companies
+        console.log('📦 Step 1: Checking employees_cache database...');
+        const dbResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-from-db`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+            person_titles: suggestedParams.person_titles,
+            organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : [],
+            per_page: 100,  // 100 per page for pagination
+            page: currentEmployeePage || 1  // Current page number
+          })
+        });
+        
+        const dbData = await dbResponse.json();
+        
+        console.log('📦 Database check response:', {
+          success: dbData.success,
+          employeesCount: dbData.employees?.length || 0,
+          count: dbData.count,
+          source: dbData.source,
+          from_cache: dbData.from_cache
+        });
+        
+        // CRITICAL: If database has results, ALWAYS return early - NEVER call Apollo
+        // Check if database has results - accept both 'database' source and from_cache: true
+        // Reject only if source is explicitly 'apollo_api' (meaning Apollo was just called)
+        const hasDatabaseResults = dbData.success && 
+                                   dbData.employees && 
+                                   dbData.employees.length > 0 && 
+                                   dbData.source !== 'apollo_api';
+        
+        if (hasDatabaseResults) {
+          console.log(`✅ Found ${dbData.count || dbData.employees.length} employees in database (from cache)`);
+          console.log('🛑 Database has results - NOT calling Apollo API');
+          console.log('🛑 Returning early - will NOT proceed to Apollo block');
+          
+          // Extract topic from keywords for auto-filtering
+          const keywords = suggestedParams.company_keywords || '';
+          const extractedTopic = extractTopicFromKeywords(keywords);
+          
+          if (!extractedTopic) {
+            // No topic found, just show all results
+            console.log('👥 Setting employeeSearchResults from database (no topic):', dbData.employees?.length, 'employees');
+            const employeesArray = Array.isArray(dbData.employees) ? dbData.employees : [];
+            setEmployeeSearchResults(employeesArray);
+            setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+            // Auto-switch to Employees tab when employee search completes
+            setActiveResultsTab(1);
+            // Store search params for pagination
+            setLastEmployeeSearchParams({
+              person_titles: suggestedParams.person_titles || [],
+              location: suggestedParams.location || '',
+              company_keywords: suggestedParams.company_keywords || '',
+              company_ids: [],
+              include_similar_titles: false
+            });
+            setCurrentEmployeePage(1); // Reset to page 1 for new search
+            setHasMoreEmployeePages(true); // Assume more pages available
+            
+            // Add employee search to history - Store results and summaries from database
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'employee', // Mark as employee search
+              timestamp: new Date().toISOString(),
+              keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              location: suggestedParams.location || 'N/A',
+              platforms: ['apollo'],
+              person_titles: suggestedParams.person_titles || [],
+              results: dbData.count || dbData.employees.length,
+              resultCount: dbData.count || dbData.employees.length,
+              searchResults: dbData.employees, // Store actual employee results
+              companySummaries: dbData.summaries || {}, // Store summaries from database
+              filterTopic: null, // No filtering for database-only results
+              params: {
+                person_titles: suggestedParams.person_titles || [],
+                organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+            
+            setEmployeeSearchLoading(false);
+            return; // Exit early - don't call Apollo
+          }
+          
+          // Extract unique companies from employees
+          const companyMap = new Map();
+          dbData.employees.forEach(emp => {
+            const companyId = emp.organization?.id || emp.company_id;
+            const companyName = emp.organization?.name || emp.company_name;
+            const website = emp.organization?.website_url || emp.company_website_url;
+            const linkedin = emp.organization?.linkedin_url || emp.company_linkedin_url;
+            
+            if (companyId && !companyMap.has(companyId)) {
+              companyMap.set(companyId, {
+                id: companyId,
+                companyName: companyName,
+                website: website,
+                linkedinProfile: linkedin
+              });
+            }
+          });
+          
+          const allCompanies = Array.from(companyMap.values());
+          console.log(`📊 Found ${allCompanies.length} unique companies from ${dbData.count} employees`);
+          
+          // Check which companies already have summaries
+          // Companies with NULL summaries are NOT in the summaries object, so they need processing
+          const existingSummaries = dbData.summaries || {};
+          
+          // Normalize company IDs for comparison (convert to string, handle null/undefined)
+          const normalizeCompanyId = (id) => {
+            if (!id) return null;
+            return String(id).trim();
+          };
+          
+          const companiesWithSummaries = new Set(
+            Object.keys(existingSummaries).map(id => normalizeCompanyId(id))
+          );
+          
+          // Filter companies that need processing
+          // Skip companies already marked as "not related" - don't process them again
+          const companiesWithoutSummaries = allCompanies.filter(c => {
+            const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+            if (!companyId) return true; // No ID means needs processing
+            
+            const hasSummary = companiesWithSummaries.has(companyId);
+            const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+            
+            // Skip if already marked as "not related" - don't process again
+            if (summary === "not related") {
+              return false; // Don't include in processing
+            }
+            
+            // Include only companies that don't have summaries (NULL in database)
+            return !hasSummary;
+          });
+          
+          // Count companies marked as "not related" (these won't be processed)
+          const notRelatedCount = allCompanies.filter(c => {
+            const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+            if (!companyId) return false;
+            const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+            return summary === "not related";
+          }).length;
+          
+          console.log(`✅ ${companiesWithSummaries.size} companies already have summaries (from backend)`);
+          console.log(`🚫 ${notRelatedCount} companies already marked as "not related" (skipping)`);
+          console.log(`📊 Total unique companies from employees: ${allCompanies.length}`);
+          console.log(`🔄 ${companiesWithoutSummaries.length} companies need filtering/summarization (NULL summaries only)`);
+          
+          // Debug: Show which companies have summaries vs which don't
+          if (companiesWithoutSummaries.length > 0 && companiesWithSummaries.size > 0) {
+            console.log(`🔍 Debug: Checking company ID matching...`);
+            const sampleWithSummary = Array.from(companiesWithSummaries).slice(0, 3);
+            const sampleWithoutSummary = companiesWithoutSummaries.slice(0, 3).map(c => 
+              normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id)
+            );
+            console.log(`   Sample company IDs WITH summaries:`, sampleWithSummary);
+            console.log(`   Sample company IDs WITHOUT summaries:`, sampleWithoutSummary);
+          }
+          
+          // DON'T show results immediately - wait for ALL processing to complete
+          setIsFiltering(true);
+          
+          // Process remaining companies that don't have summaries first
+          if (companiesWithoutSummaries.length > 0) {
+            console.log(`🤖 Processing ${companiesWithoutSummaries.length} companies without summaries...`);
+            
+            try {
+              const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+              const filterResponse = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  companies: companiesWithoutSummaries,
+                  topic: extractedTopic.trim()
+                }),
+              });
+              
+              const filterData = await filterResponse.json();
+        
+              if (filterResponse.ok && filterData.success) {
+                // Merge new summaries with existing ones
+                const allSummaries = { ...existingSummaries, ...(filterData.summaries || {}) };
+                
+                // Get filtered company IDs (companies that passed the filter - not "not related")
+                const filteredCompanyIds = new Set(
+                  filterData.filtered_companies.map(c => c.id || c.company_id)
+                );
+                
+                // Filter out companies marked as "not related" from summaries
+                const relatedSummaries = {};
+                for (const [companyId, summary] of Object.entries(allSummaries)) {
+                  if (summary !== "not related") {
+                    relatedSummaries[companyId] = summary;
+                  }
+                }
+                
+                setCompanySummaries(relatedSummaries);
+                
+                // Combine employees from companies with existing summaries + newly filtered companies
+                // Only show employees from companies that are related (not "not related")
+                const allRelatedCompanyIds = new Set([
+                  ...Array.from(companiesWithSummaries).filter(id => {
+                    const summary = allSummaries[id];
+                    return summary && summary !== "not related";
+                  }),
+                  ...Array.from(filteredCompanyIds)
+                ]);
+                
+                const allFilteredEmployees = dbData.employees.filter(emp => {
+                  const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                  return allRelatedCompanyIds.has(companyId);
+                });
+                
+                // Show results ONLY after all processing is complete
+                console.log('👥 Setting employeeSearchResults (filtered):', allFilteredEmployees?.length, 'employees');
+                const employeesArray = Array.isArray(allFilteredEmployees) ? allFilteredEmployees : [];
+                setEmployeeSearchResults(employeesArray);
+                setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+                // Auto-switch to Employees tab when employee search completes
+                setActiveResultsTab(1);
+                // Store search params for pagination
+                setLastEmployeeSearchParams({
+                  person_titles: suggestedParams.person_titles || [],
+                  location: suggestedParams.location || '',
+                  company_keywords: suggestedParams.company_keywords || '',
+                  company_ids: [],
+                  include_similar_titles: false
+                });
+                setCurrentEmployeePage(1); // Reset to page 1 for new search
+                setHasMoreEmployeePages(true); // Assume more pages available
+                
+                // Add employee search to history - Store filtered results, summaries, and filter state
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'employee', // Mark as employee search
+                  timestamp: new Date().toISOString(),
+                  keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+                  keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+                  location: suggestedParams.location || 'N/A',
+                  platforms: ['apollo'],
+                  person_titles: suggestedParams.person_titles || [],
+                  results: allFilteredEmployees.length,
+                  resultCount: allFilteredEmployees.length,
+                  searchResults: allFilteredEmployees, // Store filtered employee results (what user sees)
+                  companySummaries: relatedSummaries, // Store summaries for companies
+                  filterTopic: extractedTopic, // Store the filter topic used
+                  params: {
+                    person_titles: suggestedParams.person_titles || [],
+                    organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                    organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+                  }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+                
+                // Combine companies with summaries (existing + new, excluding "not related")
+                const existingFilteredCompanies = allCompanies
+                  .filter(c => {
+                    const companyId = c.id || c.company_id;
+                    return companiesWithSummaries.has(companyId) && 
+                           allSummaries[companyId] && 
+                           allSummaries[companyId] !== "not related";
+                  })
+                  .map(c => ({
+                    ...c,
+                    summary: allSummaries[c.id || c.company_id]
+                  }));
+                
+                const newFilteredCompanies = filterData.filtered_companies.map(c => ({
+                  ...c,
+                  summary: filterData.summaries[c.id || c.company_id]
+                }));
+                
+                const allFilteredCompanies = [...existingFilteredCompanies, ...newFilteredCompanies];
+                // DON'T set filteredCompanies for employee searches - only for company searches
+                // This prevents employee-related companies from showing in the Companies tab
+                // setFilteredCompanies(allFilteredCompanies);
+                // setShowFilteredOnly(true);
+          
+          const successMessage = {
+            role: 'assistant',
+                  content: `✅ **Search & Filter Complete!**
+
+**Step 1:** Found ${dbData.count} employees in database
+**Step 2:** Found ${companiesWithSummaries.size} companies with existing summaries (shown immediately)
+**Step 3:** Filtered ${companiesWithoutSummaries.length} remaining companies by topic "${extractedTopic}"
+**Step 4:** Generated ${Object.keys(filterData.summaries || {}).length} new summaries
+
+✅ **${allFilteredEmployees.length}** employees from **${allFilteredCompanies.length}** filtered companies
+✅ **${Object.keys(allSummaries).length}** total summaries (${companiesWithSummaries.size} existing + ${Object.keys(filterData.summaries || {}).length} new)
+
+Showing employees from companies matching "${extractedTopic}". Companies not related to the topic have been filtered out.`
+          };
+          setChatHistory(prev => [...prev, successMessage]);
+        } else {
+                throw new Error(filterData.error || 'Filtering failed');
+              }
+            } catch (filterError) {
+              console.error('❌ Auto-filter error:', filterError);
+              setIsFiltering(false);
+              
+              // If filtering fails, show results with existing summaries only (excluding "not related")
+              const relatedCompanyIds = new Set(
+                Array.from(companiesWithSummaries).filter(id => {
+                  const summary = existingSummaries[id];
+                  return summary && summary !== "not related";
+                })
+              );
+              
+              const filteredEmployees = dbData.employees.filter(emp => {
+                const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                return relatedCompanyIds.has(companyId);
+              });
+              
+              // Show results even if processing failed
+              // DON'T set showFilteredOnly for employee searches - only for company searches
+              if (companiesWithSummaries.size === 0) {
+                // No existing summaries, show all results
+                setEmployeeSearchResults(dbData.employees);
+                // setShowFilteredOnly(false);
+              } else {
+                setEmployeeSearchResults(filteredEmployees);
+                // setShowFilteredOnly(true);
+              }
+              
+              const errorMessage = {
+                role: 'assistant',
+                content: `⚠️ **Filtering Error**
+
+Found ${dbData.count} employees in database.
+${companiesWithSummaries.size > 0 ? `Showing ${filteredEmployees.length} employees from ${companiesWithSummaries.size} companies with existing summaries.` : ''}
+Error processing remaining companies: ${filterError.message}`
+              };
+              setChatHistory(prev => [...prev, errorMessage]);
+            }
+          } else {
+            // All companies already have summaries - filter out "not related" ones
+            console.log(`✅ All companies have summaries - showing final results`);
+            setIsFiltering(false);
+            
+            const relatedCompanyIds = new Set(
+              Object.entries(existingSummaries)
+                .filter(([id, summary]) => summary && summary !== "not related")
+                .map(([id]) => normalizeCompanyId(id))
+            );
+            
+            const relatedEmployees = dbData.employees.filter(emp => {
+              const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+              return relatedCompanyIds.has(companyId);
+            });
+            
+            const relatedFilteredCompanies = allCompanies
+              .filter(c => {
+                const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                return relatedCompanyIds.has(companyId);
+              })
+              .map(c => ({
+                ...c,
+                summary: existingSummaries[normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id)]
+              }));
+            
+            setCompanySummaries(Object.fromEntries(
+              Object.entries(existingSummaries).filter(([_, summary]) => summary !== "not related")
+            ));
+            setFilterTopic(extractedTopic);
+            // DON'T set filteredCompanies for employee searches - only for company searches
+            // This prevents employee-related companies from showing in the Companies tab
+            // setFilteredCompanies(relatedFilteredCompanies);
+            // setShowFilteredOnly(true);
+            
+            // Show results ONLY after all processing is complete
+            setEmployeeSearchResults(relatedEmployees);
+            setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+            // Store search params for pagination
+            setLastEmployeeSearchParams({
+              person_titles: suggestedParams.person_titles || [],
+              location: suggestedParams.location || '',
+              company_keywords: suggestedParams.company_keywords || '',
+              company_ids: [],
+              include_similar_titles: false
+            });
+            setCurrentEmployeePage(1); // Reset to page 1 for new search
+            setHasMoreEmployeePages(true); // Assume more pages available
+            
+            // Add employee search to history
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'employee', // Mark as employee search
+              timestamp: new Date().toISOString(),
+              keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              location: suggestedParams.location || 'N/A',
+              platforms: ['apollo'],
+              person_titles: suggestedParams.person_titles || [],
+              results: relatedEmployees.length,
+              resultCount: relatedEmployees.length,
+              searchResults: relatedEmployees, // Store actual employee results
+              params: {
+                person_titles: suggestedParams.person_titles || [],
+                organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+            
+            const successMessage = {
+              role: 'assistant',
+              content: `✅ **Found ${relatedEmployees.length} Employees with Existing Summaries!**
+
+**Step 1:** Found ${dbData.count} employees in database
+**Step 2:** All ${relatedCompanyIds.size} companies already have summaries (excluding "not related")
+
+✅ **${relatedEmployees.length}** employees from companies with summaries
+✅ Summaries loaded from database (no processing needed)
+
+Showing employees from companies that have summaries for "${extractedTopic}". Companies marked as "not related" are excluded.`
+            };
+            setChatHistory(prev => [...prev, successMessage]);
+          }
+          
+          setEmployeeSearchLoading(false);
+          return;
+        }
+        
+        // If no results in database, check if backend already searched Apollo
+        // The backend will automatically search Apollo if no results found in DB
+        console.log('📊 Database response:', {
+          success: dbData.success,
+          count: dbData.count,
+          source: dbData.source,
+          hasEmployees: dbData.employees && dbData.employees.length > 0
+        });
+        
+        // Only proceed to Apollo if NO results found in database
+        // If database has results, we should have already returned above
+        // IMPORTANT: If dbData has employees and source is NOT 'apollo_api', we should have returned above
+        // So this block should only execute if:
+        // 1. Backend already called Apollo (source === 'apollo_api') AND has results - use those results
+        // 2. No employees found in database (dbData.employees is empty or null)
+        // NEVER call Apollo if database has results OR if backend already called Apollo
+        
+        // If backend already called Apollo and found results, use those (don't call Apollo again)
+        // BUT: Apply the same filtering/analysis workflow as database results
+        if (dbData.source === 'apollo_api' && dbData.employees && dbData.employees.length > 0) {
+          console.log('🔄 Backend already called Apollo and found results - using those');
+          console.log(`✅ Found ${dbData.count || dbData.employees.length} employees from backend Apollo call`);
+          
+          // Extract topic from keywords for auto-filtering (same as database results)
+          const keywords = suggestedParams.company_keywords || '';
+          const extractedTopic = extractTopicFromKeywords(keywords);
+          
+          const employeesArray = Array.isArray(dbData.employees) ? dbData.employees : [];
+          
+          // If no topic, just show all results
+          if (!extractedTopic) {
+            setEmployeeSearchResults(employeesArray);
+            setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+            // Auto-switch to Employees tab when employee search completes
+            setActiveResultsTab(1);
+            setEmployeeSearchLoading(false);
+            
+            // Add employee search to history
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'employee',
+              timestamp: new Date().toISOString(),
+              keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              location: suggestedParams.location || 'N/A',
+              platforms: ['apollo'],
+              person_titles: suggestedParams.person_titles || [],
+              results: employeesArray.length,
+              resultCount: employeesArray.length,
+              searchResults: employeesArray,
+              params: {
+                person_titles: suggestedParams.person_titles || [],
+                organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+            
+            const aiMessage = {
+              role: 'assistant',
+              content: `✅ **Found ${employeesArray.length} Employees!**
+
+I found ${employeesArray.length} employees matching your search criteria.
+
+**Titles searched:**
+${(suggestedParams.person_titles || []).map(t => `• ${t}`).join('\n')}
+
+The results are displayed below.`
+            };
+            setChatHistory(prev => [...prev, aiMessage]);
+            return; // Exit early, don't call Apollo again
+          }
+          
+          // Extract unique companies from employees (same workflow as database results)
+          const companyMap = new Map();
+          employeesArray.forEach(emp => {
+            const companyId = emp.organization?.id || emp.company_id;
+            const companyName = emp.organization?.name || emp.company_name;
+            const website = emp.organization?.website_url || emp.company_website_url;
+            const linkedin = emp.organization?.linkedin_url || emp.company_linkedin_url;
+            
+            if (companyId && !companyMap.has(companyId)) {
+              companyMap.set(companyId, {
+                id: companyId,
+                companyName: companyName,
+                website: website,
+                linkedinProfile: linkedin
+              });
+            }
+          });
+          
+          const allCompanies = Array.from(companyMap.values());
+          console.log(`📊 Found ${allCompanies.length} unique companies from ${employeesArray.length} employees`);
+          
+          // Check which companies already have summaries (from backend response)
+          const existingSummaries = dbData.summaries || {};
+          
+          // Normalize company IDs for comparison
+          const normalizeCompanyId = (id) => {
+            if (!id) return null;
+            return String(id).trim();
+          };
+          
+          const companiesWithSummaries = new Set(
+            Object.keys(existingSummaries).map(id => normalizeCompanyId(id))
+          );
+          
+          // Filter companies that need processing
+          const companiesWithoutSummaries = allCompanies.filter(c => {
+            const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+            if (!companyId) return true;
+            
+            const hasSummary = companiesWithSummaries.has(companyId);
+            const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+            
+            if (summary === "not related") {
+              return false; // Don't process again
+            }
+            
+            return !hasSummary;
+          });
+          
+          console.log(`✅ ${companiesWithSummaries.size} companies already have summaries`);
+          console.log(`🔄 ${companiesWithoutSummaries.length} companies need filtering/summarization`);
+          
+          // DON'T show results immediately - wait for ALL processing to complete
+          setIsFiltering(true);
+          
+          // Process remaining companies that don't have summaries
+          if (companiesWithoutSummaries.length > 0) {
+            console.log(`🤖 Processing ${companiesWithoutSummaries.length} companies without summaries...`);
+            
+            try {
+              const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+              const filterResponse = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  companies: companiesWithoutSummaries,
+                  topic: extractedTopic.trim()
+                }),
+              });
+              
+              const filterData = await filterResponse.json();
+      
+              if (filterResponse.ok && filterData.success) {
+                // Merge new summaries with existing ones
+                const allSummaries = { ...existingSummaries, ...(filterData.summaries || {}) };
+                
+                // Get filtered company IDs
+                const filteredCompanyIds = new Set(
+                  filterData.filtered_companies.map(c => c.id || c.company_id)
+                );
+                
+                // Filter out "not related"
+                const relatedSummaries = {};
+                for (const [companyId, summary] of Object.entries(allSummaries)) {
+                  if (summary !== "not related") {
+                    relatedSummaries[companyId] = summary;
+                  }
+                }
+                
+                setCompanySummaries(relatedSummaries);
+                
+                // Filter employees to only show those from related companies
+                const allRelatedCompanyIds = new Set([
+                  ...Array.from(companiesWithSummaries).filter(id => {
+                    const summary = allSummaries[id];
+                    return summary && summary !== "not related";
+                  }),
+                  ...Array.from(filteredCompanyIds)
+                ]);
+                
+                const allFilteredEmployees = employeesArray.filter(emp => {
+                  const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                  return allRelatedCompanyIds.has(companyId);
+                });
+                
+                // Show results ONLY after all processing is complete
+                setEmployeeSearchResults(allFilteredEmployees);
+                setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+                setIsFiltering(false);
+                
+                // Add to history
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'employee',
+                  timestamp: new Date().toISOString(),
+                  keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+                  keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+                  location: suggestedParams.location || 'N/A',
+                  platforms: ['apollo'],
+                  person_titles: suggestedParams.person_titles || [],
+                  results: allFilteredEmployees.length,
+                  resultCount: allFilteredEmployees.length,
+                  searchResults: allFilteredEmployees,
+                  params: {
+                    person_titles: suggestedParams.person_titles || [],
+                    organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                    organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+                  }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+                
+                const successMessage = {
+                  role: 'assistant',
+                  content: `✅ **Search & Filter Complete!**
+
+**Step 1:** Found ${employeesArray.length} employees from Apollo
+**Step 2:** Found ${companiesWithSummaries.size} companies with existing summaries
+**Step 3:** Filtered ${companiesWithoutSummaries.length} remaining companies by topic "${extractedTopic}"
+**Step 4:** Generated ${Object.keys(filterData.summaries || {}).length} new summaries
+
+✅ **${allFilteredEmployees.length}** employees from filtered companies
+✅ **${Object.keys(allSummaries).length}** total summaries
+
+Showing employees from companies matching "${extractedTopic}".`
+                };
+                setChatHistory(prev => [...prev, successMessage]);
+                setEmployeeSearchLoading(false);
+                return;
+              } else {
+                throw new Error(filterData.error || 'Filtering failed');
+              }
+            } catch (filterError) {
+              console.error('❌ Auto-filter error:', filterError);
+              setIsFiltering(false);
+              
+              // If filtering fails, show results with existing summaries only
+              const relatedCompanyIds = new Set(
+                Array.from(companiesWithSummaries).filter(id => {
+                  const summary = existingSummaries[id];
+                  return summary && summary !== "not related";
+                })
+              );
+              
+              const filteredEmployees = employeesArray.filter(emp => {
+                const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                return relatedCompanyIds.has(companyId);
+              });
+              
+              setEmployeeSearchResults(filteredEmployees.length > 0 ? filteredEmployees : employeesArray);
+              setEmployeeSearchLoading(false);
+              
+              const errorMessage = {
+                role: 'assistant',
+                content: `⚠️ **Filtering Error**
+
+Found ${employeesArray.length} employees from Apollo.
+${companiesWithSummaries.size > 0 ? `Showing ${filteredEmployees.length} employees from ${companiesWithSummaries.size} companies with existing summaries.` : 'Showing all results.'}
+Error processing remaining companies: ${filterError.message}`
+              };
+              setChatHistory(prev => [...prev, errorMessage]);
+              return;
+            }
+          } else {
+            // All companies already have summaries - filter out "not related"
+            console.log(`✅ All companies have summaries - showing final results`);
+            setIsFiltering(false);
+            
+            const relatedCompanyIds = new Set(
+              Object.entries(existingSummaries)
+                .filter(([id, summary]) => summary && summary !== "not related")
+                .map(([id]) => normalizeCompanyId(id))
+            );
+            
+            const relatedEmployees = employeesArray.filter(emp => {
+              const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+              return relatedCompanyIds.has(companyId);
+            });
+            
+            setCompanySummaries(Object.fromEntries(
+              Object.entries(existingSummaries).filter(([_, summary]) => summary !== "not related")
+            ));
+            
+            setEmployeeSearchResults(relatedEmployees);
+            setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+            setEmployeeSearchLoading(false);
+            
+            // Add to history - Store filtered results, summaries, and filter state
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'employee',
+              timestamp: new Date().toISOString(),
+              keyword: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              keywords: suggestedParams.person_titles?.join(', ') || 'Employee Search',
+              location: suggestedParams.location || 'N/A',
+              platforms: ['apollo'],
+              person_titles: suggestedParams.person_titles || [],
+              results: relatedEmployees.length,
+              resultCount: relatedEmployees.length,
+              searchResults: relatedEmployees, // Store filtered employee results (what user sees)
+              companySummaries: Object.fromEntries(
+                Object.entries(existingSummaries).filter(([_, summary]) => summary !== "not related")
+              ), // Store summaries for companies
+              filterTopic: extractedTopic, // Store the filter topic used
+              params: {
+                person_titles: suggestedParams.person_titles || [],
+                organization_locations: suggestedParams.location ? [suggestedParams.location] : [],
+                organization_industries: suggestedParams.company_keywords ? [suggestedParams.company_keywords] : []
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+            
+            const successMessage = {
+              role: 'assistant',
+              content: `✅ **Found ${relatedEmployees.length} Employees with Existing Summaries!**
+
+**Step 1:** Found ${employeesArray.length} employees from Apollo
+**Step 2:** All ${relatedCompanyIds.size} companies already have summaries
+
+✅ **${relatedEmployees.length}** employees from companies with summaries
+✅ Summaries loaded from database
+
+Showing employees from companies that have summaries for "${extractedTopic}".`
+            };
+            setChatHistory(prev => [...prev, successMessage]);
+            return; // Exit early, don't call Apollo again
+          }
+        }
+        
+        // No results found (neither in database nor from backend Apollo call)
+        if (dbData.success && (!dbData.employees || dbData.employees.length === 0)) {
+          console.log('🔄 No results in database and backend did not find results - showing empty state');
+          setEmployeeSearchResults([]);
+          setEmployeeSearchLoading(false);
+          
+          const aiMessage = {
+            role: 'assistant',
+            content: `❌ **No Employees Found**
+
+I couldn't find any employees matching your search criteria.
+
+**Titles searched:**
+${(suggestedParams.person_titles || []).map(t => `• ${t}`).join('\n')}
+
+Please try different search terms.`
+          };
+          setChatHistory(prev => [...prev, aiMessage]);
+          return; // Exit early, don't call Apollo
+        }
+        
+        // This should not be reached, but if it is, handle it
+        console.warn('⚠️ Unexpected state: dbData.source is not apollo_api and has employees, but we should have returned earlier');
+        if (dbData.employees && dbData.employees.length > 0 && dbData.source !== 'apollo_api') {
+            console.log(`✅ Found ${dbData.count} employees from external sources`);
+            
+            // Extract topic from keywords for auto-filtering
+            const keywords = suggestedParams.company_keywords || '';
+            const extractedTopic = extractTopicFromKeywords(keywords);
+            
+            // Extract unique companies from employees
+            const companyMap = new Map();
+            dbData.employees.forEach(emp => {
+              const companyId = emp.organization?.id || emp.company_id;
+              const companyName = emp.organization?.name || emp.company_name;
+              const website = emp.organization?.website_url || emp.company_website_url;
+              const linkedin = emp.organization?.linkedin_url || emp.company_linkedin_url;
+              
+              if (companyId && !companyMap.has(companyId)) {
+                companyMap.set(companyId, {
+                  id: companyId,
+                  companyName: companyName,
+                  website: website,
+                  linkedinProfile: linkedin
+                });
+              }
+            });
+            
+            const allCompanies = Array.from(companyMap.values());
+            console.log(`📊 Found ${allCompanies.length} unique companies from ${dbData.count} employees`);
+            
+            // Check which companies already have summaries (from backend response)
+            const existingSummaries = dbData.summaries || {};
+            
+            // Normalize company IDs for comparison
+            const normalizeCompanyId = (id) => {
+              if (!id) return null;
+              return String(id).trim();
+            };
+            
+            const companiesWithSummaries = new Set(
+              Object.keys(existingSummaries).map(id => normalizeCompanyId(id))
+            );
+            
+            // Filter companies that need processing
+            // Skip companies already marked as "not related" - don't process them again
+            const companiesWithoutSummaries = allCompanies.filter(c => {
+              const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+              if (!companyId) return true; // No ID means needs processing
+              
+              const hasSummary = companiesWithSummaries.has(companyId);
+              const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+              
+              // Skip if already marked as "not related" - don't process again
+              if (summary === "not related") {
+                return false; // Don't include in processing
+              }
+              
+              // Include only companies that don't have summaries (NULL in database)
+              return !hasSummary;
+            });
+            
+            // Count companies marked as "not related"
+            const notRelatedCount = allCompanies.filter(c => {
+              const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+              if (!companyId) return false;
+              const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+              return summary === "not related";
+            }).length;
+            
+            console.log(`✅ ${companiesWithSummaries.size} companies already have summaries (from database)`);
+            console.log(`🚫 ${notRelatedCount} companies already marked as "not related" (skipping)`);
+            console.log(`📊 Total unique companies from employees: ${allCompanies.length}`);
+            console.log(`🔄 ${companiesWithoutSummaries.length} companies need filtering/summarization (NULL summaries only)`);
+            
+            // DON'T show results immediately - wait for ALL processing to complete
+            setIsFiltering(true);
+            
+            // If topic is found, automatically filter companies and generate summaries
+            if (extractedTopic && companiesWithoutSummaries.length > 0) {
+              console.log(`🤖 Processing ${companiesWithoutSummaries.length} companies without summaries...`);
+              
+              try {
+                const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+                const filterResponse = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    companies: companiesWithoutSummaries,
+                    topic: extractedTopic.trim()
+                  }),
+                });
+                
+                const filterData = await filterResponse.json();
+                
+                if (filterResponse.ok && filterData.success) {
+                  // Merge new summaries with existing ones
+                  const allSummaries = { ...existingSummaries, ...(filterData.summaries || {}) };
+                  
+                  // Get filtered company IDs (companies that passed the filter - not "not related")
+                  const filteredCompanyIds = new Set(
+                    filterData.filtered_companies.map(c => c.id || c.company_id)
+                  );
+                  
+                  // Filter out companies marked as "not related" from summaries
+                  const relatedSummaries = {};
+                  for (const [companyId, summary] of Object.entries(allSummaries)) {
+                    if (summary !== "not related") {
+                      relatedSummaries[companyId] = summary;
+                    }
+                  }
+                  
+                  setCompanySummaries(relatedSummaries);
+                  
+                  // Combine employees from companies with existing summaries + newly filtered companies
+                  // Only show employees from companies that are related (not "not related")
+                  const allRelatedCompanyIds = new Set([
+                    ...Array.from(companiesWithSummaries).filter(id => {
+                      const summary = allSummaries[id];
+                      return summary && summary !== "not related";
+                    }),
+                    ...Array.from(filteredCompanyIds)
+                  ]);
+                  
+                  const allFilteredEmployees = dbData.employees.filter(emp => {
+                    const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                    return allRelatedCompanyIds.has(companyId);
+                  });
+                  
+                  // Combine companies with summaries (existing + new, excluding "not related")
+                  const existingFilteredCompanies = allCompanies
+                    .filter(c => {
+                      const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                      return companiesWithSummaries.has(companyId) && 
+                             allSummaries[companyId] && 
+                             allSummaries[companyId] !== "not related";
+                    })
+                    .map(c => ({
+                      ...c,
+                      summary: allSummaries[normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id)]
+                    }));
+                  
+                  const newFilteredCompanies = filterData.filtered_companies.map(c => ({
+                    ...c,
+                    summary: filterData.summaries[c.id || c.company_id]
+                  }));
+                  
+                  const allFilteredCompanies = [...existingFilteredCompanies, ...newFilteredCompanies];
+                  // DON'T set filteredCompanies for employee searches - only for company searches
+                  // This prevents employee-related companies from showing in the Companies tab
+                  // setFilteredCompanies(allFilteredCompanies);
+                  setFilterTopic(extractedTopic);
+                  // setShowFilteredOnly(true);
+                  
+                  // Show results ONLY after all processing is complete
+                  setEmployeeSearchResults(allFilteredEmployees);
+                  setIsFiltering(false);
+                  
+                  const successMessage = {
+                    role: 'assistant',
+                    content: `✅ **Search & Filter Complete!**
+
+**Step 1:** Found ${dbData.count} employees from external sources
+**Step 2:** Found ${companiesWithSummaries.size} companies with existing summaries
+**Step 3:** Processed ${companiesWithoutSummaries.length} companies without summaries
+**Step 4:** Generated ${Object.keys(filterData.summaries || {}).length} new summaries
+**Step 5:** Skipped ${notRelatedCount} companies already marked as "not related"
+
+✅ **${allFilteredEmployees.length}** employees from **${allFilteredCompanies.length}** filtered companies
+✅ **${Object.keys(relatedSummaries).length}** total summaries (${companiesWithSummaries.size} existing + ${Object.keys(filterData.summaries || {}).length} new)
+
+Showing employees from companies matching "${extractedTopic}". Companies not related to the topic have been filtered out.`
+                  };
+                  setChatHistory(prev => [...prev, successMessage]);
+                } else {
+                  throw new Error(filterData.error || 'Filtering failed');
+                }
+              } catch (filterError) {
+                console.error('❌ Auto-filter error:', filterError);
+                setIsFiltering(false);
+                
+                // If filtering fails, show results with existing summaries only (excluding "not related")
+                const relatedCompanyIds = new Set(
+                  Array.from(companiesWithSummaries).filter(id => {
+                    const summary = existingSummaries[id];
+                    return summary && summary !== "not related";
+                  })
+                );
+                
+                const filteredEmployees = dbData.employees.filter(emp => {
+                  const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                  return relatedCompanyIds.has(companyId);
+                });
+                
+                // Show results even if processing failed
+                // DON'T set showFilteredOnly for employee searches - only for company searches
+                if (companiesWithSummaries.size === 0) {
+                  // No existing summaries, show all results
+                  setEmployeeSearchResults(dbData.employees);
+                  // setShowFilteredOnly(false);
+                } else {
+                  setEmployeeSearchResults(filteredEmployees);
+                  // setShowFilteredOnly(true);
+                }
+                
+                const errorMessage = {
+                  role: 'assistant',
+                  content: `⚠️ **Filtering Error**
+
+Found ${dbData.count} employees from external sources.
+${companiesWithSummaries.size > 0 ? `Showing ${filteredEmployees.length} employees from ${companiesWithSummaries.size} companies with existing summaries.` : ''}
+Error processing remaining companies: ${filterError.message}`
+                };
+                setChatHistory(prev => [...prev, errorMessage]);
+              }
+            } else if (extractedTopic && companiesWithoutSummaries.length === 0) {
+              // All companies already have summaries - show results after filtering out "not related"
+              console.log(`✅ All companies have summaries - showing final results`);
+              setIsFiltering(false);
+              
+              const relatedCompanyIds = new Set(
+                Object.entries(existingSummaries)
+                  .filter(([id, summary]) => summary && summary !== "not related")
+                  .map(([id]) => normalizeCompanyId(id))
+              );
+              
+              const relatedEmployees = dbData.employees.filter(emp => {
+                const companyId = normalizeCompanyId(emp.organization?.id || emp.company_id);
+                return relatedCompanyIds.has(companyId);
+              });
+              
+              const relatedFilteredCompanies = allCompanies
+                .filter(c => {
+                  const companyId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                  return relatedCompanyIds.has(companyId);
+                })
+                .map(c => ({
+                  ...c,
+                  summary: existingSummaries[normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id)]
+                }));
+              
+              setCompanySummaries(Object.fromEntries(
+                Object.entries(existingSummaries).filter(([_, summary]) => summary !== "not related")
+              ));
+              setFilterTopic(extractedTopic);
+              // DON'T set filteredCompanies for employee searches - only for company searches
+              // This prevents employee-related companies from showing in the Companies tab
+              // setFilteredCompanies(relatedFilteredCompanies);
+              // setShowFilteredOnly(true);
+              
+              // Show results ONLY after all processing is complete
+              console.log('👥 Setting employeeSearchResults (existing summaries):', relatedEmployees?.length, 'employees');
+              console.log('👥 relatedEmployees structure:', {
+                isArray: Array.isArray(relatedEmployees),
+                length: relatedEmployees?.length,
+                firstItem: relatedEmployees?.[0],
+                type: typeof relatedEmployees
+              });
+              const employeesArray = Array.isArray(relatedEmployees) ? relatedEmployees : [];
+              console.log('👥 About to set employeeSearchResults with array:', {
+                arrayLength: employeesArray.length,
+                arrayIsArray: Array.isArray(employeesArray),
+                arrayFirstItem: employeesArray[0],
+                willSet: true
+              });
+              setEmployeeSearchResults(employeesArray);
+              console.log('👥 Just set employeeSearchResults, new state should have', employeesArray.length, 'employees');
+              
+              const successMessage = {
+                role: 'assistant',
+                content: `✅ **Found ${relatedEmployees.length} Employees with Existing Summaries!**
+
+**Step 1:** Found ${dbData.count} employees from external sources
+**Step 2:** All ${relatedCompanyIds.size} companies already have summaries (excluding "not related")
+
+✅ **${relatedEmployees.length}** employees from companies with summaries
+✅ Summaries loaded from database (no processing needed)
+
+Showing employees from companies that have summaries for "${extractedTopic}". Companies marked as "not related" are excluded.`
+              };
+              setChatHistory(prev => [...prev, successMessage]);
+            } else {
+              // No topic extracted or no companies to process - show all results
+              setIsFiltering(false);
+              console.log('👥 Setting employeeSearchResults (no topic, all results):', dbData.employees?.length, 'employees');
+              const employeesArray = Array.isArray(dbData.employees) ? dbData.employees : [];
+              setEmployeeSearchResults(employeesArray);
+              // DON'T set showFilteredOnly for employee searches - only for company searches
+              // setShowFilteredOnly(false);
+            }
+            
+            setEmployeeSearchLoading(false);
+            return;
+          }
+      } catch (error) {
+        console.error('❌ Employee search error:', error);
+        const errorMessage = {
+          role: 'assistant',
+          content: `❌ **Employee Search Failed**
+
+Error: ${error.message}
+
+Please try again or adjust your search criteria.`
+        };
+        setChatHistory(prev => [...prev, errorMessage]);
+        setEmployeeSearchLoading(false);
+      }
+      
+      return;
+    }
+    
+    // Handle company search (normal flow)
+    // Map backend platform keys to UI values
+    // linkedin -> apollo (display as LinkedIn, but use Apollo backend)
+    const platformMap = { 
+      google_maps: 'apollo',
+      linkedin: 'apollo'  // Map linkedin to apollo backend
+    };
+    const mappedPlatforms = (suggestedParams.platforms || ['all']).map(p => platformMap[p] || p);
+    
+    console.log('🗺️ Platform mapping:', { 
+      original: suggestedParams.platforms, 
+      mapped: mappedPlatforms 
+    });
+
+    const nextParams = {
+      ...commonParams,
+      keywords: suggestedParams.keywords || commonParams.keywords,
+      location: suggestedParams.location || commonParams.location,
+      platforms: mappedPlatforms.length ? mappedPlatforms : commonParams.platforms,
+    };
+
+    console.log('📝 Final params for search:', nextParams);
+    setCommonParams(nextParams);
+
+    // Extract topic from keywords for auto-filtering
+    const keywords = suggestedParams.keywords || '';
+    const extractedTopic = extractTopicFromKeywords(keywords);
+
+    // Start search after explicit confirmation; stay on AI chat view
+    await runSearch(nextParams, extractedTopic); // Pass topic to runSearch
+
+    const confirmMessage = {
+      role: 'assistant',
+      content: extractedTopic 
+        ? `✅ **Search Started!**\n\nI'm searching for companies and will automatically filter by "${extractedTopic}" topic.\n\nThis may take a few minutes...`
+        : `Parameters confirmed. Starting the search now and staying on this chat.`
+    };
+    setChatHistory(prev => [...prev, confirmMessage]);
+  };
+
+  // Handler to unlock all emails
+  const handleSendLinkedInConnections = async () => {
+    if (selectedEmployees.size === 0) {
+      push({ 
+        variant: 'error', 
+        title: 'No Selection', 
+        description: 'Please select at least one employee to send LinkedIn connection requests.' 
+      });
+      return;
+    }
+
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+    const selectedIndices = Array.from(selectedEmployees);
+    const employeesToConnect = selectedIndices
+      .map(index => {
+        const employee = (employeeFilterSelections.linkedin || employeeFilterSelections.phone || employeeFilterSelections.summary) 
+          ? filteredEmployeeResults[index] 
+          : employeeSearchResults[index];
+        if (!employee) return null;
+        
+        const linkedinUrl = employee.linkedin_url || 
+                           employee.organization?.linkedin_url || 
+                           employee.company_linkedin_url;
+        
+        if (!linkedinUrl) return null;
+        
+        return {
+          name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+          linkedin_url: linkedinUrl,
+          title: employee.title || employee.position,
+          company: employee.company_name || employee.organization?.name
+        };
+      })
+      .filter(Boolean);
+
+    if (employeesToConnect.length === 0) {
+      push({ 
+        variant: 'error', 
+        title: 'No LinkedIn URLs', 
+        description: 'Selected employees do not have LinkedIn URLs. Please select employees with LinkedIn profiles.' 
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/linkedin/send-connections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employees: employeesToConnect
+        })
+      });
+
+      const data = await response.json();
+      
+      // Check HTTP status code first
+      if (!response.ok) {
+        const errorMessage = data.detail || data.error || data.message || `HTTP ${response.status} error`;
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${errorMessage}` 
+        });
+        return;
+      }
+      
+      // Check the actual connection request results
+      const connectionResults = data.results?.connection_requests || {};
+      const successful = connectionResults.successful || 0;
+      const failed = connectionResults.failed || 0;
+      const total = connectionResults.total || employeesToConnect.length;
+      
+      // Check details array for error messages
+      const failedDetails = data.details?.filter(d => !d.success) || [];
+      const errorMessages = failedDetails
+        .map(d => d.error || d.message || d.detail)
+        .filter(Boolean);
+      
+      // If all failed or no successful requests
+      if (failed > 0 && successful === 0) {
+        const errorMessage = errorMessages[0] || data.error || data.detail || 'All connection requests failed';
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${errorMessage}` 
+        });
+      } 
+      // If some failed (partial success)
+      else if (failed > 0 && successful > 0) {
+        const errorMessage = errorMessages[0] || 'Some connection requests failed';
+        push({ 
+          variant: 'error', 
+          title: 'Partially Failed', 
+          description: `Sent ${successful} request(s), but ${failed} failed: ${errorMessage}` 
+        });
+      }
+      // If all successful
+      else if (successful > 0 && failed === 0) {
+        push({ 
+          variant: 'success', 
+          title: 'Successfully Sent', 
+          description: `Successfully sent ${successful} LinkedIn connection request(s)!` 
+        });
+      }
+      // Fallback
+      else {
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${data.error || data.detail || 'Unknown error'}` 
+        });
+      }
+    } catch (error) {
+      console.error('Error sending LinkedIn connections:', error);
+      push({ 
+        variant: 'error', 
+        title: 'Failed', 
+        description: `Failed to send connection requests: ${error.message}` 
+      });
+    }
+  };
+
+  const handleUnlockAllEmails = async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    
+    for (let index = 0; index < employeeSearchResults.length; index++) {
+      const employee = employeeSearchResults[index];
+      const employeeId = employee.id || `${employee.first_name}_${employee.last_name}_${index}`;
+      const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      // Skip if already revealed
+      if (revealedContacts[employeeId]?.email) continue;
+      
+      // Set unlocking state
+      setUnlockingContacts(prev => ({
+        ...prev,
+        [employeeId]: { ...prev[employeeId], email: true }
+      }));
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            person_id: employee.id,
+            employee_name: employeeName
+          })
+        });
+        
+        const data = await response.json();
+        
+        // Handle email reveal response
+        if (data.success && data.email) {
+          setRevealedContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], email: data.email }
+          }));
+          // Clear emailNotFound flag if email was found
+          setEmailNotFound(prev => {
+            const updated = { ...prev };
+            delete updated[employeeId];
+            return updated;
+          });
+        } else if (data.status === 'not_available' || (!data.success && data.error)) {
+          // Email not available - mark it in UI
+          setEmailNotFound(prev => ({
+            ...prev,
+            [employeeId]: true
+          }));
+        }
+      } catch (error) {
+        console.error(`Error unlocking email for ${employeeName}:`, error);
+      } finally {
+        setUnlockingContacts(prev => ({
+          ...prev,
+          [employeeId]: { ...prev[employeeId], email: false }
+        }));
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  // Handler to unlock all phone numbers
+  const handleUnlockAllPhones = async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    
+    for (let index = 0; index < employeeSearchResults.length; index++) {
+      const employee = employeeSearchResults[index];
+      const employeeId = employee.id || `${employee.first_name}_${employee.last_name}_${index}`;
+      const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      // Skip if already revealed
+      if (revealedContacts[employeeId]?.phone) continue;
+      
+      // Set unlocking state
+      setUnlockingContacts(prev => ({
+        ...prev,
+        [employeeId]: { ...prev[employeeId], phone: true }
+      }));
+      
+      let phoneData = null;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-phone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            person_id: employee.id,
+            employee_name: employeeName
+          })
+        });
+        
+        phoneData = await response.json();
+        
+        // Handle phone reveal response
+        if (phoneData.success && phoneData.phone) {
+          // Normalize phone number - remove spaces but preserve dashes before storing
+          const normalizedPhone = (phoneData.phone || '').replace(/\s+/g, ""); // Remove spaces only, preserve dashes (-)
+          setRevealedContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: normalizedPhone }
+          }));
+          // Clear phoneNotFound flag if phone was found
+          setPhoneNotFound(prev => {
+            const updated = { ...prev };
+            delete updated[employeeId];
+            return updated;
+          });
+        } else if (phoneData.status === 'not_found') {
+          // Phone not found - mark it in UI
+          setPhoneNotFound(prev => ({
+            ...prev,
+            [employeeId]: true
+          }));
+        } else if (phoneData.status === 'processing' || phoneData.status === 'pending') {
+          // Start polling for phone number
+          pollPhoneStatus(employeeId, employee.id);
+        }
+      } catch (error) {
+        console.error(`Error unlocking phone for ${employeeName}:`, error);
+      } finally {
+        // Don't set phone to false immediately if it's processing
+        if (!phoneData?.status || (phoneData.status !== 'processing' && phoneData.status !== 'pending')) {
+          setUnlockingContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: false }
+          }));
+        }
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  // Handler to unlock selected employees' emails only
+  const handleUnlockSelectedEmails = async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    const selectedIndices = Array.from(selectedEmployees);
+    
+    for (const index of selectedIndices) {
+      const employee = employeeSearchResults[index];
+      if (!employee) continue;
+      
+      const employeeId = employee.id || `${employee.first_name}_${employee.last_name}_${index}`;
+      const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      // Skip if already revealed
+      if (revealedContacts[employeeId]?.email) continue;
+      
+      setUnlockingContacts(prev => ({
+        ...prev,
+        [employeeId]: { ...prev[employeeId], email: true }
+      }));
+      
+      try {
+        const emailResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            person_id: employee.id,
+            employee_name: employeeName
+          })
+        });
+        
+        const emailData = await emailResponse.json();
+        
+        // Handle email reveal response
+        if (emailData.success && emailData.email) {
+          setRevealedContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], email: emailData.email }
+          }));
+          // Clear emailNotFound flag if email was found
+          setEmailNotFound(prev => {
+            const updated = { ...prev };
+            delete updated[employeeId];
+            return updated;
+          });
+        } else if (emailData.status === 'not_available' || (!emailData.success && emailData.error)) {
+          // Email not available - mark it in UI
+          setEmailNotFound(prev => ({
+            ...prev,
+            [employeeId]: true
+          }));
+        }
+      } catch (error) {
+        console.error(`Error unlocking email for ${employeeName}:`, error);
+      } finally {
+        setUnlockingContacts(prev => ({
+          ...prev,
+          [employeeId]: { ...prev[employeeId], email: false }
+        }));
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  // Handler to unlock selected employees' phones only
+  const handleUnlockSelectedPhones = async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    const selectedIndices = Array.from(selectedEmployees);
+    
+    for (const index of selectedIndices) {
+      const employee = employeeSearchResults[index];
+      if (!employee) continue;
+      
+      const employeeId = employee.id || `${employee.first_name}_${employee.last_name}_${index}`;
+      const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      // Skip if already revealed
+      if (revealedContacts[employeeId]?.phone) continue;
+      
+      setUnlockingContacts(prev => ({
+        ...prev,
+        [employeeId]: { ...prev[employeeId], phone: true }
+      }));
+      
+      let phoneData = null;
+      try {
+        const phoneResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-phone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            person_id: employee.id,
+            employee_name: employeeName
+          })
+        });
+        
+        phoneData = await phoneResponse.json();
+        
+        // Handle phone reveal response
+        if (phoneData.success && phoneData.phone) {
+          // Normalize phone number - remove spaces but preserve dashes before storing
+          const normalizedPhone = (phoneData.phone || '').replace(/\s+/g, ""); // Remove spaces only, preserve dashes (-)
+          setRevealedContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: normalizedPhone }
+          }));
+          // Clear phoneNotFound flag if phone was found
+          setPhoneNotFound(prev => {
+            const updated = { ...prev };
+            delete updated[employeeId];
+            return updated;
+          });
+        } else if (phoneData.status === 'not_found') {
+          // Phone not found - mark it in UI
+          setPhoneNotFound(prev => ({
+            ...prev,
+            [employeeId]: true
+          }));
+        } else if (phoneData.status === 'processing' || phoneData.status === 'pending') {
+          pollPhoneStatus(employeeId, employee.id);
+        }
+      } catch (error) {
+        console.error(`Error unlocking phone for ${employeeName}:`, error);
+      } finally {
+        if (!phoneData?.status || (phoneData.status !== 'processing' && phoneData.status !== 'pending')) {
+          setUnlockingContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: false }
+          }));
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  // Poll phone status for async reveals
+  const pollPhoneStatus = async (employeeId, personId) => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/apollo-leads/check-phone-status/${personId}`);
+        const data = await response.json();
+        
+        if (data.success && data.phone) {
+          clearInterval(pollInterval);
+          setRevealedContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: data.phone }
+          }));
+          setUnlockingContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: false }
+          }));
+          // Clear phoneNotFound flag if phone was found
+          setPhoneNotFound(prev => {
+            const updated = { ...prev };
+            delete updated[employeeId];
+            return updated;
+          });
+        } else if (data.status === 'not_found' || attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          setUnlockingContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: false }
+          }));
+          
+          // Mark phone as not found in UI
+          if (data.status === 'not_found' || attempts >= maxAttempts) {
+            setPhoneNotFound(prev => ({
+              ...prev,
+              [employeeId]: true
+            }));
+            
+            // If polling timed out, mark as not found in database
+            if (attempts >= maxAttempts) {
+              try {
+                const employee = employeeSearchResults.find(emp => 
+                  (emp.id || `${emp.first_name}_${emp.last_name}`) === employeeId
+                );
+                if (employee) {
+                  await fetch(`${API_BASE_URL}/api/apollo-leads/mark-phone-not-found`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      person_id: personId,
+                      employee_name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim()
+                    })
+                  });
+                }
+              } catch (markError) {
+                console.error('⚠️ Error marking phone as not found:', markError);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling phone status:', error);
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          // Clear loading state on max attempts
+          setUnlockingContacts(prev => ({
+            ...prev,
+            [employeeId]: { ...prev[employeeId], phone: false }
+          }));
+          // Mark as not found if polling failed after max attempts
+          setPhoneNotFound(prev => ({
+            ...prev,
+            [employeeId]: true
+          }));
+        }
+      }
+    }, 5000); // Poll every 5 seconds
+  };
+
+  // Handler for AI Intelligence Calling button (for employees)
+  const handleAICallIntelligent = async () => {
+    const selected = Array.from(selectedEmployees).map(idx => employeeSearchResults[idx]);
+    
+    if (selected.length === 0) {
+      alert('Please select at least one employee');
+      return;
+    }
+    
+    // Prepare employee data for AI
+    const employeeData = selected.map(emp => ({
+      name: `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+      title: emp.title || emp.job_title,
+      company: emp.organization?.name || emp.company_name,
+      email: revealedContacts[emp.id || `${emp.first_name}_${emp.last_name}`]?.email || null,
+      phone: revealedContacts[emp.id || `${emp.first_name}_${emp.last_name}`]?.phone || null,
+      linkedin: emp.linkedin_url
+    }));
+    
+    // Send to AI chat for intelligent calling
+    const aiMessage = `I want to make intelligent calls to these ${selected.length} employees:\n\n${employeeData.map((emp, idx) => 
+      `${idx + 1}. ${emp.name} - ${emp.title} at ${emp.company}${emp.email ? ` (Email: ${emp.email})` : ''}${emp.phone ? ` (Phone: ${emp.phone})` : ''}`
+    ).join('\n')}\n\nPlease help me prepare for these calls with personalized talking points and strategies.`;
+    
+    await handleSendPrompt(aiMessage);
+  };
+
+  // Handler for AI Intelligence Calling button (for companies)
+  const handleCompanyAICallIntelligent = async () => {
+    const selectedCompanies = Array.from(selectedCompanyIds).map(id => 
+      searchResults.find(company => company.id === id)
+    ).filter(Boolean);
+    
+    if (selectedCompanies.length === 0) {
+      alert('Please select at least one company');
+      return;
+    }
+    
+    // Prepare company data for AI
+    const companyData = selectedCompanies.map(company => ({
+      name: company.companyName || company.username,
+      industry: company.industry,
+      location: company.location,
+      phone: company.phone,
+      website: company.website,
+      linkedin: company.linkedinProfile,
+      employeeCount: company.employeeCount,
+      description: company.companyDescription
+    }));
+    
+    // Send to AI chat for intelligent calling
+    const aiMessage = `I want to make intelligent calls to these ${selectedCompanies.length} companies:\n\n${companyData.map((company, idx) => 
+      `${idx + 1}. ${company.name}${company.industry ? ` - ${company.industry}` : ''}${company.location ? ` (${company.location})` : ''}${company.phone ? ` (Phone: ${company.phone})` : ''}${company.employeeCount ? ` (${company.employeeCount} employees)` : ''}`
+    ).join('\n')}\n\nPlease help me prepare for these calls with personalized talking points and strategies.`;
+    
+    await handleSendPrompt(aiMessage);
+  };
+
+  const handleResults = (leads, platform) => {
+    // Helper function to check if company has valid phone
+    const getPhone = (company) => {
+      const phone = company.phone || company.phoneNumber || company.Phone_Number || '';
+      if (!phone || phone === 'N/A' || phone.trim() === '' || phone === 'null' || phone === 'undefined') {
+        return null;
+      }
+      return phone.trim();
+    };
+    
+    // Sort leads: those with phone numbers first
+    const sortedLeads = [...leads].sort((a, b) => {
+      const aPhone = getPhone(a);
+      const bPhone = getPhone(b);
+      const aHasPhone = !!aPhone;
+      const bHasPhone = !!bPhone;
+      
+      if (aHasPhone && !bHasPhone) return -1;
+      if (!aHasPhone && bHasPhone) return 1;
+      return 0;
+    });
+    
+    setSearchResults(prev => {
+      // Combine with existing results and sort again
+      const combined = [...prev, ...sortedLeads];
+      return combined.sort((a, b) => {
+        const aPhone = getPhone(a);
+        const bPhone = getPhone(b);
+        const aHasPhone = !!aPhone;
+        const bHasPhone = !!bPhone;
+        
+        if (aHasPhone && !bHasPhone) return -1;
+        if (!aHasPhone && bHasPhone) return 1;
+        return 0;
+      });
+    });
+    // Note: This is for manual searches without filtering - store all results
+    const searchRecord = {
+      id: Date.now() + Math.random(),
+      type: 'company', // Mark as company search
+      platform,
+      keyword: commonParams.keywords,
+      location: commonParams.location,
+      results: leads.length,
+      timestamp: new Date().toISOString(),
+      params: { ...commonParams },
+      searchResults: leads, // Store the actual results so they can be restored when clicked
+      showFilteredOnly: false, // No filtering applied
+      companySummaries: {}, // No summaries for manual searches
+      filterTopic: null
+    };
+    setSearchHistory(prev => [searchRecord, ...prev.slice(0, 9)]);
+  };
+
+  // Helper function to generate summaries for companies that don't have them
+  const generateSummariesForCompanies = async (companies, topic) => {
+    if (!companies || companies.length === 0) {
+      console.log('⚠️ No companies provided for summary generation');
+      return;
+    }
+    
+    console.log(`🔄 Generating summaries for ${companies.length} companies (topic: "${topic || 'general'}")...`);
+    setIsFiltering(true);
+    
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+      const companiesToProcess = companies.map(company => ({
+        id: company.id || company.company_id,
+        companyName: company.companyName || company.name || company.username,
+        website: company.website || company.website_url || company.domain,
+        linkedinProfile: company.linkedinProfile || company.linkedin_url,
+        apollo_organization_id: company.id || company.company_id,
+        ...company
+      }));
+      
+      const response = await fetch(`${API_BASE_URL}/api/apollo-leads/filter-and-analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          companies: companiesToProcess,
+          topic: topic || 'general',
+          skipFilter: true // Only generate summaries, no filtering
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.summaries) {
+          console.log(`✅ Generated ${Object.keys(data.summaries).length} summaries`);
+          
+          // Merge new summaries with existing ones
+          setCompanySummaries(prev => ({ ...prev, ...data.summaries }));
+          
+          // Update companies with new summaries
+          setSearchResults(prev => prev.map(company => {
+            const companyId = company.id || company.company_id;
+            const summary = data.summaries?.[companyId];
+            if (summary && (!company.summary || company.summary.trim().length === 0)) {
+              return { ...company, summary };
+            }
+            return company;
+          }));
+          
+          setFilteredCompanies(prev => prev.map(company => {
+            const companyId = company.id || company.company_id;
+            const summary = data.summaries?.[companyId];
+            if (summary && (!company.summary || company.summary.trim().length === 0)) {
+              return { ...company, summary };
+            }
+            return company;
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error generating summaries:', error);
+    } finally {
+      setIsFiltering(false);
+    }
+  };
+
+  // Handle clicking on a recent search - restore the search results and params
+  const handleRestoreSearch = async (search) => {
+    console.log('🔄 Restoring search:', search);
+    console.log('🔍 Search object structure check:', {
+      hasSearchResults: !!search.searchResults,
+      searchResultsLength: search.searchResults?.length || 0,
+      hasCompanySummaries: !!search.companySummaries,
+      companySummariesKeys: search.companySummaries ? Object.keys(search.companySummaries).length : 0,
+      showFilteredOnly: search.showFilteredOnly,
+      filterTopic: search.filterTopic,
+      type: search.type
+    });
+    
+    // Check if first company in searchResults has summary (if it exists)
+    if (search.searchResults && search.searchResults.length > 0) {
+      const firstCompany = search.searchResults[0];
+      const firstCompanyId = firstCompany?.id || firstCompany?.company_id || firstCompany?.apollo_organization_id;
+      console.log('🔍 First company in search object (initial check):', {
+        name: firstCompany?.companyName || firstCompany?.name,
+        id: firstCompanyId,
+        hasSummary: !!firstCompany?.summary,
+        summaryType: typeof firstCompany?.summary,
+        summaryLength: firstCompany?.summary?.length || 0,
+        summaryPreview: firstCompany?.summary?.substring(0, 50) || 'none',
+        allKeys: Object.keys(firstCompany || {})
+      });
+    }
+    
+    // Check if this is an employee search or company search
+    const isEmployeeSearch = search.type === 'employee';
+    
+    if (isEmployeeSearch) {
+      // Restore employee search
+      if (search.searchResults && search.searchResults.length > 0) {
+        console.log(`✅ Restoring ${search.searchResults.length} employee results from history`);
+        console.log('👥 Employee data structure:', {
+          isArray: Array.isArray(search.searchResults),
+          length: search.searchResults.length,
+          firstItem: search.searchResults[0],
+          type: typeof search.searchResults
+        });
+        
+        // Don't clear company search state - keep both results visible
+        // User can switch tabs to see either set of results
+        
+        // Ensure it's an array
+        const employeesArray = Array.isArray(search.searchResults) 
+          ? search.searchResults 
+          : (search.searchResults?.data || []);
+        console.log('👥 Setting employeeSearchResults with', employeesArray.length, 'employees');
+        
+        // STEP 1: Fetch latest summaries from database for companies in employee results
+        console.log('📦 Step 1: Fetching latest summaries from database for employee search companies...');
+        const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+        
+        // Extract unique company IDs from employees
+        const companyIds = employeesArray
+          .map(emp => emp.organization?.id || emp.company_id || emp.companyId)
+          .filter(id => id);
+        
+        let databaseSummaries = {};
+        if (companyIds.length > 0) {
+          try {
+            console.log(`📦 Fetching summaries from database for ${companyIds.length} companies from employee search...`);
+            
+            // Extract topic from company_keywords for summary lookup
+            const searchTopic = search.params?.organization_industries?.[0] || search.company_keywords || '';
+            
+            // Fetch summaries from database using employee search endpoint
+            const dbResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-from-db`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                organization_locations: search.params?.organization_locations || (search.location ? [search.location] : []),
+                person_titles: search.params?.person_titles || search.person_titles || [],
+                organization_industries: searchTopic ? [searchTopic] : [],
+                per_page: 100,
+                page: 1
+              }),
+            });
+            
+            if (dbResponse.ok) {
+              const dbData = await dbResponse.json();
+              if (dbData.summaries) {
+                databaseSummaries = dbData.summaries;
+                console.log(`✅ Fetched ${Object.keys(databaseSummaries).length} summaries from database for employee search`);
+                console.log(`📝 Database summary keys (first 5):`, Object.keys(databaseSummaries).slice(0, 5));
+              } else {
+                console.log('⚠️ No summaries in database response for employee search');
+              }
+            } else {
+              console.error(`⚠️ Database fetch failed with status: ${dbResponse.status}`);
+            }
+          } catch (error) {
+            console.error('⚠️ Error fetching summaries from database for employee search:', error);
+            // Continue with stored summaries if database fetch fails
+          }
+        } else {
+          console.log('⚠️ No company IDs found in employee results to fetch summaries for');
+        }
+        
+        // Merge database summaries with stored summaries (database takes priority)
+        const allSummaries = { ...(search.companySummaries || {}), ...databaseSummaries };
+        console.log(`📝 Merged summaries: ${Object.keys(allSummaries).length} total (${Object.keys(search.companySummaries || {}).length} stored + ${Object.keys(databaseSummaries).length} from database)`);
+        
+        // Attach summaries to employees' companies
+        const employeesWithCompanySummaries = employeesArray.map(emp => {
+          const companyId = emp.organization?.id || emp.company_id || emp.companyId;
+          if (companyId && allSummaries[companyId]) {
+            return {
+              ...emp,
+              organization: {
+                ...emp.organization,
+                summary: allSummaries[companyId]
+              }
+            };
+          }
+          return emp;
+        });
+        
+        setEmployeeSearchResults(employeesWithCompanySummaries);
+        
+        // Restore search params for pagination from history
+        if (search.params) {
+          setLastEmployeeSearchParams({
+            person_titles: search.params.person_titles || search.person_titles || [],
+            location: search.params.organization_locations?.[0] || search.location || '',
+            company_keywords: search.params.organization_industries?.[0] || '',
+            company_ids: search.params.company_ids || [],
+            include_similar_titles: search.params.include_similar_titles || false
+          });
+          setCurrentEmployeePage(1); // Reset to page 1 when restoring
+          setHasMoreEmployeePages(true); // Assume more pages available
+        }
+        
+        // IMPORTANT: Set companySummaries state so it's passed to CompanyDataTable
+        setCompanySummaries(allSummaries);
+        console.log(`✅ Set companySummaries state with ${Object.keys(allSummaries).length} summaries for employee search`);
+        
+        // Restore filter topic if available
+        if (search.filterTopic) {
+          console.log('🏷️ Restoring filter topic:', search.filterTopic);
+          setFilterTopic(search.filterTopic);
+        } else {
+          // Clear filter topic if not present
+          setFilterTopic('');
+        }
+        
+        // Set active tab to Employees (1) when restoring employee search
+        setActiveResultsTab(1);
+        // Force update timestamp to ensure tab switching logic recognizes this as employee search
+        // Set employee timestamp to be more recent than company to ensure showCompanyFirst is false
+        const now = Date.now();
+        setLastSearchTimestamp(prev => ({ 
+          ...prev, 
+          employee: now, 
+          company: prev.company ? Math.min(prev.company, now - 1000) : null // Ensure employee is more recent
+        }));
+        
+        // Scroll to results after restoring
+        setTimeout(() => {
+          if (companyResultsRef.current) {
+            companyResultsRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+            console.log('📍 Scrolled to restored employee results');
+          }
+        }, 300);
+      } else {
+        console.log('⚠️ Employee results not stored, cannot restore');
+      }
+    } else {
+      // Restore company search
+      // Set active tab to Companies (0) when restoring company search
+      setActiveResultsTab(0);
+      
+      // Don't clear employee search state - keep both results visible
+      // User can switch tabs to see either set of results
+      
+      // Restore search parameters
+      if (search.params) {
+        setCommonParams({
+          keywords: search.keyword || search.params.keywords || '',
+          location: search.location || search.params.location || '',
+          platforms: search.params.platforms || ['apollo'],
+        });
+        setLastSearchParams({
+          keywords: search.keyword || search.params.keywords || '',
+          location: search.location || search.params.location || '',
+        });
+      }
+      
+      // Restore search results if available
+      if (search.searchResults && search.searchResults.length > 0) {
+        console.log(`✅ Restoring ${search.searchResults.length} company results from history`);
+        
+        // STEP 1: First, fetch latest summaries from database for these companies
+        console.log('📦 Step 1: Fetching latest summaries from database...');
+        const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+        const companyIds = search.searchResults
+          .map(c => c.id || c.company_id || c.apollo_organization_id)
+          .filter(id => id);
+        
+        let databaseSummaries = {};
+        if (companyIds.length > 0) {
+          try {
+            console.log(`📦 Fetching summaries from database for ${companyIds.length} companies...`);
+            // Fetch companies from database to get latest summaries
+            const searchResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                query: search.keyword || search.params?.keywords || '',
+                location: search.location || search.params?.location || '',
+                max_results: 100,
+                page: 1
+              }),
+            });
+            
+            if (searchResponse.ok) {
+              const searchData = await searchResponse.json();
+              if (searchData.summaries) {
+                databaseSummaries = searchData.summaries;
+                console.log(`✅ Fetched ${Object.keys(databaseSummaries).length} summaries from database`);
+                console.log(`📝 Database summary keys (first 5):`, Object.keys(databaseSummaries).slice(0, 5));
+              } else {
+                console.log('⚠️ No summaries in database response');
+              }
+            } else {
+              console.error(`⚠️ Database fetch failed with status: ${searchResponse.status}`);
+            }
+          } catch (error) {
+            console.error('⚠️ Error fetching summaries from database:', error);
+            // Continue with stored summaries if database fetch fails
+          }
+        } else {
+          console.log('⚠️ No company IDs found to fetch summaries for');
+        }
+        
+        // Merge database summaries with stored summaries (database takes priority)
+        const allSummaries = { ...(search.companySummaries || {}), ...databaseSummaries };
+        
+        // Check if first company has summary attached (from when it was saved)
+        const firstCompany = search.searchResults[0];
+        const firstCompanyId = firstCompany?.id || firstCompany?.company_id || firstCompany?.apollo_organization_id;
+        const firstCompanySummary = firstCompany?.summary;
+        const firstCompanySummaryFromObject = allSummaries[firstCompanyId] || allSummaries[String(firstCompanyId)];
+        
+        console.log('🔍 First company check:', {
+          name: firstCompany?.companyName || firstCompany?.name,
+          id: firstCompanyId,
+          hasSummary: !!firstCompanySummary,
+          summaryType: typeof firstCompanySummary,
+          summaryLength: firstCompanySummary?.length || 0,
+          summaryPreview: firstCompanySummary?.substring(0, 100) || 'none',
+          companyKeys: Object.keys(firstCompany || {}),
+          hasCompanySummaries: !!allSummaries,
+          companySummariesKeys: Object.keys(allSummaries).length,
+          summaryInCompanySummaries: !!firstCompanySummaryFromObject,
+          summaryFromCompanySummariesLength: firstCompanySummaryFromObject?.length || 0,
+          databaseSummariesCount: Object.keys(databaseSummaries).length
+        });
+        
+        // Check a few more companies to see the pattern
+        if (search.searchResults.length > 1) {
+          const secondCompany = search.searchResults[1];
+          const secondCompanyId = secondCompany?.id || secondCompany?.company_id || secondCompany?.apollo_organization_id;
+          console.log('🔍 Second company check:', {
+            name: secondCompany?.companyName || secondCompany?.name,
+            id: secondCompanyId,
+            hasSummary: !!secondCompany?.summary,
+            summaryLength: secondCompany?.summary?.length || 0
+          });
+        }
+        
+        // Restore filtered state, summaries, and filter topic if available
+        if (search.showFilteredOnly) {
+          // Restore filtered results (what user saw) - stored in searchResults when filtered
+          console.log('📊 Restoring filtered companies:', search.searchResults.length);
+          
+          // Clear previous state first
+          setSearchResults([]); // Clear searchResults when showing filtered only
+          
+          // Restore summaries first (needed to attach to companies)
+          // Use merged summaries (database + stored)
+          if (Object.keys(allSummaries).length > 0) {
+            console.log('📝 Restoring company summaries:', Object.keys(allSummaries).length);
+            console.log('📝 Sample summary keys:', Object.keys(allSummaries).slice(0, 5));
+            console.log('📝 Database summaries:', Object.keys(databaseSummaries).length);
+            console.log('📝 Stored summaries:', Object.keys(search.companySummaries || {}).length);
+            
+            // Set companySummaries state FIRST so it's available for the component
+            setCompanySummaries(allSummaries);
+            
+            // Normalize company IDs for matching
+            const normalizeCompanyId = (id) => {
+              if (!id) return null;
+              return String(id).trim();
+            };
+            
+            // Attach summaries to companies if they don't already have them
+            const companiesWithSummaries = search.searchResults.map((company, index) => {
+              const companyId = normalizeCompanyId(company.id || company.company_id || company.apollo_organization_id);
+              if (!companyId) {
+                console.log('⚠️ Company has no ID:', company.companyName || company.name);
+                return company;
+              }
+              
+              // First check if company already has summary (from when it was saved)
+              // Check for summary in multiple ways (could be empty string, null, undefined)
+              const existingSummary = company.summary;
+              if (existingSummary && typeof existingSummary === 'string' && existingSummary.trim().length > 0) {
+                console.log(`✅ Company ${companyId} (${company.companyName || company.name}) already has summary attached (length: ${existingSummary.length})`);
+                // Make sure to return a new object to preserve the summary
+                return { ...company, summary: existingSummary };
+              }
+              
+              // Try multiple ID formats for matching from allSummaries (database + stored)
+              let summary = null;
+              if (allSummaries) {
+                summary = allSummaries[companyId] || 
+                         allSummaries[String(companyId)];
+                
+                // If still not found, try normalized matching
+                if (!summary) {
+                  const foundEntry = Object.entries(allSummaries).find(([key]) => {
+                    const normalizedKey = normalizeCompanyId(key);
+                    return normalizedKey === companyId;
+                  });
+                  if (foundEntry) {
+                    summary = foundEntry[1];
+                    console.log(`✅ Found summary using normalized matching for ${companyId}`);
+                  }
+                }
+              }
+              
+              if (summary && typeof summary === 'string' && summary.trim().length > 0) {
+                console.log(`✅ Attached summary to company ${companyId} (${company.companyName || company.name}) from allSummaries`);
+                return { ...company, summary };
+              } else {
+                // Log detailed info for first few companies to debug
+                if (index < 3) {
+                  console.log(`⚠️ No summary found for company ${companyId} (${company.companyName || company.name}):`, {
+                    hasAllSummaries: !!allSummaries,
+                    allSummariesKeys: Object.keys(allSummaries).length,
+                    triedCompanyId: companyId,
+                    triedStringId: String(companyId),
+                    foundInSummaries: !!allSummaries[companyId]
+                  });
+                }
+                return company;
+              }
+            });
+            
+            const companiesWithSummariesCount = companiesWithSummaries.filter(c => c.summary && typeof c.summary === 'string' && c.summary.trim().length > 0).length;
+            console.log(`📊 Restored ${companiesWithSummaries.length} filtered companies, ${companiesWithSummariesCount} with summaries attached`);
+            
+            // Verify first few companies have summaries before setting state
+            if (companiesWithSummaries.length > 0) {
+              const firstCompany = companiesWithSummaries[0];
+              console.log('✅ First restored company verification:', {
+                name: firstCompany?.companyName || firstCompany?.name,
+                hasSummary: !!firstCompany?.summary,
+                summaryType: typeof firstCompany?.summary,
+                summaryLength: firstCompany?.summary?.length || 0,
+                summaryPreview: firstCompany?.summary?.substring(0, 100) || 'none'
+              });
+            }
+            
+            // Restore filtered companies with summaries attached
+            setFilteredCompanies(companiesWithSummaries);
+          } else {
+            // No summaries - just restore companies as-is
+            console.log('⚠️ No company summaries to restore');
+            setFilteredCompanies(search.searchResults);
+            setCompanySummaries({});
+          }
+          setShowFilteredOnly(true);
+          
+          // Restore filter topic
+          if (search.filterTopic) {
+            console.log('🏷️ Restoring filter topic:', search.filterTopic);
+            setFilterTopic(search.filterTopic);
+          } else {
+            // Clear filter topic if not present
+            setFilterTopic('');
+          }
+        } else {
+          // Restore all results (no filtering was applied)
+          // Clear filtered state first
+          setFilteredCompanies([]);
+          setShowFilteredOnly(false);
+          setFilterTopic('');
+          
+          // Restore summaries if available (even for unfiltered results)
+          // Use merged summaries (database + stored)
+          if (Object.keys(allSummaries).length > 0) {
+            console.log('📝 Restoring company summaries for unfiltered results:', Object.keys(allSummaries).length);
+            console.log('📝 Sample summary keys:', Object.keys(allSummaries).slice(0, 5));
+            console.log('📝 Database summaries:', Object.keys(databaseSummaries).length);
+            console.log('📝 Stored summaries:', Object.keys(search.companySummaries || {}).length);
+            
+            // Set companySummaries state FIRST
+            setCompanySummaries(allSummaries);
+            
+            // Normalize company IDs for matching
+            const normalizeCompanyId = (id) => {
+              if (!id) return null;
+              return String(id).trim();
+            };
+            
+            // Attach summaries to companies if they don't already have them
+            const sortedResults = [...search.searchResults].sort((a, b) => {
+              const getPhone = (company) => {
+                const phone = company.phone || company.phoneNumber || company.Phone_Number || '';
+                if (!phone || phone === 'N/A' || phone.trim() === '' || phone === 'null' || phone === 'undefined') {
+                  return null;
+                }
+                return phone.trim();
+              };
+              
+              const aPhone = getPhone(a);
+              const bPhone = getPhone(b);
+              const aHasPhone = !!aPhone;
+              const bHasPhone = !!bPhone;
+              
+              if (aHasPhone && !bHasPhone) return -1;
+              if (!aHasPhone && bHasPhone) return 1;
+              return 0;
+            });
+            
+            // Attach summaries to companies
+            const resultsWithSummaries = sortedResults.map((company, index) => {
+              const companyId = normalizeCompanyId(company.id || company.company_id || company.apollo_organization_id);
+              if (!companyId) {
+                console.log('⚠️ Company has no ID:', company.companyName || company.name);
+                return company;
+              }
+              
+              // First check if company already has summary (from when it was saved)
+              // Check for summary in multiple ways (could be empty string, null, undefined)
+              const existingSummary = company.summary;
+              if (existingSummary && typeof existingSummary === 'string' && existingSummary.trim().length > 0) {
+                console.log(`✅ Company ${companyId} (${company.companyName || company.name}) already has summary attached (length: ${existingSummary.length})`);
+                // Make sure to return a new object to preserve the summary
+                return { ...company, summary: existingSummary };
+              }
+              
+              // Try multiple ID formats for matching from allSummaries (database + stored)
+              let summary = null;
+              if (allSummaries) {
+                summary = allSummaries[companyId] || 
+                         allSummaries[String(companyId)];
+                
+                // If still not found, try normalized matching
+                if (!summary) {
+                  const foundEntry = Object.entries(allSummaries).find(([key]) => {
+                    const normalizedKey = normalizeCompanyId(key);
+                    return normalizedKey === companyId;
+                  });
+                  if (foundEntry) {
+                    summary = foundEntry[1];
+                    console.log(`✅ Found summary using normalized matching for ${companyId}`);
+                  }
+                }
+              }
+              
+              if (summary && typeof summary === 'string' && summary.trim().length > 0) {
+                console.log(`✅ Attached summary to company ${companyId} (${company.companyName || company.name}) from allSummaries`);
+                return { ...company, summary };
+              } else {
+                // Log detailed info for first few companies to debug
+                if (index < 3) {
+                  console.log(`⚠️ No summary found for company ${companyId} (${company.companyName || company.name}):`, {
+                    hasAllSummaries: !!allSummaries,
+                    allSummariesKeys: Object.keys(allSummaries).length,
+                    triedCompanyId: companyId,
+                    triedStringId: String(companyId),
+                    foundInSummaries: !!allSummaries[companyId]
+                  });
+                }
+                return company;
+              }
+            });
+            
+            const companiesWithSummariesCount = resultsWithSummaries.filter(c => c.summary && typeof c.summary === 'string' && c.summary.trim().length > 0).length;
+            console.log(`📊 Restored ${resultsWithSummaries.length} companies, ${companiesWithSummariesCount} with summaries attached`);
+            
+            // Verify first few companies have summaries before setting state
+            if (resultsWithSummaries.length > 0) {
+              const firstCompany = resultsWithSummaries[0];
+              console.log('✅ First restored company verification (unfiltered):', {
+                name: firstCompany?.companyName || firstCompany?.name,
+                hasSummary: !!firstCompany?.summary,
+                summaryType: typeof firstCompany?.summary,
+                summaryLength: firstCompany?.summary?.length || 0,
+                summaryPreview: firstCompany?.summary?.substring(0, 100) || 'none'
+              });
+            }
+            
+            // IMPORTANT: Set companySummaries state so it's passed to CompanyDataTable
+            setCompanySummaries(allSummaries);
+            setSearchResults(resultsWithSummaries);
+            
+            console.log(`✅ Set companySummaries state with ${Object.keys(allSummaries).length} summaries`);
+            console.log(`✅ Set searchResults with ${resultsWithSummaries.length} companies`);
+            
+            // Check if any companies are missing summaries and generate them
+            const companiesWithoutSummaries = resultsWithSummaries.filter(c => {
+              const companyId = c.id || c.company_id;
+              return companyId && (!c.summary || c.summary.trim().length === 0);
+            });
+            
+            if (companiesWithoutSummaries.length > 0) {
+              console.log(`🔄 Found ${companiesWithoutSummaries.length} companies without summaries - generating them...`);
+              // Generate summaries for companies that don't have them
+              generateSummariesForCompanies(companiesWithoutSummaries, search.filterTopic || extractTopicFromKeywords(search.keyword || search.params?.keywords || ''));
+            }
+          } else {
+            // No summaries - just restore and sort, then generate summaries for all
+            setCompanySummaries({});
+            const sortedResults = [...search.searchResults].sort((a, b) => {
+              const getPhone = (company) => {
+                const phone = company.phone || company.phoneNumber || company.Phone_Number || '';
+                if (!phone || phone === 'N/A' || phone.trim() === '' || phone === 'null' || phone === 'undefined') {
+                  return null;
+                }
+                return phone.trim();
+              };
+              
+              const aPhone = getPhone(a);
+              const bPhone = getPhone(b);
+              const aHasPhone = !!aPhone;
+              const bHasPhone = !!bPhone;
+              
+              if (aHasPhone && !bHasPhone) return -1;
+              if (!aHasPhone && bHasPhone) return 1;
+              return 0;
+            });
+            setSearchResults(sortedResults);
+            
+            // Generate summaries for all companies since none have summaries
+            if (sortedResults.length > 0) {
+              console.log(`🔄 No summaries found - generating summaries for ${sortedResults.length} companies...`);
+              const topic = search.filterTopic || extractTopicFromKeywords(search.keyword || search.params?.keywords || '');
+              generateSummariesForCompanies(sortedResults, topic);
+            }
+          }
+        }
+        
+        // Scroll to results after restoring
+        setTimeout(() => {
+          if (companyResultsRef.current) {
+            companyResultsRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+            console.log('📍 Scrolled to restored company results');
+          }
+        }, 300);
+      } else {
+        // If results aren't stored, trigger a new search with the same params
+        console.log('⚠️ Results not stored, triggering new search...');
+        runSearch({
+          keywords: search.keyword || search.params?.keywords || '',
+          location: search.location || search.params?.location || '',
+          platforms: search.params?.platforms || ['apollo'],
+        });
+      }
+    }
+  };
+
+  // Handle page change - automatically trigger new search (only prev/next)
+  const handlePageChange = async (direction) => {
+    console.log(`🚨🚨🚨 handlePageChange CALLED with direction: ${direction} 🚨🚨🚨`);
+    
+    if (!lastSearchParams) {
+      console.warn('⚠️ No previous search found. Please search first.');
+      return;
+    }
+    
+    let newPage;
+    if (direction === 'next') {
+      if (!hasMorePages) {
+        console.log('⚠️ Already on last page');
+        return;
+      }
+      newPage = currentPage + 1;
+    } else if (direction === 'prev') {
+      if (currentPage <= 1) {
+        console.log('⚠️ Already on first page');
+        return;
+      }
+      newPage = currentPage - 1;
+    } else {
+      return;
+    }
+    
+    console.log(`📄 Page changed from ${currentPage} to ${newPage}`);
+    console.log(`🔍 lastSearchParams:`, lastSearchParams);
+    setIsLastPageEmpty(false); // Reset empty page flag when navigating
+    
+    // Save current scroll position before pagination
+    // Try to get scroll from container first, then fallback to window
+    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    console.log('💾 Saved scroll position:', scrollPositionRef.current);
+    
+    // Extract topic from keywords for filtering and scraping (like initial search)
+    // First try to use stored filterTopic, then extract from keywords
+    let extractedTopic = filterTopic || extractTopicFromKeywords(lastSearchParams.keywords);
+    console.log(`🔍 Using topic for pagination: "${extractedTopic}" (from ${filterTopic ? 'stored filterTopic' : 'extracted from keywords'})`);
+    
+    // If no topic found, try extracting from keywords
+    if (!extractedTopic || !extractedTopic.trim()) {
+      extractedTopic = extractTopicFromKeywords(lastSearchParams.keywords);
+      console.log(`🔍 Extracted topic from keywords "${lastSearchParams.keywords}": "${extractedTopic}"`);
+    }
+    
+    // Update page number immediately
+    setCurrentPage(newPage);
+    
+    // Clear results immediately and show loading
+    setSearchResults([]);
+    setFilteredCompanies([]);
+    setShowFilteredOnly(false);
+    setIsFiltering(true); // Show loading indicator - results will NOT show until API completes
+    
+    console.log(`🚨 PAGINATION: Starting for page ${newPage}`);
+    console.log(`🚨 Results cleared - will NOT show until filter-and-analyze API completes`);
+    console.log(`🚨 We will fetch companies and call filter-and-analyze API directly`);
+    
+    // DON'T call runSearch - it shows results too early
+    // Instead, fetch companies directly and call filter-and-analyze API
+    console.log(`🔧🔧🔧 DIRECT FIX: Starting direct API calls (skipping runSearch)... 🔧🔧🔧`);
+    
+    try {
+      console.log(`🔧 DIRECT FIX: Fetching companies for page ${newPage} and calling filter-and-analyze API...`);
+      
+      const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+      console.log(`🔧 API_BASE_URL: ${API_BASE_URL}`);
+      console.log(`🔧 Search URL: ${API_BASE_URL}/api/apollo-leads/search`);
+      
+      // Step 1: Fetch companies for this page
+      console.log(`📤 Step 1: Fetching companies for page ${newPage}...`);
+      const searchResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: lastSearchParams.keywords,
+          location: lastSearchParams.location,
+          max_results: 100,
+          page: newPage
+        }),
+      });
+      
+      console.log(`📥 Search response status: ${searchResponse.status}`);
+      const searchData = await searchResponse.json();
+      console.log(`📥 Search response data:`, { companiesCount: searchData.companies?.length || 0 });
+      const companies = searchData.companies || [];
+      
+      // Check for existing summaries in the response
+      const existingSummaries = searchData.summaries || {};
+      const normalizeCompanyId = (id) => {
+        if (!id) return null;
+        return String(id).trim();
+      };
+      
+      const companiesWithSummaries = new Set(
+        Object.keys(existingSummaries).map(id => normalizeCompanyId(id))
+      );
+      
+      // Separate companies: those with summaries vs those without
+      const companiesNeedingProcessing = [];
+      const companiesWithExistingSummaries = [];
+      
+      companies.forEach(company => {
+        const companyId = normalizeCompanyId(company.id || company.company_id);
+        if (!companyId) {
+          // No ID means needs processing
+          companiesNeedingProcessing.push(company);
+          return;
+        }
+        
+        const hasSummary = companiesWithSummaries.has(companyId);
+        const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+        
+        // Skip if already marked as "not related" - don't process again
+        if (summary === "not related") {
+          // Still include in UI but mark as not related
+          companiesWithExistingSummaries.push({
+            ...company,
+            summary: "not related"
+          });
+          return;
+        }
+        
+        if (hasSummary && summary && summary !== "not related") {
+          // Company already has a summary - attach it and skip processing
+          companiesWithExistingSummaries.push({
+            ...company,
+            summary: summary
+          });
+        } else {
+          // Company needs processing (no summary or NULL summary)
+          companiesNeedingProcessing.push(company);
+        }
+      });
+      
+      console.log(`✅ Found ${companiesWithExistingSummaries.length} companies with existing summaries (from database)`);
+      console.log(`🔄 Found ${companiesNeedingProcessing.length} companies that need processing (no summaries)`);
+      
+      console.log(`📊 Companies array length: ${companies.length}`);
+      console.log(`📊 Companies check: companies.length > 0 = ${companies.length > 0}`);
+      
+      if (companiesNeedingProcessing.length > 0) {
+        console.log(`✅✅✅ Found ${companiesNeedingProcessing.length} companies needing processing, now calling filter-and-analyze API... ✅✅✅`);
+        console.log(`✅✅✅ ENTERING filter-and-analyze API call block ✅✅✅`);
+        
+        setIsFiltering(true);
+        console.log(`✅ setIsFiltering(true) called`);
+        
+        // Step 2: Call filter-and-analyze API with skipFilter=true (only for companies without summaries)
+        console.log(`📝 Mapping ${companiesNeedingProcessing.length} companies for processing...`);
+        const companiesToProcess = companiesNeedingProcessing.map(company => ({
+          id: company.id || company.company_id,
+          companyName: company.companyName || company.name || company.username,
+          website: company.website || company.website_url || company.domain,
+          linkedinProfile: company.linkedinProfile || company.linkedin_url,
+          apollo_organization_id: company.id || company.company_id,
+          ...company
+        }));
+        
+        console.log(`🚀🚀🚀 CALLING FILTER-AND-ANALYZE API: ${companiesToProcess.length} companies 🚀🚀🚀`);
+        console.log(`🚀 API URL: ${API_BASE_URL}/api/apollo-leads/filter-and-analyze`);
+        console.log(`🚀 Request body:`, {
+          companiesCount: companiesToProcess.length,
+          topic: extractedTopic || 'general',
+          skipFilter: true
+        });
+        console.log(`🚀 This will trigger Apify scraping and generate summaries`);
+        console.log(`⏳ This may take 5-15 minutes for ${companiesToProcess.length} companies...`);
+        console.log(`⏳ About to call fetch() NOW...`);
+        
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes timeout
+        
+        try {
+          console.log(`📡 EXECUTING fetch() call to filter-and-analyze API...`);
+          console.log(`📝 Generating summaries for companies (no filtering, just Apify scraping and summarization)`);
+          console.log(`📝 Topic context: "${extractedTopic || 'general'}" (for summarization only)`);
+          const paginationRequestBody = {
+            companies: companiesToProcess,
+            topic: extractedTopic || 'general',
+            skipFilter: true // CRITICAL: Skip filtering - only generate summaries using Apify
+          };
+          console.log(`📤 PAGINATION REQUEST - skipFilter: ${paginationRequestBody.skipFilter} (should be true)`);
+          console.log(`📤 PAGINATION REQUEST - companies count: ${paginationRequestBody.companies.length}`);
+          const filterResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/filter-and-analyze`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(paginationRequestBody),
+             signal: controller.signal
+           });
+           
+           clearTimeout(timeoutId);
+           
+           console.log(`📥 Filter API response status: ${filterResponse.status}`);
+           
+           if (!filterResponse.ok) {
+             const errorText = await filterResponse.text();
+             throw new Error(`API returned ${filterResponse.status}: ${errorText}`);
+           }
+           
+           const filterData = await filterResponse.json();
+           console.log(`📥 Filter API response received:`, {
+             success: filterData.success,
+             summariesCount: Object.keys(filterData.summaries || {}).length
+           });
+        
+           if (filterData.success) {
+             console.log(`✅ Step 1: Found LinkedIn URLs and scraped posts using Apify`);
+             console.log(`✅ Step 2: Generated ${Object.keys(filterData.summaries || {}).length} summaries`);
+             
+             // Attach new summaries to companies that were processed
+             const newlyProcessedCompanies = companiesNeedingProcessing.map(company => {
+               const companyId = company.id || company.company_id;
+               const summary = filterData.summaries?.[companyId] || null;
+               return {
+                 ...company,
+                 summary: summary
+               };
+             });
+             
+             // Combine: companies with existing summaries + newly processed companies
+             const allCompaniesWithSummaries = [...companiesWithExistingSummaries, ...newlyProcessedCompanies];
+             
+            // Merge with existing summaries
+            setCompanySummaries(prev => ({ ...prev, ...existingSummaries, ...(filterData.summaries || {}) }));
+            setFilteredCompanies(allCompaniesWithSummaries);
+            // Since showFilteredOnly is false, we need to set searchResults so getDisplayCompanies() returns them
+            setSearchResults(allCompaniesWithSummaries); // Set searchResults so UI displays them
+            setShowFilteredOnly(false); // Show all companies (no filtering)
+            setIsFiltering(false);
+            setCurrentPage(newPage);
+            // Update hasMorePages from API response
+            setHasMorePages(searchData.hasMorePages !== false && searchData.has_more !== false);
+            
+            // Merge all summaries (existing + new)
+            const allSummaries = { ...existingSummaries, ...(filterData.summaries || {}) };
+            
+            // Add company search to history after pagination
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'company',
+              timestamp: new Date().toISOString(),
+              keyword: lastSearchParams.keywords || '',
+              keywords: lastSearchParams.keywords || '',
+              location: lastSearchParams.location || '',
+              platforms: ['apollo'],
+              results: allCompaniesWithSummaries.length,
+              resultCount: allCompaniesWithSummaries.length,
+              searchResults: allCompaniesWithSummaries, // Store results with summaries attached
+              companySummaries: allSummaries, // Store summaries object
+              filterTopic: extractedTopic || null, // Store topic used for summarization
+              showFilteredOnly: false, // No filtering for company searches
+              params: {
+                keywords: lastSearchParams.keywords || '',
+                location: lastSearchParams.location || '',
+                platforms: ['apollo']
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+            console.log(`💾 Saved pagination results to search history: ${allCompaniesWithSummaries.length} companies`);
+            
+            console.log(`✅✅✅ Pagination complete: ${allCompaniesWithSummaries.length} companies (${companiesWithExistingSummaries.length} with existing summaries, ${newlyProcessedCompanies.length} newly processed) ✅✅✅`);
+            console.log(`✅✅✅ UI STATE UPDATED: searchResults=${allCompaniesWithSummaries.length}, filteredCompanies=${allCompaniesWithSummaries.length}, showFilteredOnly=false, hasMorePages=${searchData.hasMorePages !== false && searchData.has_more !== false} ✅✅✅`);
+           } else {
+             throw new Error(filterData.error || 'API returned success=false');
+           }
+         } catch (fetchError) {
+           clearTimeout(timeoutId);
+           setIsFiltering(false);
+           
+           if (fetchError.name === 'AbortError') {
+             console.error('❌ Request timeout after 30 minutes');
+             alert('The summarization process is taking too long. Please try with fewer companies or check the backend logs.');
+           } else {
+             console.error('❌ Filter-and-analyze API error:', fetchError);
+             
+             // Check if it's a backend dependency error
+             const errorMessage = fetchError.message || '';
+             const isBackendError = errorMessage.includes('No module named') || 
+                                   errorMessage.includes('Import error') ||
+                                   errorMessage.includes('500');
+             
+             if (isBackendError) {
+               alert(`⚠️ Backend Error: The server is missing required dependencies.\n\nError: ${errorMessage}\n\nPlease contact the administrator to install the missing Python modules (e.g., 'openai') on the backend server.\n\nShowing existing summaries as fallback.`);
+             } else {
+               alert(`Error generating summaries: ${errorMessage}`);
+             }
+           }
+           
+           // Show companies with existing summaries if API fails
+           if (companiesWithExistingSummaries.length > 0) {
+             setSearchResults(companiesWithExistingSummaries);
+             setFilteredCompanies(companiesWithExistingSummaries);
+             setCompanySummaries(existingSummaries);
+           } else {
+             // No existing summaries - show companies without summaries
+             setSearchResults(companies);
+             setFilteredCompanies([]);
+             setError('Failed to process companies. Some companies may not have summaries.');
+           }
+         }
+      } else if (companiesWithExistingSummaries.length > 0) {
+        // No companies need processing, but we have companies with existing summaries
+        // Still process them through Apify to get fresh summaries before showing
+        console.log(`🔄 All ${companiesWithExistingSummaries.length} companies have existing summaries, but processing through Apify for fresh summaries...`);
+        
+        setIsFiltering(true);
+        
+        // Process all companies through Apify even if they have summaries (to get fresh data)
+        const companiesToProcess = companiesWithExistingSummaries.map(company => ({
+          id: company.id || company.company_id,
+          companyName: company.companyName || company.name || company.username,
+          website: company.website || company.website_url || company.domain,
+          linkedinProfile: company.linkedinProfile || company.linkedin_url,
+          apollo_organization_id: company.id || company.company_id,
+          ...company
+        }));
+        
+        console.log(`🚀 Processing ${companiesToProcess.length} companies through Apify for fresh summaries...`);
+        
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes timeout
+        
+        try {
+          const paginationRequestBody = {
+            companies: companiesToProcess,
+            topic: extractedTopic || 'general',
+            skipFilter: true // CRITICAL: Skip filtering - only generate summaries using Apify
+          };
+          
+          const filterResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/filter-and-analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(paginationRequestBody),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!filterResponse.ok) {
+            const errorText = await filterResponse.text();
+            throw new Error(`API returned ${filterResponse.status}: ${errorText}`);
+          }
+          
+          const filterData = await filterResponse.json();
+          
+          if (filterData.success) {
+            console.log(`✅ Apify processing complete - Generated ${Object.keys(filterData.summaries || {}).length} fresh summaries`);
+            
+            // Use fresh summaries from Apify (they override existing ones)
+            const freshSummaries = { ...existingSummaries, ...(filterData.summaries || {}) };
+            
+            // Attach fresh summaries to companies
+            const allCompaniesWithSummaries = companiesWithExistingSummaries.map(company => {
+              const companyId = company.id || company.company_id;
+              const freshSummary = filterData.summaries?.[companyId] || company.summary || existingSummaries[companyId];
+              return {
+                ...company,
+                summary: freshSummary
+              };
+            });
+            
+            // Store summaries
+            setCompanySummaries(freshSummaries);
+            
+            // Show companies with fresh summaries ONLY after Apify completes
+            setFilteredCompanies(allCompaniesWithSummaries);
+            setSearchResults(allCompaniesWithSummaries);
+            setShowFilteredOnly(false);
+            setIsFiltering(false);
+            setCurrentPage(newPage);
+            // Update hasMorePages from API response
+            setHasMorePages(searchData.hasMorePages !== false && searchData.has_more !== false);
+        
+            // Add company search to history after pagination (processed through Apify for fresh summaries)
+            const searchHistoryEntry = {
+              id: Date.now() + Math.random(),
+              type: 'company',
+              timestamp: new Date().toISOString(),
+              keyword: lastSearchParams.keywords || '',
+              keywords: lastSearchParams.keywords || '',
+              location: lastSearchParams.location || '',
+              platforms: ['apollo'],
+              results: allCompaniesWithSummaries.length,
+              resultCount: allCompaniesWithSummaries.length,
+              searchResults: allCompaniesWithSummaries, // Store results with fresh summaries attached
+              companySummaries: freshSummaries, // Store fresh summaries from Apify
+              filterTopic: extractedTopic || null, // Store topic used for summarization
+              showFilteredOnly: false, // No filtering for company searches
+              params: {
+                keywords: lastSearchParams.keywords || '',
+                location: lastSearchParams.location || '',
+                platforms: ['apollo']
+              }
+            };
+            setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+            console.log(`💾 Saved pagination results to search history: ${allCompaniesWithSummaries.length} companies (processed through Apify for fresh summaries)`);
+            
+            console.log(`✅✅✅ Showing ${allCompaniesWithSummaries.length} companies after Apify processing complete ✅✅✅`);
+            console.log(`✅✅✅ hasMorePages=${searchData.hasMorePages !== false && searchData.has_more !== false} ✅✅✅`);
+          } else {
+            throw new Error(filterData.error || 'API returned success=false');
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          setIsFiltering(false);
+          
+          if (fetchError.name === 'AbortError') {
+            console.error('❌ Request timeout after 30 minutes');
+            alert('The summarization process is taking too long. Please try with fewer companies or check the backend logs.');
+          } else {
+            console.error('❌ Filter-and-analyze API error:', fetchError);
+            
+            // Check if it's a backend dependency error
+            const errorMessage = fetchError.message || '';
+            const isBackendError = errorMessage.includes('No module named') || 
+                                  errorMessage.includes('Import error') ||
+                                  errorMessage.includes('500');
+            
+            if (isBackendError) {
+              alert(`⚠️ Backend Error: The server is missing required dependencies.\n\nError: ${errorMessage}\n\nPlease contact the administrator to install the missing Python modules (e.g., 'openai') on the backend server.\n\nShowing existing summaries as fallback.`);
+            } else {
+              alert(`Error generating summaries: ${errorMessage}`);
+            }
+          }
+          
+          // If Apify fails, show companies with existing summaries as fallback
+          if (companiesWithExistingSummaries.length > 0) {
+            setSearchResults(companiesWithExistingSummaries);
+            setFilteredCompanies(companiesWithExistingSummaries);
+            setCompanySummaries(existingSummaries);
+            setCurrentPage(newPage);
+            setHasMorePages(searchData.hasMorePages !== false && searchData.has_more !== false);
+            console.log(`⚠️ Apify processing failed, showing companies with existing summaries as fallback`);
+          } else {
+            // No fallback available - show error state
+            setError('Failed to process companies. Please try again or contact support.');
+            console.error('❌ No companies available to show as fallback');
+          }
+        }
+      } else {
+        console.log('⚠️ No companies found for this page');
+        setIsFiltering(false);
+        // If no companies found, there are no more pages
+        setHasMorePages(false);
+        setIsLastPageEmpty(true);
+      }
+    } catch (error) {
+      console.error('❌❌❌ ERROR in direct API call:', error);
+      console.error('❌ Error stack:', error.stack);
+      setIsFiltering(false);
+    }
+    
+    console.log(`🔧🔧🔧 DIRECT FIX: Completed 🔧🔧🔧`);
+  };
+
+  // Handle employee page change - automatically trigger new employee search (only prev/next)
+  const handleEmployeePageChange = async (direction) => {
+    if (!lastEmployeeSearchParams) {
+      console.warn('⚠️ No previous employee search found. Please search employees first.');
+      return;
+    }
+    
+    let newPage;
+    if (direction === 'next') {
+      if (!hasMoreEmployeePages) {
+        console.log('⚠️ Already on last employee page');
+        return;
+      }
+      newPage = currentEmployeePage + 1;
+    } else if (direction === 'prev') {
+      if (currentEmployeePage <= 1) {
+        console.log('⚠️ Already on first employee page');
+        return;
+      }
+      newPage = currentEmployeePage - 1;
+    } else {
+      return;
+    }
+    
+    console.log(`📄 Employee page changed from ${currentEmployeePage} to ${newPage}`);
+    setIsLastEmployeePageEmpty(false); // Reset empty page flag when navigating
+    
+    // Save current scroll position before pagination
+    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    console.log('💾 Saved scroll position for employee pagination:', scrollPositionRef.current);
+    
+    // Clear results immediately and show loading - results will NOT show until filtering and Apify complete
+    setEmployeeSearchResults([]);
+    setEmployeeSearchLoading(true);
+    setIsFiltering(true); // Show loading indicator for filtering/summarization
+    
+    console.log(`🚨 EMPLOYEE PAGINATION: Starting for page ${newPage}`);
+    console.log(`🚨 Results cleared - will NOT show until filter-and-analyze API completes`);
+    
+    // Trigger new employee search with same params but different page
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    
+    try {
+      // Check database first for this page
+      console.log(`📦 Checking employees_cache database for page ${newPage}...`);
+      const dbResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-from-db`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          organization_locations: lastEmployeeSearchParams.location ? [lastEmployeeSearchParams.location] : [],
+          person_titles: lastEmployeeSearchParams.person_titles || [],
+          organization_industries: lastEmployeeSearchParams.company_keywords ? [lastEmployeeSearchParams.company_keywords] : [],
+          per_page: 100, // 100 per page for pagination
+          page: newPage // Pass page number
+        })
+      });
+      
+      const dbData = await dbResponse.json();
+      
+      // Extract topic from company_keywords for filtering (like initial search)
+      // First try to use stored filterTopic, then extract from keywords
+      let extractedTopic = filterTopic || extractTopicFromKeywords(lastEmployeeSearchParams.company_keywords || '');
+      console.log(`🔍 Using topic for employee pagination: "${extractedTopic}" (from ${filterTopic ? 'stored filterTopic' : 'extracted from keywords'})`);
+      
+      // If no topic found, try extracting from keywords
+      if (!extractedTopic || !extractedTopic.trim()) {
+        extractedTopic = extractTopicFromKeywords(lastEmployeeSearchParams.company_keywords || '');
+        console.log(`🔍 Extracted topic from keywords "${lastEmployeeSearchParams.company_keywords}": "${extractedTopic}"`);
+      }
+      
+      if (dbData.success && dbData.employees && dbData.employees.length > 0 && dbData.source !== 'apollo_api') {
+        // Found in database - use it, but still filter if topic exists
+        console.log(`✅ Found ${dbData.employees.length} employees in database for page ${newPage}`);
+        
+        // If we have a topic, filter companies and generate summaries
+        if (extractedTopic && extractedTopic.trim()) {
+          // Extract unique companies from employees
+          const normalizeCompanyId = (id) => {
+            if (!id) return null;
+            return String(id).trim();
+          };
+          
+          const allCompanies = [];
+          const companyMap = new Map();
+          
+          dbData.employees.forEach(emp => {
+            const org = emp.organization || emp.company || {};
+            const companyId = normalizeCompanyId(org.id || emp.company_id || emp.organization_id);
+            if (companyId && !companyMap.has(companyId)) {
+              companyMap.set(companyId, {
+                id: companyId,
+                company_id: companyId,
+                apollo_organization_id: companyId,
+                companyName: org.name || emp.company_name || 'Unknown',
+                website: org.website || org.domain || '',
+                linkedinProfile: org.linkedin_url || org.linkedinProfile || emp.company_linkedin_url || '',
+                ...org
+              });
+            }
+          });
+          
+          allCompanies.push(...Array.from(companyMap.values()));
+          
+          if (allCompanies.length > 0) {
+            console.log(`🤖 Step 1: Filtering ${allCompanies.length} companies by topic: "${extractedTopic}"`);
+            console.log(`🤖 Step 2: Will send filtered companies to Apify for LinkedIn scraping and summary generation`);
+            console.log(`⏳ This may take 5-15 minutes...`);
+            
+            try {
+              const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+              const filterResponse = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  companies: allCompanies,
+                  topic: extractedTopic.trim() // Filter by keyword first, then generate summaries
+                }),
+              });
+              
+              const filterData = await filterResponse.json();
+              
+              if (filterResponse.ok && filterData.success) {
+                console.log(`✅ Step 1 Complete: Filtered to ${filterData.total_filtered} companies by topic "${extractedTopic}"`);
+                console.log(`✅ Step 2 Complete: Sent to Apify, scraped LinkedIn posts, and generated ${Object.keys(filterData.summaries).length} summaries`);
+                console.log(`✅ All processing complete - now showing results in UI`);
+                
+                // Update company summaries
+                const relatedSummaries = {};
+                for (const [companyId, summary] of Object.entries(filterData.summaries || {})) {
+                  if (summary !== "not related") {
+                    relatedSummaries[companyId] = summary;
+                  }
+                }
+                
+                setCompanySummaries(prev => ({ ...prev, ...relatedSummaries }));
+                
+                // Filter employees to only show those from filtered companies
+                const filteredCompanyIds = new Set(
+                  filterData.filtered_companies.map(c => normalizeCompanyId(c.id || c.company_id))
+                );
+                
+                const filteredEmployees = dbData.employees.filter(emp => {
+                  const org = emp.organization || emp.company || {};
+                  const companyId = normalizeCompanyId(org.id || emp.company_id || emp.organization_id);
+                  return filteredCompanyIds.has(companyId);
+                });
+                
+                // ONLY show results after filtering and Apify processing complete
+                setEmployeeSearchResults(filteredEmployees);
+                setCurrentEmployeePage(newPage);
+                setHasMoreEmployeePages(dbData.hasMorePages !== false);
+                setIsFiltering(false);
+                setEmployeeSearchLoading(false);
+                
+                // Add employee search to history after pagination
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'employee',
+                  timestamp: new Date().toISOString(),
+                  keyword: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+                  keywords: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+                  location: lastEmployeeSearchParams.location || 'N/A',
+                  platforms: ['apollo'],
+                  person_titles: lastEmployeeSearchParams.person_titles || [],
+                  results: filteredEmployees.length,
+                  resultCount: filteredEmployees.length,
+                  searchResults: filteredEmployees, // Store filtered employee results
+                  companySummaries: relatedSummaries, // Store summaries for companies
+                  filterTopic: extractedTopic, // Store the filter topic used
+                  params: {
+                    person_titles: lastEmployeeSearchParams.person_titles || [],
+                    organization_locations: lastEmployeeSearchParams.location ? [lastEmployeeSearchParams.location] : [],
+                    organization_industries: lastEmployeeSearchParams.company_keywords ? [lastEmployeeSearchParams.company_keywords] : []
+                  }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+                console.log(`💾 Saved employee pagination results to search history: ${filteredEmployees.length} employees`);
+                
+                // Scroll to results
+                setTimeout(() => {
+                  if (companyResultsRef.current) {
+                    companyResultsRef.current.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'start',
+                      inline: 'nearest'
+                    });
+                  }
+                }, 300);
+                return;
+              }
+            } catch (filterError) {
+              console.error('❌ Error filtering companies for employee pagination (DB):', filterError);
+              
+              // Check if it's a backend dependency error
+              const errorMessage = filterError.message || '';
+              const isBackendError = errorMessage.includes('No module named') || 
+                                    errorMessage.includes('Import error') ||
+                                    errorMessage.includes('500');
+              
+              if (isBackendError) {
+                alert(`⚠️ Backend Error: The server is missing required dependencies.\n\nError: ${errorMessage}\n\nPlease contact the administrator to install the missing Python modules (e.g., 'openai') on the backend server.`);
+              } else {
+                alert(`Error filtering companies: ${errorMessage}`);
+              }
+              
+              setIsFiltering(false);
+              // Don't show results if filtering failed - keep loading state or show error
+            }
+          }
+        }
+        
+        // If no topic or filtering failed, just show all employees
+        setEmployeeSearchResults(dbData.employees);
+        setCurrentEmployeePage(newPage);
+        setHasMoreEmployeePages(dbData.hasMorePages !== false);
+        if (dbData.companySummaries) {
+          setCompanySummaries(dbData.companySummaries);
+        }
+        setEmployeeSearchLoading(false);
+        
+        // Add employee search to history after pagination (no filtering)
+        const searchHistoryEntry = {
+          id: Date.now() + Math.random(),
+          type: 'employee',
+          timestamp: new Date().toISOString(),
+          keyword: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+          keywords: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+          location: lastEmployeeSearchParams.location || 'N/A',
+          platforms: ['apollo'],
+          person_titles: lastEmployeeSearchParams.person_titles || [],
+          results: dbData.employees.length,
+          resultCount: dbData.employees.length,
+          searchResults: dbData.employees, // Store employee results
+          companySummaries: dbData.companySummaries || {}, // Store summaries from database
+          filterTopic: null, // No filtering
+          params: {
+            person_titles: lastEmployeeSearchParams.person_titles || [],
+            organization_locations: lastEmployeeSearchParams.location ? [lastEmployeeSearchParams.location] : [],
+            organization_industries: lastEmployeeSearchParams.company_keywords ? [lastEmployeeSearchParams.company_keywords] : []
+          }
+        };
+        setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+        console.log(`💾 Saved employee pagination results to search history: ${dbData.employees.length} employees (no filtering)`);
+        
+        // Scroll to results
+        setTimeout(() => {
+          if (companyResultsRef.current) {
+            companyResultsRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 300);
+        return;
+      }
+      
+      // Not in database - call Apollo API
+      console.log(`📦 No results in database for page ${newPage}, calling Apollo API...`);
+      const apolloResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-by-title`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_ids: lastEmployeeSearchParams.company_ids || [],
+          person_titles: lastEmployeeSearchParams.person_titles || [],
+          include_similar_titles: lastEmployeeSearchParams.include_similar_titles || false,
+          per_page: 100,
+          page: newPage
+        })
+      });
+      
+      const apolloData = await apolloResponse.json();
+      
+      if (apolloData.success && apolloData.employees && apolloData.employees.length > 0) {
+        console.log(`✅ Found ${apolloData.employees.length} employees from Apollo for page ${newPage}`);
+        console.log(`🔍 Using extracted topic: "${extractedTopic}"`);
+        
+        // Always filter companies and generate summaries if we have a topic (like company pagination)
+        if (extractedTopic && extractedTopic.trim()) {
+          // Extract unique companies from employees
+          const normalizeCompanyId = (id) => {
+            if (!id) return null;
+            return String(id).trim();
+          };
+          
+          const allCompanies = [];
+          const companyMap = new Map();
+          
+          apolloData.employees.forEach(emp => {
+            const org = emp.organization || emp.company || {};
+            const companyId = normalizeCompanyId(org.id || emp.company_id || emp.organization_id);
+            if (companyId && !companyMap.has(companyId)) {
+              companyMap.set(companyId, {
+                id: companyId,
+                company_id: companyId,
+                apollo_organization_id: companyId,
+                companyName: org.name || emp.company_name || 'Unknown',
+                website: org.website || org.domain || '',
+                linkedinProfile: org.linkedin_url || org.linkedinProfile || emp.company_linkedin_url || '',
+                ...org
+              });
+            }
+          });
+          
+          allCompanies.push(...Array.from(companyMap.values()));
+          
+          if (allCompanies.length > 0) {
+            console.log(`🤖 Step 1: Filtering ${allCompanies.length} companies by topic: "${extractedTopic}"`);
+            console.log(`🤖 Step 2: Will send filtered companies to Apify for LinkedIn scraping and summary generation`);
+            console.log(`⏳ This may take 5-15 minutes...`);
+            
+            try {
+              const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+              const filterResponse = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  companies: allCompanies,
+                  topic: extractedTopic.trim() // Filter by keyword first, then generate summaries
+                }),
+              });
+              
+              const filterData = await filterResponse.json();
+              
+              if (filterResponse.ok && filterData.success) {
+                console.log(`✅ Step 1 Complete: Filtered to ${filterData.total_filtered} companies by topic "${extractedTopic}"`);
+                console.log(`✅ Step 2 Complete: Sent to Apify, scraped LinkedIn posts, and generated ${Object.keys(filterData.summaries).length} summaries`);
+                console.log(`✅ All processing complete - now showing results in UI`);
+                
+                // Update company summaries
+                const relatedSummaries = {};
+                for (const [companyId, summary] of Object.entries(filterData.summaries || {})) {
+                  if (summary !== "not related") {
+                    relatedSummaries[companyId] = summary;
+                  }
+                }
+                
+                setCompanySummaries(prev => ({ ...prev, ...relatedSummaries }));
+                
+                // Filter employees to only show those from filtered companies
+                const filteredCompanyIds = new Set(
+                  filterData.filtered_companies.map(c => normalizeCompanyId(c.id || c.company_id))
+                );
+                
+                const filteredEmployees = apolloData.employees.filter(emp => {
+                  const org = emp.organization || emp.company || {};
+                  const companyId = normalizeCompanyId(org.id || emp.company_id || emp.organization_id);
+                  return filteredCompanyIds.has(companyId);
+                });
+                
+                // ONLY show results after filtering and Apify processing complete
+                setEmployeeSearchResults(filteredEmployees);
+                setCurrentEmployeePage(newPage);
+                setHasMoreEmployeePages(apolloData.hasMorePages !== false);
+                setIsFiltering(false);
+                setEmployeeSearchLoading(false);
+                
+                // Add employee search to history after pagination (Apollo API)
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'employee',
+                  timestamp: new Date().toISOString(),
+                  keyword: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+                  keywords: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+                  location: lastEmployeeSearchParams.location || 'N/A',
+                  platforms: ['apollo'],
+                  person_titles: lastEmployeeSearchParams.person_titles || [],
+                  results: filteredEmployees.length,
+                  resultCount: filteredEmployees.length,
+                  searchResults: filteredEmployees, // Store filtered employee results
+                  companySummaries: relatedSummaries, // Store summaries for companies
+                  filterTopic: extractedTopic, // Store the filter topic used
+                  params: {
+                    person_titles: lastEmployeeSearchParams.person_titles || [],
+                    organization_locations: lastEmployeeSearchParams.location ? [lastEmployeeSearchParams.location] : [],
+                    organization_industries: lastEmployeeSearchParams.company_keywords ? [lastEmployeeSearchParams.company_keywords] : []
+                  }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+                console.log(`💾 Saved employee pagination results to search history: ${filteredEmployees.length} employees (Apollo API)`);
+                
+                // Scroll to results
+                setTimeout(() => {
+                  if (companyResultsRef.current) {
+                    companyResultsRef.current.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'start',
+                      inline: 'nearest'
+                    });
+                  }
+                }, 300);
+                return;
+              }
+            } catch (filterError) {
+              console.error('❌ Error filtering companies for employee pagination:', filterError);
+              
+              // Check if it's a backend dependency error
+              const errorMessage = filterError.message || '';
+              const isBackendError = errorMessage.includes('No module named') || 
+                                    errorMessage.includes('Import error') ||
+                                    errorMessage.includes('500');
+              
+              if (isBackendError) {
+                alert(`⚠️ Backend Error: The server is missing required dependencies.\n\nError: ${errorMessage}\n\nPlease contact the administrator to install the missing Python modules (e.g., 'openai') on the backend server.`);
+              } else {
+                alert(`Error filtering companies: ${errorMessage}`);
+              }
+              
+              setIsFiltering(false);
+              // Don't show results if filtering failed - keep loading state or show error
+            }
+          }
+        }
+        
+        // If no topic or filtering failed, just show all employees
+        setEmployeeSearchResults(apolloData.employees);
+        setCurrentEmployeePage(newPage);
+        setHasMoreEmployeePages(apolloData.hasMorePages !== false);
+        if (apolloData.summaries) {
+          setCompanySummaries(apolloData.summaries);
+        }
+        setEmployeeSearchLoading(false);
+        
+        // Add employee search to history after pagination (Apollo API, no filtering)
+        const searchHistoryEntry = {
+          id: Date.now() + Math.random(),
+          type: 'employee',
+          timestamp: new Date().toISOString(),
+          keyword: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+          keywords: lastEmployeeSearchParams.person_titles?.join(', ') || 'Employee Search',
+          location: lastEmployeeSearchParams.location || 'N/A',
+          platforms: ['apollo'],
+          person_titles: lastEmployeeSearchParams.person_titles || [],
+          results: apolloData.employees.length,
+          resultCount: apolloData.employees.length,
+          searchResults: apolloData.employees, // Store employee results
+          companySummaries: apolloData.summaries || {}, // Store summaries from Apollo
+          filterTopic: null, // No filtering
+          params: {
+            person_titles: lastEmployeeSearchParams.person_titles || [],
+            organization_locations: lastEmployeeSearchParams.location ? [lastEmployeeSearchParams.location] : [],
+            organization_industries: lastEmployeeSearchParams.company_keywords ? [lastEmployeeSearchParams.company_keywords] : []
+          }
+        };
+        setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+        console.log(`💾 Saved employee pagination results to search history: ${apolloData.employees.length} employees (Apollo API, no filtering)`);
+      } else {
+        console.log('⚠️ No employees found for page', newPage);
+        setHasMoreEmployeePages(false);
+        setIsLastEmployeePageEmpty(true);
+        setEmployeeSearchLoading(false);
+      }
+      
+      // Scroll to results (only if not already scrolled in filtering section)
+      if (!extractedTopic || !extractedTopic.trim()) {
+        setTimeout(() => {
+          if (companyResultsRef.current) {
+            companyResultsRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 300);
+      }
+    } catch (error) {
+      console.error('❌ Error in employee pagination:', error);
+      setEmployeeSearchLoading(false);
+      alert(`Error loading employee page ${newPage}: ${error.message}`);
+    }
+  };
+
+  // Core search runner (can be called by manual form or AI auto-apply)
+  const runSearch = async (effectiveParams, autoFilterTopic = null) => {
+    const params = effectiveParams || commonParams;
+    console.log('🔍 runSearch called with params:', params, 'autoFilterTopic:', autoFilterTopic);
+    setIsLoading(true);
+    setError(null);
+    
+    // Check if keyword or location changed (even if isPagination is true)
+    const isNewSearch = !params.isPagination || 
+      !lastSearchParams || 
+      lastSearchParams.keywords !== params.keywords || 
+      lastSearchParams.location !== params.location;
+    
+    // Determine which page to use
+    const pageToUse = isNewSearch ? 1 : (params.page || currentPage);
+    
+    // Only clear results if this is a new search (not pagination of same search)
+    if (isNewSearch) {
+      console.log('🆕 New search detected - resetting to page 1');
+      setSearchResults([]);
+      setFilteredCompanies([]);
+      setCurrentPage(1);  // Reset to page 1 for new searches
+      setHasMorePages(true); // Reset - assume there are more pages for new search
+      setIsLastPageEmpty(false); // Reset empty page flag
+    } else {
+      // Update current page if pagination - clear old results to show loading state
+      console.log('📄 Pagination detected - continuing with page', pageToUse);
+      setCurrentPage(pageToUse);
+      // Clear old results during pagination so UI shows loading state, not stale data
+      setSearchResults([]);
+      setFilteredCompanies([]);
+      setIsFiltering(false); // Reset filtering state
+    }
+    
+    try {
+      // Handle different search types
+      let platformsToSearch = [];
+      
+      if (params.searchType === 'company') {
+        platformsToSearch = ['apollo', 'linkedin'];
+      } else if (params.searchType === 'linkedin') {
+        platformsToSearch = ['linkedin'];
+      } else if (params.searchType === 'website') {
+        platformsToSearch = ['apollo'];
+      } else {
+        // Fallback to original logic
+        platformsToSearch = params.platforms.includes('all')
+          ? ['apollo']
+          : params.platforms;
+      }
+      
+      console.log('🔍 Search type:', params.searchType, 'Platforms to search:', platformsToSearch);
+      
+      const searchPromises = [];
+
+      if (platformsToSearch.includes('apollo')) {
+        // Use the page number determined earlier (respects new search vs pagination)
+        searchPromises.push(
+          apolloLeadsService.searchLeads({
+            query: params.keywords,
+            location: params.location ||'',
+            max_results: 100,  // Default: 100 companies
+            page: pageToUse,  // Use the page number determined above
+          }).then(response => {
+            // Handle new response format with metadata
+            const companies = response.companies || [];
+            
+            // Check if summaries exist in response
+            if (response.summaries && Object.keys(response.summaries).length > 0) {
+              console.log(`✅ Found ${Object.keys(response.summaries).length} existing summaries for companies`);
+              // Store summaries for later use
+              setCompanySummaries(response.summaries);
+            }
+            
+            return { 
+              platform: 'apollo', 
+              response: companies,  // Extract companies array
+              success: true,
+              page: response.page || 1,
+              fromCache: response.fromCache || false,
+              totalFound: response.totalFound || companies.length,
+              summaries: response.summaries, // Pass summaries along
+              topic: response.topic // Pass topic along
+            };
+          })
+            .catch(error => {
+              console.error('Apollo.io search failed:', error);
+              return { platform: 'apollo', response: [], success: false, error: error.message };
+            })
+        );
+      }
+
+      const results = await Promise.all(searchPromises);
+      console.log('🔍 All search results:', results);
+      let allLeads = [];
+      let failedPlatforms = [];
+      let successfulPlatforms = [];
+      
+      results.forEach(({ platform, response, success, error, page, fromCache }) => {
+        console.log(`🔍 Processing ${platform} response:`, { success, response, error, page, fromCache });
+        
+        // Store search params for pagination
+        if (success && platform === 'apollo') {
+          setLastSearchParams({ keywords: params.keywords, location: params.location });
+          // Page is already set above based on isNewSearch logic
+          setIsFromCache(fromCache || false);
+        }
+        
+        if (!success) {
+          failedPlatforms.push({ platform, error });
+          return;
+        }
+        
+        if (response.success || response.businesses || response.leads || Array.isArray(response)) {
+          let transformedLeads = [];
+          let responseData = response.leads || response.businesses || response.data || response || [];
+          console.log(`🔍 ${platform} responseData:`, responseData);
+          
+          // Check if this page has results - if empty, we've reached the end
+          if (Array.isArray(responseData) && responseData.length === 0 && platform === 'apollo') {
+            setHasMorePages(false);
+            setIsLastPageEmpty(true);
+          } else if (Array.isArray(responseData) && responseData.length > 0) {
+            // If we got results, there might be more pages
+            // Apollo typically returns 25 per page, so if we got less, it might be the last page
+            if (platform === 'apollo') {
+              setHasMorePages(responseData.length >= 25);
+              setIsLastPageEmpty(false);
+            }
+          }
+          
+          if (Array.isArray(responseData) && responseData.length > 0) {
+            transformedLeads = responseData.map(lead => {
+              if (platform === 'apollo') {
+                return {
+                  // CRITICAL: Use Apollo organization ID if available (required for employee search!)
+                  // Only generate fallback ID if Apollo didn't provide one
+                  id: lead.id && lead.id !== '' && !lead.id.includes('no_id_') 
+                    ? lead.id  // Use real Apollo org ID
+                    : `apollo_unknown_${lead.companyName || lead.business_name || 'unknown'}_${Date.now()}_${Math.random()}`,
+                  username: lead.business_name || lead.companyName || lead.title || lead.username || 'N/A',
+                  platform: platform.charAt(0).toUpperCase() + platform.slice(1),
+                  postContent: lead.category || lead.type || lead.postContent || 'N/A',
+                  engagement: lead.rating || lead.reviews || lead.engagement || 0,
+                  location: lead.address || lead.location || params.location || 'N/A',
+                  profileUrl: lead.website || lead.link || lead.profileUrl || '#',
+                  timestamp: lead.timestamp || new Date().toISOString(),
+                  postType: 'business',
+                  emailId: lead.email || lead.emailId || 'N/A',
+                  phoneNumber: lead.phone || lead.phoneNumber || 'N/A',
+                  postLink: lead.website || lead.link || lead.postLink || '#',
+                  // Enhanced company data - pass through all enriched fields
+                  companyName: lead.companyName || lead.business_name,
+                  industry: lead.industry || lead.business_type,
+                  employees: lead.employees,
+                  revenue: lead.revenue,
+                  cLevelExecutives: lead.cLevelExecutives || [],
+                  website: lead.website,
+                  phone: lead.phone,
+                  email: lead.email,
+                  // Comprehensive company data
+                  companyDescription: lead.companyDescription,
+                  servicesOffered: lead.servicesOffered,
+                  yearEstablished: lead.foundingYear || lead.yearEstablished,
+                  foundingYear: lead.foundingYear,
+                  companySize: lead.companySize,
+                  targetMarket: lead.targetMarket,
+                  businessModel: lead.businessModel,
+                  keyCompetitors: lead.keyCompetitors,
+                  marketPosition: lead.marketPosition,
+                  growthStage: lead.growthStage,
+                  technologyStack: lead.technologyStack,
+                  certifications: lead.certifications,
+                  awards: lead.awards,
+                  socialMediaPresence: lead.socialMediaPresence,
+                  customerSegments: lead.customerSegments,
+                  pricingModel: lead.pricingModel,
+                  operationalRegions: lead.operationalRegions,
+                  partnerships: lead.partnerships,
+                  recentNews: lead.recentNews,
+                  financialHealth: lead.financialHealth,
+                  // New Apollo.io enriched fields
+                  keywords: lead.keywords || [],
+                  rawAddress: lead.rawAddress || '',
+                  naicsCodes: lead.naicsCodes || [],
+                  sicCodes: lead.sicCodes || [],
+                  alexaRanking: lead.alexaRanking,
+                  logoUrl: lead.logoUrl,
+                  stockInfo: lead.stockInfo,
+                  growth6M: lead.growth6M,
+                  growth12M: lead.growth12M,
+                  growth24M: lead.growth24M,
+                  // Additional enriched fields
+                  teamMembers: lead.teamMembers,
+                  contactInfo: lead.contactInfo,
+                  socialMediaLinks: lead.socialMediaLinks,
+                  newsUpdates: lead.newsUpdates,
+                  technologyUsed: lead.technologyUsed,
+                  linkedinProfile: lead.linkedinProfile,
+                  linkedinFollowers: lead.linkedinFollowers,
+                  linkedinEmployees: lead.linkedinEmployees,
+                  linkedinIndustry: lead.linkedinIndustry,
+                  linkedinFounded: lead.linkedinFounded,
+                  linkedinHeadquarters: lead.linkedinHeadquarters,
+                  linkedinWebsite: lead.linkedinWebsite,
+                  linkedinDescription: lead.linkedinDescription,
+                  linkedinSpecialties: lead.linkedinSpecialties,
+                  linkedinCompanySize: lead.linkedinCompanySize,
+                  socialMediaActivity: lead.socialMediaActivity,
+                  socialMediaFollowers: lead.socialMediaFollowers,
+                  socialMediaEngagement: lead.socialMediaEngagement,
+                  industryTrends: lead.industryTrends,
+                  marketSize: lead.marketSize,
+                  competitorAnalysis: lead.competitorAnalysis,
+                  growthOpportunities: lead.growthOpportunities,
+                  industryChallenges: lead.industryChallenges,
+                  regulatoryEnvironment: lead.regulatoryEnvironment,
+                  technologyTrends: lead.technologyTrends,
+                  customerBehavior: lead.customerBehavior,
+                  profitability: lead.profitability,
+                  growthRate: lead.growthRate,
+                  financialStability: lead.financialStability,
+                  creditRating: lead.creditRating,
+                  fundingHistory: lead.fundingHistory,
+                  investors: lead.investors,
+                  financialHighlights: lead.financialHighlights,
+                  // Social media links
+                  facebookUrl: lead.facebookUrl || '',
+                  twitterUrl: lead.twitterUrl || '',
+                  instagramUrl: lead.instagramUrl || '',
+                  blogUrl: lead.blogUrl || '',
+                  crunchbaseUrl: lead.crunchbaseUrl || '',
+                  angellistUrl: lead.angellistUrl || '',
+                  // Additional company info
+                  employeeCount: lead.employeeCount || 0,
+                  domain: lead.domain || ''
+                };
+              }
+              
+              // Default fallback for any other platform
+              return {
+                id: `${platform}_${lead.id || lead.username || 'unknown'}_${Date.now()}_${Math.random()}`,
+                username: lead.username || lead.business_name || lead.User || lead.author || 'N/A',
+                platform: platform.charAt(0).toUpperCase() + platform.slice(1),
+                postContent: lead.postContent || lead.category || lead.Post_Type || lead.title || 'N/A',
+                engagement: lead.engagement || lead.rating || lead.Engagement || lead.score || 0,
+                location: lead.location || lead.address || lead.Profile || params.location || 'N/A',
+                profileUrl: lead.profileUrl || lead.website || lead.Post_Link || '#',
+                timestamp: lead.timestamp || lead.created_at || lead.Timestamp || lead.publishedAt || new Date().toISOString(),
+                postType: lead.postType || lead.post_type || lead.Post_Type || lead.type || 'post',
+                emailId: lead.emailId || lead.email || lead.Email_Id || 'N/A',
+                phoneNumber: lead.phoneNumber || lead.phone || lead.Phone_Number || 'N/A',
+                postLink: lead.postLink || lead.website || lead.Post_Link || '#',
+              };
+            });
+          }
+          
+          console.log(`🔍 ${platform} transformedLeads:`, transformedLeads);
+          allLeads = allLeads.concat(transformedLeads);
+          successfulPlatforms.push({ platform, count: transformedLeads.length });
+          
+          const searchRecord = {
+            id: Date.now() + Math.random(),
+            platform: platform.charAt(0).toUpperCase() + platform.slice(1),
+            keyword: params.keywords,
+            location: params.location,
+            results: transformedLeads.length,
+            timestamp: new Date().toISOString(),
+            params: params,
+            searchResults: transformedLeads, // Store actual results so they can be restored when clicked
+          };
+          setSearchHistory(prev => [searchRecord, ...prev.slice(0, 9)]);
+        } else {
+          console.log(`🔍 ${platform} response does not match expected format:`, response);
+        }
+      });
+      
+      if (successfulPlatforms.length > 0) {
+        console.log(`✅ Successful platforms: ${successfulPlatforms.map(p => `${p.platform} (${p.count} results)`).join(', ')}`);
+      }
+      if (failedPlatforms.length > 0) {
+        console.warn(`❌ Failed platforms: ${failedPlatforms.map(p => `${p.platform} (${p.error})`).join(', ')}`);
+        
+        // Check if any platform failed due to insufficient credits
+        const insufficientCreditsError = failedPlatforms.find(p => 
+          p.error && (
+            p.error.includes('Insufficient credits') || 
+            p.error.includes('credits to perform') ||
+            p.error.includes('You need') ||
+            p.error.includes('credits available')
+          )
+        );
+        
+        if (insufficientCreditsError && successfulPlatforms.length === 0) {
+          // Show credit recharge alert
+          const errorMessage = insufficientCreditsError.error.replace('Error: ', '');
+          setError(`⚠️ ${errorMessage} Click "Add Credits" to recharge your account.`);
+        } else if (successfulPlatforms.length === 0) {
+          setError('All platforms failed to search. Please check your internet connection and try again.');
+        } else {
+          setError(`Some platforms failed: ${failedPlatforms.map(p => p.platform).join(', ')}. Results shown from working platforms.`);
+        }
+      }
+      
+      console.log('🔍 Final allLeads:', allLeads);
+      
+      // Sort companies: those with phone numbers first
+      const sortedLeads = [...allLeads].sort((a, b) => {
+        // Check multiple phone field names and exclude invalid values
+        const getPhone = (company) => {
+          const phone = company.phone || company.phoneNumber || company.Phone_Number || '';
+          if (!phone || phone === 'N/A' || phone.trim() === '' || phone === 'null' || phone === 'undefined') {
+            return null;
+          }
+          return phone.trim();
+        };
+        
+        const aPhone = getPhone(a);
+        const bPhone = getPhone(b);
+        
+        const aHasPhone = !!aPhone;
+        const bHasPhone = !!bPhone;
+        
+        // Companies with phone numbers come first
+        if (aHasPhone && !bHasPhone) return -1;
+        if (!aHasPhone && bHasPhone) return 1;
+        
+        // If both have or both don't have phones, maintain original order
+        return 0;
+      });
+      
+      // Check if summaries already exist in the response (from database)
+      const existingSummaries = results.find(r => r.summaries)?.summaries || {};
+      const existingTopic = results.find(r => r.topic)?.topic;
+      
+      // Use autoFilterTopic if provided, otherwise use existingTopic from response
+      const topicToUse = autoFilterTopic || existingTopic;
+      console.log(`🔍 Topic for filtering: autoFilterTopic="${autoFilterTopic}", existingTopic="${existingTopic}", using="${topicToUse}"`);
+      console.log(`📊 Pagination check: isPagination=${params.isPagination}, sortedLeads.length=${sortedLeads.length}, topicToUse="${topicToUse}"`);
+      
+      // Check which companies already have summaries from database
+      const normalizeCompanyId = (id) => {
+        if (!id) return null;
+        return String(id).trim();
+      };
+      
+      const companiesWithSummaries = new Set(
+        Object.keys(existingSummaries).map(id => normalizeCompanyId(id))
+      );
+      
+      // Separate companies: those with summaries vs those without
+      const companiesNeedingProcessing = [];
+      const companiesWithExistingSummaries = [];
+      
+      sortedLeads.forEach(company => {
+        const companyId = normalizeCompanyId(company.id || company.company_id);
+        if (!companyId) {
+          // No ID means needs processing
+          companiesNeedingProcessing.push(company);
+          return;
+        }
+        
+        const hasSummary = companiesWithSummaries.has(companyId);
+        const summary = existingSummaries[companyId] || existingSummaries[String(companyId)];
+        
+        // Skip if already marked as "not related" - don't process again
+        if (summary === "not related") {
+          // Still include in UI but mark as not related
+          companiesWithExistingSummaries.push({
+            ...company,
+            summary: "not related"
+          });
+          return;
+        }
+        
+        if (hasSummary && summary && summary !== "not related") {
+          // Company already has a summary - attach it and skip processing
+          companiesWithExistingSummaries.push({
+            ...company,
+            summary: summary
+          });
+        } else {
+          // Company needs processing (no summary or NULL summary)
+          companiesNeedingProcessing.push(company);
+        }
+      });
+      
+      console.log(`✅ Found ${companiesWithExistingSummaries.length} companies with existing summaries (from database)`);
+      console.log(`🔄 Found ${companiesNeedingProcessing.length} companies that need processing (no summaries)`);
+      
+      // CRITICAL: For company searches, call API only for companies without summaries
+      console.log(`🔍 CHECKING: isPagination=${params.isPagination}, sortedLeads.length=${sortedLeads.length}`);
+      
+      // For company searches: Call API only for companies without summaries
+      if (companiesNeedingProcessing.length > 0) {
+        const isPagination = params.isPagination;
+        console.log(`${isPagination ? '🚨 PAGINATION' : '🚨 INITIAL SEARCH'} DETECTED: Processing ${companiesNeedingProcessing.length} companies for summarization (${companiesWithExistingSummaries.length} already have summaries)`);
+        
+        // Extract topic from keywords for summarization context (not for filtering)
+        let finalTopicToUse = topicToUse || extractTopicFromKeywords(params.keywords || '');
+        if (!finalTopicToUse) {
+          finalTopicToUse = 'general'; // Default topic for summarization
+        }
+        console.log(`📝 Topic for summarization context: "${finalTopicToUse}"`);
+        console.log(`${isPagination ? '📄 Pagination' : '📄 Initial Search'}: Processing ${companiesNeedingProcessing.length} companies for summarization`);
+        console.log(`📋 Step 1: Found ${companiesNeedingProcessing.length} companies without summaries ${isPagination ? `from page ${params.page || currentPage}` : ''}`);
+        console.log(`🔄 Starting summarization process (find LinkedIn URLs, scrape posts using Apify, generate summaries)...`);
+        
+        // DON'T set searchResults immediately - wait for processing to complete
+        console.log('🛑 NOT showing results yet - waiting for summarization to complete');
+        
+        // Process only companies that need processing (no summaries)
+        const allCompaniesToProcess = companiesNeedingProcessing.map(company => ({
+          id: company.id || company.company_id,
+          companyName: company.companyName || company.name || company.username,
+          website: company.website || company.website_url || company.domain,
+          linkedinProfile: company.linkedinProfile || company.linkedin_url,
+          apollo_organization_id: company.id || company.company_id,
+          ...company
+        }));
+        
+        // Set filtering state IMMEDIATELY so UI shows loading
+        setIsFiltering(true);
+        console.log(`🔄 Summarization state set to TRUE - UI should show loading indicator`);
+        console.log(`📤 CALLING SUMMARIZATION API: ${allCompaniesToProcess.length} companies`);
+        console.log(`📤 This will: 1) Find LinkedIn URLs, 2) Scrape posts using Apify, 3) Generate summaries`);
+        console.log(`📝 Topic context: "${finalTopicToUse || 'none'}" (for summarization only, NOT for filtering)`);
+        console.log(`📤 API URL: ${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api/apollo-leads/filter-and-analyze`);
+        console.log(`📤 Request body:`, {
+          companiesCount: allCompaniesToProcess.length,
+          topic: finalTopicToUse || 'general',
+          skipFilter: true
+        });
+        
+        try {
+          const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+          
+          // For company searches: Call API to process ALL companies (skip filtering, just summarize)
+          console.log(`🚀 MAKING API CALL NOW - This should trigger Apify scraping...`);
+          const requestBody = {
+            companies: allCompaniesToProcess,
+            topic: finalTopicToUse ? finalTopicToUse.trim() : 'general', // Topic for summarization context
+            skipFilter: true // CRITICAL: Skip filtering - process all companies, just generate summaries
+          };
+          console.log(`📤 REQUEST BODY - skipFilter: ${requestBody.skipFilter} (should be true)`);
+          console.log(`📤 REQUEST BODY - companies count: ${requestBody.companies.length}`);
+          console.log(`📤 REQUEST BODY - topic: "${requestBody.topic}" (for summarization only)`);
+          const response = await fetch(`${API_BASE_URL}/apollo-leads/filter-and-analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+          
+          console.log(`✅ API CALL COMPLETED - Status: ${response.status}`);
+          
+          console.log(`📥 Filter API response status: ${response.status}`);
+          const data = await response.json();
+          console.log(`📥 Filter API response:`, {
+            success: data.success,
+            total_filtered: data.total_filtered,
+            summaries_count: data.summaries ? Object.keys(data.summaries).length : 0
+          });
+          
+          if (response.ok && data.success) {
+              // For company searches: Process only companies without summaries
+              console.log(`✅ Step 1: Found LinkedIn URLs and scraped posts using Apify`);
+              console.log(`✅ Step 2: Generated ${Object.keys(data.summaries || {}).length} summaries`);
+              console.log(`✅ Summarization complete! Setting results in UI...`);
+              
+              // Merge new summaries with existing ones
+              const allSummaries = { ...existingSummaries, ...(data.summaries || {}) };
+              
+              // Attach new summaries to companies that were processed
+              const newlyProcessedCompanies = companiesNeedingProcessing.map(company => {
+                const companyId = company.id || company.company_id;
+                const summary = data.summaries?.[companyId] || null;
+                return {
+                  ...company,
+                  summary: summary
+                };
+              });
+              
+              // Combine: companies with existing summaries + newly processed companies
+              const allCompaniesWithSummaries = [...companiesWithExistingSummaries, ...newlyProcessedCompanies];
+              
+              // Store all summaries (existing + new)
+              setCompanySummaries(allSummaries);
+              
+              // Show ALL companies (those with existing summaries + newly processed)
+              const allFilteredCompanies = allCompaniesWithSummaries;
+              
+              console.log(`📊 Summarization complete ${params.isPagination ? `for page ${params.page || currentPage}` : 'for initial search'}:`, {
+                totalFromCurrentPage: sortedLeads.length,
+                companiesWithExistingSummaries: companiesWithExistingSummaries.length,
+                newlyProcessed: newlyProcessedCompanies.length,
+                companiesWithSummaries: allFilteredCompanies.filter(c => c.summary && c.summary !== "not related").length,
+                totalCompanies: allFilteredCompanies.length,
+                isPagination: params.isPagination
+              });
+              
+              // Show results ONLY after all processing is complete
+              // Show ALL companies (no filtering for company searches)
+              // Since showFilteredOnly is false, we need to set searchResults so getDisplayCompanies() returns them
+              setFilteredCompanies(allFilteredCompanies);
+              setSearchResults(allFilteredCompanies); // Set searchResults so UI displays them
+              setShowFilteredOnly(false); // Show all companies (no filtering)
+              setIsFiltering(false); // Processing complete - show results now
+              
+              console.log(`✅✅✅ UI STATE UPDATED: searchResults=${allFilteredCompanies.length}, filteredCompanies=${allFilteredCompanies.length}, showFilteredOnly=false ✅✅✅`);
+              
+              // Store summaries and filter topic
+              setFilterTopic(finalTopicToUse || topicToUse);
+              
+              // Verify companies have summaries before saving
+              const companiesWithSummariesCount = allFilteredCompanies.filter(c => c.summary && typeof c.summary === 'string' && c.summary.trim().length > 0).length;
+              console.log('💾 Saving to search history:', {
+                totalCompanies: allFilteredCompanies.length,
+                companiesWithSummaries: companiesWithSummariesCount,
+                summariesObjectKeys: Object.keys(allSummaries).length,
+                firstCompanyHasSummary: !!allFilteredCompanies[0]?.summary,
+                firstCompanySummaryLength: allFilteredCompanies[0]?.summary?.length || 0,
+                firstCompanySummaryPreview: allFilteredCompanies[0]?.summary?.substring(0, 100) || 'none'
+              });
+              
+              // Companies already have summaries attached from above
+              const companiesToSave = allFilteredCompanies;
+              
+              // Verify after ensuring summaries are attached
+              const finalCompaniesWithSummaries = companiesToSave.filter(c => c.summary && typeof c.summary === 'string' && c.summary.trim().length > 0).length;
+              console.log('💾 After ensuring summaries attached:', {
+                totalCompanies: companiesToSave.length,
+                companiesWithSummaries: finalCompaniesWithSummaries
+              });
+              
+              // Add company search to history - Store results with summaries
+              const searchHistoryEntry = {
+                id: Date.now() + Math.random(),
+                type: 'company',
+                timestamp: new Date().toISOString(),
+                keyword: params.keywords || '',
+                keywords: params.keywords || '',
+                location: params.location || '',
+                platforms: params.platforms || ['apollo'],
+                results: companiesToSave.length,
+                resultCount: companiesToSave.length,
+                searchResults: companiesToSave, // Store results with summaries attached
+                companySummaries: allSummaries, // Store summaries object as backup
+                filterTopic: finalTopicToUse || topicToUse, // Store topic used for summarization
+                showFilteredOnly: false, // No filtering for company searches
+                params: { ...params }
+              };
+              setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+              
+              const successMessage = {
+                role: 'assistant',
+                content: `✅ **Search & Summary Complete!**
+
+**Step 1:** Scraped ${sortedLeads.length} companies using Apollo
+**Step 2:** Found LinkedIn URLs and scraped posts using Apify
+**Step 3:** Generated ${Object.keys(data.summaries || {}).length} summaries
+
+✅ **${allFilteredCompanies.length}** companies processed
+✅ **${companiesWithSummariesCount}** companies with summaries generated
+
+All companies are shown below with their summaries.`
+              };
+              setChatHistory(prev => [...prev, successMessage]);
+            } else {
+              // If filtering fails, show all results (or existing summaries if any)
+              console.error('❌ Filter API failed:', data.error || 'Unknown error');
+              setIsFiltering(false); // Processing failed - show what we have
+              if (companiesWithExistingSummaries.length > 0) {
+                // Show companies with existing summaries
+                const allCompaniesWithSummaries = companiesWithExistingSummaries;
+                
+                setCompanySummaries(existingSummaries);
+                setFilterTopic(topicToUse);
+                setFilteredCompanies(allCompaniesWithSummaries);
+                setSearchResults(allCompaniesWithSummaries);
+                setShowFilteredOnly(false);
+                
+                // Add company search to history - Store filtered results, summaries, and filter state
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'company',
+                  timestamp: new Date().toISOString(),
+                  keyword: params.keywords || '',
+                  keywords: params.keywords || '',
+                  location: params.location || '',
+                  platforms: params.platforms || ['apollo'],
+                  results: relatedCompanies.length,
+                  resultCount: relatedCompanies.length,
+                  searchResults: relatedCompanies, // Store filtered results (what user sees)
+                  companySummaries: filteredSummaries, // Store summaries
+                  filterTopic: topicToUse, // Store filter topic
+                  showFilteredOnly: true, // Store filter state
+                  params: { ...params }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+                
+                const successMessage = {
+                  role: 'assistant',
+                  content: `✅ **Found ${relatedCompanies.length} Companies with Existing Summaries!**
+
+**Step 1:** Scraped ${sortedLeads.length} companies using Apollo
+**Step 2:** All ${relatedCompanyIds.size} companies already have summaries (excluding "not related")
+
+✅ **${relatedCompanies.length}** companies with summaries
+✅ Summaries loaded from database (no processing needed)
+
+Showing companies that have summaries for "${topicToUse}". Companies marked as "not related" are excluded.`
+                };
+                setChatHistory(prev => [...prev, successMessage]);
+              } else {
+                // No summaries at all, show all results
+                setSearchResults(sortedLeads);
+                setShowFilteredOnly(false);
+              }
+              console.warn('⚠️ Auto-filtering failed, showing available results');
+              const errorMessage = {
+                role: 'assistant',
+                content: `⚠️ **Filtering Failed**
+
+Found ${sortedLeads.length} companies.
+${companiesWithSummaries.size > 0 ? `Showing ${companiesWithSummaries.size} companies with existing summaries.` : ''}
+Error processing remaining companies: ${data.error || 'Unknown error'}
+
+${companiesWithSummaries.size > 0 ? 'Showing companies with existing summaries.' : 'Showing all results.'}`
+              };
+              setChatHistory(prev => [...prev, errorMessage]);
+            }
+          } catch (error) {
+            console.error('❌ Auto-filter error:', error);
+            setIsFiltering(false); // Processing failed - show what we have
+            // If filtering fails, show all results (or existing summaries if any)
+            if (companiesWithExistingSummaries.length > 0) {
+              // Show companies with existing summaries
+              const allCompaniesWithSummaries = companiesWithExistingSummaries;
+              
+              setCompanySummaries(existingSummaries);
+              setFilterTopic(topicToUse);
+              setFilteredCompanies(allCompaniesWithSummaries);
+              setSearchResults(allCompaniesWithSummaries);
+              setShowFilteredOnly(false);
+            } else {
+              setSearchResults(sortedLeads);
+              setFilteredCompanies([]);
+              setShowFilteredOnly(false);
+            }
+            const errorMessage = {
+              role: 'assistant',
+              content: `❌ **Filtering Error**
+
+Found ${sortedLeads.length} companies.
+${companiesWithSummaries.size > 0 ? `Showing ${companiesWithSummaries.size} companies with existing summaries.` : ''}
+Error: ${error.message}
+
+${companiesWithSummaries.size > 0 ? 'Showing companies with existing summaries.' : 'Showing all results.'}`
+            };
+            setChatHistory(prev => [...prev, errorMessage]);
+          }
+      }
+      
+      // Restore scroll position after pagination (use setTimeout to ensure DOM is updated)
+      if (params.isPagination && scrollPositionRef.current > 0) {
+        const savedScroll = scrollPositionRef.current;
+        setTimeout(() => {
+          // Restore window scroll position
+          window.scrollTo({
+            top: savedScroll,
+            behavior: 'auto' // Use 'auto' instead of 'smooth' for instant restore
+          });
+          console.log('📍 Restored scroll position:', savedScroll);
+          // Reset scroll position ref after restoring
+          scrollPositionRef.current = 0;
+        }, 100);
+      }
+      
+      setLastSearchTimestamp(prev => ({ ...prev, company: Date.now() })); // Track company search timestamp
+      // Auto-switch to Companies tab when company search completes
+      setActiveResultsTab(0);
+      localStorage.setItem('scrapingResults', JSON.stringify(allLeads));
+      
+      // If employee search was queued, trigger it now that companies are loaded
+      if (employeeSearchParamsRef.current && allLeads.length > 0) {
+        const employeeParams = employeeSearchParamsRef.current;
+        employeeSearchParamsRef.current = null; // Clear the ref
+        
+        console.log('👥 Triggering queued employee search for', allLeads.length, 'companies');
+        
+        const companyIds = allLeads
+          .filter(company => company.id && !company.id.includes('no_id_'))
+          .map(company => company.id)
+          .slice(0, 50);
+        
+        if (companyIds.length > 0) {
+          setEmployeeSearchLoading(true);
+          setTimeout(async () => {
+            try {
+              const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+              
+              // STEP 1: Check database first
+              // DON'T clear company search results - they should remain visible in Companies tab
+              // The Companies tab already filters to only show actual company objects, not employee-related companies
+              console.log('📦 Step 1: Checking employees_cache database first...');
+              const dbResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-from-db`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  person_titles: employeeParams.person_titles,
+                  company_keywords: '', // Not used in this flow
+                  location: '', // Not used in this flow
+                  company_ids: companyIds // Use provided company IDs
+                })
+              });
+              
+              const dbData = await dbResponse.json();
+              console.log('📦 Database response:', dbData);
+              
+              // If found in database, use it
+              if (dbData.success && dbData.employees && dbData.employees.length > 0) {
+                console.log(`✅ Found ${dbData.employees.length} employees in database (from cache)`);
+                const employeesArray = Array.isArray(dbData.employees) ? dbData.employees : [];
+                setEmployeeSearchResults(employeesArray);
+                setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() }));
+                // Auto-switch to Employees tab when employee search completes
+                setActiveResultsTab(1);
+                setEmployeeSearchLoading(false);
+                
+                // Add employee search to history
+                const searchHistoryEntry = {
+                  id: Date.now() + Math.random(),
+                  type: 'employee',
+                  timestamp: new Date().toISOString(),
+                  keyword: employeeParams.person_titles.join(', '),
+                  keywords: employeeParams.person_titles.join(', '),
+                  location: 'N/A',
+                  platforms: ['apollo'],
+                  person_titles: employeeParams.person_titles,
+                  company_count: companyIds.length,
+                  results: employeesArray.length,
+                  resultCount: employeesArray.length,
+                  searchResults: employeesArray,
+                  params: {
+                    person_titles: employeeParams.person_titles,
+                    include_similar_titles: employeeParams.include_similar_titles || false,
+                    company_ids: companyIds
+                  }
+                };
+                setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]);
+                
+                const aiMessage = {
+                  role: 'assistant',
+                  content: `✅ **Found ${employeesArray.length} Employees from Database!**
+
+I found ${employeesArray.length} employees matching your search criteria in the database.
+
+**Titles searched:**
+${employeeParams.person_titles.map(t => `• ${t}`).join('\n')}
+
+The results are displayed below.`
+                };
+                setChatHistory(prev => [...prev, aiMessage]);
+                return; // Exit early, don't call Apollo
+              }
+              
+              // STEP 2: If not in database, call Apollo API
+              console.log('📦 No results in database, calling Apollo API...');
+              const searchResponse = await fetch(`${API_BASE_URL}/api/apollo-leads/search-employees-by-title`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  company_ids: companyIds,
+                  person_titles: employeeParams.person_titles,
+                  include_similar_titles: employeeParams.include_similar_titles || false,
+                  per_page: employeeParams.per_page || 100  // 100 per page for pagination
+                })
+              });
+              
+              if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                if (searchData.success && searchData.employees) {
+                  const employeesArray = Array.isArray(searchData.employees) 
+                    ? searchData.employees 
+                    : (searchData.employees?.data || []);
+                  setEmployeeSearchResults(employeesArray);
+                  setLastSearchTimestamp(prev => ({ ...prev, employee: Date.now() })); // Track employee search timestamp
+                  // Auto-switch to Employees tab when employee search completes
+                  setActiveResultsTab(1);
+                  
+                  // Add employee search to history
+                  const searchHistoryEntry = {
+                    id: Date.now() + Math.random(),
+                    type: 'employee', // Mark as employee search
+                    timestamp: new Date().toISOString(),
+                    keyword: employeeParams.person_titles.join(', '),
+                    keywords: employeeParams.person_titles.join(', '),
+                    location: 'N/A', // Employee searches don't have location
+                    platforms: ['apollo'],
+                    person_titles: employeeParams.person_titles,
+                    company_count: companyIds.length,
+                    results: searchData.count || searchData.employees.length,
+                    resultCount: searchData.count || searchData.employees.length,
+                    searchResults: searchData.employees, // Store actual employee results
+                    params: {
+                      person_titles: employeeParams.person_titles,
+                      include_similar_titles: employeeParams.include_similar_titles || false,
+                      company_ids: companyIds
+                    }
+                  };
+                  setSearchHistory(prev => [searchHistoryEntry, ...prev.slice(0, 9)]); // Keep max 10 recent searches
+                  
+                  const aiMessage = {
+                    role: 'assistant',
+                    content: `✅ **Found ${searchData.count} Employees!**
+
+I found ${searchData.count} employees matching your search criteria across ${companyIds.length} companies.
+
+**Titles searched:**
+${employeeParams.person_titles.map(t => `• ${t}`).join('\n')}
+
+The results are displayed below. You can view their contact information and reveal phone numbers/emails.`
+                  };
+                  setChatHistory(prev => [...prev, aiMessage]);
+                }
+              }
+            } catch (error) {
+              console.error('❌ Employee search error:', error);
+              const errorMessage = {
+                role: 'assistant',
+                content: `❌ **Employee Search Failed**
+
+Error: ${error.message}
+
+Please try again.`
+              };
+              setChatHistory(prev => [...prev, errorMessage]);
+            } finally {
+              setEmployeeSearchLoading(false);
+            }
+          }, 500); // Small delay to ensure state is updated
+        }
+      }
+    } catch (error) {
+      console.error('Multi-platform search error:', error);
+      setError(error.message || 'Search failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+
+
+  useEffect(() => {
+    console.log('CommonParams changed:', commonParams);
+  }, [commonParams]);
+
+  // Load persisted recent searches from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('searchHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSearchHistory(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load search history from localStorage', e);
+    }
+  }, []);
+
+  // Persist recent searches to localStorage when it changes
+  useEffect(() => {
+    try {
+      if (searchHistory && searchHistory.length > 0) {
+        localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+      } else {
+        localStorage.removeItem('searchHistory');
+      }
+    } catch (e) {
+      console.warn('Failed to save search history to localStorage', e);
+    }
+  }, [searchHistory]);
+
+  // Auto-scroll to company results when search completes
+  useEffect(() => {
+    if (searchResults.length > 0 && !isLoading && !isFiltering) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        if (companyResultsRef.current) {
+          companyResultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+          console.log('📍 Scrolled to company results');
+        }
+      }, 300);
+    }
+  }, [searchResults.length, isLoading, isFiltering]);
+
+  // Auto-scroll to employee results when search completes
+  useEffect(() => {
+    if (employeeSearchResults.length > 0 && !employeeSearchLoading && !isFiltering) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        // Check which search was latest
+        const companyTimestamp = lastSearchTimestamp.company;
+        const employeeTimestamp = lastSearchTimestamp.employee;
+        const showEmployeeFirst = employeeTimestamp && (!companyTimestamp || employeeTimestamp > companyTimestamp);
+        
+        if (showEmployeeFirst && companyResultsRef.current) {
+          // Employee results are shown in tabs within CompanyDataTable, so scroll to that section
+          companyResultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+          console.log('📍 Scrolled to employee results (in CompanyDataTable tabs)');
+        } else if (!showEmployeeFirst && companyResultsRef.current) {
+          // If company search is latest but we have employee results, scroll to company section
+          companyResultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+          console.log('📍 Scrolled to company results (employee results in tabs)');
+        }
+      }, 300);
+    }
+  }, [employeeSearchResults.length, employeeSearchLoading, isFiltering, lastSearchTimestamp]);
+  
+  // Auth gating moved here (after all Hooks) to keep Hooks order stable
+  if (authed === null) {
+    return (
+      <Box sx={{ minHeight: '50vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress size={28} />
+      </Box>
+    );
+  }
+  if (authed === false) return <></>;
+
+  return (
+    <>
+      <Box sx={{ 
+        p: 3, 
+        height: '100%', 
+        overflow: 'auto', 
+        minHeight: 0, 
+        maxWidth: '100%',
+        position: 'relative',
+        // Voice agent theme - light background
+        background: '#ffffff',
+        minHeight: '100vh',
+        // Ensure content is above background layers
+        '& > *': {
+          position: 'relative',
+          zIndex: 2,
+        }
+      }}>
+      {/* AI Intelligence Search Section */}
+      <Box sx={{ mb: 2 }}>
+        <AIChatSection 
+          onSendPrompt={handleSendPrompt} 
+          onApplyParams={handleApplyAIParams}
+          loading={aiLoading} 
+          chatHistory={chatHistory}
+        />
+      </Box>
+
+      {/* Error Display */}
+      {error && (
+        <Box sx={{ mb: 4 }}>
+          <Alert 
+            severity="error" 
+            action={
+              <>
+                {error.includes('credits') && (
+                  <Button 
+                    color="inherit" 
+                    size="small" 
+                    onClick={() => window.location.href = '/wallet'}
+                    sx={{ mr: 1 }}
+                  >
+                    Add Credits
+                  </Button>
+                )}
+                <Button color="inherit" size="small" onClick={() => setError(null)}>
+                  Dismiss
+                </Button>
+              </>
+            }
+          >
+            {error}
+          </Alert>
+        </Box>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4, position: 'relative', zIndex: 2 }}>
+          <Card sx={{ 
+            p: 3, 
+            textAlign: 'center',
+            background: '#ffffff',
+            border: '1px solid oklch(0.922 0 0)',
+            borderRadius: '20px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }}>
+            <LoadingSpinner size="lg" message="Searching for leads..." />
+            <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)', mt: -2 }}>
+              This may take a few minutes for large searches
+            </Typography>
+          </Card>
+        </Box>
+      )}
+
+      {/* Determine which search was performed most recently */}
+      {(() => {
+        const companyTimestamp = lastSearchTimestamp.company;
+        const employeeTimestamp = lastSearchTimestamp.employee;
+        const showCompanyFirst = companyTimestamp && (!employeeTimestamp || companyTimestamp > employeeTimestamp);
+        
+        return (
+          <>
+            {/* Employee Search Loading */}
+      {employeeSearchLoading && (
+        <Box sx={{ mb: 4, position: 'relative', zIndex: 2 }}>
+          <Card sx={{ 
+            boxShadow: 'none',
+            bgcolor: 'transparent',
+            border: 'none'
+          }}>
+            <CardContent sx={{ bgcolor: 'transparent' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                <CircularProgress sx={{ mr: 2, color: '#0b1957' }} />
+                <Typography variant="h6" sx={{ color: '#0b1957' }}>Searching for employees...</Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
+            {/* Render sections based on latest search first */}
+            {showCompanyFirst ? (
+              <>
+                {/* Company Data Display Panel - Show first if company search is latest */}
+                {(searchResults.length > 0 || lastSearchParams || employeeSearchResults.length > 0) && (
+                  <Box sx={{ mb: 4, position: 'relative', zIndex: 2 }} ref={companyResultsRef}>
+                    <Card sx={{ 
+                      boxShadow: 'none',
+                      bgcolor: 'transparent',
+                      border: 'none',
+                      borderRadius: '8px',
+                      overflow: 'visible'
+                    }}>
+                      <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                          
+                          {/* Clear Results Button */}
+                          {(searchResults.length > 0 || employeeSearchResults.length > 0) && (
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Clear />}
+                              onClick={handleClearResults}
+                              sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderColor: '#d32f2f',
+                                color: '#d32f2f',
+                                '&:hover': {
+                                  borderColor: '#c62828',
+                                  backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                }
+                              }}
+                            >
+                              Clear Results
+                            </Button>
+                          )}
+                          
+                          {/* Auto-filtering status (when filtering is in progress) */}
+                          {isFiltering && (
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                              🔍 Automatically filtering and generating summaries... This may take a few minutes.
+                            </Alert>
+                          )}
+                          
+                          
+                          {/* Page Navigation - Show only for active tab */}
+                          <Stack spacing={2} direction="row" alignItems="center" sx={{ mt: 2 }}>
+                            {/* Company Page Navigation - Only show when Companies tab is active */}
+                            {activeResultsTab === 0 && lastSearchParams && (
+                              <Stack spacing={1} direction="row" alignItems="center">
+                                <Typography variant="body2" sx={{ color: '#0b1957', mr: 1, fontWeight: 600 }}>
+                                  Companies:
+                                </Typography>
+                              <IconButton
+                                onClick={() => handlePageChange('prev')}
+                                disabled={isLoading || currentPage <= 1}
+                                color="primary"
+                                size="small"
+                              >
+                                <ChevronLeft />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => {
+                                  console.log('🔵 NEXT BUTTON CLICKED!');
+                                  console.log('🔵 isLoading:', isLoading);
+                                  console.log('🔵 hasMorePages:', hasMorePages);
+                                  handlePageChange('next');
+                                }}
+                                disabled={isLoading || !hasMorePages}
+                                color="primary"
+                                size="small"
+                              >
+                                <ChevronRight />
+                              </IconButton>
+                            </Stack>
+                          )}
+                            
+                            {/* Employee Page Navigation - Only show when Employees tab is active */}
+                            {activeResultsTab === 1 && lastEmployeeSearchParams && employeeSearchResults.length > 0 && (
+                              <Stack spacing={1} direction="row" alignItems="center">
+                                <Typography variant="body2" sx={{ color: '#0b1957', mr: 1, fontWeight: 600 }}>
+                                  Employees:
+                                </Typography>
+                                <IconButton
+                                  onClick={() => handleEmployeePageChange('prev')}
+                                  disabled={employeeSearchLoading || currentEmployeePage <= 1}
+                                  color="primary"
+                                  size="small"
+                                >
+                                  <ChevronLeft />
+                                </IconButton>
+                                <IconButton
+                                  onClick={() => handleEmployeePageChange('next')}
+                                  disabled={employeeSearchLoading || !hasMoreEmployeePages}
+                                  color="primary"
+                                  size="small"
+                                >
+                                  <ChevronRight />
+                                </IconButton>
+                              </Stack>
+                            )}
+                          </Stack>
+                        </Box>
+                        
+                        {/* Show "No results" message if page has no results from Apollo - HIDDEN */}
+                        {false && !isLoading && searchResults.length === 0 && lastSearchParams && (
+                          <Alert severity="info" sx={{ mb: 2 }}>
+                            No companies found for this page. Please try navigating to a different page or adjust your search criteria.
+                          </Alert>
+                        )}
+                        
+                        {(searchResults.length > 0 || filteredCompanies.length > 0 || employeeSearchResults.length > 0) && (
+                          <>
+                            {console.log('🔍 Scraper passing data to CompanyDataTable:', {
+                              companies: getDisplayCompanies().length,
+                              employees: employeeSearchResults.length,
+                              employeeSearchResultsIsArray: Array.isArray(employeeSearchResults),
+                              employeeSearchResultsType: typeof employeeSearchResults,
+                              firstEmployee: employeeSearchResults[0]
+                            })}
+                            {console.log('👥 First company executives in Scraper:', getDisplayCompanies()[0]?.cLevelExecutives)}
+                            {console.log('👥 Scraper passing employeeData to CompanyDataTable:', {
+                              length: employeeSearchResults.length,
+                              isArray: Array.isArray(employeeSearchResults),
+                              firstTwo: employeeSearchResults.slice(0, 2),
+                              fullArray: employeeSearchResults
+                            })}
+                            {(() => {
+                              const displayCompanies = getDisplayCompanies();
+                              const firstCompany = displayCompanies[0];
+                              const companiesWithSummaries = displayCompanies.filter(c => c.summary && typeof c.summary === 'string' && c.summary.trim().length > 0).length;
+                              console.log('📋 FINAL VERIFICATION - Companies being passed to CompanyDataTable:', {
+                                totalCompanies: displayCompanies.length,
+                                companiesWithSummaries: companiesWithSummaries,
+                                firstCompanyName: firstCompany?.companyName || firstCompany?.name,
+                                firstCompanyId: firstCompany?.id || firstCompany?.company_id,
+                                firstCompanyHasSummary: !!firstCompany?.summary,
+                                firstCompanySummaryType: typeof firstCompany?.summary,
+                                firstCompanySummaryLength: firstCompany?.summary?.length || 0,
+                                firstCompanySummaryPreview: firstCompany?.summary?.substring(0, 100) || 'none',
+                                companySummariesPropKeys: Object.keys(companySummaries).length,
+                                showFilteredOnly: showFilteredOnly,
+                                usingFilteredCompanies: showFilteredOnly && filteredCompanies.length > 0,
+                                usingSearchResults: !showFilteredOnly || filteredCompanies.length === 0
+                              });
+                              return null;
+                            })()}
+                            <CompanyDataTable 
+                              key={`companies-${getDisplayCompanies().length}-employees-${employeeSearchResults.length}-${Date.now()}`}
+                              data={getDisplayCompanies()} 
+                              companySummaries={companySummaries}
+                              isLoading={isLoading}
+                              employeeSearchLoading={employeeSearchLoading}
+                              employeeSearchQuery={lastEmployeeSearchParams}
+                              employeeData={(employeeFilterSelections.linkedin || employeeFilterSelections.phone || employeeFilterSelections.summary) ? filteredEmployeeResults : (employeeSearchResults || [])}
+                              selectedEmployees={selectedEmployees}
+                              onEmployeeSelectionChange={(newSelectedSet) => setSelectedEmployees(newSelectedSet)}
+                              onUnlockEmployeeEmails={handleUnlockSelectedEmails}
+                              onUnlockEmployeePhones={handleUnlockSelectedPhones}
+                              onUnlockAllEmployeeEmails={handleUnlockAllEmails}
+                              onUnlockAllEmployeePhones={handleUnlockAllPhones}
+                              onSendLinkedInConnections={handleSendLinkedInConnections}
+                              onEmployeeFilterClick={(e) => setEmployeeFilterAnchorEl(e.currentTarget)}
+                              revealedEmployeeContacts={revealedContacts}
+                              unlockingEmployeeContacts={unlockingContacts}
+                              showCompanyFirst={showCompanyFirst}
+                              activeTab={activeResultsTab}
+                              onActiveTabChange={handleActiveTabChange}
+                              onSelectionChange={(selectedIds) => {
+                                console.log('📋 Selected companies changed:', selectedIds);
+                                setSelectedCompanyIds(new Set(selectedIds));
+                              }}
+                              paginationControls={lastSearchParams && (
+                                <Stack spacing={1} direction="row" alignItems="center">
+                                  <IconButton
+                                    onClick={() => handlePageChange('prev')}
+                                    disabled={isLoading || currentPage <= 1}
+                                    color="primary"
+                                    size="small"
+                                  >
+                                    <ChevronLeft />
+                                  </IconButton>
+                                  <IconButton
+                                    onClick={() => handlePageChange('next')}
+                                    disabled={isLoading || !hasMorePages}
+                                    color="primary"
+                                    size="small"
+                                  >
+                                    <ChevronRight />
+                                  </IconButton>
+                                </Stack>
+                              )}
+                              employeePaginationControls={lastEmployeeSearchParams && employeeSearchResults.length > 0 && (
+                                <Stack spacing={1} direction="row" alignItems="center">
+                                  <IconButton
+                                    onClick={() => handleEmployeePageChange('prev')}
+                                    disabled={employeeSearchLoading || currentEmployeePage <= 1}
+                                    color="primary"
+                                    size="small"
+                                  >
+                                    <ChevronLeft />
+                                  </IconButton>
+                                  <IconButton
+                                    onClick={() => handleEmployeePageChange('next')}
+                                    disabled={employeeSearchLoading || !hasMoreEmployeePages}
+                                    color="primary"
+                                    size="small"
+                                  >
+                                    <ChevronRight />
+                                  </IconButton>
+                                </Stack>
+                              )}
+                            />
+                          </>
+                        )}
+                        
+                        {/* Show message when filtering */}
+                        {isFiltering && (
+                          <Alert severity="info" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                            <span style={{ transform: 'scale(0.3)', display: 'inline-block', marginLeft: '-12px', marginRight: '-8px' }}>
+                              <LoadingSpinner size="sm" message="" />
+                            </span>
+                            Filtering companies and generating summaries... This may take a few minutes.
+                          </Alert>
+                        )}
+                        
+                        {/* Show message when filtered but no results */}
+                        {showFilteredOnly && filteredCompanies.length === 0 && !isFiltering && (
+                          <Alert severity="warning" sx={{ mb: 2 }}>
+                            No companies match the topic "{filterTopic}". Click "Show All Results" to see all companies.
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Box>
+                )}
+
+                {/* Employee Search Results - Now integrated in CompanyDataTable tabs */}
+              </>
+            ) : (
+              <>
+                {/* Employee Search Results - Show first if employee search is latest - Now integrated in CompanyDataTable tabs */}
+
+                {/* Company Data Display Panel - Show second if employee search is latest */}
+                {(searchResults.length > 0 || lastSearchParams || employeeSearchResults.length > 0) && (
+                  <Box sx={{ mb: 4, position: 'relative', zIndex: 2 }} ref={companyResultsRef}>
+          <Card sx={{ 
+            boxShadow: 'none',
+            bgcolor: 'transparent',
+            border: 'none',
+            borderRadius: '8px'
+          }}>
+            <CardContent sx={{ bgcolor: 'transparent', pt: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
+                {/* Clear Results Button */}
+                {(searchResults.length > 0 || employeeSearchResults.length > 0) && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Clear />}
+                    onClick={handleClearResults}
+                    sx={{
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderColor: '#d32f2f',
+                      color: '#d32f2f',
+                      '&:hover': {
+                        borderColor: '#c62828',
+                        backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                      }
+                    }}
+                  >
+                    Clear Results
+                  </Button>
+                )}
+              </Box>
+              
+              {/* Show "No results" message if page has no results from Apollo - HIDDEN */}
+              {false && !isLoading && searchResults.length === 0 && lastSearchParams && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  No companies found for this page. Please try navigating to a different page or adjust your search criteria.
+                </Alert>
+              )}
+              
+              {(searchResults.length > 0 || filteredCompanies.length > 0 || employeeSearchResults.length > 0) && (
+                <>
+                  {console.log('🔍 Scraper passing data to CompanyDataTable (else branch):', {
+                    companies: getDisplayCompanies().length,
+                    employees: employeeSearchResults.length,
+                    employeeSearchResultsIsArray: Array.isArray(employeeSearchResults)
+                  })}
+                  {console.log('👥 First company executives in Scraper:', getDisplayCompanies()[0]?.cLevelExecutives)}
+                  <CompanyDataTable 
+                    key={`companies-${getDisplayCompanies().length}-employees-${employeeSearchResults.length}-${Date.now()}`}
+                    data={getDisplayCompanies()} 
+                    companySummaries={companySummaries}
+                    isLoading={isLoading}
+                    employeeSearchLoading={employeeSearchLoading}
+                    employeeSearchQuery={lastEmployeeSearchParams}
+                    employeeData={(employeeFilterSelections.linkedin || employeeFilterSelections.phone || employeeFilterSelections.summary) ? filteredEmployeeResults : (employeeSearchResults || [])}
+                    selectedEmployees={selectedEmployees}
+                    onEmployeeSelectionChange={(newSelectedSet) => setSelectedEmployees(newSelectedSet)}
+                    onUnlockEmployeeEmails={handleUnlockSelectedEmails}
+                    onUnlockEmployeePhones={handleUnlockSelectedPhones}
+                    onUnlockAllEmployeeEmails={handleUnlockAllEmails}
+                    onUnlockAllEmployeePhones={handleUnlockAllPhones}
+                    onSendLinkedInConnections={handleSendLinkedInConnections}
+                    onEmployeeFilterClick={(e) => setEmployeeFilterAnchorEl(e.currentTarget)}
+                    revealedEmployeeContacts={revealedContacts}
+                    unlockingEmployeeContacts={unlockingContacts}
+                    showCompanyFirst={showCompanyFirst}
+                    activeTab={activeResultsTab}
+                    onActiveTabChange={(tabIndex) => setActiveResultsTab(tabIndex)}
+                    onSelectionChange={(selectedIds) => {
+                      console.log('📋 Selected companies changed:', selectedIds);
+                      setSelectedCompanyIds(new Set(selectedIds));
+                    }}
+                    paginationControls={lastSearchParams && (
+                      <Stack spacing={1} direction="row" alignItems="center">
+                        <IconButton
+                          onClick={() => handlePageChange('prev')}
+                          disabled={isLoading || currentPage <= 1}
+                          color="primary"
+                          size="small"
+                        >
+                          <ChevronLeft />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handlePageChange('next')}
+                          disabled={isLoading || !hasMorePages}
+                          color="primary"
+                          size="small"
+                        >
+                          <ChevronRight />
+                        </IconButton>
+                      </Stack>
+                    )}
+                    employeePaginationControls={(() => {
+                      const shouldShow = lastEmployeeSearchParams && employeeSearchResults.length > 0;
+                      console.log('🔍 Employee Pagination Check:', {
+                        lastEmployeeSearchParams: !!lastEmployeeSearchParams,
+                        employeeSearchResultsLength: employeeSearchResults.length,
+                        shouldShow,
+                        currentEmployeePage,
+                        hasMoreEmployeePages
+                      });
+                      return shouldShow && (
+                        <Stack spacing={1} direction="row" alignItems="center">
+                          <IconButton
+                            onClick={() => handleEmployeePageChange('prev')}
+                            disabled={employeeSearchLoading || currentEmployeePage <= 1}
+                            color="primary"
+                            size="small"
+                          >
+                            <ChevronLeft />
+                          </IconButton>
+                          <IconButton
+                            onClick={() => handleEmployeePageChange('next')}
+                            disabled={employeeSearchLoading || !hasMoreEmployeePages}
+                            color="primary"
+                            size="small"
+                          >
+                            <ChevronRight />
+                          </IconButton>
+                        </Stack>
+                      );
+                    })()}
+                  />
+                </>
+              )}
+              
+              {/* Show message when filtering */}
+              {isFiltering && (
+                <Alert severity="info" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                  <span style={{ transform: 'scale(0.3)', display: 'inline-block', marginLeft: '-12px', marginRight: '-8px' }}>
+                    <LoadingSpinner size="sm" message="" />
+                  </span>
+                  Filtering companies and generating summaries... This may take a few minutes.
+                </Alert>
+              )}
+              
+              {/* Show message when filtered but no results */}
+              {showFilteredOnly && filteredCompanies.length === 0 && !isFiltering && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  No companies match the topic "{filterTopic}". Click "Show All Results" to see all companies.
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+                )}
+              </>
+            )}
+          </>
+        );
+      })()}
+
+      {/* Stats Grid Section - Commented Out */}
+      {/* <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        {getCurrentStats().map((stat) => (
+          <Card key={stat.title}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                  {stat.icon}
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {stat.title}
+                  </Typography>
+                </Box>
+              </Box>
+              <Chip label={stat.change} color={stat.change.startsWith('+') ? 'success' : 'error'} size="small" variant="outlined" />
+            </CardContent>
+          </Card>
+        ))}
+      </Box> */}
+
+
+      {/* Recent Searches - Clickable */}
+      {searchHistory.length > 0 && (
+        <Box sx={{ mb: 2, mt: 4, position: 'relative', zIndex: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#0b1957' }}>
+            <QueryStatsIcon sx={{ color: '#0b1957', mr: 1 }} />
+            Recent Searches
+          </Typography>
+          <Card sx={{ 
+            background: '#ffffff',
+            border: '1px solid oklch(0.922 0 0)',
+            borderRadius: '20px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' }, gap: 2 }}>
+                {searchHistory.map((search) => (
+                  <Card 
+                    key={search.id} 
+                    variant="outlined"
+                    onClick={() => handleRestoreSearch(search)}
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      background: '#ffffff',
+                      border: '1px solid oklch(0.922 0 0) !important',
+                      borderColor: 'oklch(0.922 0 0) !important',
+                      borderRadius: '20px',
+                      color: '#0b1957',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      '&.MuiCard-outlined': {
+                        borderColor: 'oklch(0.922 0 0) !important'
+                      },
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(11, 25, 87, 0.15)',
+                        borderColor: '#0b1957 !important',
+                        background: '#ffffff',
+                        '&.MuiCard-outlined': {
+                          borderColor: '#0b1957 !important'
+                        },
+                        '& .MuiTypography-root': {
+                          color: '#0b1957'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          color: '#0b1957'
+                        },
+                        '& .MuiChip-root': {
+                          borderColor: '#0b1957',
+                          color: '#0b1957'
+                        }
+                      }
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <QueryStatsIcon sx={{ color: '#0b1957', mr: 1 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0b1957' }}>
+                          {search.keyword || search.keywords || 'Untitled Search'}
+                        </Typography>
+                        {search.type === 'employee' && (
+                          <Chip
+                            label="Employee"
+                            size="small"
+                            sx={{ 
+                              ml: 1,
+                              background: 'oklch(0.97 0 0)',
+                              color: '#0b1957',
+                              border: '1px solid oklch(0.922 0 0)'
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'oklch(0.556 0 0)' }}>
+                        Found {search.results || search.resultCount || 0} {search.type === 'employee' ? 'employees' : 'leads'} • {new Date(search.timestamp).toLocaleString()}
+                        {(search.location || search.params?.location) && search.location !== 'N/A' && ` • Location: ${search.location || search.params.location}`}
+                        {search.type === 'employee' && search.params?.person_titles && search.params.person_titles.length > 0 && (
+                          ` • Titles: ${search.params.person_titles.slice(0, 2).join(', ')}${search.params.person_titles.length > 2 ? '...' : ''}`
+                        )}
+                      </Typography>
+                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          label={`${search.results || search.resultCount || 0} results`}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            color: '#0b1957',
+                            borderColor: 'oklch(0.922 0 0)',
+                            background: 'transparent',
+                            '&:hover': {
+                              borderColor: '#0b1957',
+                              background: 'oklch(0.97 0 0)',
+                              color: '#0b1957'
+                            }
+                          }}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
+      {/* Employee Detail Dialog */}
+      <Dialog
+        open={employeeDetailDialogOpen}
+        onClose={() => setEmployeeDetailDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar 
+              src={selectedEmployeeDetail?.organization?.logo_url || selectedEmployeeDetail?.organization?.logo}
+              sx={{ width: 48, height: 48, bgcolor: 'primary.main', border: '2px solid #e0e0e0' }}
+            >
+              <Business />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {selectedEmployeeDetail?.first_name && selectedEmployeeDetail?.last_name 
+                  ? `${selectedEmployeeDetail.first_name} ${selectedEmployeeDetail.last_name}`
+                  : selectedEmployeeDetail?.name || 'Employee'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedEmployeeDetail?.organization?.name || selectedEmployeeDetail?.company_name || 'Company'}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 3 }}>
+          {selectedEmployeeDetail && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Employee Photo and Title Section */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                {/* Employee Photo */}
+                <Avatar 
+                  src={selectedEmployeeDetail.photo_url}
+                  sx={{ 
+                    width: 120, 
+                    height: 120,
+                    border: '4px solid',
+                    borderColor: 'primary.main',
+                    boxShadow: 3
+                  }}
+                >
+                  <Person sx={{ fontSize: 60 }} />
+                </Avatar>
+                
+                {/* Job Title */}
+                {selectedEmployeeDetail.title && (
+                  <Chip 
+                    label={selectedEmployeeDetail.title} 
+                    color="primary"
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      height: 32,
+                      px: 1
+                    }}
+                  />
+                )}
+              </Box>
+              
+              {/* Contact Details Section */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                {/* Location */}
+                {(selectedEmployeeDetail.city || selectedEmployeeDetail.country) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <LocationOn sx={{ fontSize: 22, color: '#f44336', flexShrink: 0 }} />
+                    <Typography variant="body2" sx={{ color: '#555', fontWeight: 500 }}>
+                      {[selectedEmployeeDetail.city, selectedEmployeeDetail.state, selectedEmployeeDetail.country].filter(Boolean).join(', ')}
+                    </Typography>
+                  </Box>
+                )}
+                
+                {/* LinkedIn */}
+                {selectedEmployeeDetail.linkedin_url && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <LinkedInIcon sx={{ fontSize: 22, color: '#0077b5', flexShrink: 0 }} />
+                    <Link
+                      href={selectedEmployeeDetail.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ 
+                        color: '#0077b5',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        '&:hover': { textDecoration: 'underline' }
+                      }}
+                    >
+                      View LinkedIn Profile
+                    </Link>
+                  </Box>
+                )}
+                
+                {/* Phone Number (Blurred with Lock) */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ 
+                    bgcolor: '#2196f3', 
+                    borderRadius: '50%', 
+                    p: 0.75,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Phone sx={{ fontSize: 18, color: 'white' }} />
+                  </Box>
+                  <Typography variant="body2" sx={{ 
+                    color: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone 
+                      ? '#212529' 
+                      : phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] 
+                      ? '#d32f2f' 
+                      : '#999',
+                    fontSize: '0.9rem',
+                    letterSpacing: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? 'normal' : '1px',
+                    filter: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? 'none' : phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] ? 'none' : 'blur(3px)',
+                    userSelect: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? 'text' : 'none',
+                    flex: 1,
+                    fontWeight: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? 600 : phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] ? 500 : 400
+                  }}>
+                    {revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone 
+                      || (phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] 
+                        ? 'No mobile number' 
+                        : '+971 50 123 4567')}
+                  </Typography>
+                  <Tooltip title={
+                    revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone 
+                      ? "Phone number revealed" 
+                      : phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                      ? "Phone number not available"
+                      : "Click to reveal phone number"
+                  } arrow>
+                    <IconButton
+                      size="small"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const employeeId = selectedEmployeeDetail.id || selectedEmployeeDetail.name;
+                        const employeeName = selectedEmployeeDetail.first_name && selectedEmployeeDetail.last_name
+                          ? `${selectedEmployeeDetail.first_name} ${selectedEmployeeDetail.last_name}`
+                          : selectedEmployeeDetail.name || 'Employee';
+                        
+                        // Skip if already revealed or not found
+                        if (revealedContacts[employeeId]?.phone || phoneNotFound[employeeId]) return;
+                        
+                        const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+                        
+                        // Set unlocking state
+                        setUnlockingContacts(prev => ({
+                          ...prev,
+                          [employeeId]: { ...prev[employeeId], phone: true }
+                        }));
+                        
+                        let phoneData = null;
+                        try {
+                          const response = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-phone`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              person_id: selectedEmployeeDetail.id,
+                              employee_name: employeeName
+                            })
+                          });
+                          
+                          phoneData = await response.json();
+                          
+                          if (phoneData.success && phoneData.phone) {
+                            setRevealedContacts(prev => ({
+                              ...prev,
+                              [employeeId]: { ...prev[employeeId], phone: phoneData.phone }
+                            }));
+                            setPhoneNotFound(prev => {
+                              const updated = { ...prev };
+                              delete updated[employeeId];
+                              return updated;
+                            });
+                          } else if (phoneData.status === 'not_found') {
+                            setPhoneNotFound(prev => ({
+                              ...prev,
+                              [employeeId]: true
+                            }));
+                          } else if (phoneData.status === 'processing' || phoneData.status === 'pending') {
+                            // Keep loading state active while polling
+                            pollPhoneStatus(employeeId, selectedEmployeeDetail.id);
+                            // Don't clear unlocking state here - let pollPhoneStatus handle it
+                            return;
+                          }
+                        } catch (error) {
+                          console.error('Error revealing phone:', error);
+                        } finally {
+                          // Only clear unlocking state if not processing/pending
+                          if (!phoneData?.status || (phoneData.status !== 'processing' && phoneData.status !== 'pending')) {
+                            setUnlockingContacts(prev => ({
+                              ...prev,
+                              [employeeId]: { ...prev[employeeId], phone: false }
+                            }));
+                          }
+                        }
+                      }}
+                      disabled={
+                        unlockingContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone || 
+                        revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone || 
+                        phoneNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                      }
+                      sx={{ 
+                        bgcolor: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? '#c8e6c9' : '#e3f2fd',
+                        '&:hover': { bgcolor: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? '#c8e6c9' : '#bbdefb' },
+                        p: 0.75
+                      }}
+                    >
+                      {unlockingContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? (
+                        <CircularProgress size={20} sx={{ color: '#2196f3' }} />
+                      ) : revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.phone ? (
+                        <CheckCircle sx={{ fontSize: 20, color: '#4caf50' }} />
+                      ) : (
+                        <Lock sx={{ fontSize: 20, color: '#2196f3' }} />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                
+                {/* Email (Blurred with Lock) */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ 
+                    bgcolor: '#4caf50', 
+                    borderRadius: '50%', 
+                    p: 0.75,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Email sx={{ fontSize: 18, color: 'white' }} />
+                  </Box>
+                  <Typography variant="body2" sx={{ 
+                    color: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email 
+                      ? '#212529' 
+                      : emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                      ? '#d32f2f'
+                      : '#999',
+                    fontSize: '0.9rem',
+                    letterSpacing: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? 'normal' : '1px',
+                    filter: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? 'none' : emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] ? 'none' : 'blur(3px)',
+                    userSelect: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? 'text' : 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                    fontWeight: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? 600 : emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name] ? 500 : 400
+                  }}>
+                    {revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email 
+                      || (emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                        ? 'No email available'
+                        : 'name@company.com')}
+                  </Typography>
+                  <Tooltip title={
+                    revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email 
+                      ? "Email address revealed" 
+                      : emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                      ? "Email not available"
+                      : "Click to reveal email address"
+                  } arrow>
+                    <IconButton
+                      size="small"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const employeeId = selectedEmployeeDetail.id || selectedEmployeeDetail.name;
+                        const employeeName = selectedEmployeeDetail.first_name && selectedEmployeeDetail.last_name
+                          ? `${selectedEmployeeDetail.first_name} ${selectedEmployeeDetail.last_name}`
+                          : selectedEmployeeDetail.name || 'Employee';
+                        
+                        // Skip if already revealed or not found
+                        if (revealedContacts[employeeId]?.email || emailNotFound[employeeId]) return;
+                        
+                        const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+                        
+                        // Set unlocking state
+                        setUnlockingContacts(prev => ({
+                          ...prev,
+                          [employeeId]: { ...prev[employeeId], email: true }
+                        }));
+                        
+                        try {
+                          const response = await fetch(`${API_BASE_URL}/api/apollo-leads/reveal-email`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              person_id: selectedEmployeeDetail.id,
+                              employee_name: employeeName
+                            })
+                          });
+                          
+                          const data = await response.json();
+                          
+                          if (data.success && data.email) {
+                            setRevealedContacts(prev => ({
+                              ...prev,
+                              [employeeId]: { ...prev[employeeId], email: data.email }
+                            }));
+                            setEmailNotFound(prev => {
+                              const updated = { ...prev };
+                              delete updated[employeeId];
+                              return updated;
+                            });
+                          } else if (data.status === 'not_available' || (!data.success && data.error)) {
+                            setEmailNotFound(prev => ({
+                              ...prev,
+                              [employeeId]: true
+                            }));
+                          }
+                        } catch (error) {
+                          console.error('Error revealing email:', error);
+                        } finally {
+                          setUnlockingContacts(prev => ({
+                            ...prev,
+                            [employeeId]: { ...prev[employeeId], email: false }
+                          }));
+                        }
+                      }}
+                      disabled={
+                        unlockingContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email || 
+                        revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ||
+                        emailNotFound[selectedEmployeeDetail.id || selectedEmployeeDetail.name]
+                      }
+                      sx={{ 
+                        bgcolor: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? '#c8e6c9' : '#e8f5e9',
+                        '&:hover': { bgcolor: revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? '#c8e6c9' : '#c8e6c9' },
+                        p: 0.75
+                      }}
+                    >
+                      {unlockingContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? (
+                        <CircularProgress size={20} sx={{ color: '#4caf50' }} />
+                      ) : revealedContacts[selectedEmployeeDetail.id || selectedEmployeeDetail.name]?.email ? (
+                        <CheckCircle sx={{ fontSize: 20, color: '#4caf50' }} />
+                      ) : (
+                        <Lock sx={{ fontSize: 20, color: '#4caf50' }} />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+              
+              {/* Company Information */}
+              {selectedEmployeeDetail.organization && (
+                <Box sx={{ mt: 1, pt: 2.5, borderTop: '1px solid #e0e0e0' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: '#333' }}>Company Information</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {selectedEmployeeDetail.organization.name && (
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 80, color: '#666' }}>Name:</Typography>
+                        <Typography variant="body2" sx={{ color: '#212529' }}>{selectedEmployeeDetail.organization.name}</Typography>
+                      </Box>
+                    )}
+                    {selectedEmployeeDetail.organization.website_url && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 80, color: '#666' }}>Website:</Typography>
+                        <Link 
+                          href={selectedEmployeeDetail.organization.website_url} 
+                          target="_blank"
+                          sx={{ 
+                            color: '#0b1957',
+                            textDecoration: 'none',
+                            '&:hover': { 
+                              textDecoration: 'underline',
+                              color: '#0b1957'
+                            }
+                          }}
+                        >
+                          {selectedEmployeeDetail.organization.website_url}
+                        </Link>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1.5 }}>
+          <Button 
+            onClick={() => setEmployeeDetailDialogOpen(false)} 
+            variant="contained"
+            sx={{
+              minWidth: 100,
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Company Detail Dialog (from Employee Card click) */}
+      <Dialog
+        open={companyDetailDialogOpen}
+        onClose={() => setCompanyDetailDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' } }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar 
+              src={selectedCompanyDetail?.logoUrl}
+              sx={{ width: 48, height: 48, bgcolor: 'primary.main', border: '2px solid #e0e0e0' }}
+            >
+              <Business />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.25 }}>
+                {selectedCompanyDetail?.companyName || 'Company'}
+              </Typography>
+              {selectedCompanyDetail?.industry && (
+                <Chip label={selectedCompanyDetail.industry} size="small" variant="outlined" sx={{ height: 22, fontWeight: 600 }} />
+              )}
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2.5 }}>
+          {selectedCompanyDetail && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Phone */}
+              {selectedCompanyDetail.phone && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <Phone sx={{ fontSize: 18, color: '#6c757d' }} />
+                  <Typography variant="body2" sx={{ color: '#212529', fontWeight: 500 }}>
+                    {selectedCompanyDetail.phone}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Location */}
+              {selectedCompanyDetail.location && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <LocationOn sx={{ fontSize: 18, color: '#6c757d' }} />
+                  <Typography variant="body2" sx={{ color: '#212529' }}>
+                    {selectedCompanyDetail.location}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Links */}
+              {(selectedCompanyDetail.website || selectedCompanyDetail.linkedinProfile || selectedCompanyDetail.facebookUrl || selectedCompanyDetail.twitterUrl) && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" sx={{ color: '#6c757d', fontWeight: 600, letterSpacing: '0.5px' }}>LINKS</Typography>
+                  <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
+                    {selectedCompanyDetail.website && (
+                      <Tooltip title="Website" arrow>
+                        <IconButton component="a" href={selectedCompanyDetail.website} target="_blank" rel="noopener noreferrer" size="small" sx={{ bgcolor: '#f8f9fa' }}>
+                          <Public fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {selectedCompanyDetail.linkedinProfile && (
+                      <Tooltip title="LinkedIn" arrow>
+                        <IconButton component="a" href={selectedCompanyDetail.linkedinProfile} target="_blank" rel="noopener noreferrer" size="small" sx={{ bgcolor: '#f0f7ff' }}>
+                          <LinkedInIcon fontSize="small" sx={{ color: '#0a66c2' }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {selectedCompanyDetail.facebookUrl && (
+                      <Tooltip title="Facebook" arrow>
+                        <IconButton component="a" href={selectedCompanyDetail.facebookUrl} target="_blank" rel="noopener noreferrer" size="small" sx={{ bgcolor: '#f8f9fa' }}>
+                          <Facebook fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {selectedCompanyDetail.twitterUrl && (
+                      <Tooltip title="Twitter" arrow>
+                        <IconButton component="a" href={selectedCompanyDetail.twitterUrl} target="_blank" rel="noopener noreferrer" size="small" sx={{ bgcolor: '#f8f9fa' }}>
+                          <Article fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Sales Intelligence Summary */}
+              {selectedCompanyDetail?.summary && (
+                <Box sx={{ mt: 3, p: 2.5, bgcolor: '#e8f5e9', borderRadius: 2, borderLeft: '4px solid #4caf50' }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ color: '#2e7d32', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Article sx={{ fontSize: 20 }} />
+                    Sales Intelligence Summary
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    component="div"
+                    sx={{ 
+                      lineHeight: 1.8,
+                      whiteSpace: 'pre-wrap',
+                      '& strong': {
+                        fontWeight: 'bold',
+                        color: '#2e7d32'
+                      }
+                    }}
+                  >
+                    {selectedCompanyDetail.summary.split('\n').map((line, idx) => {
+                      if (line.startsWith('##')) {
+                        return (
+                          <Typography key={idx} variant="h6" sx={{ mt: 2, mb: 1, color: '#2e7d32', fontWeight: 'bold' }}>
+                            {line.replace(/^##+\s*/, '')}
+                          </Typography>
+                        );
+                      } else if (line.startsWith('#')) {
+                        return (
+                          <Typography key={idx} variant="h5" sx={{ mt: 2, mb: 1, color: '#2e7d32', fontWeight: 'bold' }}>
+                            {line.replace(/^#+\s*/, '')}
+                          </Typography>
+                        );
+                      } else if (line.trim() === '') {
+                        return <br key={idx} />;
+                      } else {
+                        // Format bold text
+                        const parts = line.split(/(\*\*.*?\*\*)/g);
+                        return (
+                          <Typography key={idx} component="p" sx={{ mb: 1 }}>
+                            {parts.map((part, partIdx) => {
+                              if (part.startsWith('**') && part.endsWith('**')) {
+                                return <strong key={partIdx}>{part.slice(2, -2)}</strong>;
+                              }
+                              return <span key={partIdx}>{part}</span>;
+                            })}
+                          </Typography>
+                        );
+                      }
+                    })}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setCompanyDetailDialogOpen(false)} variant="contained" sx={{ textTransform: 'none', fontWeight: 600 }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Employee Filter Menu */}
+      <Menu
+        anchorEl={employeeFilterAnchorEl}
+        open={employeeFilterOpen}
+        onClose={(e, reason) => {
+          // Only close on backdrop click or escape, not on item click
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+            setEmployeeFilterAnchorEl(null);
+          }
+        }}
+        anchorOrigin={{ 
+          vertical: 'bottom', 
+          horizontal: 'left' 
+        }}
+        transformOrigin={{ 
+          vertical: 'top', 
+          horizontal: 'left' 
+        }}
+        disableScrollLock={false}
+        disablePortal={false}
+        disableAutoFocusItem={true}
+        MenuListProps={{
+          'aria-labelledby': 'employee-filter-button',
+          dense: false,
+        }}
+        PaperProps={{
+          sx: {
+            bgcolor: '#ffffff',
+            minWidth: 280,
+            maxHeight: 400,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            border: '1px solid oklch(0.922 0 0)',
+            borderRadius: '20px',
+            mt: 0.5,
+          }
+        }}
+        slotProps={{
+          root: {
+            sx: {
+              zIndex: 1300,
+            }
+          }
+        }}
+        sx={{
+          '& .MuiPaper-root': {
+            marginTop: '4px !important',
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={(e) => {
+          e.stopPropagation();
+            e.preventDefault();
+          const next = { ...employeeFilterSelections, linkedin: !employeeFilterSelections.linkedin };
+          setEmployeeFilterSelections(next);
+            applyEmployeeFilters(next);
+          }}
+          sx={{
+            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
+            py: 1.5,
+          }}
+        >
+          <Checkbox 
+            checked={employeeFilterSelections.linkedin} 
+            sx={{ 
+              mr: 1,
+              color: '#0b1957',
+              '&.Mui-checked': { color: '#0b1957' }
+            }} 
+          />
+          <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            With LinkedIn
+          </Typography>
+        </MenuItem>
+        <MenuItem 
+          onClick={(e) => {
+          e.stopPropagation();
+            e.preventDefault();
+          const next = { ...employeeFilterSelections, phone: !employeeFilterSelections.phone };
+          setEmployeeFilterSelections(next);
+            applyEmployeeFilters(next);
+          }}
+          sx={{
+            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
+            py: 1.5,
+          }}
+        >
+          <Checkbox 
+            checked={employeeFilterSelections.phone} 
+            sx={{ 
+              mr: 1,
+              color: '#0b1957',
+              '&.Mui-checked': { color: '#0b1957' }
+            }} 
+          />
+          <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            With Phone
+          </Typography>
+        </MenuItem>
+        <MenuItem 
+          onClick={(e) => {
+          e.stopPropagation();
+            e.preventDefault();
+          const next = { ...employeeFilterSelections, summary: !employeeFilterSelections.summary };
+          setEmployeeFilterSelections(next);
+            applyEmployeeFilters(next);
+          }}
+          sx={{
+            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
+            py: 1.5,
+          }}
+        >
+          <Checkbox 
+            checked={employeeFilterSelections.summary} 
+            sx={{ 
+              mr: 1,
+              color: '#0b1957',
+              '&.Mui-checked': { color: '#0b1957' }
+            }} 
+          />
+          <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            With Sales Summary
+          </Typography>
+        </MenuItem>
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem 
+          onClick={() => {
+          setEmployeeFilterSelections({ linkedin: false, phone: false, summary: false });
+          setFilteredEmployeeResults([]);
+          setSelectedEmployees(new Set());
+          setEmployeeFilterAnchorEl(null);
+          }}
+          sx={{
+            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
+            py: 1.5,
+          }}
+        >
+          <Typography sx={{ color: '#0b1957', fontWeight: 500, ml: 4.5 }}>
+            Clear Selection
+          </Typography>
+        </MenuItem>
+      </Menu>
+
+      {/* Floating AI Icon */}
+      <FloatingAIIcon 
+        position="bottom-right"
+        onClick={() => {
+          // Scroll to AI chat section or focus on it
+          const chatSection = document.getElementById('ai-chat-section');
+          if (chatSection) {
+            chatSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }}
+      />
+
+    </Box>
+    </>
+  );
+}
