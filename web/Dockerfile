@@ -11,8 +11,8 @@ COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
 # Install dependencies
-RUN cd web && npm ci --only=production && \
-    (cd ../sdk && npm ci --only=production || mkdir -p ../sdk/node_modules)
+RUN cd web && npm ci && \
+    (cd ../sdk && npm ci || mkdir -p ../sdk/node_modules)
 
 # Rebuild the source code only when needed
 FROM base AS builder
