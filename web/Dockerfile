@@ -46,10 +46,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy necessary files from standalone build
-# Standalone preserves the original directory structure: frontend/web/
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Copy standalone output which includes frontend/web/ structure
+# This contains: server.js, package.json, node_modules, and .next directory
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone/frontend ./frontend
+
+# Copy static assets (built files) to the correct location
+# These need to go into frontend/web/.next/static/
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./frontend/web/.next/static
+
+# Copy public directory to the correct location  
+# This needs to go into frontend/web/public/
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./frontend/web/public
 
 USER nextjs
