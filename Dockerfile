@@ -30,6 +30,9 @@ WORKDIR /app/web
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Generate Prisma client if prisma directory exists
+RUN if [ -d "prisma" ]; then npx prisma generate; fi
+
 RUN npm run build
 
 # Production image, copy all the files and run next

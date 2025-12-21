@@ -38,7 +38,7 @@ export { useApolloLeads } from './useApolloLeads';
 // ============================================================================
 // COMPONENTS
 // ============================================================================
-export { ApolloLeadsSearch } from './ApolloLeadsSearch';
+export { default as ApolloLeadsSearch } from './ApolloLeadsSearch';
 // export { ApolloCompanyCard } from './components/ApolloCompanyCard';
 // export { ApolloEmployeeList } from './components/ApolloEmployeeList';
 
