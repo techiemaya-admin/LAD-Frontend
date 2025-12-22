@@ -18,6 +18,7 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
       '--cache-from', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
       '--build-arg', 'BUILDKIT_INLINE_CACHE=1',
+      '--build-arg', 'NEXT_PUBLIC_API_URL=$_API_URL',
       '-f', 'web/Dockerfile',
       '.'
     ]
@@ -76,6 +77,6 @@ timeout: '1800s'
 # Substitutions
 substitutions:
   _REGION: 'us-central1'
-  _SERVICE_NAME: 'lad-frontend'
-  _ENV: 'production'
+  _SERVICE_NAME: 'lad-frontend-develop'
+  _ENV: 'develop'
   _API_URL: 'https://lad-backend-3nddlneyya-uc.a.run.app'
