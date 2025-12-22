@@ -46,17 +46,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output which includes frontend/web/ structure
-# This contains: server.js, package.json, node_modules, and .next directory
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone/frontend ./frontend
+# Copy standalone output (server.js at root)
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
 
-# Copy static assets (built files) to the correct location
-# These need to go into frontend/web/.next/static/
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./frontend/web/.next/static
+# Copy static assets to .next/static
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
 
-# Copy public directory to the correct location  
-# This needs to go into frontend/web/public/
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./frontend/web/public
+# Copy public directory
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 
 USER nextjs
 
@@ -66,5 +63,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application - server.js is at frontend/web/server.js
-CMD ["node", "frontend/web/server.js"]
+# Start the application
+CMD ["node", "server.js"]

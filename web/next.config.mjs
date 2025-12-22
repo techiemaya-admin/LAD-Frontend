@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure Turbopack root to avoid workspace warnings
+  // Configure Turbopack root - use current dir in production, workspace root in dev
   turbopack: {
-    root: '../..',
+    root: process.env.NODE_ENV === 'production' ? '.' : '../..',
   },
   // Disable caching during development to prevent stale code issues
   async headers() {
