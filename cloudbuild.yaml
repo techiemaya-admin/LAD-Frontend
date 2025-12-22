@@ -7,6 +7,7 @@ steps:
       - |
         echo "${BRANCH_NAME,,}" > /workspace/branch_lower.txt
         cat /workspace/branch_lower.txt
+        echo "API URL: $_API_URL"
 
   # Build the Docker image with buildkit for better caching
   - name: 'gcr.io/cloud-builders/docker'
