@@ -1,0 +1,45 @@
+{
+    "success": true,
+    "result": {
+        "job_id": "batch-22c3f6b794c042dbb52fa465886cc565",
+        "mode": "batch",
+        "status": "pending",
+        "created_at": "2025-12-05T16:53:23+00:00",
+        "updated_at": "2025-12-05T16:53:23+00:00",
+        "voice_id": "95d51f79-c397-46f9-b49a-23763d3eaa2d",
+        "tts_voice_id": "95d51f79-c397-46f9-b49a-23763d3eaa2d",
+        "voice_provider": "cartesia",
+        "voice_name": "Cartesia's hindi Arushi female voice",
+        "llm_provider": null,
+        "llm_model": null,
+        "from_number": "+19513456728",
+        "base_context": null,
+        "initiated_by": 11,
+        "agent_id": null,
+        "results": [
+            {
+                "to_number": "+919014406622",
+                "status": "pending",
+                "room_name": null,
+                "dispatch_id": null,
+                "error": null,
+                "index": 0,
+                "lead_name": "suhas",
+                "context": "name is suhas and studying 10th class\nThe lead's name is \"suhas\".",
+                "call_log_id": "3917d7ee-1d75-4dbe-a71d-58e25cfe9fe1"
+            },
+            {
+                "to_number": "+919014406622",
+                "status": "pending",
+                "room_name": null,
+                "dispatch_id": null,
+                "error": null,
+                "index": 1,
+                "lead_name": "suhas",
+                "context": "Studing 12th class for feature road map\nThe lead's name is \"suhas\".",
+                "call_log_id": "5dca253f-10c6-4900-a1a6-faab2fb88d8e"
+            }
+        ],
+        "error": null
+    }
+}
