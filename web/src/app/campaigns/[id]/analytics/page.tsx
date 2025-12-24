@@ -10,91 +10,28 @@ import {
   ArrowBack, TrendingUp, People, Send, CheckCircle, Email, OpenInNew,
   Launch, Error as ErrorIcon, LinkedIn as LinkedInIcon, Schedule
 } from '@mui/icons-material';
-import { apiGet } from '@/lib/api';
+import { useCampaignAnalytics } from '@/features/campaigns/hooks/useCampaignAnalytics';
 import { useToast } from '@/components/ui/app-toaster';
-
-interface CampaignAnalytics {
-  campaign: {
-    id: string;
-    name: string;
-    status: string;
-    created_at: string;
-  };
-  overview: {
-    total_leads: number;
-    active_leads: number;
-    completed_leads: number;
-    stopped_leads: number;
-  };
-  metrics: {
-    sent: number;
-    delivered: number;
-    connected: number;
-    replied: number;
-    opened: number;
-    clicked: number;
-    errors: number;
-    // Step-specific metrics
-    leads_generated?: number;
-    connection_requests_sent?: number;
-    connection_requests_accepted?: number;
-    linkedin_messages_sent?: number;
-    linkedin_messages_replied?: number;
-    voice_calls_made?: number;
-    voice_calls_answered?: number;
-  };
-  rates: {
-    delivery_rate: number;
-    connection_rate: number;
-    reply_rate: number;
-    open_rate: number;
-    click_rate: number;
-  };
-  step_analytics: Array<{
-    id: string;
-    type: string;
-    title: string;
-    order: number;
-    total_executions: number;
-    sent: number;
-    delivered: number;
-    connected: number;
-    replied: number;
-    errors: number;
-  }>;
-}
 
 export default function CampaignAnalyticsPage() {
   const params = useParams();
   const router = useRouter();
   const campaignId = params.id as string;
   const { push } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null);
+  
+  // Use SDK hook for analytics
+  const { analytics, loading, error } = useCampaignAnalytics(campaignId);
 
   useEffect(() => {
-    if (campaignId) {
-      loadAnalytics();
-    }
-  }, [campaignId]);
-
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-      const response = await apiGet(`/api/campaigns/${campaignId}/analytics`) as { data: CampaignAnalytics };
-      setAnalytics(response.data);
-    } catch (error: any) {
-      console.error('Failed to load analytics:', error);
+    if (error) {
       push({
         variant: 'error',
         title: 'Error',
-        description: error.message || 'Failed to load analytics',
+        description: error || 'Failed to load analytics',
       });
       router.push('/campaigns');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error, push, router]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -148,6 +85,9 @@ export default function CampaignAnalyticsPage() {
                 size="small"
                 sx={{ textTransform: 'capitalize' }}
               />
+              <Typography variant="body2" sx={{ color: '#64748B' }}>
+                •
+              </Typography>
               <Typography variant="body2" sx={{ color: '#64748B' }}>
                 Created {new Date(analytics.campaign.created_at).toLocaleDateString()}
               </Typography>
@@ -267,83 +207,84 @@ export default function CampaignAnalyticsPage() {
       </Grid>
 
       {/* Step-Specific Metrics */}
-      {((analytics.metrics.leads_generated && analytics.metrics.leads_generated > 0) || 
-        (analytics.metrics.connection_requests_sent && analytics.metrics.connection_requests_sent > 0) || 
-        (analytics.metrics.linkedin_messages_sent && analytics.metrics.linkedin_messages_sent > 0) || 
-        (analytics.metrics.voice_calls_made && analytics.metrics.voice_calls_made > 0)) && (
-        <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
-              Step-Specific Activity
-            </Typography>
-            <Grid container spacing={2}>
-              {analytics.metrics.leads_generated && analytics.metrics.leads_generated > 0 && (
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
-                      Leads Scraped/Generated
+      <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
+            Step-Specific Activity
+          </Typography>
+          <Grid container spacing={2}>
+            {analytics.metrics.leads_generated !== undefined && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
+                    Leads Scraped/Generated
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#3B82F6' }}>
+                    {analytics.metrics.leads_generated}
+                  </Typography>
+                </Box>
+              </Grid>
+            )}
+            {analytics.metrics.connection_requests_sent !== undefined && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
+                    Connection Requests Sent
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#0077B5' }}>
+                    {analytics.metrics.connection_requests_sent}
+                  </Typography>
+                  {analytics.metrics.connection_requests_accepted !== undefined && 
+                   analytics.metrics.connection_requests_accepted !== null && 
+                   analytics.metrics.connection_requests_accepted > 0 && (
+                    <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
+                      {analytics.metrics.connection_requests_accepted} accepted
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#3B82F6' }}>
-                      {analytics.metrics.leads_generated}
+                  )}
+                </Box>
+              </Grid>
+            )}
+            {analytics.metrics.linkedin_messages_sent !== undefined && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
+                    LinkedIn Messages Sent
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#0077B5' }}>
+                    {analytics.metrics.linkedin_messages_sent}
+                  </Typography>
+                  {analytics.metrics.linkedin_messages_replied !== undefined && 
+                   analytics.metrics.linkedin_messages_replied !== null && 
+                   analytics.metrics.linkedin_messages_replied > 0 && (
+                    <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
+                      {analytics.metrics.linkedin_messages_replied} replied
                     </Typography>
-                  </Box>
-                </Grid>
-              )}
-              {analytics.metrics.connection_requests_sent && analytics.metrics.connection_requests_sent > 0 && (
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
-                      Connection Requests Sent
+                  )}
+                </Box>
+              </Grid>
+            )}
+            {analytics.metrics.voice_calls_made !== undefined && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
+                    Voice Calls Made
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#8B5CF6' }}>
+                    {analytics.metrics.voice_calls_made}
+                  </Typography>
+                  {analytics.metrics.voice_calls_answered !== undefined && 
+                   analytics.metrics.voice_calls_answered !== null && 
+                   analytics.metrics.voice_calls_answered > 0 && (
+                    <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
+                      {analytics.metrics.voice_calls_answered} answered
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#0077B5' }}>
-                      {analytics.metrics.connection_requests_sent}
-                    </Typography>
-                    {analytics.metrics.connection_requests_accepted && analytics.metrics.connection_requests_accepted > 0 && (
-                      <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
-                        {analytics.metrics.connection_requests_accepted} accepted
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              )}
-              {analytics.metrics.linkedin_messages_sent && analytics.metrics.linkedin_messages_sent > 0 && (
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
-                      LinkedIn Messages Sent
-                    </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#0077B5' }}>
-                      {analytics.metrics.linkedin_messages_sent}
-                    </Typography>
-                    {analytics.metrics.linkedin_messages_replied && analytics.metrics.linkedin_messages_replied > 0 && (
-                      <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
-                        {analytics.metrics.linkedin_messages_replied} replied
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              )}
-              {analytics.metrics.voice_calls_made && analytics.metrics.voice_calls_made > 0 && (
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
-                      Voice Calls Made
-                    </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#8B5CF6' }}>
-                      {analytics.metrics.voice_calls_made}
-                    </Typography>
-                    {analytics.metrics.voice_calls_answered && analytics.metrics.voice_calls_answered > 0 && (
-                      <Typography variant="body2" sx={{ color: '#10B981', mt: 0.5 }}>
-                        {analytics.metrics.voice_calls_answered} answered
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+                  )}
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* Metrics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -360,7 +301,7 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Sent</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.sent}
+                    {analytics.overview.sent}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -369,7 +310,7 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Delivered</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.delivered}
+                    {analytics.overview.delivered}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -378,7 +319,7 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Connected</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.connected}
+                    {analytics.overview.connected}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -387,7 +328,7 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Replied</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.replied}
+                    {analytics.overview.replied}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -396,7 +337,7 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Opened</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.opened}
+                    {analytics.overview.opened}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -405,10 +346,10 @@ export default function CampaignAnalyticsPage() {
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Clicked</Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                    {analytics.metrics.clicked}
+                    {analytics.overview.clicked}
                   </Typography>
                 </Box>
-                {analytics.metrics.errors > 0 && (
+                {analytics.metrics.errors && analytics.metrics.errors > 0 && (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <ErrorIcon sx={{ color: '#EF4444', fontSize: 20 }} />
@@ -435,12 +376,12 @@ export default function CampaignAnalyticsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Delivery Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
-                      {analytics.rates.delivery_rate.toFixed(1)}%
+                      {analytics.metrics.delivery_rate?.toFixed(1) ?? 0}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={analytics.rates.delivery_rate}
+                    value={analytics.metrics.delivery_rate ?? 0}
                     sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0' }}
                   />
                 </Box>
@@ -448,12 +389,12 @@ export default function CampaignAnalyticsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Connection Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#0077B5' }}>
-                      {analytics.rates.connection_rate.toFixed(1)}%
+                      {analytics.metrics.connection_rate?.toFixed(1) ?? 0}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={analytics.rates.connection_rate}
+                    value={analytics.metrics.connection_rate ?? 0}
                     sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0' }}
                   />
                 </Box>
@@ -461,12 +402,12 @@ export default function CampaignAnalyticsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Reply Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#F59E0B' }}>
-                      {analytics.rates.reply_rate.toFixed(1)}%
+                      {analytics.metrics.reply_rate?.toFixed(1) ?? 0}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={analytics.rates.reply_rate}
+                    value={analytics.metrics.reply_rate ?? 0}
                     sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0' }}
                   />
                 </Box>
@@ -474,12 +415,12 @@ export default function CampaignAnalyticsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Open Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#8B5CF6' }}>
-                      {analytics.rates.open_rate.toFixed(1)}%
+                      {analytics.metrics.open_rate?.toFixed(1) ?? 0}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={analytics.rates.open_rate}
+                    value={analytics.metrics.open_rate ?? 0}
                     sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0' }}
                   />
                 </Box>
@@ -487,12 +428,12 @@ export default function CampaignAnalyticsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ color: '#64748B' }}>Click Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#EC4899' }}>
-                      {analytics.rates.click_rate.toFixed(1)}%
+                      {analytics.metrics.click_rate?.toFixed(1) ?? 0}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={analytics.rates.click_rate}
+                    value={analytics.metrics.click_rate ?? 0}
                     sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0' }}
                   />
                 </Box>
@@ -503,14 +444,14 @@ export default function CampaignAnalyticsPage() {
       </Grid>
 
       {/* Step-by-Step Analytics */}
-      {analytics.step_analytics && analytics.step_analytics.length > 0 && (
-        <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
-              Step-by-Step Performance
-            </Typography>
+      <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
+            Step-by-Step Performance
+          </Typography>
+          {analytics.step_analytics && analytics.step_analytics.length > 0 ? (
             <Stack spacing={2}>
-              {analytics.step_analytics.map((step, index) => (
+              {analytics.step_analytics.map((step) => (
                 <Paper
                   key={step.id}
                   sx={{
@@ -583,9 +524,13 @@ export default function CampaignAnalyticsPage() {
                 </Paper>
               ))}
             </Stack>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <Typography variant="body2" sx={{ color: '#64748B', textAlign: 'center', py: 4 }}>
+              No step-by-step analytics available yet. Campaign steps will appear here once executed.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
     </Box>
   );
 }
