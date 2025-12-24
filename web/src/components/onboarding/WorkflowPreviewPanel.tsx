@@ -15,7 +15,7 @@ import ReactFlow, {
   NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import CustomNode from '@/components/campaigns/nodes/CustomNode';
+import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { StepType } from '@/types/campaign';
 import { CheckCircle2, Edit, Trash2, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiPost } from '@/lib/api';

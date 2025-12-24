@@ -11,8 +11,8 @@ import {
 } from '@mui/icons-material';
 import { apiGet, apiPost } from '@/lib/api';
 import { useToast } from '@/components/ui/app-toaster';
-import EmployeeCard from '@/components/campaigns/EmployeeCard';
-import ProfileSummaryDialog from '@/components/campaigns/ProfileSummaryDialog';
+import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
+import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 
 interface CampaignLead {
   id: string;

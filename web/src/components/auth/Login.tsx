@@ -182,8 +182,8 @@ import {
   loginSuccess,
   loginFailure,
   clearError,
-} from "../../store/slices/authSlice";
-import authService from "../../services/authService";
+} from "@/store/slices/authSlice";
+import authService from "@/services/authService";
 import { validateEmail, validatePassword } from "../../utils/validation";
 
 type RootState = any;

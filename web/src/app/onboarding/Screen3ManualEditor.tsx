@@ -19,9 +19,9 @@ import 'reactflow/dist/style.css';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import StepLibrary from '@/components/campaigns/StepLibrary';
-import StepSettings from '@/components/campaigns/StepSettings';
-import CustomNode from '@/components/campaigns/nodes/CustomNode';
+import StepLibrary from '../../features/campaigns/components/StepLibrary';
+import StepSettings from '../../features/campaigns/components/StepSettings';
+import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
 
 // Register node types

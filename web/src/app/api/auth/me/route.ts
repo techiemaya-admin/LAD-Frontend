@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-function getBackendBase() {
-  // For server-side calls, use direct localhost connection to avoid nginx routing
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
-  return backendInternal.replace(/\/$/, '');
-}
+import { getBackendUrl } from '../../utils/backend';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,7 +19,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
     
-     const backend = getBackendBase();
+     const backend = getBackendUrl();
     console.log('[/api/auth/me] Forwarding to backend:', `${backend}/api/auth/me`);
     
     const resp = await fetch(`${backend}/api/auth/me`, {

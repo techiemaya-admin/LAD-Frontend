@@ -7,9 +7,9 @@ import { ArrowBack, Save, PlayArrow, Visibility, Pause } from '@mui/icons-materi
 import { useCampaignStore } from '@/store/campaignStore';
 import { apiGet, apiPut, apiPost } from '@/lib/api';
 import { useToast } from '@/components/ui/app-toaster';
-import StepLibrary from '@/components/campaigns/StepLibrary';
-import FlowCanvas from '@/components/campaigns/FlowCanvas';
-import StepSettings from '@/components/campaigns/StepSettings';
+import StepLibrary from '../../../features/campaigns/components/StepLibrary';
+import FlowCanvas from '../../../features/campaigns/components/FlowCanvas';
+import StepSettings from '../../../features/campaigns/components/StepSettings';
 
 export default function CampaignDetailPage() {
   const params = useParams();

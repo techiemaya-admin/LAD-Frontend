@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Provider } from 'react-redux';
-import { store } from '../store/store';
+import { store } from '@/store/store';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { StripeProvider } from '../contexts/StripeContext';
 import { AuthProvider } from '../contexts/AuthContext';

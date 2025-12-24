@@ -1,21 +1,11 @@
 /**
- * @deprecated Import from '@/features/deals-pipeline' instead
- * This file is kept for backward compatibility
+ * Pipeline Service - Web Layer
+ * Contains web-specific pipeline operations and API calls
  */
-export {
-  pipelineService as default,
-  type PipelineStage,
-  type PipelineLead,
-  type Pipeline,
-} from '@/features/deals-pipeline';
-
-// Re-export for backward compatibility
-import pipelineServiceSDK from '@/features/deals-pipeline';
-export const pipelineService = pipelineServiceSDK;
 
 import api from './api';
 import { enhanceLeadsWithLabels, getStatusOptions } from '../utils/statusMappings';
-import { Lead } from '../components/leads/types';
+import { Lead } from '../features/deals-pipeline/components/leads/types';
 import { Stage } from '../store/slices/pipelineSlice';
 import { Status, Priority, Source } from '../store/slices/masterDataSlice';
 

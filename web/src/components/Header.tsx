@@ -4,17 +4,17 @@ import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { logout as logoutAction } from '../store/slices/authSlice';
-import authService from '../services/authService';
+import { logout as logoutAction } from '@/store/slices/authSlice';
+import authService from '@/services/authService';
 import {
   clearNotifications,
   selectNotifications,
   selectUnreadCounts,
   selectTotalUnread,
   markNotificationRead,
-} from '../store/slices/notificationSlice';
-import { markConversationAsReadUnified } from '../store/slices/conversationSlice';
-import { showSnackbar } from '../store/slices/bootstrapSlice';
+} from '@/store/slices/notificationSlice';
+import { markConversationAsReadUnified } from '@/store/slices/conversationSlice';
+import { showSnackbar } from '@/store/slices/bootstrapSlice';
 //test
 type RootState = any;
 

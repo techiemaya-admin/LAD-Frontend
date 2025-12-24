@@ -36,7 +36,7 @@ export const GoogleAuthIntegration: React.FC = () => {
 
         if (userId) {
           // Check calendar connection status from our database
-          const statusRes = await fetch(`${getApiBaseUrl()}/api/calender/google/status`, {
+          const statusRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/status`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export const GoogleAuthIntegration: React.FC = () => {
 
         if (userId) {
           // Check status from our backend (which already has the data from VOAG callback)
-          const statusRes = await fetch(`${getApiBaseUrl()}/api/calender/google/status`, {
+          const statusRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/status`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export const GoogleAuthIntegration: React.FC = () => {
       }
 
       // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
-      const startRes = await fetch(`${getApiBaseUrl()}/api/calender/google/start`, {
+      const startRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ export const GoogleAuthIntegration: React.FC = () => {
 
       if (userId) {
         // Call our backend to disconnect (it will update voag and database)
-        const response = await fetch(`${getApiBaseUrl()}/api/calender/google/disconnect`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/calendar/google/disconnect`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

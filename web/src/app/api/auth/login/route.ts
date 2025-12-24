@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-function getBackendBase() {
-  // For server-side calls, use direct localhost connection to avoid nginx routing
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
-  return backendInternal.replace(/\/$/, '');
-}
+import { getBackendUrl } from '../../utils/backend';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
 
-    const backend = getBackendBase();
+    const backend = getBackendUrl();
     console.log('[/api/auth/login] Backend URL:', backend);
     console.log('[/api/auth/login] Forwarding to:', `${backend}/api/auth/login`);
     

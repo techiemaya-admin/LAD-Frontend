@@ -24,18 +24,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-
-function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
-  return backendInternal.replace(/\/$/, '');
-}
+import { getBackendUrl } from '../../utils/backend';
 
 async function handler(
   req: NextRequest,
   { params }: { params: { feature: string; path: string[] } }
 ) {
   try {
-    const backend = getBackendBase();
+    const backend = getBackendUrl();
     const { feature, path } = params;
     
     // Build backend URL

@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
-  return backendInternal.replace(/\/$/, '');
-}
+import { getBackendUrl } from '../utils/backend';
 
 export async function GET(req: NextRequest) {
   try {
