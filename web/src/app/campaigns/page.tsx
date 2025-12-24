@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import CampaignsList from '../../../src/features/campaigns/components/CampaignsList';
+import CampaignsList from '../../features/campaigns/components/CampaignsList';
 
 /**
  * Campaigns Page - follows LAD architecture pattern

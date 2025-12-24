@@ -15,7 +15,7 @@ import {
   WhatsApp,
   PersonSearch,
 } from '@mui/icons-material';
-import { useCampaignStore } from '@/store/campaignStore';
+import { useCampaignStore } from '../../store/campaignStore';
 import { StepType } from '@/types/campaign';
 
 const getNodeColor = (type: StepType) => {

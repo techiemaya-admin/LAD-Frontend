@@ -15,7 +15,7 @@ import ReactFlow, {
   BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useCampaignStore } from '@/store/campaignStore';
+import { useCampaignStore } from '../store/campaignStore';
 import CustomNode from './nodes/CustomNode';
 
 // Register all node types - React Flow uses the 'type' field from nodes

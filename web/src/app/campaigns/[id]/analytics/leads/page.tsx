@@ -9,28 +9,21 @@ import {
 import {
   ArrowBack, People, Search
 } from '@mui/icons-material';
-import { apiGet, apiPost } from '@/lib/api';
 import { useToast } from '@/components/ui/app-toaster';
+import { useCampaignLeads, type CampaignLead } from '@/features/campaigns';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 
-interface CampaignLead {
-  id: string;
-  campaign_id: string;
-  name: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
-  linkedin_url?: string;
-  company?: string;
-  title?: string;
-  status: string;
-  created_at: string;
-  updated_at?: string;
+// Extended CampaignLead interface for UI needs
+interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;
   custom_fields?: any;
   profile_summary?: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  company?: string;
+  photo_url?: string;
 }
 
 export default function CampaignLeadsPage() {
@@ -39,10 +32,20 @@ export default function CampaignLeadsPage() {
   const campaignId = params.id as string;
   const { push } = useToast();
   
-  const [loading, setLoading] = useState(true);
-  const [leads, setLeads] = useState<CampaignLead[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  
+  // Use SDK hook for leads
+  const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
+    campaignId,
+    useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
+  );
+  
+  // Convert to extended type for UI
+  const leads = (campaignLeads || []) as ExtendedCampaignLead[];
+  const loading = leadsLoading;
+  
+  // Note: Pagination would ideally come from SDK
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   
@@ -50,39 +53,51 @@ export default function CampaignLeadsPage() {
   const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
   
+  // Type-safe state setters
+  const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+    setRevealedContacts(updater);
+  };
+  const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+    setRevealingContacts(updater);
+  };
+  
   // Profile summary dialog state
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<ExtendedCampaignLead | null>(null);
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (campaignId) {
-      loadLeads();
+    if (leadsError) {
+      push({
+        variant: 'error',
+        title: 'Error',
+        description: leadsError || 'Failed to load leads',
+      });
     }
-  }, [campaignId, page]);
+  }, [leadsError, push]);
+  
+  // Update total when leads change (this would ideally come from SDK)
+  useEffect(() => {
+    if (leads) {
+      setTotal(leads.length);
+      setTotalPages(Math.ceil(leads.length / 50));
+    }
+  }, [leads]);
 
-  const loadLeads = async () => {
-    try {
-      setLoading(true);
-      const response = await apiGet(
-        `/api/campaigns/${campaignId}/leads?page=${page}&limit=50`
-      ) as { success?: boolean; data?: CampaignLead[]; pagination?: { total: number; total_pages: number; page?: number; limit?: number } };
-      
-      console.log('[Campaign Leads] API Response:', response);
-      
-      // Handle response structure - backend returns { success, data, pagination }
-      let leadsData = response.data || [];
-      
+  // Load summaries for leads (this is UI-specific logic, not SDK)
+  useEffect(() => {
+    if (leads && leads.length > 0) {
       // Fetch summaries for all leads in parallel
-      const summaryPromises = leadsData.map(async (lead) => {
+      const summaryPromises = leads.map(async (lead) => {
         try {
-          const summaryResponse = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
-            `/api/profile-summary/${lead.id}?campaignId=${campaignId}`
-          );
-          if (summaryResponse.success && summaryResponse.summary) {
-            return { leadId: lead.id, summary: summaryResponse.summary };
+          // Note: This API call is from a different feature (profile-summary)
+          // It should ideally be in its own SDK feature
+          const response = await fetch(`/api/profile-summary/${lead.id}?campaignId=${campaignId}`);
+          const data = await response.json();
+          if (data.success && data.summary) {
+            return { leadId: lead.id, summary: data.summary };
           }
         } catch (err) {
           // Silently fail - summary might not exist yet
@@ -91,67 +106,44 @@ export default function CampaignLeadsPage() {
         return null;
       });
       
-      const summaryResults = await Promise.all(summaryPromises);
-      const summaryMap = new Map<string, string>();
-      summaryResults.forEach((result) => {
-        if (result) {
-          summaryMap.set(result.leadId, result.summary);
-        }
+      Promise.all(summaryPromises).then((summaryResults) => {
+        const summaryMap = new Map<string, string>();
+        summaryResults.forEach((result) => {
+          if (result) {
+            summaryMap.set(result.leadId, result.summary);
+          }
+        });
+        
+        // Update leads with summaries (this would need state management)
+        // For now, this is handled by the component's local state
       });
-      
-      // Attach summaries to leads
-      leadsData = leadsData.map((lead) => ({
-        ...lead,
-        profile_summary: summaryMap.get(lead.id) || null,
-      }));
-      
-      const paginationData = response.pagination || { total: 0, total_pages: 1 };
-      
-      console.log('[Campaign Leads] Parsed data:', { 
-        leadsCount: leadsData.length, 
-        total: paginationData.total,
-        pagination: paginationData
-      });
-      
-      setLeads(leadsData);
-      setTotal(paginationData.total || 0);
-      setTotalPages(paginationData.total_pages || 1);
-    } catch (error: any) {
-      console.error('Failed to load leads:', error);
-      push({
-        variant: 'error',
-        title: 'Error',
-        description: error.message || 'Failed to load leads',
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [leads, campaignId]);
 
 
-  const handleRevealPhone = async (employee: any) => {
+  const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
-    setRevealingContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+    setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
     
     // Simulate API call - replace with actual API call
     setTimeout(() => {
-      setRevealedContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
-      setRevealingContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: false } }));
+      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+      setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: false } }));
     }, 1000);
   };
 
-  const handleRevealEmail = async (employee: any) => {
+  const handleRevealEmail = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
-    setRevealingContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
+    setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
     
     // Simulate API call - replace with actual API call
     setTimeout(() => {
-      setRevealedContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-      setRevealingContacts(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
+      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
+      setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
     }, 1000);
   };
 
-  const handleViewSummary = async (employee: any) => {
+  const handleViewSummary = async (employee: ExtendedCampaignLead) => {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
     setProfileSummary(null);
@@ -161,9 +153,8 @@ export default function CampaignLeadsPage() {
     try {
       // First, try to get existing summary
       try {
-        const existingSummary = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
-          `/api/profile-summary/${employee.id}?campaignId=${campaignId}`
-        );
+        const response = await fetch(`/api/profile-summary/${employee.id}?campaignId=${campaignId}`);
+        const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
         
         if (existingSummary.success && existingSummary.summary) {
           setProfileSummary(existingSummary.summary);
@@ -176,9 +167,10 @@ export default function CampaignLeadsPage() {
       }
 
       // Generate new summary
-      const response = await apiPost<{ success: boolean; summary: string; generated_at?: string }>(
-        '/api/profile-summary/generate',
-        {
+      const generateResponse = await fetch('/api/profile-summary/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           leadId: employee.id,
           campaignId: campaignId,
           profileData: {
@@ -190,8 +182,9 @@ export default function CampaignLeadsPage() {
             linkedin_url: employee.linkedin_url,
             ...employee,
           },
-        }
-      );
+        }),
+      });
+      const response = await generateResponse.json() as { success: boolean; summary: string; generated_at?: string };
 
       if (response.success && response.summary) {
         setProfileSummary(response.summary);

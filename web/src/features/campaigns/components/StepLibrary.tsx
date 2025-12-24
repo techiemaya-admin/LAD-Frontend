@@ -23,7 +23,7 @@ import {
   PersonSearch
 } from '@mui/icons-material';
 import { StepDefinition } from '@/types/campaign';
-import { useCampaignStore } from '@/store/campaignStore';
+import { useCampaignStore } from '../store/campaignStore';
 
 const STEP_DEFINITIONS: StepDefinition[] = [
   {

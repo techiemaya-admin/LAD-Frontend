@@ -20,7 +20,7 @@ import {
   IconButton
 } from '@mui/material';
 import { InfoOutlined, CheckCircle, ErrorOutline } from '@mui/icons-material';
-import { useCampaignStore } from '@/store/campaignStore';
+import { useCampaignStore } from '../store/campaignStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { StepType } from '@/types/campaign';
 
