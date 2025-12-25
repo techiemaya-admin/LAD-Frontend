@@ -1118,7 +1118,7 @@ const PipelineBoard: React.FC = () => {
         showStageValue: pipelineSettings.showStageValue,
         enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
-    };
+    });
     autoSavePipelinePreferences(completePreferences);
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
 
