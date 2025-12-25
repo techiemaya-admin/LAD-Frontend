@@ -1,18 +1,18 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { RootState } from '../store';
+import { RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
-import { Lead } from '../../components/leads/types';
-import { User } from '../slices/usersSlice';
+import { Lead } from '../../../../components/leads/types';
+import { User } from '../../../../store/slices/usersSlice';
 
 // Import selectors
 import { selectStages } from '../slices/pipelineSlice';
 import { selectLeads } from '../slices/leadsSlice';
-import { selectUsers } from '../slices/usersSlice';
+import { selectUsers } from '../../../../store/slices/usersSlice';
 import { 
   selectPipelineActiveFilters, 
   selectPipelineSearchQuery, 
   selectPipelineSortConfig 
-} from '../slices/uiSlice';
+} from '../../../../store/slices/uiSlice';
 
 // ============ TYPE DEFINITIONS ============
 

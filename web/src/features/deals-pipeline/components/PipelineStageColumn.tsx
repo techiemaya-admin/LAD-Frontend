@@ -1,20 +1,20 @@
 // PipelineStageColumn.tsx
 import React, { useState, useMemo } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Select } from '../../../components/ui/select';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
-import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
 import PipelineLeadCard from './PipelineLeadCard';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { updateStage, deleteStage } from '../../../services/pipelineService';
+import { updateStage, deleteStage } from '@/services/pipelineService';
 import { useDispatch } from 'react-redux';
-import { Stage } from '../../../store/slices/pipelineSlice';
-import { Lead } from './leads/types';
-import { User } from '../../../store/slices/usersSlice';
+import { Stage } from '../store/slices/pipelineSlice';
+import { Lead } from '@/components/leads/types';
+import { User } from '@/store/slices/usersSlice';
 
 interface PipelineStageColumnProps {
   stage: Stage & { name?: string; label?: string; order?: number; display_order?: number; totalStages?: number };
@@ -219,8 +219,16 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       </div>
 
       <Dialog open={editDialogOpen} onOpenChange={(isOpen) => !isOpen && setEditDialogOpen(false)}>
-        <DialogTitle>Edit Stage</DialogTitle>
-        <DialogContent>
+        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="flex justify-between items-center">
+            <span className="text-lg font-semibold text-[#3A3A4F]">Edit Stage</span>
+            <button
+              onClick={() => setEditDialogOpen(false)}
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogTitle>
           <div className="pt-2">
             <div className="mb-6">
               <Label htmlFor="stage-name" className="text-sm font-medium mb-2 block">Stage Name</Label>
@@ -228,7 +236,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
                 id="stage-name"
                 autoFocus
                 value={editFormData.stageName}
-                onChange={(e) => setEditFormData({ ...editFormData, stageName: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFormData({ ...editFormData, stageName: e.target.value })}
                 className={error ? 'border-red-500' : ''}
               />
               {error && (
@@ -240,10 +248,8 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
               <div className="flex-1">
                 <Label htmlFor="position-type" className="text-sm font-medium mb-2 block">Position Type</Label>
                 <Select
-                  id="position-type"
                   value={editFormData.positionType}
-                  onChange={(e) => setEditFormData({ ...editFormData, positionType: e.target.value as 'before' | 'after' })}
-                  className="w-full"
+                  onValueChange={(value: string) => setEditFormData({ ...editFormData, positionType: value as 'before' | 'after' })}
                 >
                   <option value="before">Before</option>
                   <option value="after">After</option>
@@ -252,10 +258,8 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
               <div className="flex-1">
                 <Label htmlFor="reference-stage" className="text-sm font-medium mb-2 block">Reference Stage</Label>
                 <Select
-                  id="reference-stage"
                   value={editFormData.position}
-                  onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
-                  className="w-full"
+                  onValueChange={(value: string) => setEditFormData({ ...editFormData, position: value })}
                 >
                   <option value="">No position change</option>
                   {allStages
@@ -269,45 +273,53 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
                 </Select>
               </div>
             </div>
+            <div className="flex gap-2 pt-4 border-t mt-6">
+              <Button
+                onClick={() => setEditDialogOpen(false)}
+                variant="outline"
+                className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditStage}
+                className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Save
+              </Button>
+            </div>
           </div>
         </DialogContent>
-        <DialogActions className="px-6 py-4">
-          <Button
-            onClick={() => setEditDialogOpen(false)}
-            variant="outline"
-            className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleEditStage}
-            className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            Save
-          </Button>
-        </DialogActions>
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={(isOpen) => !isOpen && setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Stage</DialogTitle>
-        <DialogContent>
-          <p>Are you sure you want to delete the stage "{stage.name || stage.label}"?</p>
+        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="flex justify-between items-center">
+            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Stage</span>
+            <button
+              onClick={() => setDeleteDialogOpen(false)}
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogTitle>
+          <p className="mt-4">Are you sure you want to delete the stage "{stage.name || stage.label}"?</p>
+          <div className="flex gap-2 pt-4 border-t mt-6">
+            <Button
+              onClick={() => setDeleteDialogOpen(false)}
+              variant="outline"
+              className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteStage}
+              className="rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </Button>
+          </div>
         </DialogContent>
-        <DialogActions className="px-6 py-4">
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            variant="outline"
-            className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteStage}
-            className="rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white"
-          >
-            Delete
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );

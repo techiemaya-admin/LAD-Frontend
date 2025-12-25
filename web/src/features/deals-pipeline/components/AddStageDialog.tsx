@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Badge } from '../../../components/ui/badge';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Chip } from '@/components/ui/chip';
 import { X } from 'lucide-react';
-import { Stage } from '../../store/slices/pipelineSlice';
+import { Stage } from '../store/slices/pipelineSlice';
 
 interface StageColor {
   value: string;
@@ -89,21 +89,21 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogTitle className="flex justify-between items-center">
-        <span className="text-lg font-semibold text-[#3A3A4F]">
-          {stage ? 'Edit Stage' : 'Add New Stage'}
-        </span>
-        <button
-          onClick={onClose}
-          className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </DialogTitle>
+    <Dialog open={open}>
+      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="flex justify-between items-center">
+          <span className="text-lg font-semibold text-[#3A3A4F]">
+            {stage ? 'Edit Stage' : 'Add New Stage'}
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogTitle>
 
-      <DialogContent className="p-6 pt-2">
-          <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
             <div className="space-y-2">
               <Label htmlFor="stage-name">Stage Name *</Label>
               <Input
@@ -159,26 +159,27 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
               <p className="text-sm text-red-500">{errors.submit}</p>
             )}
           </div>
-        </DialogContent>
 
-        < DialogActions className="p-6 pt-2">
-          <Button
-            onClick={onClose}
-            disabled={loading}
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-[#3B82F6] border-[1.5px] border-[#EBF4FF] hover:bg-[#EBF4FF]"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="rounded-lg shadow-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB]"
-          >
-            {loading ? 'Saving...' : (stage ? 'Update Stage' : 'Add Stage')}
-          </Button>
-        </ DialogActions>
-    </Dialog>
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button
+              onClick={onClose}
+              disabled={loading}
+              variant="outline"
+              className="rounded-lg font-semibold bg-white text-[#3B82F6] border-[1.5px] border-[#EBF4FF] hover:bg-[#EBF4FF]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="rounded-lg shadow-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+            >
+              {loading ? 'Saving...' : (stage ? 'Update Stage' : 'Add Stage')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
   );
 };
 

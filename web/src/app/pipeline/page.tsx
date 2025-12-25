@@ -1,6 +1,6 @@
 "use client";
 import React, { JSX } from 'react';
-import { PipelineBoard } from '../../features/deals-pipeline/components';
+import { PipelineBoard } from '@/features/deals-pipeline/components';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -13,7 +13,7 @@ export default function PipelinePage(): JSX.Element {
   const [authed, setAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    (async () => {
+    (async () => {    
       try {
         await getCurrentUser();
         setAuthed(true);

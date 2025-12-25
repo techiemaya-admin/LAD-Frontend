@@ -1,19 +1,19 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Select } from '../../../components/ui/select';
-import { Label } from '../../../components/ui/label';
-import { Badge } from '../../../components/ui/badge';
-import { Avatar } from '../../../components/ui/avatar';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
-import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Chip } from '@/components/ui/chip';
+import { Avatar } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
   Edit, Trash2, User, Search, Filter, ArrowUpDown, Columns
 } from 'lucide-react';
-import { selectStatuses, selectPriorities } from '../../../store/slices/masterDataSlice';
+import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
-import { getFieldValue } from '../../../utils/fieldMappings';
+import { getFieldValue } from '@/utils/fieldMappings';
 import { 
   selectPipelineSearchQuery,
   selectPipelineActiveFilters,

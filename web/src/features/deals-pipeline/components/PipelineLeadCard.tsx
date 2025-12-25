@@ -1,18 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { safeStorage } from '../../../utils/storage';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { Label } from '../../../components/ui/label';
-import { Badge } from '../../../components/ui/badge';
-import { Avatar } from '../../../components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui/tabs';
-import { Progress } from '../../../components/ui/progress';
-import { Checkbox } from '../../../components/ui/checkbox';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
+import { safeStorage } from '@/utils/storage';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Chip } from '@/components/ui/chip';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
   User as UserIcon, Mail, Phone, Clock, Paperclip, MessageSquare, FileText, GripVertical,
   Trash2, MoreVertical, Building2, DollarSign, Calendar, Flag, CheckCircle2,
@@ -21,14 +22,14 @@ import {
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import api from '../../../services/api';
-import leadsService from '../../../services/leadsService';
-import AttachmentPreview from '../../../components/common/AttachmentPreview';
-import { getStatusLabel } from '../../../utils/statusMappings';
-import { getFieldValue } from '../../../utils/fieldMappings';
-import { selectStatuses, selectPriorities, selectSources } from '../../../store/slices/masterDataSlice';
-import { selectStages } from '../../../store/slices/pipelineSlice';
-import { updateLeadAction, deleteLeadAction } from '../../../store/actions/pipelineActions';
+import api from '@/services/api';
+import leadsService from '@/services/leadsService';
+import AttachmentPreview from '@/components/common/AttachmentPreview';
+import { getStatusLabel } from '@/utils/statusMappings';
+import { getFieldValue } from '@/utils/fieldMappings';
+import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
+import { selectStages } from '../store/slices/pipelineSlice';
+import { updateLeadAction, deleteLeadAction } from '../store/action/pipelineActions';
 import { 
   selectLeadCardActiveTab,
   selectLeadCardExpanded,
@@ -39,15 +40,44 @@ import {
   setLeadCardEditingOverview,
   setLeadCardEditFormData,
   resetLeadCardEditFormData
-} from '../../../store/slices/uiSlice';
+} from '@/store/slices/uiSlice';
 import { 
   selectUsers, 
   selectUsersLoading, 
   selectUsersError,
   User
-} from '../../../store/slices/usersSlice';
-import { fetchUsersAction } from '../../../store/actions/usersActions';
-import { Lead } from './leads/types';
+} from '@/store/slices/usersSlice';
+import { fetchUsersAction } from '@/store/actions/usersActions';
+import { Lead } from '@/components/leads/types';
+
+interface TabPanelProps {
+  children: React.ReactNode;
+  value: number;
+  index: number;
+  [key: string]: unknown;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other }) => {
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`lead-tabpanel-${index}`}
+      aria-labelledby={`lead-tab-${index}`}
+      {...other}
+      className="h-full min-h-[500px] flex flex-col"
+    >
+      <div className="p-6 h-full overflow-auto flex flex-col">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const a11yProps = (index: number) => ({
+  id: `lead-tab-${index}`,
+  'aria-controls': `lead-tabpanel-${index}`,
+});
 
 interface Note {
   id: string | number;
@@ -964,35 +994,46 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </div>
                     <div>
                       <Label htmlFor="assignee" className="text-sm text-gray-600 mb-1 block">Assignee</Label>
-                      <select
-                        id="assignee"
-                        value={globalEditFormData.assignee || ''}
-                        onChange={(e) => handleFormFieldChange('assignee', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Select
+                        value={globalEditFormData.assignee || 'unassigned'}
+                        onValueChange={(value: string) => handleFormFieldChange('assignee', value === 'unassigned' ? '' : value)}
                       >
-                        <option value="">Select assignee...</option>
-                        {effectiveTeamMembers.map((member) => (
-                          <option key={member.id} value={member.id}>
-                            {member.name}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select assignee..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {effectiveTeamMembers.map((member) => {
+                            const memberId = String(member.id || '');
+                            if (!memberId) return null;
+                            return (
+                              <SelectItem key={member.id} value={memberId}>
+                                {member.name || member.email || 'Unknown'}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="source" className="text-sm text-gray-600 mb-1 block">Source</Label>
-                      <select
-                        id="source"
-                        value={globalEditFormData.source || ''}
-                        onChange={(e) => handleFormFieldChange('source', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Select
+                        value={globalEditFormData.source || undefined}
+                        onValueChange={(value: string) => handleFormFieldChange('source', value)}
                       >
-                        <option value="">Select source...</option>
-                        {sourceOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select source..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sourceOptions
+                            .filter((option) => option.key && String(option.key).trim() !== '')
+                            .map((option) => (
+                              <SelectItem key={option.key} value={String(option.key)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 ) : (
@@ -1003,22 +1044,22 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">{lead.phone}</span>
+                      <span className="text-gray-900">{String(lead.phone) || '-'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">{lead.company}</span>
+                      <span className="text-gray-900">{String(lead.company) || '-'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <UserCircle className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-900">
-                        {getAssigneeName(lead.assignee || lead.assigned_to_id)}
+                        {getAssigneeName((lead.assignee || lead.assigned_to_id) as string | number | null | undefined)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-900">
-                        {getOptionLabel(sourceOptions, lead.source) || 'No source'}
+                        {getOptionLabel(sourceOptions, String(lead.source) || undefined) || 'No source'}
                       </span>
                     </div>
                   </>
@@ -1036,51 +1077,63 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   <>
                     <div>
                       <Label htmlFor="status" className="text-sm text-gray-600 mb-1 block">Status</Label>
-                      <select
-                        id="status"
-                        value={globalEditFormData.status || ''}
-                        onChange={(e) => handleFormFieldChange('status', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Select
+                        value={globalEditFormData.status || undefined}
+                        onValueChange={(value: string) => handleFormFieldChange('status', value)}
                       >
-                        <option value="">Select status...</option>
-                        {statusOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions
+                            .filter((option) => option.key && String(option.key).trim() !== '')
+                            .map((option) => (
+                              <SelectItem key={option.key} value={String(option.key)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="priority" className="text-sm text-gray-600 mb-1 block">Priority</Label>
-                      <select
-                        id="priority"
-                        value={globalEditFormData.priority || ''}
-                        onChange={(e) => handleFormFieldChange('priority', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Select
+                        value={globalEditFormData.priority || undefined}
+                        onValueChange={(value: string) => handleFormFieldChange('priority', value)}
                       >
-                        <option value="">Select priority...</option>
-                        {priorityOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select priority..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {priorityOptions
+                            .filter((option) => option.key && String(option.key).trim() !== '')
+                            .map((option) => (
+                              <SelectItem key={option.key} value={String(option.key)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="stage" className="text-sm text-gray-600 mb-1 block">Stage</Label>
-                      <select
-                        id="stage"
-                        value={globalEditFormData.stage || ''}
-                        onChange={(e) => handleFormFieldChange('stage', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Select
+                        value={globalEditFormData.stage || undefined}
+                        onValueChange={(value: string) => handleFormFieldChange('stage', value)}
                       >
-                        <option value="">Select stage...</option>
-                        {stageOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select stage..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stageOptions
+                            .filter((option) => option.key && String(option.key).trim() !== '')
+                            .map((option) => (
+                              <SelectItem key={option.key} value={String(option.key)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 ) : (
@@ -1094,7 +1147,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-900">
-                        {getOptionLabel(priorityOptions, lead.priority) || 'No priority'}
+                        {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1163,7 +1216,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-500" />
                       <span className="text-gray-900">
-                        {formatCurrency(lead.amount || 0)}
+                        {formatCurrency((lead.amount as number) || 0)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1172,11 +1225,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         <span className="text-gray-900">
                           Close Date: {formatDate(getFieldValueLocal(lead, 'closeDate')) || 'Not set'}
                         </span>
-                        {getDaysRemaining() !== null && getDaysRemaining() < 7 && (
-                          <Badge variant="destructive" className="ml-2 text-xs">
-                            {`${getDaysRemaining()} days left`}
-                          </Badge>
-                        )}
+                        {(() => { const days = getDaysRemaining(); return days !== null && days < 7 ? (
+                          <Chip className="ml-2 bg-red-100 text-red-600 text-xs">
+                            {`${days} days left`}
+                          </Chip>
+                        ) : null; })()}
                       </div>
                     </div>
                     {getFieldValueLocal(lead, 'expectedCloseDate') && (
@@ -1215,7 +1268,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 />
               ) : (
                 <p className="text-sm text-gray-600">
-                  {lead.description || 'No description provided'}
+                  {String(lead.description) || 'No description provided'}
                 </p>
               )}
             </div>
@@ -1585,96 +1638,105 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       open={isDetailsOpen} 
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
-      <DialogTitle>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              {lead.avatar ? (
-                <img src={lead.avatar} alt={lead.name || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
-              ) : (
-                <span className="text-base font-semibold text-white bg-blue-500 h-full w-full rounded-full flex items-center justify-center">
-                  {lead.name?.charAt(0) || 'L'}
-                </span>
-              )}
-            </Avatar>
-            <div>
-              <p className="text-base font-semibold text-gray-900">{lead.name}</p>
-              {lead.company && (
-                <p className="text-sm text-gray-500">{lead.company}</p>
-              )}
+      <DialogContent className="flex flex-col max-h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
+        <DialogTitle className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                {lead.avatar ? (
+                  <img src={lead.avatar} alt={lead.name || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
+                ) : (
+                  <span className="text-base font-semibold text-white bg-blue-500 h-full w-full rounded-full flex items-center justify-center">
+                    {lead.name?.charAt(0) || 'L'}
+                  </span>
+                )}
+              </Avatar>
+              <div>
+                <p className="text-base font-semibold text-gray-900">{lead.name}</p>
+                {(lead.company as string | undefined) && (
+                  <p className="text-sm text-gray-500">{String(lead.company as unknown)}</p>
+                )}
+              </div>
             </div>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClose();
-            }}
-            className="text-gray-500 hover:text-gray-900"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </DialogTitle>
-      
-      <DialogContent className="flex-1 overflow-hidden p-0">
-        <Tabs 
-          value={String(globalActiveTab)} 
-          onValueChange={(value) => dispatch(setLeadCardActiveTab(parseInt(value, 10)))}
-          className="flex flex-col h-full"
-        >
-          <div className="border-b border-gray-200 px-6">
-            <TabsList className="grid w-full grid-cols-4">
-              {tabs.map((tab) => (
-                <TabsTrigger 
-                  key={tab.index}
-                  value={String(tab.index)}
-                >
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          {tabs.map((tab) => (
-            <TabsContent key={tab.index} value={String(tab.index)} className="flex-1 px-6 py-4 overflow-auto">
-              {tab.content}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </DialogContent>
-
-      <DialogActions className="border-t border-gray-200 px-6 py-4">
-        {globalActiveTab === 0 && (
-          globalEditingOverview ? (
-            <div className="flex gap-2 ml-auto">
-              <Button
-                onClick={handleCancelEdit}
-                disabled={isLoading}
-                variant="outline"
-                className="border-gray-200 text-gray-600 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveEdit}
-                disabled={isLoading}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                {isLoading ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={handleStartEdit}
-              className="ml-auto bg-blue-500 hover:bg-blue-600 text-white"
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose();
+              }}
+              className="text-gray-500 hover:text-gray-900"
             >
-              Edit Lead
+              <X className="h-4 w-4" />
             </Button>
-          )
-        )}
-      </DialogActions>
+          </div>
+        </DialogTitle>
+        
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="w-full">
+            <Tabs 
+              value={String(globalActiveTab)} 
+              onValueChange={(value) => dispatch(setLeadCardActiveTab(parseInt(value, 10)))}
+              className="flex flex-col"
+            >
+              <div className="border-b border-gray-200 px-6 sticky top-0 bg-white z-10">
+                <TabsList className="flex gap-2">
+                  {tabs.map((tab) => (
+                    <TabsTrigger 
+                      key={tab.index}
+                      value={String(tab.index)}
+                      className="px-3 py-1 text-sm"
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              {tabs.map((tab) => (
+                <TabsContent 
+                  key={tab.index} 
+                  value={String(tab.index)}
+                  className="flex flex-col mt-0 p-6"
+                >
+                  {tab.content}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        </div>
+        
+        <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0 bg-white">
+          {globalActiveTab === 0 && (
+            globalEditingOverview ? (
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  onClick={handleCancelEdit}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={isLoading}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  {isLoading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleStartEdit}
+                className="ml-auto bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Edit Lead
+              </Button>
+            )
+          )}
+        </div>
+      </DialogContent>
     </Dialog>
   );
 
@@ -1732,10 +1794,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 <span>{probability}%</span>
               </div>
             </div>
-            {lead.company && (
+            {(lead.company as string | undefined) && (
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <Building2 className="h-3.5 w-3.5" />
-                {lead.company}
+                {String(lead.company as unknown)}
               </p>
             )}
           </div>
@@ -1816,23 +1878,23 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
               <span className="flex items-center gap-1 font-semibold text-green-600">
                 <DollarSign className="h-4 w-4" />
-                {formatCurrency(lead.amount || 0)}
+                {formatCurrency((lead.amount as number) || 0)}
               </span>
-              {lead.closeDate && (
+              {(lead.closeDate as string | undefined) && (
                 <span
                   className={`flex items-center gap-1 text-xs ${
-                    getDaysRemaining() !== null && getDaysRemaining() < 7 ? 'text-red-500' : 'text-gray-500'
+                    (() => { const days = getDaysRemaining(); return days !== null && days < 7 ? 'text-red-500' : 'text-gray-500'; })()
                   }`}
-                  title={getDaysRemaining() !== null ? `Due in ${getDaysRemaining()} days` : undefined}
+                  title={(() => { const days = getDaysRemaining(); return days !== null ? `Due in ${days} days` : undefined; })()}
                 >
                   <Calendar className="h-4 w-4" />
-                  {formatDate(lead.closeDate)}
+                  {formatDate((lead.closeDate as string) || undefined)}
                 </span>
               )}
             </div>
 
-            {lead.description && (
-              <p className="text-sm text-gray-600">{lead.description}</p>
+            {(lead.description as string | undefined) && (
+              <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
             )}
 
             {allTags.length > 0 && (
@@ -1876,44 +1938,60 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
 
         {renderDetailsDialog()}
 
-        <Dialog open={deleteDialogOpen} onOpenChange={(isOpen) => !isOpen && handleDeleteDialogClose()}>
-          <DialogTitle>Delete Lead</DialogTitle>
-          <DialogContent>
-            <p>Are you sure you want to delete {lead.name}? This action cannot be undone.</p>
+        <Dialog open={deleteDialogOpen}>
+          <DialogContent showCloseButton={false} className="p-6 pt-2">
+            <DialogTitle className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
+              <button
+                onClick={handleDeleteDialogClose}
+                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogTitle>
+            <p className="mt-4">Are you sure you want to delete {String(lead.name)}? This action cannot be undone.</p>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                disabled={isLoading}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {isLoading ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
           </DialogContent>
-          <DialogActions className="px-6 py-4">
-            <Button variant="outline" onClick={handleDeleteDialogClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmDelete}
-              disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              {isLoading ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogActions>
         </Dialog>
 
-        <Dialog open={deleteConfirmation.open} onOpenChange={(isOpen) => !isOpen && handleDeleteConfirmationClose()}>
-          <DialogTitle>
-            Delete {deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1)}
-          </DialogTitle>
-          <DialogContent>
-            <p>Are you sure you want to delete this {deleteConfirmation.type}? This action cannot be undone.</p>
+        <Dialog open={deleteConfirmation.open}>
+          <DialogContent showCloseButton={false} className="p-6 pt-2">
+            <DialogTitle className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-[#3A3A4F]">
+                Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}
+              </span>
+              <button
+                onClick={handleDeleteConfirmationClose}
+                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogTitle>
+            <p className="mt-4">Are you sure you want to delete this {String(deleteConfirmation.type)}? This action cannot be undone.</p>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={handleDeleteConfirmationClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                disabled={isLoading}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {isLoading ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
           </DialogContent>
-          <DialogActions className="px-6 py-4">
-            <Button variant="outline" onClick={handleDeleteConfirmationClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmDelete}
-              disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              {isLoading ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogActions>
         </Dialog>
 
         {snackbar.open && (

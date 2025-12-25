@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Checkbox } from '../../../components/ui/checkbox';
-import { Badge } from '../../../components/ui/badge';
-import { Label } from '../../../components/ui/label';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Chip } from '@/components/ui/chip';
+import { Label } from '@/components/ui/label';
 import { X } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '../../../store/slices/masterDataSlice';
-import { selectUsers, selectUsersLoading } from '../../../store/slices/usersSlice';
-import { Stage } from '../../../store/slices/pipelineSlice';
+import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '@/store/slices/masterDataSlice';
+import { selectUsers, selectUsersLoading } from '@/store/slices/usersSlice';
+import { Stage } from '../store/slices/pipelineSlice';
 
 interface PipelineActiveFilters {
   stages: string[];
@@ -139,16 +139,21 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   
   if (masterDataLoading || hasNoMasterData) {
     return (
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogTitle>Filter Leads</DialogTitle>
-        <DialogContent>
+      <Dialog open={open}>
+        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="flex justify-between items-center">
+            <span className="text-lg font-semibold text-[#3A3A4F]">Filter Leads</span>
+            <button
+              onClick={onClose}
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogTitle>
           <div className="flex justify-center p-6">
             <p>Loading filter options...</p>
           </div>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Close</Button>
-        </DialogActions>
       </Dialog>
     );
   }
@@ -194,9 +199,17 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogTitle>Filter Leads</DialogTitle>
-      <DialogContent>
+    <Dialog open={open}>
+      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="flex justify-between items-center">
+          <span className="text-lg font-semibold text-[#3A3A4F]">Filter Leads</span>
+          <button
+            onClick={onClose}
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogTitle>
         <div className="flex flex-col gap-6 mt-2">
           {/* Stages Filter */}
           <MultiSelect
@@ -289,23 +302,25 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-4 border-t">
+          <Button 
+            onClick={onClearFilters}
+            variant="outline"
+            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
+          >
+            <X className="mr-2 h-4 w-4" />
+            Clear All
+          </Button>
+          <Button 
+            onClick={onClose}
+            className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Close
+          </Button>
+        </div>
       </DialogContent>
-      <DialogActions className="px-6 py-4">
-        <Button 
-          onClick={onClearFilters}
-          variant="outline"
-          className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
-        >
-          <X className="mr-2 h-4 w-4" />
-          Clear All
-        </Button>
-        <Button 
-          onClick={onClose}
-          className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

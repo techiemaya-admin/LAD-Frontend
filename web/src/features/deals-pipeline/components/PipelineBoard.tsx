@@ -2,12 +2,12 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSelector, useDispatch } from 'react-redux';
-import type { AppDispatch } from '../../../store/store';
-import { store } from '../../../store/store';
-import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '../../../services/userService';
-import { Button } from '../../../components/ui/button';
-import { Lead } from './leads/types';
-import { Stage } from '../../../store/slices/pipelineSlice';
+import type { AppDispatch } from '@/store/store';
+import { store } from '@/store/store';
+import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
+import { Button } from '@/components/ui/button';
+import type { Lead } from '@/features/deals-pipeline/components/leads/types';
+import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 
 // Pipeline component imports
 import PipelineBoardToolbar from './PipelineBoardToolbar';
@@ -21,25 +21,24 @@ import PipelineBoardSettings from './PipelineBoardSettings';
 import PipelineListView from './PipelineListView';
 import PipelineKanbanView from './PipelineKanbanView';
 
-import { 
-  selectPipelineBoardDataWithFilters,
+import {
   selectStagesWithNames,
   selectLeadsByStage
-} from '../../../store/selectors/pipelineSelectors';
+} from '../store/selector/pipelineSelectors';
 import { 
   selectStagesLoading, 
   selectStagesError 
-} from '../../../store/slices/pipelineSlice';
+} from '../store/slices/pipelineSlice';
 import { 
   selectLeadsLoading, 
   selectLeadsError,
   selectLeads
-} from '../../../store/slices/leadsSlice';
+} from '../store/slices/leadsSlice';
 import { 
   selectUsers,
   selectUsersLoading,
   selectUsersError
-} from '../../../store/slices/usersSlice';
+} from '@/store/slices/usersSlice';
 import {
   selectPipelineUI,
   selectPipelineViewMode,
@@ -88,11 +87,11 @@ import {
   setEditingLead,
   setAiInsights,
   setPipelineSettings
-} from '../../../store/slices/uiSlice';
+} from '@/store/slices/uiSlice';
 import { 
   selectUser,
   selectIsAuthenticated
-} from '../../../store/slices/authSlice';
+} from '@/store/slices/authSlice';
 import { 
   loadPipelineDataAction, 
   refreshPipelineDataAction,
@@ -104,10 +103,10 @@ import {
   updateStageAction,
   deleteStageAction,
   reorderStagesAction
-} from '../../../store/actions/pipelineActions';
-import { fetchUsersAction } from '../../../store/actions/usersActions';
-import { bootstrapApp } from '../../../store/actions/bootstrapActions';
-import { showSnackbar } from '../../../store/slices/bootstrapSlice';
+} from '../store/action/pipelineActions';
+import { fetchUsersAction } from '@/store/actions/usersActions';
+import { bootstrapApp } from '@/store/actions/bootstrapActions';
+import { showSnackbar } from '@/store/slices/bootstrapSlice';
 import { 
   selectStatuses, 
   selectPriorities, 
@@ -116,8 +115,8 @@ import {
   setStatuses,
   setSources, 
   setPriorities
-} from '../../../store/slices/masterDataSlice';
-import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, updateStage, deleteStage, createLead } from '../../../services/pipelineService';
+} from '@/store/slices/masterDataSlice';
+import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@/services/pipelineService';
 
 const HEADER_HEIGHT = 64; 
 
@@ -140,7 +139,7 @@ interface FilteredLeadsByStage {
 
 interface StageDataForCreate {
   name: string;
-  positionStageId: string | null;
+  positionStageId: string | undefined;
   positionType: 'before' | 'after';
 }
 
@@ -208,7 +207,14 @@ const PipelineBoard: React.FC = () => {
   const pipelineSettings = useSelector(selectPipelineSettings);
   
   // Get filtered pipeline data from the new enhanced selector
-  const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
+  const pipelineBoardData = useMemo(() => {
+    return {
+      stages: reduxStages.map((stage: { key: string; label?: string; name?: string; order?: number; display_order?: number }) => ({
+        ...stage,
+        leads: reduxLeadsByStage[stage.key]?.leads || []
+      }))
+    };
+  }, [reduxStages, reduxLeadsByStage]);
   
   // Add preferences loading state (still local as it's component-specific)
   const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
@@ -220,8 +226,8 @@ const PipelineBoard: React.FC = () => {
   // Use the filtered pipeline data from the selector
   const currentStages = pipelineBoardData.stages;
   const currentLeadsByStage = useMemo<LeadsByStage>(() => {
-    return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: Stage & { leads: Lead[] }) => {
-      acc[stage.key] = { stage, leads: stage.leads };
+    return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: any) => {
+      acc[stage.key] = { stage: { key: stage.key, label: stage.label || stage.name || stage.key }, leads: stage.leads };
       return acc;
     }, {});
   }, [pipelineBoardData]);
@@ -421,7 +427,9 @@ const PipelineBoard: React.FC = () => {
               onStatusChange={handlers.onStatusChange}
               allStages={allStages}
               handlers={{
-                onUpdateStage: handlers.onUpdateStage,
+                onUpdateStage: async (stageKey: string, updates: Record<string, unknown>): Promise<void> => {
+                  await handlers.onUpdateStage(stageKey, updates as StageUpdateData);
+                },
                 onDeleteStageAction: handlers.onDeleteStageAction
               }}
             />
@@ -521,9 +529,9 @@ const PipelineBoard: React.FC = () => {
     }
 
     if (!destinationStageId && over?.id) {
-      const stageMatch = currentStages.find(s => (s.key || s.id) === over.id);
+      const stageMatch = currentStages.find(s => s.key === over.id);
       if (stageMatch) {
-        destinationStageId = stageMatch.key || stageMatch.id;
+        destinationStageId = stageMatch.key;
       } else {
         const leadMatch = allLeads.find(l => String(l.id) === String(over.id));
         if (leadMatch) {
@@ -569,7 +577,7 @@ const PipelineBoard: React.FC = () => {
     try {
       const stageData: StageDataForCreate = {
         name: newStageName.trim(),
-        positionStageId: positionStageId || null,
+        positionStageId: positionStageId || undefined,
         positionType
       };
       
@@ -624,7 +632,7 @@ const PipelineBoard: React.FC = () => {
     try {
       // Always use Redux action for creating lead
       console.log('[PipelineBoard] Creating lead via Redux:', newLead);
-      await dispatch(createLeadAction(newLead));
+      await dispatch(createLeadAction({ ...newLead, status: newLead.status as 'Active' | 'Inactive' | undefined }));
       
       // Success - show success message and close dialog
       dispatch(showSnackbar({
@@ -645,7 +653,8 @@ const PipelineBoard: React.FC = () => {
         description: '',
         priority: 'Medium',
         assignee: '',
-        dueDate: null
+        dueDate: null,
+        amount: undefined
       }));
       dispatch(setCreateLeadDialogOpen(false));
     } catch (error) {
@@ -669,7 +678,8 @@ const PipelineBoard: React.FC = () => {
         description: '',
         priority: 'Medium',
         assignee: '',
-        dueDate: null
+        dueDate: null,
+        amount: undefined
       }));
       dispatch(setCreateLeadDialogOpen(false));
     }
@@ -703,7 +713,11 @@ const PipelineBoard: React.FC = () => {
       dispatch(setAiInsights({
         ...aiInsights,
         loading: false,
-        ...mockAnalysis
+        suggestedStage: mockAnalysis.suggestedStage,
+        score: mockAnalysis.score,
+        similarLeads: [],
+        emailValidation: mockAnalysis.emailValidation,
+        phoneValidation: mockAnalysis.phoneValidation
       }));
     } catch (error) {
       dispatch(setAiInsights({
@@ -753,11 +767,11 @@ const PipelineBoard: React.FC = () => {
       );
     }
     
-    const referenceStage = currentStages.find(s => (s.id === positionStageId) || (s.key === positionStageId));
+    const referenceStage = currentStages.find(s => s.key === positionStageId);
     if (!referenceStage) return null;
 
     const stagesCopy = [...currentStages].sort((a, b) => (a.order || 0) - (b.order || 0));
-    const referenceIndex = stagesCopy.findIndex(s => (s.id === positionStageId) || (s.key === positionStageId));
+    const referenceIndex = stagesCopy.findIndex(s => s.key === positionStageId);
     
     let previewStages = [...stagesCopy];
     const previewId = `preview-${Date.now()}`;
@@ -776,9 +790,9 @@ const PipelineBoard: React.FC = () => {
     };
     
     if (positionType === 'before') {
-      previewStages.splice(referenceIndex, 0, previewStage);
+      previewStages.splice(referenceIndex, 0, { key: 'preview', label: newStageName || 'New Stage', isPreview: true } as any);
     } else {
-      previewStages.splice(referenceIndex + 1, 0, previewStage);
+      previewStages.splice(referenceIndex + 1, 0, { key: 'preview', label: newStageName || 'New Stage', isPreview: true } as any);
     }
 
     return (
@@ -827,7 +841,7 @@ const PipelineBoard: React.FC = () => {
   const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<void> => {
     try {
       console.log('[PipelineBoard] Creating stage with data:', stageData);
-      console.log('[PipelineBoard] Current stages available:', currentStages.map(s => ({ key: s.key, id: s.id, name: s.name })));
+      console.log('[PipelineBoard] Current stages available:', currentStages.map(s => ({ key: s.key, name: s.name })));
       
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for creating stage
@@ -976,7 +990,7 @@ const PipelineBoard: React.FC = () => {
   const handleStatusChange = useCallback(async (leadId: string | number, newStatus: string): Promise<void> => {
     try {
       // Always use Redux action - it handles both API call AND state update
-      await dispatch(updateLeadAction(leadId, { status: newStatus }));
+      await dispatch(updateLeadAction(leadId, { status: newStatus as 'Active' | 'Inactive' }));
       
       // Show success message
       dispatch(showSnackbar({
@@ -1089,24 +1103,22 @@ const PipelineBoard: React.FC = () => {
     const constrainedZoom = Math.max(0.5, Math.min(2.0, newZoom));
     dispatch(setPipelineZoom(constrainedZoom));
     
-    // Auto-save zoom preference with complete preferences structure
-    const completePreferences = {
+    // Auto-save zoom preference
+    autoSavePipelinePreferences({
       viewMode: pipelineSettings.viewMode,
       visibleColumns: pipelineSettings.visibleColumns as unknown as Record<string, boolean>,
-      filters: {
-        stages: activeFilters.stages || [],
-        statuses: activeFilters.statuses || [],
-        priorities: activeFilters.priorities || [],
-        sources: activeFilters.sources || [],
-        assignees: activeFilters.assignees || [],
-        dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || { start: null, end: null }
-      },
+      filters: activeFilters as any,
       sortConfig: sortConfig,
       uiSettings: {
-        ...pipelineSettings,
-        zoom: constrainedZoom
+        zoom: zoom,
+        autoRefresh: pipelineSettings.autoRefresh,
+        refreshInterval: pipelineSettings.refreshInterval,
+        compactView: pipelineSettings.compactView,
+        showCardCount: pipelineSettings.showCardCount,
+        showStageValue: pipelineSettings.showStageValue,
+        enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
-    };
+    });
     autoSavePipelinePreferences(completePreferences);
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
 
@@ -1125,8 +1137,7 @@ const PipelineBoard: React.FC = () => {
 
   const handleSearchChange = useCallback((query: string): void => {
     dispatch(setPipelineSearchQuery(query));
-    
-    // Note: Search query is handled by Redux state, not saved to preferences
+    // Search is handled by Redux state, not persisted to preferences
   }, [dispatch]);
 
   // Handle pipeline settings changes
@@ -1158,7 +1169,19 @@ const PipelineBoard: React.FC = () => {
         sortConfig: sortConfig
       };
       
-      await savePipelinePreferences(preferences);
+      await savePipelinePreferences({
+        viewMode: preferences.viewMode,
+        visibleColumns: preferences.visibleColumns as unknown as Record<string, boolean>,
+        filters: {
+          statuses: preferences.filters.statuses,
+          priorities: preferences.filters.priorities,
+          sources: preferences.filters.sources,
+          assignees: preferences.filters.assignees,
+          dateRange: (preferences.filters.dateRange as { start: string | null; end: string | null }) || { start: null, end: null }
+        },
+        sortConfig: preferences.sortConfig,
+        uiSettings: preferences.uiSettings
+      });
       
       // Show success message
       dispatch(showSnackbar({
@@ -1184,7 +1207,7 @@ const PipelineBoard: React.FC = () => {
     onCreateStage: handleCreateStage,
     onUpdateStage: handleUpdateStage,
     onDeleteStageAction: handleDeleteStage
-  }), [handleStageUpdate, handleStageDelete, handleEditLead, handleDeleteLead, handleStatusChange, handleCreateStage, handleUpdateStage, handleDeleteStage]);
+  } as Record<string, unknown>), [handleStageUpdate, handleStageDelete, handleEditLead, handleDeleteLead, handleStatusChange, handleCreateStage, handleUpdateStage, handleDeleteStage]);
 
   // Calculate responsive sizes based on zoom
   const getZoomedSize = (baseSize: number): number => {
@@ -1255,7 +1278,7 @@ const PipelineBoard: React.FC = () => {
           }
         }}
         onAdd={handleAddStage}
-        stages={[...currentStages].sort((a, b) => (a.order || a.display_order || 0) - (b.order || b.display_order || 0))}
+        stages={[...currentStages].map(s => ({ ...s, label: s.label || s.name || s.key })).sort((a, b) => (a.order || a.display_order || 0) - (b.order || b.display_order || 0)) as Stage[]}
         isSubmitting={isSubmitting}
         error={addStageError}
         newStageName={newStageName}
@@ -1270,16 +1293,16 @@ const PipelineBoard: React.FC = () => {
         <CreateCardDialog
           open={createCardDialogOpen}
           onClose={() => dispatch(setCreateLeadDialogOpen(false))}
-          onCreate={async (leadData: Lead) => {
+          onCreate={async (leadData: Partial<Lead>) => {
             if (USE_REDUX_ACTIONS) {
               await dispatch(createLeadAction(leadData));
             } else {
-              await createLead(leadData);
+              await createLead(leadData as Lead);
               loadStagesAndLeads();
             }
             dispatch(setCreateLeadDialogOpen(false));
           }}
-          stages={currentStages || []}
+          stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as Stage[] || []}
           leads={USE_REDUX_PIPELINE ? Object.values(currentLeadsByStage).flatMap(stage => stage.leads) : []}
         />
       )}
@@ -1298,7 +1321,7 @@ const PipelineBoard: React.FC = () => {
               onDragCancel={handleDragCancel}
             >
               <PipelineKanbanView
-                stages={currentStages}
+                stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
                 leadsByStage={currentLeadsByStage}
                 activeCard={activeCard}
                 zoom={zoom}
@@ -1320,10 +1343,10 @@ const PipelineBoard: React.FC = () => {
           priorities: activeFilters.priorities || [],
           sources: activeFilters.sources || [],
           assignees: activeFilters.assignees || [],
-          dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || { start: null, end: null }
+          dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || null
         }}
         onFiltersChange={handleFiltersChange}
-        stages={currentStages}
+        stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
         onClearFilters={() => {
           const clearedFilters = {
             stages: [],
