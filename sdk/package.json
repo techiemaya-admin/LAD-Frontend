@@ -14,9 +14,13 @@
       "types": "./features/campaigns/index.ts",
       "default": "./features/campaigns/index.ts"
     },
-    "./pipeline": {
-      "types": "./features/pipeline/index.ts",
-      "default": "./features/pipeline/index.ts"
+    "./deals-pipeline": {
+      "types": "./features/deals-pipeline/index.ts",
+      "default": "./features/deals-pipeline/index.ts"
+    },
+    "./apollo-leads": {
+      "types": "./features/apollo-leads/index.ts",
+      "default": "./features/apollo-leads/index.ts"
     },
     "./voice-agent": {
       "types": "./features/voice-agent/index.ts",
@@ -25,7 +29,19 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:sdk": "vitest run features/",
+    "test:sdk:campaigns": "vitest run features/campaigns/__tests__"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "jsdom": "^27.3.0",
+    "react": "^18.0.0",
+    "vitest": "^4.0.16"
   },
   "keywords": [
     "frontend",

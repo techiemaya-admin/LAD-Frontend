@@ -400,7 +400,7 @@ const PipelineBoard: React.FC = () => {
         onEdit: (lead: Lead) => void;
         onDelete: (leadId: string | number) => void;
         onStatusChange: (leadId: string | number, newStatus: string) => void;
-        onUpdateStage: (stageKey: string, updates: StageUpdateData) => Promise<unknown>;
+        onUpdateStage: (stageKey: string, updates: StageUpdateData) => Promise<void>;
         onDeleteStageAction: (stageKey: string) => Promise<void>;
       };
       allStages: Stage[];
@@ -649,6 +649,7 @@ const PipelineBoard: React.FC = () => {
         stage: '',
         status: 'New',
         source: 'Manual',
+        amount: undefined,
         description: '',
         priority: 'Medium',
         assignee: '',
@@ -673,6 +674,7 @@ const PipelineBoard: React.FC = () => {
         stage: '',
         status: 'New',
         source: 'Manual',
+        amount: undefined,
         description: '',
         priority: 'Medium',
         assignee: '',
@@ -772,6 +774,21 @@ const PipelineBoard: React.FC = () => {
     const referenceIndex = stagesCopy.findIndex(s => s.key === positionStageId);
     
     let previewStages = [...stagesCopy];
+    const previewId = `preview-${Date.now()}`;
+    const previewStage = {
+      id: previewId,
+      key: previewId,
+      label: newStageName || 'New Stage',
+      name: newStageName || 'New Stage',
+      isPreview: true,
+      display_order: 0,
+      leads: [],
+      leadCount: 0,
+      totalValue: 0,
+      priority: { high: 0, medium: 0, low: 0 },
+      order: positionType === 'before' ? referenceIndex : referenceIndex + 1
+    };
+    
     if (positionType === 'before') {
       previewStages.splice(referenceIndex, 0, { key: 'preview', label: newStageName || 'New Stage', isPreview: true } as any);
     } else {
@@ -821,7 +838,7 @@ const PipelineBoard: React.FC = () => {
     }
   }, [USE_REDUX_PIPELINE, dispatch]);
 
-  const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<unknown> => {
+  const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<void> => {
     try {
       console.log('[PipelineBoard] Creating stage with data:', stageData);
       console.log('[PipelineBoard] Current stages available:', currentStages.map(s => ({ key: s.key, name: s.name })));
@@ -829,12 +846,14 @@ const PipelineBoard: React.FC = () => {
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for creating stage
         console.log('[PipelineBoard] Creating stage via Redux:', stageData);
-        return await dispatch(createStageAction(stageData));
+        await dispatch(createStageAction({
+          ...stageData,
+          positionStageId: stageData.positionStageId || undefined
+        }));
       } else {
         // Fallback to direct API call
-        const newStage = await addStage(stageData.name, stageData.positionStageId, stageData.positionType);
+        await addStage(stageData.name, stageData.positionStageId, stageData.positionType);
         loadStagesAndLeads();
-        return newStage;
       }
     } catch (error) {
       console.error('[PipelineBoard] Failed to create stage:', error);
@@ -1099,8 +1118,9 @@ const PipelineBoard: React.FC = () => {
         showStageValue: pipelineSettings.showStageValue,
         enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
-    });
-  }, [pipelineSettings, dispatch]);
+    };
+    autoSavePipelinePreferences(completePreferences);
+  }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
 
   // Toolbar dialog handlers
   const handleOpenFilter = useCallback((): void => {
@@ -1128,7 +1148,7 @@ const PipelineBoard: React.FC = () => {
       // Save the complete preferences
       const preferences = {
         viewMode: newSettings.viewMode,
-        visibleColumns: newSettings.visibleColumns,
+        visibleColumns: newSettings.visibleColumns as unknown as Record<string, boolean>,
         uiSettings: {
           zoom: zoom,
           autoRefresh: newSettings.autoRefresh,
@@ -1144,7 +1164,7 @@ const PipelineBoard: React.FC = () => {
           priorities: activeFilters.priorities || [],
           sources: activeFilters.sources || [],
           assignees: activeFilters.assignees || [],
-          dateRange: (activeFilters as { dateRange?: unknown }).dateRange
+          dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || { start: null, end: null }
         },
         sortConfig: sortConfig
       };

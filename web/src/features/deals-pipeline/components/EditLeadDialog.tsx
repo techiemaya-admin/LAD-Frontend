@@ -313,7 +313,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 <Label>Goals</Label>
                 <div className="flex flex-wrap gap-2">
                   {editingLead.goals?.map((goal, index) => (
-                    <Chip key={index} variant="outline">
+                    <Badge key={index} variant="outline">
                       {goal}
                       <button
                         onClick={() => handleGoalsChange(editingLead.goals?.filter((_, i) => i !== index) || [])}
@@ -321,7 +321,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                       >
                         ×
                       </button>
-                    </Chip>
+                    </Badge>
                   ))}
                   <Input
                     placeholder="Add goal"
@@ -339,7 +339,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 <Label>Labels</Label>
                 <div className="flex flex-wrap gap-2">
                   {editingLead.labels?.map((label, index) => (
-                    <Chip key={index} variant="outline">
+                    <Badge key={index} variant="outline">
                       {label}
                       <button
                         onClick={() => handleLabelsChange(editingLead.labels?.filter((_, i) => i !== index) || [])}
@@ -347,7 +347,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                       >
                         ×
                       </button>
-                    </Chip>
+                    </Badge>
                   ))}
                   <Input
                     placeholder="Add label"

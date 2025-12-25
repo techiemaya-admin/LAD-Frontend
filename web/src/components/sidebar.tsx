@@ -5,8 +5,8 @@ import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from 'react-redux';
-import { logout as logoutAction } from '../store/slices/authSlice';
-import authService from '../services/authService';
+import { logout as logoutAction } from '@/store/slices/authSlice';
+import authService from '@/services/authService';
 import logo from "../assets/logo.png";
 import {
   DropdownMenu,

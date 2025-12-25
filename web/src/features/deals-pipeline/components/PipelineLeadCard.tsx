@@ -1309,9 +1309,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {globalEditFormData.tags && globalEditFormData.tags.map((tag, index) => (
-                      <Chip 
+                      <Badge 
                         key={index}
-                        className="bg-gray-200 text-gray-900 text-xs"
+                        variant="secondary"
+                        className="text-xs"
                       >
                         {tag}
                         <button
@@ -1320,19 +1321,20 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         >
                           <X className="h-3 w-3" />
                         </button>
-                      </Chip>
+                      </Badge>
                     ))}
                   </div>
                 </div>
               ) : (
                 <div className="flex gap-2 flex-wrap">
                   {allTags.map((tag, index) => (
-                    <Chip 
+                    <Badge 
                       key={index}
-                      className="bg-gray-200 text-gray-900 text-xs hover:bg-gray-300 transition-colors"
+                      variant="outline"
+                      className="text-xs hover:bg-gray-100 transition-colors"
                     >
                       {tag}
-                    </Chip>
+                    </Badge>
                   ))}
                   {allTags.length === 0 && (
                     <p className="text-sm text-gray-500 italic">
@@ -1699,7 +1701,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   {tab.content}
                 </TabsContent>
               ))}
-            </Tabs>
+            </TabsList>
           </div>
         </div>
         
@@ -1809,10 +1811,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" data-ignore-card-click className="focus:outline-none">
-                <Chip className="bg-blue-100 text-blue-700 text-xs flex items-center gap-1">
+                <Badge className="text-xs flex items-center gap-1" style={{ backgroundColor: getProbabilityColor(probability), color: 'white' }}>
                   {getStatusIcon(currentStatus)}
                   {getStatusLabel(currentStatus, statusOptions)}
-                </Chip>
+                </Badge>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[180px]">
@@ -1897,9 +1899,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             {allTags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag, index) => (
-                  <Chip key={index} className="bg-gray-100 text-gray-700 text-xs">
+                  <Badge key={index} variant="outline" className="text-xs">
                     {tag}
-                  </Chip>
+                  </Badge>
                 ))}
               </div>
             )}

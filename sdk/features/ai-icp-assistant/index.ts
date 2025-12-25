@@ -11,7 +11,7 @@ export {
   type ChatMessage,
   type ChatResponse,
   type ICPData
-} from './aiICPAssistantService';
+} from './services/aiICPAssistantService';
 
 // New Maya AI Service
 export { mayaAI, default as mayaAIService } from './services/mayaAIService';

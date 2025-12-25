@@ -82,9 +82,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
             <span className="text-gray-500">Select {label.toLowerCase()}...</span>
           ) : (
             value.map((key) => (
-              <Chip key={key} variant="secondary" className="text-xs">
+              <Badge key={key} variant="secondary" className="text-xs">
                 {renderChip ? renderChip(key) : options.find(o => o.key === key)?.label || key}
-              </Chip>
+              </Badge>
             ))
           )}
         </div>

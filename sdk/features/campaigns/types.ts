@@ -1,144 +1,134 @@
-export type StepType = 
-  | 'linkedin_visit' 
-  | 'linkedin_follow' 
-  | 'linkedin_connect' 
-  | 'linkedin_message'
-  | 'linkedin_scrape_profile'
-  | 'linkedin_company_search'
-  | 'linkedin_employee_list'
-  | 'linkedin_autopost'
-  | 'linkedin_comment_reply'
-  | 'email_send' 
-  | 'email_followup' 
-  | 'whatsapp_send'
-  | 'voice_agent_call'
-  | 'instagram_follow'
-  | 'instagram_like'
-  | 'instagram_dm'
-  | 'instagram_autopost'
-  | 'instagram_comment_reply'
-  | 'instagram_story_view'
-  | 'lead_generation'
-  | 'delay' 
-  | 'condition' 
-  | 'start' 
-  | 'end';
+/**
+ * Campaigns Feature - TypeScript Types
+ * 
+ * All type definitions for the campaigns feature.
+ * These types are shared between SDK and web layers.
+ */
 
 export type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'stopped';
-
-export type LeadStatus = 'pending' | 'active' | 'completed' | 'stopped' | 'error';
-
-export type ActivityStatus = 'pending' | 'sent' | 'delivered' | 'opened' | 'clicked' | 'connected' | 'replied' | 'failed' | 'skipped' | 'error';
-
-export type ConditionType = 
-  | 'connected'
-  | 'linkedin_replied'
-  | 'linkedin_followed'
-  | 'opened'
-  | 'replied'
-  | 'clicked'
-  | 'whatsapp_delivered'
-  | 'whatsapp_read'
-  | 'whatsapp_replied'
-  | 'voice_answered'
-  | 'voice_not_answered'
-  | 'voice_completed'
-  | 'voice_busy'
-  | 'voice_failed'
-  | 'instagram_followed'
-  | 'instagram_liked'
-  | 'instagram_replied'
-  | 'instagram_commented'
-  | 'instagram_story_viewed';
-
-export interface StepConfig {
-  title?: string;
-  message?: string;
-  subject?: string;
-  body?: string;
-  delayHours?: number;
-  delayDays?: number;
-  delayMinutes?: number;
-  conditionType?: ConditionType;
-  conditionTrueStep?: string;
-  conditionFalseStep?: string;
-  whatsappTemplate?: string;
-  whatsappMessage?: string;
-  voiceAgentId?: string;
-  voiceAgentName?: string;
-  voiceTemplate?: string;
-  voiceContext?: string;
-  linkedinCompanyName?: string;
-  linkedinCompanyUrl?: string;
-  linkedinScrapeFields?: string[];
-  linkedinPostContent?: string;
-  linkedinPostImageUrl?: string;
-  linkedinCommentText?: string;
-  instagramUsername?: string;
-  instagramPostUrl?: string;
-  instagramPostCaption?: string;
-  instagramPostImageUrl?: string;
-  instagramDmMessage?: string;
-  instagramCommentText?: string;
-  leadGenerationQuery?: string;
-  leadGenerationFilters?: {
-    roles?: string[];
-    industries?: string[];
-    location?: string | string[];
-  };
-  leadGenerationLimit?: number;
-  [key: string]: any;
-}
-
-export interface WorkflowStep {
-  id: string;
-  type: StepType;
-  data: StepConfig;
-  position?: { x: number; y: number };
-}
-
-export interface WorkflowEdge {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
-}
 
 export interface Campaign {
   id: string;
   name: string;
-  description?: string;
   status: CampaignStatus;
-  workflow: {
-    steps: WorkflowStep[];
-    edges: WorkflowEdge[];
+  leads_count: number;
+  sent_count: number;
+  delivered_count: number;
+  connected_count: number;
+  replied_count: number;
+  opened_count: number;
+  clicked_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  steps?: Array<{ type: string; [key: string]: any }>;
+}
+
+export interface CampaignStats {
+  total_campaigns: number;
+  active_campaigns: number;
+  total_leads: number;
+  total_sent: number;
+  total_delivered: number;
+  total_connected: number;
+  total_replied: number;
+  avg_connection_rate: number;
+  avg_reply_rate: number;
+  instagram_connection_rate?: number;
+  whatsapp_connection_rate?: number;
+  voice_agent_connection_rate?: number;
+}
+
+export interface CampaignFilters {
+  search?: string;
+  status?: CampaignStatus | 'all';
+}
+
+export interface CreateCampaignRequest {
+  name: string;
+  status?: CampaignStatus;
+  steps?: Array<{ type: string; [key: string]: any }>;
+}
+
+export interface UpdateCampaignRequest {
+  name?: string;
+  status?: CampaignStatus;
+  steps?: Array<{ type: string; [key: string]: any }>;
+}
+
+export interface CampaignAnalytics {
+  campaign: {
+    id: string;
+    name: string;
+    status: string;
+    created_at: string;
   };
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  org_id?: string;
+  overview: {
+    total_leads: number;
+    active_leads: number;
+    completed_leads: number;
+    stopped_leads: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    connected: number;
+    replied: number;
+  };
+  metrics: {
+    delivery_rate: number;
+    open_rate: number;
+    click_rate: number;
+    connection_rate: number;
+    reply_rate: number;
+    // Step-specific metrics
+    leads_generated?: number;
+    connection_requests_sent?: number;
+    connection_requests_accepted?: number;
+    linkedin_messages_sent?: number;
+    linkedin_messages_replied?: number;
+    voice_calls_made?: number;
+    voice_calls_answered?: number;
+    emails_sent?: number;
+    emails_opened?: number;
+    whatsapp_messages_sent?: number;
+    whatsapp_messages_replied?: number;
+    errors?: number;
+  };
+  timeline: Array<{
+    date: string;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    connected: number;
+    replied: number;
+  }>;
+  step_analytics?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    order: number;
+    total_executions: number;
+    sent: number;
+    delivered: number;
+    connected: number;
+    replied: number;
+    errors: number;
+  }>;
 }
 
-export interface Lead {
+export interface CampaignLead {
   id: string;
   campaign_id: string;
-  lead_data: Record<string, any>;
-  status: LeadStatus;
-  current_step_id?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  status: string;
+  connected: boolean;
+  replied: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface Activity {
-  id: string;
-  campaign_id: string;
-  lead_id: string;
-  step_id: string;
-  step_type: StepType;
-  status: ActivityStatus;
-  error_message?: string;
-  scheduled_at?: string;
-  created_at: string;
-  updated_at: string;
-}

@@ -72,12 +72,12 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               <span className="text-sm text-gray-600 dark:text-gray-300">
                 {filteredLeadsCount !== totalLeads ? `${filteredLeadsCount} of ` : ''}{totalLeads} leads
               </span>
-              <Chip 
+              <Badge 
                 variant="secondary"
                 className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 h-5 text-xs"
               >
                 {stagesCount} stages
-              </Chip>
+              </Badge>
             </div>
             
             {/* Action buttons */}

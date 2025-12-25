@@ -4,12 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Box, Button, TextField, Stack, Paper, Typography, CircularProgress } from '@mui/material';
 import { ArrowBack, Save, PlayArrow, Visibility, Pause } from '@mui/icons-material';
-import { useCampaignStore } from '@/store/campaignStore';
-import { apiGet, apiPut, apiPost } from '@/lib/api';
+import { useCampaignStore } from '../../../features/campaigns/store/campaignStore';
+import { useCampaign, updateCampaign, createCampaign, pauseCampaign } from '@/features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
-import StepLibrary from '@/components/campaigns/StepLibrary';
-import FlowCanvas from '@/components/campaigns/FlowCanvas';
-import StepSettings from '@/components/campaigns/StepSettings';
+import StepLibrary from '../../../features/campaigns/components/StepLibrary';
+import FlowCanvas from '../../../features/campaigns/components/FlowCanvas';
+import StepSettings from '../../../features/campaigns/components/StepSettings';
 
 export default function CampaignDetailPage() {
   const params = useParams();
@@ -26,20 +26,26 @@ export default function CampaignDetailPage() {
     serialize,
   } = useCampaignStore();
 
-  useEffect(() => {
-    if (campaignId && campaignId !== 'new') {
-      loadCampaignData();
-    } else if (campaignId === 'new') {
-      setLoading(false);
-    }
-  }, [campaignId]);
+  // Campaign loading is handled by useCampaign hook above
 
-  const loadCampaignData = async () => {
-    try {
-      setLoading(true);
-      const response = await apiGet(`/api/campaigns/${campaignId}`) as { data: any };
-      const campaign = response.data;
-      
+  // Use SDK hook for campaign data
+  const { campaign, loading: campaignLoading, error: campaignError, refetch } = useCampaign(
+    campaignId && campaignId !== 'new' ? campaignId : null
+  );
+
+  useEffect(() => {
+    if (campaignError) {
+      push({
+        variant: 'error',
+        title: 'Error',
+        description: campaignError || 'Failed to load campaign',
+      });
+      router.push('/campaigns');
+    }
+  }, [campaignError, push, router]);
+
+  useEffect(() => {
+    if (campaign) {
       console.log('Loading campaign:', {
         id: campaign.id,
         name: campaign.name,
@@ -52,18 +58,15 @@ export default function CampaignDetailPage() {
         name: campaign.name,
         steps: campaign.steps || [],
       });
-    } catch (error: any) {
-      console.error('Failed to load campaign:', error);
-      push({
-        variant: 'error',
-        title: 'Error',
-        description: error.message || 'Failed to load campaign',
-      });
-      router.push('/campaigns');
-    } finally {
+      setLoading(false);
+    } else if (campaignId === 'new') {
+      setLoading(false);
+    } else if (campaignLoading) {
+      setLoading(true);
+    } else {
       setLoading(false);
     }
-  };
+  }, [campaign, campaignId, campaignLoading, loadCampaign]);
 
   const handleSave = async (startCampaign = false) => {
     if (!name.trim()) {
@@ -89,17 +92,17 @@ export default function CampaignDetailPage() {
       
       if (campaignId === 'new') {
         // Create new campaign
-        const response = await apiPost('/api/campaigns', {
+        const newCampaign = await createCampaign({
           name: campaignData.name,
           status: startCampaign ? 'running' : 'draft',
           steps: campaignData.steps,
-        }) as { data: any };
+        });
         
         // Redirect to the newly created campaign
-        router.push(`/campaigns/${response.data.id}`);
+        router.push(`/campaigns/${newCampaign.id}`);
       } else {
         // Update existing campaign
-        await apiPut(`/api/campaigns/${campaignId}`, {
+        await updateCampaign(campaignId, {
           name: campaignData.name,
           status: startCampaign ? 'running' : 'draft',
           steps: campaignData.steps,
@@ -134,7 +137,7 @@ export default function CampaignDetailPage() {
       setSaving(true);
       // First save the campaign with current changes
       const campaignData = serialize();
-      await apiPut(`/api/campaigns/${campaignId}`, {
+      await updateCampaign(campaignId, {
         name: campaignData.name,
         status: 'running',
         steps: campaignData.steps,
@@ -163,13 +166,13 @@ export default function CampaignDetailPage() {
   const handlePauseCampaign = async () => {
     try {
       setSaving(true);
-      await apiPost(`/api/campaigns/${campaignId}/pause`, {});
+      await pauseCampaign(campaignId);
       push({
         variant: 'success',
         title: 'Success',
         description: 'Campaign paused successfully',
       });
-      loadCampaignData(); // Reload to get updated status
+      refetch(); // Reload to get updated status
     } catch (error: any) {
       console.error('Failed to pause campaign:', error);
       push({

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-
-function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
-  return backendInternal.replace(/\/$/, '');
-}
+import { getBackendUrl } from '../utils/backend';
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,7 +16,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const backend = getBackendBase();
+    const backend = getBackendUrl();
     const resp = await fetch(`${backend}/api/metrics`, {
       method: 'GET',
       headers: { 

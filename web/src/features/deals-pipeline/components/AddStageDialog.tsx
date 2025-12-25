@@ -136,7 +136,7 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
               <Label>Stage Color</Label>
               <div className="flex flex-wrap gap-2">
                 {stageColors.map(color => (
-                  <Chip
+                  <Badge
                     key={color.value}
                     onClick={() => setLocalStage({ ...localStage, color: color.value })}
                     className={`cursor-pointer transition-opacity hover:opacity-90 ${
@@ -150,7 +150,7 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
                     }}
                   >
                     {color.label}
-                  </Chip>
+                  </Badge>
                 ))}
               </div>
             </div>

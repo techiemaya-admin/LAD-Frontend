@@ -494,9 +494,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       
       case 'source':
         return (
-          <Chip className="text-xs">
+          <Badge className="text-xs">
             {lead.source || 'Unknown'}
-          </Chip>
+          </Badge>
         );
       
       case 'assignee':
