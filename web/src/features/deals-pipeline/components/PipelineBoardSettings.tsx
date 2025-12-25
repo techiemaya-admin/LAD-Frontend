@@ -1,17 +1,82 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../app/components/ui/dialog';
-import { Button } from '../../app/components/ui/button';
-import { Switch } from '../../app/components/ui/switch';
-import { Checkbox } from '../../app/components/ui/checkbox';
-import { RadioGroup, Radio } from '../../app/components/ui/radio-group';
-import { Slider } from '../../app/components/ui/slider';
-import { Label } from '../../app/components/ui/label';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import { Settings, LayoutGrid, List, RotateCcw, Save } from 'lucide-react';
 import {
   selectPipelineSettings,
   setPipelineSettings
-} from '../../store/slices/uiSlice';
+} from '@/store/slices/uiSlice';
+
+type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
+interface ViewModeOptionProps extends Omit<React.ComponentProps<typeof RadioGroupItem>, 'checked'> {
+  title: string;
+  description: string;
+  icon: IconComponent;
+  checked?: boolean; // Optional: can be passed from parent to indicate active state
+}
+
+const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(({
+  title,
+  description,
+  icon: Icon,
+  id,
+  className,
+  value,
+  checked,
+  ...radioProps
+}, ref) => {
+  const optionId = id || `view-mode-${value}`;
+  // RadioGroupItem is controlled by RadioGroup's value, but we use checked prop for visual state
+  const isActive = Boolean(checked);
+
+  return (
+    <label
+      htmlFor={optionId}
+      className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-colors ${
+        isActive ? 'bg-blue-50 border-2 border-blue-200' : 'hover:bg-gray-100 border-2 border-transparent'
+      }`}
+    >
+      <RadioGroupItem
+        {...radioProps}
+        id={optionId}
+        ref={ref}
+        value={value}
+        className={`sr-only ${className ?? ''}`}
+      />
+      <span
+        className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
+          isActive
+            ? 'border-blue-500 bg-blue-500'
+            : 'border-slate-300 bg-white'
+        }`}
+      >
+        <span
+          className={`h-2.5 w-2.5 rounded-sm transition-opacity ${
+            isActive ? 'bg-white opacity-100' : 'bg-transparent opacity-0'
+          }`}
+        />
+      </span>
+      <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
+      <div>
+        <div className={`text-sm font-medium ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>
+          {title}
+        </div>
+        <div className="text-xs text-gray-500">
+          {description}
+        </div>
+      </div>
+    </label>
+  );
+});
+
+ViewModeOption.displayName = 'ViewModeOption';
 
 interface VisibleColumns {
   name: boolean;
@@ -145,7 +210,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <div className="w-full flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogTitle className="pb-2">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-blue-500" />
@@ -159,8 +224,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
             </button>
           </div>
         </DialogTitle>
-
-        <DialogContent className="pb-6 overflow-y-auto flex-1">
           {/* View Mode Section */}
           <div className="p-6 mb-6 bg-gray-50 rounded-lg">
             <fieldset>
@@ -174,26 +237,22 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                 onValueChange={handleViewModeChange}
                 className="flex flex-col gap-4"
               >
-                <label htmlFor="view-kanban" className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors">
-                  <Radio value="kanban" id="view-kanban" />
-                  <LayoutGrid className="h-5 w-5" />
-                  <div>
-                    <div className="text-sm font-medium">Kanban View</div>
-                    <div className="text-xs text-gray-500">
-                      Cards organized in columns by stage
-                    </div>
-                  </div>
-                </label>
-                <label htmlFor="view-list" className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors">
-                  <Radio value="list" id="view-list" />
-                  <List className="h-5 w-5" />
-                  <div>
-                    <div className="text-sm font-medium">List View</div>
-                    <div className="text-xs text-gray-500">
-                      Tabular view with customizable columns
-                    </div>
-                  </div>
-                </label>
+                <ViewModeOption
+                  value="kanban"
+                  id="view-kanban"
+                  title="Kanban View"
+                  description="Cards organized in columns by stage"
+                  icon={LayoutGrid}
+                  checked={localSettings.viewMode === 'kanban'}
+                />
+                <ViewModeOption
+                  value="list"
+                  id="view-list"
+                  title="List View"
+                  description="Tabular view with customizable columns"
+                  icon={List}
+                  checked={localSettings.viewMode === 'list'}
+                />
               </RadioGroup>
             </fieldset>
           </div>
@@ -313,30 +372,29 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </div>
             )}
           </div>
-        </DialogContent>
 
-        <DialogActions className="p-6 gap-2">
-          <Button 
-            onClick={handleCancel} 
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-blue-500 border-[1.5px] border-blue-100 hover:bg-blue-50"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSave} 
-            className="rounded-lg shadow-md font-semibold bg-blue-500 hover:bg-blue-600 text-white"
-            style={{
-              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
-            }}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Settings
-          </Button>
-        </DialogActions>
-      </div>
-    </Dialog>
-  );
-};
+          <div className="flex gap-2 mt-6 pt-6 border-t">
+            <Button 
+              onClick={handleCancel} 
+              variant="outline"
+              className="rounded-lg font-semibold bg-white text-blue-500 border-[1.5px] border-blue-100 hover:bg-blue-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              className="rounded-lg shadow-md font-semibold bg-blue-500 hover:bg-blue-600 text-white"
+              style={{
+                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
+              }}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Settings
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
 export default PipelineBoardSettings;

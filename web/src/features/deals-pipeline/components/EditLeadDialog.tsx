@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../app/components/ui/dialog';
-import { Button } from '../../app/components/ui/button';
-import { Input } from '../../app/components/ui/input';
-import { Label } from '../../app/components/ui/label';
-import { Select } from '../../app/components/ui/select';
-import { Textarea } from '../../app/components/ui/textarea';
-import { Chip } from '../../app/components/ui/chip';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Chip } from '@/components/ui/chip';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectStatuses, selectPriorities, selectSources } from '../../store/slices/masterDataSlice';
-import { selectUsers } from '../../store/slices/usersSlice';
+import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
+import { selectUsers } from '@/store/slices/usersSlice';
 import { 
   selectEditingLead, 
   setEditingLead,
   resetEditingLead 
-} from '../../store/slices/uiSlice';
+} from '@/store/slices/uiSlice';
 import { Lead } from '../leads/types';
-import { Stage } from '../../store/slices/pipelineSlice';
+import { Stage } from '../store/slices/pipelineSlice';
 
 interface EditLeadDialogProps {
   open: boolean;

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Button } from '../../app/components/ui/button';
-import { Input } from '../../app/components/ui/input';
-import { Chip } from '../../app/components/ui/chip';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import {
   Plus,
   Filter,

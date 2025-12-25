@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Lead } from '../../components/leads/types';
+import { Lead } from '@/components/leads/types';
 
 interface LeadsFilters {
   searchQuery: string;
@@ -99,7 +99,7 @@ const leadsSlice = createSlice({
     
     updateLead(state, action: PayloadAction<{ id: string | number; data: Partial<Lead> }>) {
       const { id, data } = action.payload;
-      const leadIndex = state.leads.findIndex(l => l.id === id);
+      const leadIndex = state.leads.findIndex((l: Lead) => l.id === id);
       if (leadIndex !== -1) {
         const oldLead = { ...state.leads[leadIndex] };
         // Update lead with provided data (no stage validation needed - backend validates)
@@ -117,7 +117,7 @@ const leadsSlice = createSlice({
         
         // Log current stage distribution after update
         const stageDistribution: Record<string, number> = {};
-        state.leads.forEach(lead => {
+        state.leads.forEach((lead: Lead) => {
           const stage = lead.stage || 'unknown';
           stageDistribution[stage] = (stageDistribution[stage] || 0) + 1;
         });
@@ -129,7 +129,7 @@ const leadsSlice = createSlice({
     
     deleteLead(state, action: PayloadAction<string | number>) {
       const leadId = action.payload;
-      state.leads = state.leads.filter(l => l.id !== leadId);
+      state.leads = state.leads.filter((l: Lead) => l.id !== leadId);
       state.lastUpdated = Date.now();
       state.cache.isValid = false;
       state.pagination.total = Math.max(0, state.pagination.total - 1);
@@ -138,8 +138,8 @@ const leadsSlice = createSlice({
     // Bulk operations for future use
     bulkUpdateLeads(state, action: PayloadAction<Array<{ id: string | number; data: Partial<Lead> }>>) {
       const updates = action.payload; // Array of { id, data }
-      updates.forEach(({ id, data }) => {
-        const leadIndex = state.leads.findIndex(l => l.id === id);
+      updates.forEach(({ id, data }: { id: string | number; data: Partial<Lead> }) => {
+        const leadIndex = state.leads.findIndex((l: Lead) => l.id === id);
         if (leadIndex !== -1) {
           state.leads[leadIndex] = { ...state.leads[leadIndex], ...data };
         }

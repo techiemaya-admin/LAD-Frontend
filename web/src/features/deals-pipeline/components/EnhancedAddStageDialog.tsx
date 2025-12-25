@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../app/components/ui/dialog';
-import { Button } from '../../app/components/ui/button';
-import { Input } from '../../app/components/ui/input';
-import { Label } from '../../app/components/ui/label';
-import { Select } from '../../app/components/ui/select';
+import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { X } from 'lucide-react';
-import { Stage } from '../../store/slices/pipelineSlice';
+import { Stage } from '../store/slices/pipelineSlice';
 
 interface EnhancedAddStageDialogProps {
   open: boolean;
@@ -91,22 +91,22 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={!isSubmitting ? onClose : undefined}>
-      <DialogTitle className="flex justify-between items-center">
-        <span className="text-lg font-semibold text-[#3A3A4F]">
-          Add New Stage
-        </span>
-        <button
-          onClick={onClose}
-          disabled={isSubmitting}
-          className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </DialogTitle>
+    <Dialog open={open}>
+      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="flex justify-between items-center">
+          <span className="text-lg font-semibold text-[#3A3A4F]">
+            Add New Stage
+          </span>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogTitle>
 
-      <DialogContent className="p-6 pt-2">
-          <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
             <div className="space-y-2">
               <Label htmlFor="stage-name">Stage Name *</Label>
               <Input
@@ -133,18 +133,20 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="stage-position">Stage Position</Label>
                   <Select
-                    id="stage-position"
                     value={positionStageId}
-                    onChange={(e) => handlePositionChange(e.target.value)}
+                    onValueChange={(value: string) => handlePositionChange(value)}
                     disabled={isSubmitting}
-                    className={`rounded-lg ${localErrors.position ? 'border-red-500' : ''}`}
                   >
-                    <option value="">Add at the end (after all stages)</option>
-                    {stages.map((stage) => (
-                      <option key={stage.key} value={stage.key}>
-                        {getPositionText(stage, positionType)}
-                      </option>
-                    ))}
+                    <SelectTrigger id="stage-position" className="rounded-lg">
+                      <SelectValue placeholder="Add at the end (after all stages)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.map((stage) => (
+                        <SelectItem key={stage.key} value={stage.key || ''}>
+                          {getPositionText(stage, positionType)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                   {localErrors.position && (
                     <p className="text-sm text-red-500">{localErrors.position}</p>
@@ -157,18 +159,21 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="placement-type">Placement</Label>
                 <Select
-                  id="placement-type"
                   value={positionType}
-                  onChange={(e) => handlePositionTypeChange(e.target.value)}
+                  onValueChange={(value: string) => handlePositionTypeChange(value)}
                   disabled={isSubmitting}
-                  className="rounded-lg"
                 >
-                  <option value="before">
-                    Before "{stages.find(s => s.key === positionStageId)?.label || ''}"
-                  </option>
-                  <option value="after">
-                    After "{stages.find(s => s.key === positionStageId)?.label || ''}"
-                  </option>
+                  <SelectTrigger id="placement-type" className="rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="before">
+                      Before "{stages.find(s => s.key === positionStageId)?.label || ''}"
+                    </SelectItem>
+                    <SelectItem value="after">
+                      After "{stages.find(s => s.key === positionStageId)?.label || ''}"
+                    </SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             )}
@@ -181,26 +186,27 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
               </div>
             )}
           </div>
-        </DialogContent>
 
-        <DialogActions className="p-6 pt-2">
-          <Button
-            onClick={onClose}
-            disabled={isSubmitting}
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-[#3B82F6] border-[1.5px] border-[#EBF4FF] hover:bg-[#EBF4FF]"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="rounded-lg shadow-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB]"
-          >
-            {isSubmitting ? 'Adding Stage...' : 'Add Stage'}
-          </Button>
-        </DialogActions>
-    </Dialog>
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button
+              onClick={onClose}
+              disabled={isSubmitting}
+              variant="outline"
+              className="rounded-lg font-semibold bg-white text-[#3B82F6] border-[1.5px] border-[#EBF4FF] hover:bg-[#EBF4FF]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="rounded-lg shadow-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+            >
+              {isSubmitting ? 'Adding Stage...' : 'Add Stage'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
   );
 };
 

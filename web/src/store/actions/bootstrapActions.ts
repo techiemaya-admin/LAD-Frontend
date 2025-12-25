@@ -2,8 +2,8 @@
 import { setBootstrapLoading, setBootstrapError, setBootstrapFinished } from '../slices/bootstrapSlice';
 import { setConversations, setLoading as setConversationLoading, setError as setConversationError } from '../slices/conversationSlice';
 import { setNotifications } from '../slices/notificationSlice';
-import { setStages, setStagesLoading, setStagesError } from '../slices/pipelineSlice';
-import { setLeads, setLeadsLoading, setLeadsError } from '../slices/leadsSlice';
+import { setStages, setStagesLoading, setStagesError } from '../../features/deals-pipeline/store/slices/pipelineSlice';
+import { setLeads, setLeadsLoading, setLeadsError } from '../../features/deals-pipeline/store/slices/leadsSlice';
 import { setStatuses, setSources, setPriorities } from '../slices/masterDataSlice';
 import chatService from '../../services/chatService';
 import { fetchStages, fetchStatuses, fetchSources, fetchPriorities, fetchLeads } from '../../services/pipelineService';

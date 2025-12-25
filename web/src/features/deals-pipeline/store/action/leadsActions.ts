@@ -21,10 +21,10 @@ import {
   selectLeadsCacheValid
 } from '../slices/leadsSlice';
 
-import * as pipelineService from '../../services/pipelineService';
-import { AppDispatch, RootState } from '../store';
+import * as pipelineService from '../../../../services/pipelineService';
+import { AppDispatch, RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
-import { Lead } from '../../components/leads/types';
+import { Lead } from '../../../../components/leads/types';
 
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
