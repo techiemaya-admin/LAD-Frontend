@@ -48,7 +48,34 @@ import {
   User
 } from '@/store/slices/usersSlice';
 import { fetchUsersAction } from '@/store/actions/usersActions';
-import { Lead } from '@/components/leads/types';
+import BookingSlot from './BookingSlot';
+import * as bookingService from '@/services/bookingService';
+
+interface Lead {
+  id: string | number;
+  name?: string;
+  email?: string;
+  company?: string;
+  phone?: string;
+  status?: string;
+  priority?: string;
+  stage?: string;
+  amount?: number | string;
+  assignee?: string;
+  assigned_to_id?: string | number;
+  source?: string;
+  closeDate?: string;
+  close_date?: string;
+  expectedCloseDate?: string;
+  expected_close_date?: string;
+  description?: string;
+  tags?: string[];
+  goals?: string | string[];
+  avatar?: string;
+  lastActivity?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
 
 interface TabPanelProps {
   children: React.ReactNode;
@@ -218,6 +245,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   // Local states that remain component-specific
   const [newTagInput, setNewTagInput] = useState('');
 
+  // Users state
+  const [users, setUsers] = useState<Array<{
+    id: string | number;
+    name: string;
+    email: string;
+  }>>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
   const goalsArray = Array.isArray(lead.goals) ? lead.goals : 
                     typeof lead.goals === 'string' && lead.goals.trim() !== '' ? [lead.goals] : [];
   const tagsArray = Array.isArray(lead.tags) ? lead.tags : [];
@@ -297,6 +332,26 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       loadTabData(globalActiveTab);
     }
   }, [isDetailsOpen, globalActiveTab]);
+
+  // Fetch users from API
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const fetchedUsers = await bookingService.fetchUsers();
+        setUsers(fetchedUsers);
+        console.log('[PipelineLeadCard] Users loaded:', fetchedUsers.length);
+      } catch (error) {
+        console.error('[PipelineLeadCard] Error loading users:', error);
+        // Keep empty array on error
+        setUsers([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   // Load data for specific tab
   const loadTabData = async (tabIndex: number) => {
@@ -1253,24 +1308,27 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </div>
             </div>
 
-            {/* Description Section */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base font-semibold mb-4 text-gray-900">
-                Description
+            {/* Schedule Appointment Section */}
+            <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-base font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                Schedule Appointment
               </h3>
-              {globalEditingOverview ? (
-                <Textarea
-                  value={globalEditFormData.description || ''}
-                  onChange={(e) => handleFormFieldChange('description', e.target.value)}
-                  placeholder="Enter lead description..."
-                  rows={3}
-                  className="w-full"
-                />
-              ) : (
-                <p className="text-sm text-gray-600">
-                  {String(lead.description) || 'No description provided'}
-                </p>
-              )}
+              <div className="flex flex-col gap-4">
+                {globalEditingOverview ? (
+                  <BookingSlot 
+                    leadId={lead.id} 
+                    users={users}
+                    isEditMode={true}
+                  />
+                ) : (
+                  <BookingSlot 
+                    leadId={lead.id} 
+                    users={users}
+                    isEditMode={false}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Tags Section */}
@@ -1812,7 +1870,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" data-ignore-card-click className="focus:outline-none">
-                <Badge className="text-xs flex items-center gap-1" style={{ backgroundColor: getProbabilityColor(probability), color: 'white' }}>
+                <Badge className="text-xs flex items-center gap-1" style={{ backgroundColor: '#172560', color: 'white' }}>
                   {getStatusIcon(currentStatus)}
                   {getStatusLabel(currentStatus, statusOptions)}
                 </Badge>
