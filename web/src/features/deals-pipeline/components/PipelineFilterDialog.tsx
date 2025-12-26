@@ -81,10 +81,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
           {value.length === 0 ? (
             <span className="text-gray-500">Select {label.toLowerCase()}...</span>
           ) : (
-            value.map((key) => (
-              <Badge key={key} variant="secondary" className="text-xs">
+            value.map((key, index) => (
+              <Chip key={`${key}-${index}`} variant="secondary" className="text-xs">
                 {renderChip ? renderChip(key) : options.find(o => o.key === key)?.label || key}
-              </Badge>
+              </Chip>
             ))
           )}
         </div>
@@ -94,11 +94,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
       </button>
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isChecked = value.includes(option.key);
+            // Ensure unique key by combining option.key with index as fallback
+            const uniqueKey = option.key || `option-${index}`;
             return (
               <label
-                key={option.key}
+                key={uniqueKey}
                 className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
               >
                 <Checkbox
