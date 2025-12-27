@@ -153,7 +153,7 @@ export default function CampaignLeadsPage() {
     try {
       // First, try to get existing summary
       try {
-        const response = await fetch(`/api/profile-summary/${employee.id}?campaignId=${campaignId}`);
+        const response = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`);
         const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
         
         if (existingSummary.success && existingSummary.summary) {
@@ -167,7 +167,7 @@ export default function CampaignLeadsPage() {
       }
 
       // Generate new summary
-      const generateResponse = await fetch('/api/profile-summary/generate', {
+      const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
