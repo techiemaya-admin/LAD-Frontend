@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead } from '@/features/campaigns';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
+import { safeStorage } from '@/utils/storage';
 
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
@@ -153,7 +154,12 @@ export default function CampaignLeadsPage() {
     try {
       // First, try to get existing summary
       try {
-        const response = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`);
+        const token = safeStorage.getItem('token');
+        const response = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        });
         const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
         
         if (existingSummary.success && existingSummary.summary) {
@@ -167,20 +173,24 @@ export default function CampaignLeadsPage() {
       }
 
       // Generate new summary
+      const token = safeStorage.getItem('token');
       const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           leadId: employee.id,
           campaignId: campaignId,
           profileData: {
+            ...employee,
             name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
             title: employee.title,
             company: employee.company,
             email: employee.email,
             phone: employee.phone,
             linkedin_url: employee.linkedin_url,
-            ...employee,
           },
         }),
       });
