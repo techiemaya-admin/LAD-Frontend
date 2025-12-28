@@ -673,18 +673,14 @@ useEffect(() => {
   async function loadDashboardCallLogs() {
     let qs = `?limit=100`;
 
-    // 🔐 figure out role, org, voiceagent_id (same as CallLogsPage)
+    // 🔐 figure out role, org, userId (architecture-compliant: use user.id from core platform)
     try {
       const meAny: any = await getCurrentUser().catch(() => null);
-      const role: string | undefined = meAny?.voiceagent_role || meAny?.role;
-      const voiceagentIdRaw =
-        meAny?.voiceagent_id ?? meAny?.user?.voiceagent_id;
+      const role: string | undefined = meAny?.role || meAny?.user?.role;
+      // Use user.id (UUID) from core platform response
+      const userId = meAny?.user?.id || meAny?.id;
       const orgId: string | undefined =
-        meAny?.voiceagent_organization_id || meAny?.organization_id;
-      const voiceagentId =
-        typeof voiceagentIdRaw === "string"
-          ? Number(voiceagentIdRaw)
-          : voiceagentIdRaw;
+        meAny?.tenantId || meAny?.user?.tenantId || meAny?.organizationId;
 
       if (role && /^dev$/i.test(role)) {
         // dev → see everything (no extra filters)
@@ -694,14 +690,8 @@ useEffect(() => {
           qs += `&organizationId=${encodeURIComponent(orgId)}`;
       } else {
         // co_admin / user → only their own calls
-        if (
-          voiceagentId !== undefined &&
-          voiceagentId !== null &&
-          !Number.isNaN(Number(voiceagentId))
-        ) {
-          qs += `&initiatedByIds=${encodeURIComponent(
-            String(Number(voiceagentId))
-          )}`;
+        if (userId) {
+          qs += `&initiatedByIds=${encodeURIComponent(userId)}`;
         }
       }
     } catch {

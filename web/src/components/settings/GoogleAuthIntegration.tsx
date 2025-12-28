@@ -31,8 +31,8 @@ export const GoogleAuthIntegration: React.FC = () => {
 
       if (meRes.ok) {
         const meData = await meRes.json();
-        // Use voice_agent_user_id if available, otherwise fall back to regular user id
-        const userId = meData?.voice_agent_user_id || meData?.id;
+        // Use user.id from the response (architecture-compliant: core platform returns user.id)
+        const userId = meData?.user?.id || meData?.id;
 
         if (userId) {
           // Check calendar connection status from our database
@@ -64,7 +64,8 @@ export const GoogleAuthIntegration: React.FC = () => {
 
       if (meRes.ok) {
         const meData = await meRes.json();
-        const userId = meData?.voice_agent_user_id || meData?.id;
+        // Use user.id from the response (architecture-compliant: core platform returns user.id)
+        const userId = meData?.user?.id || meData?.id;
 
         if (userId) {
           // Check status from our backend (which already has the data from VOAG callback)
@@ -99,14 +100,14 @@ export const GoogleAuthIntegration: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Get the logged-in user's voice_agent_user_id or regular id
+      // Get the logged-in user's id
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
       });
 
       const meData = await meRes.json();
-      // Use voice_agent_user_id if available, otherwise fall back to regular user id
-      const userId = meData?.voice_agent_user_id || meData?.id;
+      // Use user.id from the response (architecture-compliant: core platform returns user.id)
+      const userId = meData?.user?.id || meData?.id;
 
       if (!userId) {
         alert('User ID not available');
@@ -162,8 +163,8 @@ export const GoogleAuthIntegration: React.FC = () => {
       });
 
       const meData = await meRes.json();
-      // Use voice_agent_user_id if available, otherwise fall back to regular user id
-      const userId = meData?.voice_agent_user_id || meData?.id;
+      // Use user.id from the response (architecture-compliant: core platform returns user.id)
+      const userId = meData?.user?.id || meData?.id;
 
       if (userId) {
         // Call our backend to disconnect (it will update voag and database)

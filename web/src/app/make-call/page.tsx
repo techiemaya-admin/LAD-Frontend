@@ -104,12 +104,12 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [additionalInstructions, setAdditionalInstructions] =
     useState<string>("");
-  const [initiatedBy, setInitiatedBy] = useState<string | number | undefined>(
+  const [initiatedBy, setInitiatedBy] = useState<string | undefined>(
     undefined
   );
 
-  // ID used to scope number/agent availability (from /api/auth/me)
-  const [voiceAgentUserId, setVoiceAgentUserId] = useState<number | null>(null);
+  // User ID (UUID) - backend uses JWT req.user.id, so this is mainly for local state
+  const [voiceAgentUserId, setVoiceAgentUserId] = useState<string | null>(null);
 
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -117,33 +117,22 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
     process.env.NEXT_PUBLIC_API_BASE ||
     "http://localhost:3002";
 
-  // Get initiated_by and voiceAgentUserId from /auth/me
+  // Get user ID from /auth/me (architecture-compliant: core platform returns user.id)
   useEffect(() => {
     (async () => {
       try {
         const meAny: any = await getCurrentUser();
         console.log("[make-call] /api/auth/me response", meAny);
-        const rawVid =
-          meAny &&
-          (meAny.voice_agent_user_id ??
-            meAny.voiceagent_id ??
-            meAny?.user?.voice_agent_user_id ??
-            meAny?.user?.voiceagent_id);
-        const vidNum = typeof rawVid === "string" ? Number(rawVid) : rawVid;
-        if (
-          vidNum !== undefined &&
-          vidNum !== null &&
-          vidNum !== "" &&
-          !Number.isNaN(Number(vidNum))
-        ) {
-          const parsed = Number(vidNum);
-          console.log("[make-call] derived voiceAgentUserId", parsed);
-          setInitiatedBy(parsed);
-          setVoiceAgentUserId(parsed);
+        // Use user.id from response (UUID format, not number)
+        const userId = meAny?.user?.id || meAny?.id;
+        if (userId) {
+          console.log("[make-call] derived userId", userId);
+          setInitiatedBy(userId);
+          setVoiceAgentUserId(userId);
         }
       } catch (e) {
         console.warn(
-          "/api/auth/me failed or unauthenticated; proceeding without initiated_by"
+          "/api/auth/me failed or unauthenticated; proceeding without user ID"
         );
       }
     })();
@@ -484,16 +473,17 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
     }
   }, [qpSeed, qpBulk, qpIds]);
 
-  // 🔥 Fetch numbers & agents from new view-based endpoints, scoped by voice_agent_user_id
+  // 🔥 Fetch numbers & agents from endpoints (backend uses JWT req.user.id, not query param)
   // Numbers should load even if agents API fails
   useEffect(() => {
     if (!voiceAgentUserId) return;
 
     (async () => {
       // 1) Load numbers (failures logged but do not affect agents)
+      // Note: Backend uses JWT req.user.id, query param is ignored but kept for compatibility
       try {
         const numbersRes = await apiGet<{ success: boolean; data: any[] }>(
-          `/api/voiceagent/user/available-numbers?voice_agent_user_id=${voiceAgentUserId}`
+          `/api/voice-agent/user/available-numbers`
         );
 
         if (numbersRes.success) {
@@ -527,9 +517,10 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
       }
 
       // 2) Load agents separately, so an error here doesn't block numbers
+      // Note: Backend uses JWT req.user.id, query param is ignored but kept for compatibility
       try {
         const agentsRes = await apiGet<{ success: boolean; agents: any[] }>(
-          `/api/voiceagent/user/available-agents?voice_agent_user_id=${voiceAgentUserId}`
+          `/api/voice-agent/user/available-agents`
         );
 
         if (agentsRes.success) {
