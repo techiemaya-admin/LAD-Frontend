@@ -20,6 +20,7 @@ interface LinkedInAccount {
   connected: boolean;
   status?: 'connected' | 'disconnected' | 'stopped' | 'checkpoint' | 'unknown' | 'error';
   profileName?: string;
+  accountName?: string; // Account name from database
   profileUrl?: string;
   email?: string;
   connectedAt?: string;
@@ -100,11 +101,11 @@ export const LinkedInIntegration: React.FC = () => {
     };
   }, [linkedInConnections.length]);
 
-  // Auto-polling for Yes/No checkpoint - monitors Unipile and auto-logins when user clicks Yes on mobile
+  // Auto-polling for Yes/No checkpoint - monitors LinkedIn and auto-logins when user clicks Yes on mobile
   useEffect(() => {
     // If we have a Yes/No checkpoint, start polling to detect when user clicks Yes on mobile
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
-      console.log('[LinkedIn Integration] Starting Yes/No auto-polling to monitor Unipile...');
+      console.log('[LinkedIn Integration] Starting Yes/No auto-polling to monitor LinkedIn connection status...');
       
       const pollInterval = setInterval(async () => {
         try {
@@ -215,7 +216,7 @@ export const LinkedInIntegration: React.FC = () => {
       const data = await apiPost<any>('/api/social-integration/linkedin/connect', payload);
 
       if (!data.success) {
-        const errorMessage = data.error || 'Failed to connect LinkedIn account';
+        const errorMessage = data.error || data.message || 'Failed to connect LinkedIn account';
         setConnectionError(errorMessage);
         throw new Error(errorMessage);
       }
@@ -607,10 +608,7 @@ export const LinkedInIntegration: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-white bg-blue-600 px-3 py-1 rounded-md shadow-sm">
-                            Account {accountNumber}
-                          </span>
-                          <p className="font-medium text-gray-900">{account.profileName || account.email || 'LinkedIn Account'}</p>
+                          <p className="font-medium text-gray-900">{account.accountName || account.profileName || account.email || 'LinkedIn Account'}</p>
                         </div>
                         <div className={`flex items-center px-2 py-1 rounded-md text-xs font-medium ${
                           accountStatusDisplay.color === 'text-green-600' ? 'bg-green-100 text-green-700' :
@@ -1012,7 +1010,7 @@ export const LinkedInIntegration: React.FC = () => {
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-700 text-center">
                         <Loader2 className="h-3 w-3 animate-spin inline-block mr-1" />
-                        Monitoring Unipile... Click Yes on your phone and we'll detect it automatically.
+                        Waiting for verification... Click Yes on your phone notification and we'll detect it automatically.
                       </p>
                     </div>
                   )}

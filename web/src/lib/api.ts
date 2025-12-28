@@ -55,7 +55,17 @@ export async function apiPost<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`POST ${path} ${res.status}`);
+    
+    // Try to extract error message from response body
+    let errorMessage = `POST ${path} ${res.status}`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch (e) {
+      // If response is not JSON, use default error message
+    }
+    
+    throw new Error(errorMessage);
   }
   return res.json();
 }
