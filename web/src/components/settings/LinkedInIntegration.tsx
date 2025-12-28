@@ -392,34 +392,42 @@ export const LinkedInIntegration: React.FC = () => {
       return;
     }
 
-    const disconnectKey = connectionId || 'default';
+    // If no connectionId provided, try to get the first account
+    let accountId = connectionId;
+    if (!accountId && linkedInConnections.length > 0) {
+      accountId = linkedInConnections[0].id;
+    }
+
+    if (!accountId) {
+      alert('No LinkedIn account found to disconnect');
+      return;
+    }
+
+    const disconnectKey = accountId || 'default';
     setDisconnecting(prev => ({ ...prev, [disconnectKey]: true }));
 
     try {
-      const url = connectionId 
-        ? `${getApiBaseUrl()}/api/social-integration/linkedin/disconnect?connection_id=${connectionId}`
-        : `${getApiBaseUrl()}/api/social-integration/linkedin/disconnect`;
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/disconnect`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountId }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to disconnect LinkedIn');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to disconnect LinkedIn');
       }
 
       // Remove the disconnected connection from the list
-      if (connectionId) {
-        setLinkedInConnections(prev => prev.filter(conn => conn.id !== connectionId));
-      } else {
-        setLinkedInConnections([]);
-      }
+      setLinkedInConnections(prev => prev.filter(conn => conn.id !== accountId));
 
       alert('LinkedIn account disconnected successfully');
     } catch (error) {
       console.error('Error disconnecting LinkedIn:', error);
-      alert('Failed to disconnect LinkedIn account');
+      alert(error instanceof Error ? error.message : 'Failed to disconnect LinkedIn account');
     } finally {
       setDisconnecting(prev => ({ ...prev, [disconnectKey]: false }));
     }
