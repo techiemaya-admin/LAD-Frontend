@@ -519,12 +519,12 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
       // 2) Load agents separately, so an error here doesn't block numbers
       // Note: Backend uses JWT req.user.id, query param is ignored but kept for compatibility
       try {
-        const agentsRes = await apiGet<{ success: boolean; agents: any[] }>(
+        const agentsRes = await apiGet<{ success: boolean; data: any[] }>(
           `/api/voice-agent/user/available-agents`
         );
 
         if (agentsRes.success) {
-          const voiceAgents: VoiceAgent[] = (agentsRes.agents || []).map(
+          const voiceAgents: VoiceAgent[] = (agentsRes.data || []).map(
             (v: any) => ({
               id: String(v.agent_id ?? v.id),
               name: v.agent_name ?? v.name ?? "Unknown Agent",
