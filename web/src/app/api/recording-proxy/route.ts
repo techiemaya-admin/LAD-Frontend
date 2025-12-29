@@ -15,8 +15,12 @@ export async function GET(req: NextRequest) {
 
     let targetUrl = url;
 
+    // If it's already a signed URL (storage.googleapis.com), use it directly
+    if (url.includes("storage.googleapis.com")) {
+      targetUrl = url;
+    }
     // If gs:// → use backend's signing endpoint via agent API
-    if (url.startsWith("gs://")) {
+    else if (url.startsWith("gs://")) {
       if (!agentId) {
         return NextResponse.json(
           { error: "Missing `agentId` parameter for gs:// URL" },
@@ -74,15 +78,25 @@ export async function GET(req: NextRequest) {
 
         if (!signingResp.ok) {
           const errorData = await signingResp.json().catch(() => ({}));
-          throw new Error(`Signing service returned ${signingResp.status}: ${errorData.error || 'Unknown error'}`);
+          const errorMsg = errorData.error || errorData.message || 'Unknown error';
+          console.error("[recording-proxy] Backend signing endpoint failed:", {
+            status: signingResp.status,
+            statusText: signingResp.statusText,
+            error: errorMsg,
+            fullResponse: errorData
+          });
+          throw new Error(`Signing service returned ${signingResp.status}: ${errorMsg}`);
         }
 
         const payload = await signingResp.json();
 
-        targetUrl = payload?.signed_url;
+        // Backend returns signed_url at top level OR in data.signed_url
+        targetUrl = payload?.signed_url || payload?.data?.signed_url;
 
         if (!targetUrl) {
-          throw new Error("Invalid signing response (missing signed_url)");
+          const errorMsg = `Invalid signing response: ${JSON.stringify(payload)}`;
+          console.error("[recording-proxy] Missing signed_url in response:", payload);
+          throw new Error(errorMsg);
         }
       } catch (err: any) {
         console.error("[recording-proxy] signing failed:", err);
