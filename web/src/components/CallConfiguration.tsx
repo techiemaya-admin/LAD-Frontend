@@ -573,6 +573,7 @@ export function CallConfiguration({
     if (!selectedAgent?.voice_sample_url) {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = '';
         audioRef.current = null;
       }
       return;
@@ -585,12 +586,128 @@ export function CallConfiguration({
         )}&agentId=${selectedAgent.id}&token=${encodeURIComponent(token)}`
       : selectedAgent.voice_sample_url;
 
-    const a = new Audio(audioUrl);
-    a.onended = () => setIsPlaying(false);
-    audioRef.current = a;
+    // Validate URL before creating Audio element
+    if (!audioUrl || audioUrl.trim() === '') {
+      console.error("Invalid audio URL:", { audioUrl, agentId: selectedAgent?.id });
+      return;
+    }
+
+    // Validate the URL is accessible before creating Audio element
+    const validateAndCreateAudio = async () => {
+      try {
+        // For proxy URLs, check if it returns audio (use GET with range to avoid downloading full file)
+        if (audioUrl.startsWith('/api/recording-proxy')) {
+          const response = await fetch(audioUrl, { 
+            method: 'GET',
+            headers: { 'Range': 'bytes=0-1023' } // Only fetch first 1KB to check content type
+          });
+          const contentType = response.headers.get('Content-Type');
+          
+          if (!response.ok) {
+            // Try to get error message from response
+            let errorText = '';
+            try {
+              const text = await response.text();
+              errorText = text.substring(0, 200);
+            } catch (e) {
+              // Ignore if can't read error text
+            }
+            
+            console.error("Recording proxy error:", {
+              status: response.status,
+              statusText: response.statusText,
+              contentType,
+              errorText,
+              url: audioUrl.substring(0, 100)
+            });
+            return; // Don't create Audio element if proxy fails
+          }
+          
+          if (!contentType || !contentType.startsWith('audio/')) {
+            console.error("Recording proxy returned non-audio content:", {
+              contentType,
+              status: response.status,
+              url: audioUrl.substring(0, 100)
+            });
+            return; // Don't create Audio element if not audio
+          }
+        }
+        
+        // Create Audio element after validation
+        // Use preload="metadata" to start loading metadata without downloading full file
+        const a = new Audio(audioUrl);
+        a.preload = 'metadata'; // Load metadata only, not full file
+        a.onended = () => setIsPlaying(false);
+        
+        // Enhanced error handling for audio loading
+        a.onerror = () => {
+          const error = a.error;
+          const errorInfo: any = {
+            url: audioUrl.substring(0, 100),
+            agentId: selectedAgent?.id,
+            voiceSampleUrl: selectedAgent?.voice_sample_url?.substring(0, 100),
+            readyState: a.readyState,
+            networkState: a.networkState,
+            src: a.src?.substring(0, 100)
+          };
+          
+          if (error) {
+            errorInfo.errorCode = error.code;
+            errorInfo.errorMessage = error.message;
+            // MediaError codes: 1=MEDIA_ERR_ABORTED, 2=MEDIA_ERR_NETWORK, 3=MEDIA_ERR_DECODE, 4=MEDIA_ERR_SRC_NOT_SUPPORTED
+            const errorCodes: Record<number, string> = {
+              1: 'MEDIA_ERR_ABORTED',
+              2: 'MEDIA_ERR_NETWORK',
+              3: 'MEDIA_ERR_DECODE',
+              4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+            };
+            errorInfo.errorCodeName = errorCodes[error.code] || 'UNKNOWN';
+          } else {
+            errorInfo.error = 'No error object available';
+          }
+          
+          console.error("Audio loading error:", errorInfo);
+          setIsPlaying(false);
+        };
+        
+        // Add canplaythrough handler to validate audio is loadable
+        a.oncanplaythrough = () => {
+          // Audio is ready to play
+        };
+        
+        // Add loadstart to track when loading begins
+        a.onloadstart = () => {
+          // Loading started
+        };
+        
+        // Add stalled handler for network issues
+        a.onstalled = () => {
+          console.warn("Audio loading stalled:", {
+            url: audioUrl.substring(0, 100),
+            readyState: a.readyState,
+            networkState: a.networkState
+          });
+        };
+        
+        audioRef.current = a;
+      } catch (validationError: any) {
+        console.error("Error validating audio URL:", {
+          error: validationError.message,
+          url: audioUrl.substring(0, 100),
+          agentId: selectedAgent?.id
+        });
+      }
+    };
+
+    validateAndCreateAudio();
 
     return () => {
-      a.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current.load(); // Reset the element
+        audioRef.current = null;
+      }
     };
   }, [selectedAgent?.voice_sample_url, selectedAgent?.id]);
 
@@ -605,18 +722,51 @@ export function CallConfiguration({
         : selectedAgent.voice_sample_url;
       const a = new Audio(audioUrl);
       a.onended = () => setIsPlaying(false);
+      
+      // Add error handling
+      a.onerror = (e) => {
+        console.error("Audio loading error in togglePlay:", {
+          error: e,
+          url: audioUrl,
+          agentId: selectedAgent?.id
+        });
+        setIsPlaying(false);
+      };
+      
       audioRef.current = a;
     }
     try {
       if (!isPlaying) {
-        await audioRef.current!.play();
-        setIsPlaying(true);
+        // Check if audio is ready before playing
+        if (audioRef.current!.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+          await audioRef.current!.play();
+          setIsPlaying(true);
+        } else {
+          // Wait for audio to load
+          audioRef.current!.addEventListener('canplay', async () => {
+            try {
+              await audioRef.current!.play();
+              setIsPlaying(true);
+            } catch (playError) {
+              console.error("Audio play error after load:", playError);
+              setIsPlaying(false);
+            }
+          }, { once: true });
+          
+          // Load the audio
+          audioRef.current!.load();
+        }
       } else {
         audioRef.current!.pause();
         setIsPlaying(false);
       }
     } catch (e) {
-      console.error("Audio play error:", e);
+      console.error("Audio play error:", {
+        error: e,
+        readyState: audioRef.current?.readyState,
+        url: audioRef.current?.src
+      });
+      setIsPlaying(false);
     }
   };
 

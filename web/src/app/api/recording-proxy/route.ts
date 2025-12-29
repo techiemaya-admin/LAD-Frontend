@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
 
     let targetUrl = url;
 
-    // If it's already a signed URL (storage.googleapis.com), use it directly
-    if (url.includes("storage.googleapis.com")) {
+    // If it's already a signed URL (storage.googleapis.com) or HTTP/HTTPS, use it directly
+    if (url.includes("storage.googleapis.com") || url.startsWith("http://") || url.startsWith("https://")) {
       targetUrl = url;
     }
     // If gs:// → use backend's signing endpoint via agent API
@@ -107,45 +107,112 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fetch audio binary
-    const audioResp = await fetch(targetUrl);
+    // Fetch audio binary with streaming support
+    try {
+      // Check if Range header is present (for streaming/partial content)
+      const rangeHeader = req.headers.get("range");
+      
+      const fetchHeaders: HeadersInit = {
+        'Accept': 'audio/*',
+      };
+      
+      // Forward Range header for partial content requests (streaming)
+      if (rangeHeader) {
+        fetchHeaders['Range'] = rangeHeader;
+      }
 
-    if (!audioResp.ok) {
-      return NextResponse.json(
-        {
-          error: "Failed fetching audio",
-          status: audioResp.status,
-        },
-        { status: audioResp.status }
-      );
-    }
+      const audioResp = await fetch(targetUrl, {
+        headers: fetchHeaders,
+      });
 
-    const audioBuffer = await audioResp.arrayBuffer();
+      if (!audioResp.ok) {
+        // Don't log 206 (Partial Content) as error - it's expected for Range requests
+        if (audioResp.status !== 206) {
+          console.error("[recording-proxy] Failed to fetch audio", {
+            url: targetUrl.substring(0, 100) + '...',
+            status: audioResp.status,
+            statusText: audioResp.statusText
+          });
+        }
+        
+        // For non-206 errors, return error response
+        if (audioResp.status !== 206) {
+          return NextResponse.json(
+            {
+              error: "Failed fetching audio",
+              status: audioResp.status,
+              url: targetUrl.substring(0, 100) + '...',
+            },
+            { status: audioResp.status }
+          );
+        }
+      }
 
-    const contentType =
-      audioResp.headers.get("Content-Type") ||
-      (targetUrl.endsWith(".mp3") && "audio/mpeg") ||
-      (targetUrl.endsWith(".wav") && "audio/wav") ||
-      (targetUrl.endsWith(".ogg") && "audio/ogg") ||
-      "application/octet-stream";
+      // Stream the response instead of loading full file into memory
+      const audioStream = audioResp.body;
+      
+      if (!audioStream) {
+        return NextResponse.json(
+          {
+            error: "No audio stream received",
+          },
+          { status: 502 }
+        );
+      }
 
-    return new NextResponse(audioBuffer, {
-      status: 200,
-      headers: {
+      // Determine content type
+      const contentType =
+        audioResp.headers.get("Content-Type") ||
+        (targetUrl.endsWith(".mp3") && "audio/mpeg") ||
+        (targetUrl.endsWith(".wav") && "audio/wav") ||
+        (targetUrl.endsWith(".ogg") && "audio/ogg") ||
+        "application/octet-stream";
+
+      // Build response headers
+      const responseHeaders: HeadersInit = {
         "Content-Type": contentType,
-        "Content-Length":
-          audioResp.headers.get("Content-Length") ||
-          String(audioBuffer.byteLength),
-
         // Cache signed URL content for 1 hour
         "Cache-Control": "public, max-age=3600",
-
         // CORS
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
+        "Access-Control-Allow-Headers": "Content-Type, Range",
+        "Accept-Ranges": "bytes",
+      };
+
+      // Forward content length if available
+      const contentLength = audioResp.headers.get("Content-Length");
+      if (contentLength) {
+        responseHeaders["Content-Length"] = contentLength;
+      }
+
+      // Forward content range for partial content (206)
+      if (audioResp.status === 206) {
+        const contentRange = audioResp.headers.get("Content-Range");
+        if (contentRange) {
+          responseHeaders["Content-Range"] = contentRange;
+        }
+        responseHeaders["Content-Length"] = audioResp.headers.get("Content-Length") || "0";
+      }
+
+      // Return streaming response
+      return new NextResponse(audioStream, {
+        status: audioResp.status === 206 ? 206 : 200,
+        headers: responseHeaders,
+      });
+    } catch (fetchError: any) {
+      console.error("[recording-proxy] Error fetching audio", {
+        error: fetchError.message,
+        url: targetUrl.substring(0, 100) + '...'
+      });
+      return NextResponse.json(
+        {
+          error: "Failed to fetch audio",
+          details: fetchError.message,
+        },
+        { status: 502 }
+      );
+    }
   } catch (err: any) {
     console.error("[recording-proxy] Top-level error:", err);
     return NextResponse.json(
