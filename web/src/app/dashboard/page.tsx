@@ -454,22 +454,20 @@ export default function DashboardPage() {
   const fetchCredits = useCallback(async () => {
     try {
       setIsLoadingCredits(true);
-      const token = safeStorage.getItem('auth_token');
-      if (!token) return;
-
-      // Try to fetch from the user endpoint first
-      const userResponse = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data');
+      const token = safeStorage.getItem('auth_token') || safeStorage.getItem('token');
+      if (!token) {
+        // No token available, skip fetch
+        return;
       }
-      
-      const userData = await userResponse.json();
+
+      // Use apiGet utility which handles auth headers and error handling
+      const userData = await apiGet<{
+        balance?: number;
+        credit_balance?: number;
+        credits?: number;
+        monthly_usage?: number;
+        [key: string]: any;
+      }>('/api/auth/me');
       
       // Get the balance from the user data (adjust these property names based on your API response)
       const balance = userData.balance || userData.credit_balance || userData.credits || 0;
@@ -495,9 +493,8 @@ export default function DashboardPage() {
         totalMinutes,
         remainingMinutes,
       });
-    } catch (error) {
-      console.error('Error fetching credits:', error);
-      // Set to zero if API fails
+    } catch (error: any) {
+      // Set to zero if API fails - error is already logged by apiGet utility
       setCreditsData({
         balance: 0,
         usageThisMonth: 0,
@@ -525,36 +522,27 @@ export default function DashboardPage() {
         
         // Get token from storage
         const token = safeStorage.getItem('token');
-        console.log('[Dashboard] Auth check - token present:', !!token);
         
         if (!token) {
-          console.log('[Dashboard] No token found, redirecting to login');
           router.push('/login');
           return;
         }
         
-        console.log('[Dashboard] Token found, verifying with backend');
-        const res = await fetch('/api/auth/me', { 
-          cache: 'no-store',
-          headers: {
-            'Authorization': `Bearer ${token}`
+        // Verify token with backend using apiGet utility
+        try {
+          await apiGet('/api/auth/me');
+          // Token is valid, user is authenticated
+        } catch (error: any) {
+          // Token invalid or network error
+          if (error?.message?.includes('401') || error?.message?.includes('403')) {
+            safeStorage.removeItem('auth_token');
+            safeStorage.removeItem('token');
+            router.push('/login');
           }
-        });
-        console.log('[Dashboard] Auth check response status:', res.status);
-        
-        if (res.status === 401) {
-          console.log('[Dashboard] Token invalid, clearing and redirecting to login');
-          safeStorage.removeItem('auth_token');
-          router.push('/login');
-        } else if (res.ok) {
-          console.log('[Dashboard] Auth check passed, user authenticated');
-        } else {
-          console.log('[Dashboard] Unexpected status:', res.status);
+          // For network errors, keep user on dashboard (don't redirect)
         }
       } catch (error) {
-        console.error('[Dashboard] Auth check error:', error);
-        // Don't redirect on network errors, let user stay on dashboard
-        console.log('[Dashboard] Network error, keeping user on dashboard');
+        // Don't redirect on unexpected errors, let user stay on dashboard
       }
     };
     check();
