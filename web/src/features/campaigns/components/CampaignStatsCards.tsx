@@ -12,6 +12,13 @@ interface CampaignStatsCardsProps {
 }
 
 export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
+  // Debug logging
+  console.log('[CampaignStatsCards] Stats received:', {
+    total_campaigns: stats.total_campaigns,
+    active_campaigns: stats.active_campaigns,
+    total_leads: stats.total_leads,
+  });
+
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: { xs: 'wrap', md: 'nowrap' }, alignItems: 'stretch' }}>
       <Box sx={{ flex: '1 1 0', minWidth: 0, width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'auto' }, display: 'flex' }}>
@@ -47,6 +54,35 @@ export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
               </Box>
               <Avatar sx={{ bgcolor: '#10B981', width: 48, height: 48 }}>
                 <PlayArrow sx={{ color: '#FFFFFF' }} />
+              </Avatar>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+      <Box sx={{ flex: '1 1 0', minWidth: 0, width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'auto' }, display: 'flex' }}>
+        <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', width: '100%', display: 'flex', flexDirection: 'column' }}>
+          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" sx={{ color: '#64748B', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Total Leads
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#1E293B' }}>
+                  {stats.total_leads || 0}
+                </Typography>
+              </Box>
+              <Avatar sx={{ bgcolor: '#6366F1', width: 48, height: 48 }}>
+                <Box
+                  component="svg"
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    fill: '#FFFFFF',
+                  }}
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </Box>
               </Avatar>
             </Box>
           </CardContent>
