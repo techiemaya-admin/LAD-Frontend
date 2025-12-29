@@ -228,3 +228,28 @@ export interface ApolloEmployeeListProps {
   onEmployeeSelect?: (employee: ApolloPerson) => void;
   showRevealActions?: boolean;
 }
+
+// ============================================================================
+// PHONE SERVICE TYPES
+// ============================================================================
+
+export interface PhoneRevealRequest {
+  contacts: Array<{
+    id: string;
+    name: string;
+    company?: string;
+    title?: string;
+  }>;
+}
+
+export interface PhoneRevealResponse {
+  success: boolean;
+  results: Array<{
+    contact_id: string;
+    phone?: string;
+    error?: string;
+    credits_used: number;
+  }>;
+  total_credits_used: number;
+  credits_remaining: number;
+}
