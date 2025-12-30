@@ -615,14 +615,20 @@ export function CallConfiguration({
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiGet<SignedSampleResponse>(
-          `/api/voice-agent/agents/${encodeURIComponent(key)}/sample-signed-url`
-        );
-        const url = (res?.signed_url || res?.signedUrl || res?.url || '').toString().trim();
-        if (!cancelled && url) {
-          signedSampleUrlCache.current.set(key, url);
-          setSignedSampleUrl(url);
-        } else if (!cancelled) {
+        // VAPI DISABLED: Commenting out voice agent sample URL fetch
+        // const res = await apiGet<SignedSampleResponse>(
+        //   `/api/voice-agent/agents/${encodeURIComponent(key)}/sample-signed-url`
+        // );
+        // const url = (res?.signed_url || res?.signedUrl || res?.url || '').toString().trim();
+        // if (!cancelled && url) {
+        //   signedSampleUrlCache.current.set(key, url);
+        //   setSignedSampleUrl(url);
+        // } else if (!cancelled) {
+        //   setSignedSampleUrl(null);
+        // }
+        
+        // VAPI DISABLED: Set null since voice agent is disabled
+        if (!cancelled) {
           setSignedSampleUrl(null);
         }
       } catch (e) {
