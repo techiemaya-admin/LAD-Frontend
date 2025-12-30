@@ -122,6 +122,7 @@ export function CallOptions(props: CallOptionsProps) {
         };
 
         console.log("📦 Sending bulk payload:", payload);
+        // Using backend voice-agent calls API (VAPI integration disabled in backend)
         const res = await apiPost("/api/voice-agent/calls/batch", payload);
 
         // Expect backend response like { success: true, result: { job_id: "batch-..." } }
@@ -158,6 +159,7 @@ export function CallOptions(props: CallOptionsProps) {
         ...(effectiveInitiator !== undefined ? { initiated_by: effectiveInitiator } : {}),
       } as const;
       console.log("☎️ Sending single-call payload:", singlePayload);
+      // Using backend voice-agent calls API (VAPI integration disabled in backend)
       await apiPost("/api/voice-agent/calls", singlePayload);
       push({ title: "Success", description: "Call initiated successfully!" });
       onDialChange("");

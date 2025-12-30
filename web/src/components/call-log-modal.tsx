@@ -556,7 +556,7 @@ export function CallLogModal({
       }
 
       try {
-        // 1) Call log
+        // Call log - Using voice-agent API (VAPI integration disabled in backend)
         const res = await apiGet<{ success: boolean; log: any }>(`/api/voice-agent/calls/${id}`);
         const l = res.log;
         setLog(l);
@@ -603,6 +603,7 @@ export function CallLogModal({
 
           if (callId) {
             try {
+              // Using voice-agent API for recording URL (VAPI integration disabled in backend)
               const signedRes = await apiGet<{ success: boolean; signed_url?: string }>(
                 `/api/voice-agent/calls/${callId}/recording-signed-url`
               );
@@ -622,7 +623,7 @@ export function CallLogModal({
           setSignedRecordingUrl(l?.call_recording_url);
         }
 
-        // 4) Analysis (optional)
+        // 4) Analysis - Using voice-agent API (VAPI integration disabled in backend)
         try {
           const ra = await apiGet<{ success: boolean; analysis: any }>(`/api/voice-agent/calls/${id}/analysis`);
           const a = ra?.analysis ?? null;
