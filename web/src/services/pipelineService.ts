@@ -11,7 +11,7 @@ import { Status, Priority, Source } from '../store/slices/masterDataSlice';
 
 const API_ENDPOINTS = {
   stages: '/api/deals-pipeline/stages',
-  statuses: '/api/deals-pipeline/statuses', 
+  statuses: '/api/deals-pipeline/reference/statuses', 
   pipeline: '/api/deals-pipeline/pipeline/board',
   leads: '/api/deals-pipeline/leads'
 };
@@ -209,7 +209,7 @@ export const createStage = addStage;
 
 // Get all statuses for dropdowns
 export const fetchStatuses = async (): Promise<Status[]> => {
-  const response = await api.get('/api/deals-pipeline/statuses');
+  const response = await api.get('/api/deals-pipeline/reference/statuses');
   return response.data as Status[];
 };
 
@@ -236,12 +236,25 @@ export const fetchLeads = async (): Promise<Lead[]> => {
     if (!Array.isArray(data)) {
       return [];
     }
-    
+
+    // Normalize API payload to ensure a combined `name` field exists
+    const normalizedLeads = data.map((rawLead: any) => {
+      const firstName = rawLead.first_name || rawLead.firstName || '';
+      const lastName = rawLead.last_name || rawLead.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      return {
+        ...rawLead,
+        // Prefer explicit name if already present, otherwise fall back to combined
+        name: rawLead.name || fullName || undefined,
+      } as Lead;
+    });
+
     // Get stages for label mapping
     const stages = await fetchStages();
-    
+
     // Enhance leads with status and stage labels
-    return enhanceLeadsWithLabels(data, stages) as Lead[];
+    return enhanceLeadsWithLabels(normalizedLeads, stages) as Lead[];
   } catch (error) {
     throw error;
   }

@@ -76,6 +76,12 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
   const sanitizePhoneNumber = (phone: string): string =>
     phone ? String(phone).replace(/\s+/g, "") : "";
 
+  const normalizeE164Like = (phone: unknown): string => {
+    const s = sanitizePhoneNumber(String(phone ?? "").trim());
+    // Defensive: if backend accidentally returns "++<digits>", collapse to "+<digits>".
+    return s.replace(/^\+{2,}/, "+");
+  };
+
   const setBulkEntriesSanitized = (
     entries: BulkEntry[] | ((prev: BulkEntry[]) => BulkEntry[])
   ) => {
@@ -489,7 +495,7 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
         if (numbersRes.success) {
           const formatted = (numbersRes.data || []).map((n: any) => ({
             id: String(n.id),
-            phone_number: n.phone_number,
+            phone_number: normalizeE164Like(n.phone_number),
             provider: n.provider,
             type: n.type,
             assignedAgentId: n.assignedAgentId,
