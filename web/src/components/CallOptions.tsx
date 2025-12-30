@@ -400,6 +400,15 @@ export function CallOptions(props: CallOptionsProps) {
         return;
       }
 
+      // Only .xlsx files should reach this point; reject other unsupported types explicitly
+      if (!filename.endsWith(".xlsx")) {
+        push({
+          variant: "error",
+          title: "Unsupported file type",
+          description: "Only .csv and .xlsx files are supported. Please upload a .csv or .xlsx file.",
+        });
+        return;
+      }
       const arrayBuffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
