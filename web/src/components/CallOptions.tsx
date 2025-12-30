@@ -8,15 +8,23 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Loader2, Phone, Edit2, Download, Trash, Eye, EyeOff, SquarePen } from "lucide-react";
+import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen } from "lucide-react";
 import { useToast } from "@/components/ui/app-toaster";
 import { apiPost } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import ExcelJS from "exceljs";
+
   
 
-type BulkEntry = { to_number: string; name?: string; company_name?: string; summary?: string; requested_id?: string };
+type BulkEntry = {
+  to_number: string;
+  name?: string;
+  company_name?: string;
+  summary?: string;
+  requested_id?: string;
+  _extra?: Record<string, any>;
+};
 
 interface CallOptionsProps {
   useCsv: boolean;
@@ -278,35 +286,42 @@ export function CallOptions(props: CallOptionsProps) {
   };
 
   // ----------------------------
-  // Template download (xlsx)
+  // Template download (xlsx) using ExcelJS
   // ----------------------------
-const downloadTemplate = () => {
-  const wb = XLSX.utils.book_new();
-  const wsData = [
-    ["Phone", "Name", "Summary"],
-    ["+1XXXXXXXXXX", "Optional Name", "Optional summary to add to Additional Instructions"],
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const downloadTemplate = async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Template");
 
-  // Force all columns to TEXT format
-  const ensuredRef = ws["!ref"] ?? XLSX.utils.encode_range({
-    s: { r: 0, c: 0 },
-    e: { r: wsData.length - 1, c: (wsData[0]?.length ?? 1) - 1 },
-  });
-  const range = XLSX.utils.decode_range(ensuredRef);
-  for (let C = range.s.c; C <= range.e.c; C++) {
-    for (let R = 1; R <= range.e.r; R++) {
-      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-      if (ws[cellRef]) {
-        ws[cellRef].t = "s"; // force string type
-        ws[cellRef].z = "@"; // force Excel TEXT format
-      }
-    }
-  }
+    ws.columns = [
+      { header: "Phone", key: "phone", width: 20 },
+      { header: "Name", key: "name", width: 20 },
+      { header: "Summary", key: "summary", width: 40 },
+    ];
 
-  XLSX.utils.book_append_sheet(wb, ws, "Template");
-  XLSX.writeFile(wb, "bulk_template_with_summary.xlsx");
-};
+    ws.addRow({
+      phone: "+1XXXXXXXXXX",
+      name: "Optional Name",
+      summary: "Optional summary for call context",
+    });
+
+    ws.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.numFmt = "@"; // TEXT format
+      });
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bulk_call_template.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const [isRephrasing, setIsRephrasing] = useState(false);
   // ----------------------------
@@ -375,77 +390,120 @@ const downloadTemplate = () => {
         return;
       }
 
-      // For xlsx/xls — use SheetJS
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { header: 1 });
-      // json is array of rows (arrays). First row may be headers.
-      const parsed: BulkEntry[] = [];
-
-      if (json.length === 0) {
-        push({ variant: "error", title: "Empty file", description: "Uploaded file contained no rows." });
+      // Excel parsing (.xlsx) using ExcelJS
+      if (filename.endsWith(".xls")) {
+        push({
+          variant: "error",
+          title: "Unsupported format",
+          description: "Legacy .xls is not supported. Please save/export as .xlsx and try again.",
+        });
         return;
       }
 
-      const firstRow = (json[0] || []) as any[];
-      let startIndex = 0;
-      let phoneIdx = 0, nameIdx = 1, summaryIdx = 2;
-      let employeeIdIdx: number | null = null;
-      let companyIdIdx: number | null = null;
-      let requestedIdIdx: number | null = null;
+      // Only .xlsx files should reach this point; reject other unsupported types explicitly
+      if (!filename.endsWith(".xlsx")) {
+        push({
+          variant: "error",
+          title: "Unsupported file type",
+          description: "Only .csv and .xlsx files are supported. Please upload a .csv or .xlsx file.",
+        });
+        return;
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
 
-      // If first row contains headers like 'phone' or 'name' or 'summary', map columns accordingly
-      if (firstRow.some((c: any) => /phone|number|to_number|name|summary|employee_data_id|company_data_id|requested_id/i.test(String(c || "")))) {
-        startIndex = 1;
-        for (let i = 0; i < firstRow.length; i++) {
-          const h = String(firstRow[i] || "").toLowerCase();
-          if (h.includes("phone") || h.includes("number") || h.includes("to_number")) phoneIdx = i;
-          if (h.includes("name") || h.includes("lead") || h.includes("client")) nameIdx = i;
-          if (h.includes("summary") || h.includes("note") || h.includes("context")) summaryIdx = i;
-          if (h.includes('employee_data_id')) employeeIdIdx = i;
-          if (h.includes('company_data_id')) companyIdIdx = i;
-          if (h.includes('requested_id')) requestedIdIdx = i;
-        }
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        push({ variant: "error", title: "Invalid file", description: "No worksheet found" });
+        return;
       }
 
-      for (let i = startIndex; i < json.length; i++) {
-        const row = json[i] as any[];
-        if (!row) continue;
-        const phone = String(row[phoneIdx] || "").trim().replace(/\s+/g, ""); // Remove all spaces from phone number
-        const name = String(row[nameIdx] || "").trim();
-        const summary = String(row[summaryIdx] || "").trim();
-        let requested_id: string | undefined = undefined;
-        if (employeeIdIdx !== null && row[employeeIdIdx] != null) requested_id = String(row[employeeIdIdx]).trim();
-        else if (companyIdIdx !== null && row[companyIdIdx] != null) requested_id = String(row[companyIdIdx]).trim();
-        else if (requestedIdIdx !== null && row[requestedIdIdx] != null) requested_id = String(row[requestedIdIdx]).trim();
-        if (phone) parsed.push({ to_number: phone, name: name || undefined, summary: summary || undefined, requested_id });
+      // Read headers
+      const headers: string[] = [];
+      worksheet.getRow(1).eachCell((cell, col) => {
+        headers[col - 1] = String((cell.value as any) || "").toLowerCase().trim();
+      });
+
+      // Detect columns
+      const phoneIdx = headers.findIndex((h) => /phone|number|to_number/.test(h));
+      const nameIdx = headers.findIndex((h) => /name|lead|client/.test(h));
+      const summaryIdx = headers.findIndex((h) => /summary|note|context/.test(h));
+      const requestedIdx = headers.findIndex((h) => /requested_id|employee_data_id|company_data_id/.test(h));
+
+      if (phoneIdx === -1) {
+        push({
+          variant: "error",
+          title: "Invalid Excel",
+          description: "Phone / Number column not found",
+        });
+        return;
       }
+
+      const parsed: BulkEntry[] = [];
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        const values = row.values as any[];
+        const phone = String(values[phoneIdx + 1] || "")
+          .replace(/\s+/g, "")
+          .trim();
+        if (!phone) return;
+
+        const extra: Record<string, any> = {};
+        headers.forEach((h, i) => {
+          if (![phoneIdx, nameIdx, summaryIdx, requestedIdx].includes(i)) {
+            extra[h] = values[i + 1];
+          }
+        });
+
+        parsed.push({
+          to_number: phone,
+          name: nameIdx >= 0 ? String(values[nameIdx + 1] || "").trim() : undefined,
+          summary: summaryIdx >= 0 ? String(values[summaryIdx + 1] || "").trim() : undefined,
+          requested_id: requestedIdx >= 0 ? String(values[requestedIdx + 1] || "").trim() : undefined,
+          _extra: Object.keys(extra).length ? extra : undefined,
+        });
+      });
 
       onBulkEntriesChange?.(parsed);
       onUseCsvChange?.(true as any);
-      onDataSourceChange?.('file'); // Mark as file-sourced
-      // Persist to localStorage
+      onDataSourceChange?.("file");
+
       try {
-        localStorage.setItem('bulk_call_targets', JSON.stringify({ data: parsed }));
-        console.log('[CallOptions] Excel data saved to localStorage');
-      } catch (e) {
-        console.warn('[CallOptions] Failed to save Excel to localStorage:', e);
-      }
-      push({ title: "File parsed", description: `${parsed.length} rows loaded from Excel file.` });
+        localStorage.setItem("bulk_call_targets", JSON.stringify({ data: parsed }));
+      } catch {}
+
+      push({
+        title: "Excel imported",
+        description: `${parsed.length} rows loaded`,
+      });
     } catch (err: any) {
       console.error("Failed to parse file:", err);
       push({ variant: "error", title: "Parse Error", description: "Unable to process uploaded file." });
     }
   };
 
-  const BulkTable = () => (
-    <div className="w-full mx-0">
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-gray-700 block">Bulk List</label>
-        <div className="text-xs text-gray-500">{bulkEntries.length} numbers</div>
-      </div>
+  const BulkTable = () => {
+    // Collect all extra column names dynamically
+    const extraColumns = (() => {
+      const set = new Set<string>();
+      bulkEntries.forEach((row) => {
+        Object.keys(row._extra || {}).forEach((k) => {
+          const key = String(k || "").trim();
+          if (key) set.add(key);
+        });
+      });
+      return Array.from(set);
+    })();
+
+    return (
+      <div className="w-full mx-0">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700 block">Bulk List</label>
+          <div className="text-xs text-gray-500">{bulkEntries.length} numbers</div>
+        </div>
 
       {/* New UI row: Download template + Choose file */}
       <div className="flex gap-3 mb-3">
@@ -479,6 +537,12 @@ const downloadTemplate = () => {
               <th className="p-2"></th>
               <th className="text-left p-2 font-semibold">Phone</th>
               <th className="text-left p-2 font-semibold">Name</th>
+              {/* Extra Excel columns */}
+              {extraColumns.map((col) => (
+                <th key={col} className="text-left p-2 font-semibold capitalize">
+                  {col.replace(/_/g, " ")}
+                </th>
+              ))}
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -549,6 +613,13 @@ const downloadTemplate = () => {
                   />
                 </td>
 
+                {/* Extra Excel data */}
+                {extraColumns.map((col) => (
+                  <td key={col} className="p-2 text-gray-600 text-sm">
+                    {String((row._extra as any)?.[col] ?? "")}
+                  </td>
+                ))}
+
                 <td className="p-2 text-right">
                   <Button
                     variant="outline"
@@ -563,7 +634,11 @@ const downloadTemplate = () => {
             ))}
 
             {bulkEntries.length === 0 && (
-              <tr><td colSpan={5} className="p-4 text-center text-gray-500">No rows</td></tr>
+              <tr>
+                <td colSpan={4 + extraColumns.length} className="p-4 text-center text-gray-500">
+                  No rows
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -581,9 +656,10 @@ const downloadTemplate = () => {
         </div>
       )}
 
-      <p className="text-xs text-gray-500 mt-2">These rows came from your “Resolve Phones” selection.</p>
-    </div>
-  );
+        <p className="text-xs text-gray-500 mt-2">These rows came from your “Resolve Phones” selection.</p>
+      </div>
+    );
+  };
 
   return (
     <Card className="rounded-2xl transition-all p-6 bg-white border border-gray-100">
@@ -739,8 +815,5 @@ const downloadTemplate = () => {
       </Dialog>
     </Card>
   );
-}
-function Post(arg0: string, singlePayload: { readonly initiated_by?: string | number | undefined; readonly agent_id: string; readonly from_number: string; readonly to_number: string; readonly client_name: string | undefined; readonly lead_name: string | undefined; readonly added_context: string; }) {
-  throw new Error("Function not implemented.");
 }
 
