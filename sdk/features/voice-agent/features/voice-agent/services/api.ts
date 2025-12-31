@@ -39,8 +39,11 @@ class APIClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Handle unauthorized - could trigger logout
-          console.error('Unauthorized request');
+          // Handle unauthorized - trigger auth flow
+          // Could dispatch logout event or redirect to login
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+          }
         }
         return Promise.reject(error);
       }
