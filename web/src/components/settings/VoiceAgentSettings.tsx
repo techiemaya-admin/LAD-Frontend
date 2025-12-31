@@ -73,7 +73,9 @@ export const VoiceAgentSettings: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const json = await response.json();
+        // Extract data from the response wrapper
+        const data = json.data || json;
         setSettings(data);
       }
     } catch (error) {

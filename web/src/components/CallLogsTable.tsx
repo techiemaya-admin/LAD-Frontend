@@ -78,7 +78,7 @@ export function CallLogsTable({
           {items.length > 0 ? (
             items.map((item, index) => (
               <TableRow
-                key={item.id}
+                key={item.id || `call-${index}`}
                 onClick={() => onRowClick(item.id)}
                 className={`table-row-hover cursor-pointer border-b border-border/30 ${
                   selectedCalls.has(item.id) ? "bg-primary/5" : ""

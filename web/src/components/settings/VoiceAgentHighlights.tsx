@@ -22,7 +22,8 @@ export function VoiceAgentHighlights() {
 
         if (res.ok) {
           const json = await res.json();
-          setData(json);
+          // Extract data from the response wrapper
+          setData(json.data || json);
         }
       } catch (err) {}
     }

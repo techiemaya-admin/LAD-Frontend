@@ -160,13 +160,13 @@ export default function CallLogsPage() {
       const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?limit=100`);
 
       const logs = (res.logs || []).map((r) => ({
-        id: r.id,
-        assistant: r.agent_name,
-        lead_name: r.lead_name,
+        id: String(r.id || ''),
+        assistant: r.agent_name || '',
+        lead_name: r.lead_name || '',
         type: r.call_type === "inbound" ? "Inbound" : "Outbound",
-        status: r.status,
+        status: r.status || '',
         startedAt: r.started_at,
-        duration: r.call_duration,
+        duration: r.call_duration || 0,
         cost: r.call_cost ?? r.cost ?? 0,
         batch_status: r.batch_status,
       }));
@@ -202,7 +202,7 @@ export default function CallLogsPage() {
       const s = search.toLowerCase();
 
       const matchSearch =
-        i.id.toLowerCase().includes(s) ||
+        (i.id || "").toLowerCase().includes(s) ||
         (i.assistant || "").toLowerCase().includes(s) ||
         (i.lead_name || "").toLowerCase().includes(s);
 
