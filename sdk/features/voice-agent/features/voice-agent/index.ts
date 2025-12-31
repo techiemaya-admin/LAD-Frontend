@@ -6,3 +6,15 @@ export type {
   PhoneNumber,
   BatchCallLogEntry,
 } from './types';
+
+// React Query Hooks
+export {
+  useVoiceAgents,
+  useCallLogs,
+  useCallLog,
+  useBatchCallLogs,
+  useTenantPhoneNumbers,
+  useUserAvailableNumbers,
+  useMakeCall,
+  voiceAgentKeys,
+} from './hooks';
