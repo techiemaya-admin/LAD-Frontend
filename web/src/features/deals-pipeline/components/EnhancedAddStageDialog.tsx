@@ -141,8 +141,8 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                       <SelectValue placeholder="Add at the end (after all stages)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {stages.map((stage) => (
-                        <SelectItem key={stage.key} value={stage.key || ''}>
+                      {stages.map((stage, index) => (
+                        <SelectItem key={`${stage.key}-${index}`} value={stage.key || ''}>
                           {getPositionText(stage, positionType)}
                         </SelectItem>
                       ))}

@@ -49,14 +49,16 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
 }) => {
   // Memoize stage columns
   const stageColumns = useMemo(() => {
-    return stages.map((stage) => {
-      const stageKey = stage.key || String(stage.id);
+    return stages.map((stage, index) => {
+      // Use a combination of key, id, and index to ensure uniqueness
+      const stageKey = stage.key || stage.id || `stage-${index}`;
+      const uniqueKey = `${stageKey}-${index}`;
       const stageData = leadsByStage[stageKey] || { stage, leads: [] };
       const { leads = [] } = stageData;
 
       return (
         <div
-          key={stageKey}
+          key={uniqueKey}
           className="min-w-[280px] sm:min-w-[320px] md:min-w-[350px] max-w-[280px] sm:max-w-[320px] md:max-w-[350px] transition-transform duration-200 ease-in-out"
           style={{
             transform: `scale(${zoom})`,
