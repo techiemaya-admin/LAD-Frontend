@@ -3,9 +3,13 @@ import { safeStorage } from '../utils/storage';
 
 // Use backend URL directly
 const API_BASE_URL: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+const API_TIMEOUT_MS: number = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 120000;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  // Prevent infinite loading states if the backend hangs.
+  // Pipeline loads can be legitimately slow (cold starts / large datasets), so default to 2 minutes.
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },

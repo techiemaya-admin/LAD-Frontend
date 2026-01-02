@@ -131,10 +131,11 @@ class DealsPipelineSDK {
     });
   }
   
-  async updateLeadStage(id, stageId) {
-    return this.request(`/leads/${id}/stage`, {
-      method: 'PATCH',
-      body: { stageId }
+  async updateLeadStage(id, stageKey) {
+    // Deployed backend: PUT /pipeline/leads/:id/stage
+    return this.request(`/pipeline/leads/${id}/stage`, {
+      method: 'PUT',
+      body: { stageKey, stage: stageKey }
     });
   }
   
@@ -168,10 +169,16 @@ class DealsPipelineSDK {
     });
   }
   
-  async reorderStages(stageIds) {
+  async reorderStages(stageIdsOrOrders) {
+    // Deployed backend: PUT /stages/reorder
+    // Accept legacy input (array of stage IDs) and convert to ordered payload.
+    const stageOrders = Array.isArray(stageIdsOrOrders)
+      ? stageIdsOrOrders.map((key, index) => ({ key, order: index }))
+      : stageIdsOrOrders;
+
     return this.request('/stages/reorder', {
-      method: 'POST',
-      body: { stageIds }
+      method: 'PUT',
+      body: { stageOrders }
     });
   }
   
@@ -209,6 +216,7 @@ class DealsPipelineSDK {
   // === ATTACHMENTS API ===
   
   async getAttachments(leadId) {
+    // Deployed backend: GET /leads/:id/attachments
     return this.request(`/leads/${leadId}/attachments`);
   }
   
@@ -221,61 +229,23 @@ class DealsPipelineSDK {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
     
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      
-      // Track upload progress
-      if (onProgress) {
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = (e.loaded / e.total) * 100;
-            onProgress(percentComplete);
-          }
-        });
-      }
-      
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
-        } else {
-          reject(new Error(`Upload failed: ${xhr.status}`));
-        }
-      });
-      
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
-      });
-      
-      xhr.open('POST', `${this.baseURL}/leads/${leadId}/attachments`);
-      Object.keys(headers).forEach(key => {
-        xhr.setRequestHeader(key, headers[key]);
-      });
-      
-      xhr.send(formData);
-    });
-  }
-  
-  async deleteAttachment(leadId, attachmentId) {
-    return this.request(`/leads/${leadId}/attachments/${attachmentId}`, {
-      method: 'DELETE'
-    });
-  }
-  
-  // === NOTES API ===
-  
-  async getNotes(leadId) {
-    return this.request(`/leads/${leadId}/notes`);
-  }
-  
-  async createNote(leadId, content) {
-    return this.request(`/leads/${leadId}/notes`, {
+    // Deployed backend: POST /leads/:id/attachments
+    const response = await fetch(`${this.baseURL}/leads/${leadId}/attachments`, {
       method: 'POST',
       body: { content }
     });
   }
   
-  async deleteNote(leadId, noteId) {
-    return this.request(`/leads/${leadId}/notes/${noteId}`, {
+  async deleteAttachment(leadId, attachmentId) {
+    // Deployed backend: DELETE /leads/:id/attachments/:attachmentId
+    // Backward-compatible call style: deleteAttachment(attachmentId)
+    if (attachmentId === undefined) {
+      return this.request(`/attachments/${leadId}`, {
+        method: 'DELETE'
+      });
+    }
+
+    return this.request(`/leads/${leadId}/attachments/${attachmentId}`, {
       method: 'DELETE'
     });
   }

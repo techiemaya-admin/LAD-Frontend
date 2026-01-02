@@ -9,7 +9,6 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Grid,
   Paper,
   Chip
 } from '@mui/material';
@@ -21,7 +20,7 @@ import {
   MonetizationOn as MonetizationOnIcon,
   CalendarToday as CalendarTodayIcon
 } from '@mui/icons-material';
-import { Lead } from '../leads/types';
+import type { Lead } from '../types';
 
 interface TabPanelProps {
   children: React.ReactNode;
@@ -181,123 +180,135 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
           </Box>
 
           <TabPanel value={activeTab} index={0}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Lead Information
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {lead.email && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <EmailIcon color="action" />
-                        <Typography>{lead.email}</Typography>
-                      </Box>
-                    )}
-                    {leadPhone && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <PhoneIcon color="action" />
-                        <Typography>{leadPhone}</Typography>
-                      </Box>
-                    )}
-                    {leadCompany && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <BusinessIcon color="action" />
-                        <Typography>{leadCompany}</Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </Paper>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Deal Information
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                gap: 3,
+              }}
+            >
+              <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Lead Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {lead.email && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <MonetizationOnIcon color="primary" />
-                      <Typography>{formatCurrency(leadAmount || 0)}</Typography>
+                      <EmailIcon color="action" />
+                      <Typography>{lead.email}</Typography>
                     </Box>
-                    {leadCloseDate && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarTodayIcon color="action" />
-                        <Box>
-                          <Typography>
-                            Close Date: {formatDate(leadCloseDate)}
-                          </Typography>
-                          {getDaysRemaining(leadCloseDate) !== null && getDaysRemaining(leadCloseDate)! < 7 && (
-                            <Chip 
-                              size="small" 
-                              color="error" 
-                              label={`${getDaysRemaining(leadCloseDate)} days left`}
-                              sx={{ mt: 0.5 }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    )}
+                  )}
+                  {leadPhone && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2" color="text.secondary">Status:</Typography>
-                      <Chip 
-                        label={(lead as { statusLabel?: string }).statusLabel || leadStatus} 
-                        size="small"
-                        sx={{ 
-                          bgcolor: getStatusColor(leadStatus),
-                          color: 'white',
-                          borderRadius: '4px'
-                        }}
-                      />
+                      <PhoneIcon color="action" />
+                      <Typography>{leadPhone}</Typography>
                     </Box>
+                  )}
+                  {leadCompany && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2" color="text.secondary">Priority:</Typography>
-                      <Chip 
-                        label={(lead as { priorityLabel?: string }).priorityLabel || leadPriority} 
-                        size="small"
-                        sx={{ 
-                          bgcolor: getPriorityColor(leadPriority),
-                          color: 'white',
-                          borderRadius: '4px'
-                        }}
-                      />
+                      <BusinessIcon color="action" />
+                      <Typography>{leadCompany}</Typography>
                     </Box>
-                  </Box>
-                </Paper>
-              </Grid>
+                  )}
+                </Box>
+              </Paper>
 
-              <Grid item xs={12}>
-                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Description
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {leadDescription || 'No description provided'}
-                  </Typography>
-                </Paper>
-              </Grid>
+              <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Pipeline & Deal Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <MonetizationOnIcon color="primary" />
+                    <Typography>{formatCurrency(leadAmount || 0)}</Typography>
+                  </Box>
+                  {leadCloseDate && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarTodayIcon color="action" />
+                      <Box>
+                        <Typography>
+                          Close Date: {formatDate(leadCloseDate)}
+                        </Typography>
+                        {getDaysRemaining(leadCloseDate) !== null && getDaysRemaining(leadCloseDate)! < 7 && (
+                          <Chip
+                            size="small"
+                            color="error"
+                            label={`${getDaysRemaining(leadCloseDate)} days left`}
+                            sx={{ mt: 0.5 }}
+                          />
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">Status:</Typography>
+                    <Chip
+                      label={(lead as { statusLabel?: string }).statusLabel || leadStatus}
+                      size="small"
+                      sx={{
+                        bgcolor: getStatusColor(leadStatus),
+                        color: 'white',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">Priority:</Typography>
+                    <Chip
+                      label={(lead as { priorityLabel?: string }).priorityLabel || leadPriority}
+                      size="small"
+                      sx={{
+                        bgcolor: getPriorityColor(leadPriority),
+                        color: 'white',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Paper>
+
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  bgcolor: 'background.default',
+                  gridColumn: { xs: 'auto', md: '1 / -1' },
+                }}
+              >
+                <Typography variant="subtitle1" gutterBottom>
+                  Description
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {leadDescription || 'No description provided'}
+                </Typography>
+              </Paper>
 
               {leadTags.length > 0 && (
-                <Grid item xs={12}>
-                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Tags
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {leadTags.map((tag, index) => (
-                        <Chip
-                          key={index}
-                          label={String(tag)}
-                          size="small"
-                          variant="outlined"
-                          sx={{ borderRadius: '4px' }}
-                        />
-                      ))}
-                    </Box>
-                  </Paper>
-                </Grid>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    bgcolor: 'background.default',
+                    gridColumn: { xs: 'auto', md: '1 / -1' },
+                  }}
+                >
+                  <Typography variant="subtitle1" gutterBottom>
+                    Tags
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {leadTags.map((tag: unknown, index: number) => (
+                      <Chip
+                        key={index}
+                        label={String(tag)}
+                        size="small"
+                        variant="outlined"
+                        sx={{ borderRadius: '4px' }}
+                      />
+                    ))}
+                  </Box>
+                </Paper>
               )}
-            </Grid>
+            </Box>
           </TabPanel>
 
           <TabPanel value={activeTab} index={1}>

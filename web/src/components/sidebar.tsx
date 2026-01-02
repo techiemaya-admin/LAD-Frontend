@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ type NavItem = {
   icon: any;
   details: string;
   requiredCapability?: string;
+  requiredFeature?: string; // For feature-flag based access
 };
 
 export function Sidebar() {
@@ -117,12 +118,34 @@ export function Sidebar() {
       details: "Manage your sales pipeline and deals.",
       requiredCapability: 'view_pipeline'
     },
+    {
+      href: "/pipeline/students",
+      label: "Students",
+      icon: GraduationCap,
+      details: "Manage student admissions and counseling.",
+      requiredFeature: 'education_vertical',
+      requiredCapability: 'education.students.view'
+    },
   ];
 
-  // Filter navigation items based on user capabilities
+  // Filter navigation items based on user capabilities and features
   const nav = allNavItems.filter(item => {
-    // If user is admin or owner, show all items
-    if (user?.role === 'admin' || user?.role === 'owner') return true;
+    // If user is admin or owner, show all items (except feature-gated ones)
+    const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
+    
+    // Check feature flag first (if required)
+    if (item.requiredFeature) {
+      // TODO: Implement proper feature flag check from backend
+      // For now, check if tenant has education_vertical feature enabled
+      // This should come from user context/tenant metadata
+      const hasEducationFeature = false; // Placeholder - should be from backend
+      if (!hasEducationFeature && !isAdminOrOwner) {
+        return false;
+      }
+    }
+    
+    // Admin/owner sees all non-feature-gated items
+    if (isAdminOrOwner && !item.requiredCapability) return true;
     
     // If the item doesn't require any specific capability, show it
     if (!item.requiredCapability) return true;
@@ -161,6 +184,9 @@ export function Sidebar() {
           <img
             src={companyLogo || logo.src}
             alt="Company Logo"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="w-8 h-8 object-contain"
           />
           <span className="text-sm font-medium text-sidebar-foreground/90">{displayName}</span>
@@ -178,7 +204,14 @@ export function Sidebar() {
       >
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
-            <img src={companyLogo || logo.src} alt="Company Logo" className="w-8 h-8 object-contain" />
+            <img
+              src={companyLogo || logo.src}
+              alt="Company Logo"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-sm font-semibold text-sidebar-foreground">LAD</span>
           </div>
           <button aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-white/10">
@@ -265,6 +298,9 @@ export function Sidebar() {
         <img
           src={companyLogo || logo.src}
           alt="Company Logo"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           className={cn(
             "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
             isExpanded ? "w-24 h-24" : "w-10 h-10"

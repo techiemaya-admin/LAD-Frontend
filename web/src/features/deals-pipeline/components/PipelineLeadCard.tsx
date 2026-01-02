@@ -24,12 +24,13 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import api from '@/services/api';
 import leadsService from '@/services/leadsService';
-import AttachmentPreview from '@/components/common/AttachmentPreview';
+import { FileDown } from 'lucide-react';
 import { getStatusLabel } from '@/utils/statusMappings';
 import { getFieldValue } from '@/utils/fieldMappings';
 import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
 import { selectStages } from '../store/slices/pipelineSlice';
 import { updateLeadAction, deleteLeadAction } from '../store/action/pipelineActions';
+import type { Lead as PipelineLead } from '../types';
 import { 
   selectLeadCardActiveTab,
   selectLeadCardExpanded,
@@ -50,6 +51,7 @@ import {
 import { fetchUsersAction } from '@/store/actions/usersActions';
 import BookingSlot from './BookingSlot';
 import * as bookingService from '@/services/bookingService';
+import { selectUser as selectAuthUser } from '@/store/slices/authSlice';
 
 interface Lead {
   id: string | number;
@@ -189,6 +191,26 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const stageOptions = useSelector(selectStages);
+
+  const authUser = useSelector(selectAuthUser) as any;
+  const createdBy = String(authUser?.id || authUser?._id || '');
+  const tenantId = String(
+    authUser?.tenantId ||
+      authUser?.organizationId ||
+      (lead as any)?.tenant_id ||
+      (lead as any)?.organization_id ||
+      ''
+  );
+  const assignedUserId = String(
+    (lead as any)?.assigned_user_id ||
+      (lead as any)?.assigned_to_id ||
+      (lead as any)?.assigned_to ||
+      createdBy ||
+      ''
+  );
+  const studentId = String(
+    (lead as any)?.student_id || (lead as any)?.studentId || (lead as any)?.student?.id || ''
+  );
   
   // Get team members from global Redux state
   const globalTeamMembers = useSelector(selectUsers);
@@ -238,6 +260,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const [notesLoading, setNotesLoading] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | number | null>(null);
   
   // Local state for current status to handle optimistic updates
   const [currentStatus, setCurrentStatus] = useState(lead.status);
@@ -376,8 +399,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         case 3: // Attachments tab
           if (attachments.length === 0) {
             setAttachmentsLoading(true);
-            const fetchedAttachments = await leadsService.getLeadAttachments(lead.id);
-            setAttachments(fetchedAttachments as Attachment[]);
+            const fetched = await leadsService.getLeadAttachments(lead.id);
+            const fetchedAttachments = Array.isArray(fetched)
+              ? fetched
+              : (fetched as any)?.attachments || (fetched as any)?.data || (fetched as any)?.result || [];
+            setAttachments((Array.isArray(fetchedAttachments) ? fetchedAttachments : []) as Attachment[]);
           }
           break;
         default:
@@ -508,8 +534,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     
     setIsLoading(true);
     try {
-      const newAttachment = await leadsService.uploadLeadAttachment(lead.id, file);
-      setAttachments([newAttachment as Attachment, ...attachments]);
+      const created = await leadsService.uploadLeadAttachment(lead.id, file);
+      const normalized =
+        (created as any)?.attachment?.db || (created as any)?.attachment || (created as any);
+      setAttachments([normalized as Attachment, ...attachments]);
       showSnackbar('File uploaded successfully', 'success');
     } catch (error) {
       console.error('Failed to upload file:', error);
@@ -520,6 +548,71 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const resolveAttachmentNameAndUrl = (raw: any): { filename: string; url: string } => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+    const filename =
+      raw?.file_name ||
+      raw?.filename ||
+      raw?.name ||
+      raw?.db?.file_name ||
+      raw?.file?.originalName ||
+      raw?.originalName ||
+      'Untitled';
+
+    const fileUrlPath =
+      raw?.url ||
+      raw?.file_url ||
+      raw?.file_path ||
+      raw?.db?.file_url ||
+      '';
+
+    const url = typeof fileUrlPath === 'string' && fileUrlPath
+      ? (fileUrlPath.startsWith('http')
+          ? fileUrlPath
+          : `${apiBaseUrl}${fileUrlPath.startsWith('/') ? '' : '/'}${fileUrlPath}`)
+      : '';
+
+    return { filename: String(filename), url };
+  };
+
+  const handleDownloadAttachment = async (rawAttachment: any) => {
+    const { filename, url } = resolveAttachmentNameAndUrl(rawAttachment);
+    if (!url) {
+      showSnackbar('Attachment URL missing', 'error');
+      return;
+    }
+
+    const attachmentId = rawAttachment?.id ?? rawAttachment?.db?.id ?? null;
+    setDownloadingAttachmentId(attachmentId);
+    try {
+      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token') || '';
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      const err = error as Error;
+      console.error('Failed to download attachment:', err);
+      showSnackbar(err.message || 'Failed to download attachment', 'error');
+    } finally {
+      setDownloadingAttachmentId(null);
     }
   };
 
@@ -721,9 +814,19 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const handleSaveEdit = async () => {
     setIsLoading(true);
     try {
+      const amountRaw = (globalEditFormData as any).amount;
+      const parsedAmount =
+        amountRaw === '' || amountRaw === null || amountRaw === undefined
+          ? undefined
+          : Number(amountRaw);
+      const amount = Number.isFinite(parsedAmount as number) ? (parsedAmount as number) : undefined;
+
+      const { amount: _ignoredAmount, ...restFormData } = (globalEditFormData as any) || {};
+
       // Prepare update data with proper field mapping
       const updateData = {
-        ...globalEditFormData,
+        ...restFormData,
+        amount,
         // Ensure proper field mapping for backend (snake_case)
         assigned_to_id: globalEditFormData.assignee,
         close_date: globalEditFormData.closeDate,
@@ -742,7 +845,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       console.log('Original lead object:', lead);
       
       // Use Redux action instead of direct API call
-      await dispatch(updateLeadAction(lead.id, updateData as Partial<Lead>) as any);
+      await dispatch(updateLeadAction(lead.id, updateData as Partial<PipelineLead>) as any);
       
       dispatch(setLeadCardEditingOverview(false));
       setNewTagInput(''); // Reset tag input on successful save
@@ -804,6 +907,31 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     if (!obj || typeof obj !== 'object') return '';
     const objRecord = obj as Record<string, unknown>;
     return String(objRecord[field] || objRecord[field.replace(/([A-Z])/g, '_$1').toLowerCase()] || '');
+  };
+
+  const normalizeDisplayValue = (value: unknown, fallback = '-'): string => {
+    if (value === null || value === undefined) return fallback;
+    const asString = String(value).trim();
+    if (!asString || asString === 'null' || asString === 'undefined') return fallback;
+    return asString;
+  };
+
+  const getLeadDisplayName = (leadObj: any): string => {
+    const name = normalizeDisplayValue(leadObj?.name, '').trim();
+    if (name) return name;
+
+    const firstName = normalizeDisplayValue(leadObj?.first_name ?? leadObj?.firstName, '').trim();
+    const lastName = normalizeDisplayValue(leadObj?.last_name ?? leadObj?.lastName, '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
+
+    const contactName = normalizeDisplayValue(leadObj?.contact_name ?? leadObj?.contactName, '').trim();
+    if (contactName) return contactName;
+
+    const email = normalizeDisplayValue(leadObj?.email, '').trim();
+    if (email) return email;
+
+    return 'Unnamed Lead';
   };
 
   // Helper function to format date for input fields
@@ -1122,10 +1250,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </div>
             </div>
             
-            {/* Pipeline Information Section */}
+            {/* Pipeline & Deal Information Section */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="text-base font-semibold mb-4 text-gray-900">
-                Pipeline Information
+                Pipeline & Deal Information
               </h3>
               <div className="flex flex-col gap-4">
                 {globalEditingOverview ? (
@@ -1190,40 +1318,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(lead.status)}
-                      <span className="text-gray-900">
-                        {getOptionLabel(statusOptions, lead.status) || 'No status'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
-                        {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FolderTree className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
-                        {getOptionLabel(stageOptions, lead.stage) || lead.stage || 'No stage'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
 
-            {/* Deal Information Section */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base font-semibold mb-4 text-gray-900">
-                Deal Information
-              </h3>
-              <div className="flex flex-col gap-4">
-                {globalEditingOverview ? (
-                  <>
                     <div className="relative">
                       <Label htmlFor="amount" className="text-sm text-gray-600 mb-1 block">Amount</Label>
                       <div className="relative">
@@ -1268,6 +1363,24 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </>
                 ) : (
                   <>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(lead.status)}
+                      <span className="text-gray-900">
+                        {getOptionLabel(statusOptions, lead.status) || 'No status'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-900">
+                        {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FolderTree className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-900">
+                        {getOptionLabel(stageOptions, lead.stage) || lead.stage || 'No stage'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-500" />
                       <span className="text-gray-900">
@@ -1318,12 +1431,20 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 {globalEditingOverview ? (
                   <BookingSlot 
                     leadId={lead.id} 
+                    tenantId={tenantId || undefined}
+                    studentId={studentId || undefined}
+                    assignedUserId={assignedUserId || undefined}
+                    createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={true}
                   />
                 ) : (
                   <BookingSlot 
                     leadId={lead.id} 
+                    tenantId={tenantId || undefined}
+                    studentId={studentId || undefined}
+                    assignedUserId={assignedUserId || undefined}
+                    createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={false}
                   />
@@ -1676,13 +1797,50 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </p>
                 </div>
               ) : (
-                attachments.map((attachment) => (
-                  <AttachmentPreview
-                    key={attachment.id}
-                    attachment={attachment as any}
-                    onDelete={canUserModify(attachment.user_id) ? (attachmentId: string | number, userId?: string | number) => handleDeleteConfirmationOpen('attachment', attachmentId, userId) : null}
-                  />
-                ))
+                attachments.map((rawAttachment, index) => {
+                  const { filename } = resolveAttachmentNameAndUrl(rawAttachment as any);
+                  const attachmentKey = String(
+                    (rawAttachment as any)?.id ??
+                      (rawAttachment as any)?.db?.id ??
+                      (rawAttachment as any)?.file_url ??
+                      (rawAttachment as any)?.db?.file_url ??
+                      `attachment-${index}`
+                  );
+                  const attachmentId = (rawAttachment as any)?.id ?? (rawAttachment as any)?.db?.id ?? null;
+                  const isDownloading = downloadingAttachmentId !== null && attachmentId === downloadingAttachmentId;
+
+                  return (
+                    <div
+                      key={attachmentKey}
+                      className="max-w-[420px] rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{filename}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          disabled={isLoading || isDownloading}
+                          onClick={() => handleDownloadAttachment(rawAttachment)}
+                          className="border-gray-300 text-gray-700"
+                        >
+                          <FileDown className="h-4 w-4 mr-2" />
+                          {isDownloading ? 'Downloading...' : 'Download'}
+                        </Button>
+                        {canUserModify((rawAttachment as any)?.user_id) && (
+                          <Button
+                            variant="outline"
+                            disabled={isLoading}
+                            onClick={() => handleDeleteConfirmationOpen('attachment', (rawAttachment as any)?.id ?? (rawAttachment as any)?.db?.id, (rawAttachment as any)?.user_id)}
+                            className="border-gray-300 text-gray-700"
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
@@ -1702,17 +1860,17 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 {lead.avatar ? (
-                  <img src={lead.avatar} alt={lead.name || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
+                  <img src={lead.avatar} alt={getLeadDisplayName(lead) || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
                 ) : (
                   <span className="text-base font-semibold text-white bg-blue-500 h-full w-full rounded-full flex items-center justify-center">
-                    {lead.name?.charAt(0) || 'L'}
+                    {getLeadDisplayName(lead).charAt(0) || 'L'}
                   </span>
                 )}
               </Avatar>
               <div>
-                <p className="text-base font-semibold text-gray-900">{lead.name}</p>
-                {(lead.company as string | undefined) && (
-                  <p className="text-sm text-gray-500">{String(lead.company as unknown)}</p>
+                <p className="text-base font-semibold text-gray-900">{getLeadDisplayName(lead)}</p>
+                {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
+                  <p className="text-sm text-gray-500">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
                 )}
               </div>
             </div>
@@ -1845,17 +2003,17 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-start gap-2">
               <p className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 min-w-0">
-                {lead.name}
+                {getLeadDisplayName(lead)}
               </p>
               <div className="flex items-center gap-1 text-xs text-gray-500" title={`Success Probability: ${probability}%`}>
                 <Progress value={probability} className="h-2 w-16" />
                 <span>{probability}%</span>
               </div>
             </div>
-            {(lead.company as string | undefined) && (
+            {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <Building2 className="h-3.5 w-3.5" />
-                {String(lead.company as unknown)}
+                {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}
               </p>
             )}
           </div>
@@ -2007,7 +2165,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 <X className="h-4 w-4" />
               </button>
             </DialogTitle>
-            <p className="mt-4">Are you sure you want to delete {String(lead.name)}? This action cannot be undone.</p>
+            <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
             <div className="flex gap-2 pt-4 border-t">
               <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
                 Cancel
