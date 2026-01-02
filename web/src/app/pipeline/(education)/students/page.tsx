@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStudents, StudentWithLead, StudentListFilter } from '@/sdk/features/deals-pipeline';
+import { useStudents, StudentWithLead, StudentListFilter } from '@/features/deals-pipeline/features/deals-pipeline';
 import { RequireFeature } from '@/components/RequireFeature';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

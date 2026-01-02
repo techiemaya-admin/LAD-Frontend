@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStudent, useStudentMutations, UpdateStudentPayload } from '@/sdk/features/deals-pipeline';
+import { useStudent, useStudentMutations, StudentWithLead, UpdateStudentPayload } from '@/features/deals-pipeline/features/deals-pipeline';
 import { RequireFeature } from '@/components/RequireFeature';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, Trash2, Edit2, X } from 'lucide-react';
