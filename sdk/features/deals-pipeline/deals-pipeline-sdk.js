@@ -88,6 +88,11 @@ class DealsPipelineSDK {
         throw new Error(error.message || `HTTP ${response.status}`);
       }
       
+      // Handle 204 No Content - no body to parse
+      if (response.status === 204) {
+        return null;
+      }
+      
       return await response.json();
     } catch (error) {
       console.error(`API Error [${config.method} ${endpoint}]:`, error);
@@ -215,7 +220,7 @@ class DealsPipelineSDK {
     return this.request(`/leads/${leadId}/attachments`);
   }
   
-  async uploadAttachment(leadId, file) {
+  async uploadAttachment(leadId, file, onProgress = null) {
     const formData = new FormData();
     formData.append('file', file);
     
@@ -227,15 +232,8 @@ class DealsPipelineSDK {
     // Deployed backend: POST /leads/:id/attachments
     const response = await fetch(`${this.baseURL}/leads/${leadId}/attachments`, {
       method: 'POST',
-      headers,
-      body: formData
+      body: { content }
     });
-    
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status}`);
-    }
-    
-    return response.json();
   }
   
   async deleteAttachment(leadId, attachmentId) {
