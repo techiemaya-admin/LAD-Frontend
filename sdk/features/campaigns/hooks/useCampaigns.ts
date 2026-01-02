@@ -45,7 +45,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load campaigns';
       setError(errorMessage);
-      console.error('[campaigns] Failed to load campaigns:', err);
     } finally {
       setLoading(false);
     }

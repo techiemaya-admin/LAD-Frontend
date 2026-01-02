@@ -121,7 +121,7 @@ const [organizationId, setOrganizationId] = useState<string | null>(null);
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     process.env.NEXT_PUBLIC_STS_SERVICE ||
     process.env.NEXT_PUBLIC_API_BASE ||
-    "http://localhost:3002";
+    '';
 
   // Get user ID from /auth/me (architecture-compliant: core platform returns user.id)
   useEffect(() => {

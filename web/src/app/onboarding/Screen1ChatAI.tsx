@@ -236,7 +236,7 @@ export default function Screen1ChatAI() {
   const hasMessages = chatHistory.length > 0;
 
   return (
-    <div className="relative w-full h-screen bg-white flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-white flex flex-col overflow-hidden">
       {!hasMessages && (
         <>
           {/* Centered Greeting and Input Container */}

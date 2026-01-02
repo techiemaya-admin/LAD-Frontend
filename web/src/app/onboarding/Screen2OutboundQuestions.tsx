@@ -99,7 +99,7 @@ export default function Screen2OutboundQuestions() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
         <div className="w-full max-w-3xl mx-auto">
           {/* Back Button */}

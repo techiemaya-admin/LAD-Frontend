@@ -23,8 +23,22 @@ export class DealsPipelineAPI {
   private baseUrl: string;
   private headers: HeadersInit;
 
-  constructor(baseUrl: string = 'http://localhost:3004/api/deals-pipeline', headers: HeadersInit = {}) {
-    this.baseUrl = baseUrl;
+  /**
+   * Initialize API client
+   * PRODUCTION: Requires NEXT_PUBLIC_BACKEND_URL or baseUrl parameter
+   * DEVELOPMENT: Falls back to localhost:3004
+   */
+  constructor(baseUrl?: string, headers: HeadersInit = {}) {
+    // Get URL from parameter or environment
+    const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    
+    // PRODUCTION: Fail fast if no URL provided
+    if (process.env.NODE_ENV === 'production' && !baseUrl && !envUrl) {
+      throw new Error('NEXT_PUBLIC_BACKEND_URL is required in production for deals-pipeline API');
+    }
+    
+    // Use provided URL, env var, or localhost fallback
+    this.baseUrl = baseUrl || (envUrl ? `${envUrl}/api/deals-pipeline` : 'http://localhost:3004/api/deals-pipeline');
     this.headers = {
       'Content-Type': 'application/json',
       ...headers,

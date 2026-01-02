@@ -1,3 +1,59 @@
+/**
+ * ICP Onboarding Questions Types
+ */
+
+export interface ICPQuestion {
+  id: string;
+  stepIndex: number;
+  title?: string;
+  question: string;
+  helperText?: string;
+  category: string;
+  intentKey: string;
+  questionType: 'text' | 'select' | 'multi-select' | 'boolean';
+  options?: Array<{ label: string; value: string }>;
+  validationRules?: {
+    minLength?: number;
+    maxLength?: number;
+    required?: boolean;
+    maxItems?: number;
+  };
+  isActive: boolean;
+  displayOrder?: number;
+}
+
+export interface ICPQuestionsResponse {
+  success: boolean;
+  questions: ICPQuestion[];
+  totalSteps: number;
+}
+
+export interface ICPAnswerRequest {
+  sessionId?: string;
+  currentStepIndex: number;
+  currentIntentKey?: string;
+  userAnswer: string;
+  category?: string;
+  collectedAnswers?: Record<string, any>;
+}
+
+export interface ICPAnswerResponse {
+  success: boolean;
+  nextStepIndex: number | null;
+  nextQuestion: ICPQuestion | null;
+  clarificationNeeded?: boolean;
+  completed?: boolean;
+  message?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  extractedData?: Record<string, any>;
+  updatedCollectedAnswers?: Record<string, any>;
+  error?: string;
+}
+
+/**
+ * Maya AI Assistant Types (Legacy)
+ */
+
 export interface MayaMessage {
   role: 'user' | 'ai';
   content: string;

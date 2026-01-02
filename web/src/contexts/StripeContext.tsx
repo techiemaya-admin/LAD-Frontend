@@ -45,7 +45,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         // Fetch Stripe config from backend via Next.js API route in dev, direct in production
         const apiUrl = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' 
           ? '/api/stripe/config'
-          : `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3004'}/api/stripe/config`;
+          : `${process.env.NEXT_PUBLIC_API_BASE || ''}/api/stripe/config`;
         const response = await fetch(apiUrl);
         
         if (!response.ok) {

@@ -5,6 +5,17 @@ import { store } from '@/store/store';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { StripeProvider } from '../contexts/StripeContext';
 import { AuthProvider } from '../contexts/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const glossyAITheme = createTheme({
   palette: {
@@ -179,12 +190,14 @@ const glossyAITheme = createTheme({
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <Provider store={store}>
-        <StripeProvider>
-          {children}
-        </StripeProvider>
-      </Provider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Provider store={store}>
+          <StripeProvider>
+            {children}
+          </StripeProvider>
+        </Provider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

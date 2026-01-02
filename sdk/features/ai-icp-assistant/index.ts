@@ -3,6 +3,28 @@
  * Export all public APIs for the AI ICP Assistant feature
  */
 
+// ICP Questions API
+export {
+  fetchICPQuestions,
+  fetchICPQuestionByStep,
+  processICPAnswer,
+} from './api';
+
+// ICP Types
+export type {
+  ICPQuestion,
+  ICPQuestionsResponse,
+  ICPAnswerRequest,
+  ICPAnswerResponse,
+} from './types';
+
+// ICP Hooks
+export {
+  useItem,
+  useItems,
+  useConversation,
+} from './hooks';
+
 // Legacy service (if exists)
 export { 
   AIICPAssistantService,

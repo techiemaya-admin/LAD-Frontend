@@ -49,7 +49,22 @@ function getAuthHeaders(): HeadersInit {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+/**
+ * Get API base URL with production validation
+ */
+function getApiBaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_BACKEND_URL;
+  
+  // PRODUCTION: Fail fast if env var missing
+  if (process.env.NODE_ENV === 'production' && !url) {
+    throw new Error('NEXT_PUBLIC_BACKEND_URL is required in production');
+  }
+  
+  // DEVELOPMENT: Use localhost fallback
+  return url || 'http://localhost:3004';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 const BASE_PATH = `${API_BASE_URL}/api/apollo-leads`;
 
 /**

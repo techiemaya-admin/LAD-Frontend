@@ -87,8 +87,8 @@ export default function CallLogsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
 
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3004";
-  const socket = useRef(io(socketUrl, { transports: ["websocket"] })).current;
+  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '';
+  const socket = useRef(socketUrl ? io(socketUrl, { transports: ["websocket"] }) : null).current;
 
   // Pagination
   const [page, setPage] = useState(1);

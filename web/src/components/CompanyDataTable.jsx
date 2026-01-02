@@ -7,7 +7,7 @@ import { Phone as PhoneIcon } from '@mui/icons-material';
 import { safeStorage } from '../utils/storage';
 
 // Get API base URL from environment variable
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api` : '';
 
 // Helper function to get userId from auth token
 const getUserId = () => {

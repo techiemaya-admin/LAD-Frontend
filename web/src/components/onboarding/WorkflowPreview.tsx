@@ -18,6 +18,7 @@ import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { StepType } from '@/types/campaign';
 import { CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import TemplateInput from './TemplateInput';
 
 // Register node types
 const nodeTypes: NodeTypes = {
@@ -43,7 +44,12 @@ const nodeTypes: NodeTypes = {
   custom: CustomNode,
 };
 
-export default function WorkflowPreview() {
+// Accept currentIntentKey as a prop (from parent or global state)
+interface WorkflowPreviewProps {
+  currentIntentKey?: string;
+}
+
+export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewProps = {}) {
   const router = useRouter();
   const { 
     workflowPreview, 
@@ -71,6 +77,8 @@ export default function WorkflowPreview() {
 
     // Add workflow steps as nodes
     workflowPreview.forEach((step, index) => {
+      // Remove duplicate title/type from ...step
+      const { title, type, ...rest } = step;
       nodes.push({
         id: step.id,
         type: step.type as StepType,
@@ -79,7 +87,7 @@ export default function WorkflowPreview() {
           title: step.title,
           type: step.type,
           description: step.description,
-          ...step,
+          ...rest,
         },
       });
     });
@@ -128,6 +136,35 @@ export default function WorkflowPreview() {
   const connectedChannels = Object.entries(channels)
     .filter(([_, connected]) => connected)
     .map(([channel]) => channel);
+
+  // Find the step that matches the backend's current template intentKey (e.g., 'linkedin_template', 'whatsapp_template')
+  let currentTemplateStepIndex: number | null = null;
+  if (currentIntentKey && currentIntentKey.endsWith('_template')) {
+    const platform = currentIntentKey.replace('_template', '');
+    currentTemplateStepIndex = workflowPreview.findIndex((step) => {
+      // Map platform to step type
+      const typeMap: Record<string, string> = {
+        linkedin: 'linkedin_message',
+        whatsapp: 'whatsapp_send',
+        email: 'email_send',
+        voice: 'voice_agent_call',
+        instagram: 'instagram_dm',
+      };
+      const expectedType = typeMap[platform];
+      const needsTemplate = step.type === expectedType;
+      const hasTemplate = (step as any).template && (step as any).template.length > 0;
+      return needsTemplate && !hasTemplate;
+    });
+    if (currentTemplateStepIndex === -1) currentTemplateStepIndex = null;
+  } else {
+    // fallback: first missing template
+    currentTemplateStepIndex = workflowPreview.findIndex((step) => {
+      const needsTemplate = ['linkedin_message', 'email_send', 'whatsapp_send', 'voice_agent_call', 'instagram_dm'].includes(step.type as string);
+      const hasTemplate = (step as any).template && (step as any).template.length > 0;
+      return needsTemplate && !hasTemplate;
+    });
+    if (currentTemplateStepIndex === -1) currentTemplateStepIndex = null;
+  }
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -236,6 +273,35 @@ export default function WorkflowPreview() {
       {/* Footer Actions */}
       {workflowPreview.length > 0 && (
         <div className="p-6 border-t border-gray-200 bg-white space-y-3">
+          {/* Show TemplateInput for the step matching backend's current template intentKey */}
+          {currentTemplateStepIndex !== null && (
+            <div className="mb-4">
+              <div className="text-sm font-semibold text-gray-700 mb-2">Template required</div>
+              <TemplateInput
+                label={`Template for ${workflowPreview[currentTemplateStepIndex].title || workflowPreview[currentTemplateStepIndex].type}`}
+                placeholder={`Write a ${workflowPreview[currentTemplateStepIndex].channel || workflowPreview[currentTemplateStepIndex].type} message template...`}
+                onSubmit={(template) => {
+                  // Update the workflowPreview step with template (or mark skipped)
+                  const updated = workflowPreview.map((s, i) => {
+                    if (i === currentTemplateStepIndex) {
+                      return { ...s, template: template === 'Skip' ? '' : template };
+                    }
+                    return s;
+                  });
+                  setWorkflowPreview(updated);
+                }}
+                onSkip={() => {
+                  const updated = workflowPreview.map((s, i) => {
+                    if (i === currentTemplateStepIndex) {
+                      return { ...s, template: '' };
+                    }
+                    return s;
+                  });
+                  setWorkflowPreview(updated);
+                }}
+              />
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -251,17 +317,20 @@ export default function WorkflowPreview() {
             <button
               onClick={() => {
                 // Convert workflowPreview to manualFlow format
-                const flowNodes = workflowPreview.map((step, index) => ({
-                  id: step.id,
-                  type: step.type,
-                  position: { x: 400, y: 150 + index * 150 },
-                  data: {
-                    title: step.title,
+                const flowNodes = workflowPreview.map((step, index) => {
+                  const { title, type, ...rest } = step;
+                  return {
+                    id: step.id,
                     type: step.type,
-                    description: step.description,
-                    ...step,
-                  },
-                }));
+                    position: { x: 400, y: 150 + index * 150 },
+                    data: {
+                      title: step.title,
+                      type: step.type,
+                      description: step.description,
+                      ...rest,
+                    },
+                  };
+                });
 
                 const flowEdges = [];
                 for (let i = 0; i < flowNodes.length - 1; i++) {

@@ -8,7 +8,7 @@ import Screen3ManualEditor from './Screen3ManualEditor';
 
 export default function ScreenSplitView() {
   return (
-    <div className="flex w-full h-screen bg-white overflow-hidden">
+    <div className="flex w-full h-full bg-white overflow-hidden">
       {/* Screen 1 - AI Chat (40%) */}
       <div className="w-[40%] border-r border-gray-200 overflow-hidden">
         <ScreenAIChat />

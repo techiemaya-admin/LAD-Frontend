@@ -20,8 +20,11 @@ class ApiClient {
   private baseURL: string;
 
   constructor() {
-    // Use environment variable or default to localhost
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    // Use environment variable - required in production
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || '';
+    if (!this.baseURL && process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_API_URL is required in production');
+    }
   }
 
   private async request<T>(

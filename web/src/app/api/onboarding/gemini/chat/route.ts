@@ -5,7 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
+// Use ICP feature backend for AI chat (port 3001)
+// Fallback to main backend if ICP backend not available
+const ICP_BACKEND_URL = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 'http://localhost:3001';
+const MAIN_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+const BACKEND_URL = ICP_BACKEND_URL; // Use ICP backend for chat
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +18,8 @@ export async function POST(request: NextRequest) {
     // Get auth token from cookie
     const token = request.cookies.get('access_token')?.value;
     
-    // Forward request to backend AI ICP Assistant
+    // Forward request to ICP feature backend AI Assistant
+    // The ICP backend runs on port 3001 and has /api/ai-icp-assistant/chat
     const response = await fetch(`${BACKEND_URL}/api/ai-icp-assistant/chat`, {
       method: 'POST',
       headers: {

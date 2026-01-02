@@ -11,6 +11,8 @@ import {
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead } from '@/features/campaigns';
+import { revealEmail, revealPhone } from '@/features/apollo-leads/api';
+import { getProfileSummary, generateProfileSummary } from '@/features/campaigns/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 import { safeStorage } from '@/utils/storage';
@@ -51,8 +53,11 @@ export default function CampaignLeadsPage() {
   const [total, setTotal] = useState(0);
   
   // Reveal state for employee contacts
-  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
+  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean; phoneValue?: string; emailValue?: string }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
+  
+  // Store revealed values separately to update leads
+  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string }>>({});
   
   // Type-safe state setters
   const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
@@ -93,16 +98,14 @@ export default function CampaignLeadsPage() {
       // Fetch summaries for all leads in parallel
       const summaryPromises = leads.map(async (lead) => {
         try {
-          // Note: This API call is from a different feature (profile-summary)
-          // It should ideally be in its own SDK feature
-          const response = await fetch(`/api/profile-summary/${lead.id}?campaignId=${campaignId}`);
-          const data = await response.json();
+          // LAD Architecture: Use SDK API layer instead of direct fetch
+          const data = await getProfileSummary(lead.id, campaignId);
           if (data.success && data.summary) {
             return { leadId: lead.id, summary: data.summary };
           }
         } catch (err) {
           // Silently fail - summary might not exist yet
-          console.log(`[Campaign Leads] No summary for lead ${lead.id}`);
+          // LAD Architecture: No console.log in production code
         }
         return null;
       });
@@ -126,22 +129,82 @@ export default function CampaignLeadsPage() {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
     
-    // Simulate API call - replace with actual API call
-    setTimeout(() => {
-      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+    try {
+      const apolloPersonId = (employee as any).apollo_person_id;
+      const employeeName = employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      if (!apolloPersonId) {
+        throw new Error('Apollo person ID not available for this lead');
+      }
+      
+      // LAD Architecture: Use SDK API layer instead of direct fetch
+      const data = await revealPhone(apolloPersonId, employeeName);
+      
+      if (data.success && data.phone) {
+        // Store the revealed phone value
+        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: data.phone } }));
+        // Mark as revealed
+        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+        // Show success message
+        push({
+          variant: 'success',
+          title: 'Phone Revealed',
+          description: `Phone number revealed${data.from_cache ? ' (from cache)' : ''}`
+        });
+      } else {
+        throw new Error(data.error || 'Failed to reveal phone number');
+      }
+    } catch (error: any) {
+      // LAD Architecture: No console.error in production code
+      push({
+        variant: 'error',
+        title: 'Error',
+        description: error.message || 'Failed to reveal phone number'
+      });
+    } finally {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: false } }));
-    }, 1000);
+    }
   };
 
   const handleRevealEmail = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
     
-    // Simulate API call - replace with actual API call
-    setTimeout(() => {
-      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
+    try {
+      const apolloPersonId = (employee as any).apollo_person_id;
+      const employeeName = employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+      
+      if (!apolloPersonId) {
+        throw new Error('Apollo person ID not available for this lead');
+      }
+      
+      // LAD Architecture: Use SDK API layer instead of direct fetch
+      const data = await revealEmail(apolloPersonId, employeeName);
+      
+      if (data.success && data.email) {
+        // Store the revealed email value
+        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: data.email } }));
+        // Mark as revealed
+        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
+        // Show success message
+        push({
+          variant: 'success',
+          title: 'Email Revealed',
+          description: `Email address revealed${data.from_cache ? ' (from cache)' : ''}`
+        });
+      } else {
+        throw new Error(data.error || 'Failed to reveal email address');
+      }
+    } catch (error: any) {
+      // LAD Architecture: No console.error in production code
+      push({
+        variant: 'error',
+        title: 'Error',
+        description: error.message || 'Failed to reveal email address'
+      });
+    } finally {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
-    }, 1000);
+    }
   };
 
   const handleViewSummary = async (employee: ExtendedCampaignLead) => {
@@ -152,6 +215,7 @@ export default function CampaignLeadsPage() {
     setSummaryLoading(true);
 
     try {
+<<<<<<< Updated upstream
       // First, try to get existing summary
       try {
         const token = safeStorage.getItem('token');
@@ -161,6 +225,12 @@ export default function CampaignLeadsPage() {
           },
         });
         const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
+=======
+        // LAD Architecture: Use SDK API layer instead of direct fetch
+        // First, try to get existing summary
+        try {
+          const existingSummary = await getProfileSummary(employee.id, campaignId);
+>>>>>>> Stashed changes
         
         if (existingSummary.success && existingSummary.summary) {
           setProfileSummary(existingSummary.summary);
@@ -169,10 +239,12 @@ export default function CampaignLeadsPage() {
         }
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
-        console.log('[Profile Summary] No existing summary found, generating new one...');
+        // LAD Architecture: No console.log in production code
       }
 
+      // LAD Architecture: Use SDK API layer instead of direct fetch
       // Generate new summary
+<<<<<<< Updated upstream
       const token = safeStorage.getItem('token');
       const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
         method: 'POST',
@@ -193,8 +265,17 @@ export default function CampaignLeadsPage() {
             linkedin_url: employee.linkedin_url,
           },
         }),
+=======
+      const response = await generateProfileSummary(employee.id, campaignId, {
+        name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+        title: employee.title,
+        company: employee.company,
+        email: employee.email,
+        phone: employee.phone,
+        linkedin_url: employee.linkedin_url,
+        ...employee,
+>>>>>>> Stashed changes
       });
-      const response = await generateResponse.json() as { success: boolean; summary: string; generated_at?: string };
 
       if (response.success && response.summary) {
         setProfileSummary(response.summary);
@@ -202,7 +283,7 @@ export default function CampaignLeadsPage() {
         throw new Error('Failed to generate summary');
       }
     } catch (error: any) {
-      console.error('[Profile Summary] Error:', error);
+      // LAD Architecture: No console.error in production code
       setSummaryError(error.message || 'Failed to load profile summary');
       push({
         variant: 'error',
@@ -316,6 +397,10 @@ export default function CampaignLeadsPage() {
             gap: 2 
           }}>
             {filteredLeads.map((lead: CampaignLead, index: number) => {
+              const idKey = lead.id || lead.name || '';
+              const revealedPhone = revealedValues[idKey]?.phone;
+              const revealedEmail = revealedValues[idKey]?.email;
+              
               return (
                 <EmployeeCard
                   key={lead.id}
@@ -325,8 +410,8 @@ export default function CampaignLeadsPage() {
                     first_name: lead.first_name,
                     last_name: lead.last_name,
                     title: lead.title,
-                    email: lead.email,
-                    phone: lead.phone,
+                    email: revealedEmail || lead.email,
+                    phone: revealedPhone || lead.phone,
                     linkedin_url: lead.linkedin_url,
                     photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
                   }}

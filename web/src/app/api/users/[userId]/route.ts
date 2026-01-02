@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
+  const backendInternal = process.env.BACKEND_INTERNAL_URL || '';
+  if (!backendInternal && process.env.NODE_ENV === 'production') {
+    throw new Error('BACKEND_INTERNAL_URL is required in production');
+  }
   return backendInternal.replace(/\/$/, '');
 }
 
