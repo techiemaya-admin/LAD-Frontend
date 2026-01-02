@@ -9,13 +9,29 @@ function getAccessToken(): string | null {
   return safeStorage.getItem('token') || safeStorage.getItem('auth_token');
 }
 
+const DEFAULT_FETCH_TIMEOUT_MS = 20000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function getUserSettings(): Promise<Record<string, unknown>> {
   const token = getAccessToken();
   if (!token) {
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch(getApiUrl('/api/settings'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
     ...defaultFetchOptions(),
     headers: {
       ...defaultFetchOptions().headers,
@@ -37,7 +53,7 @@ export async function updateUserSettings(settings: Record<string, unknown>): Pro
   }
   
   // Backend accepts both flat and nested formats, so send as-is
-  const response = await fetch(getApiUrl('/api/settings'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
     ...defaultFetchOptions(),
     method: 'PUT',
     headers: {
@@ -114,7 +130,7 @@ export async function savePipelinePreferences(preferences: PipelinePreferences):
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(getApiUrl('/api/settings'), {
+    const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
       ...defaultFetchOptions(),
       method: 'PUT',
       headers: {
@@ -351,7 +367,7 @@ function mergeWithPipelineDefaults(userPreferences: Partial<PipelinePreferences>
 export async function getAllUsers(): Promise<User[]> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl('/api/users'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/users'), {
     ...defaultFetchOptions(),
     headers: {
       ...defaultFetchOptions().headers,
@@ -365,7 +381,7 @@ export async function getAllUsers(): Promise<User[]> {
 export async function createUser(user: Partial<User>): Promise<User | { user: User; id?: string }> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl('/api/users'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/users'), {
     ...defaultFetchOptions(),
     method: 'POST',
     headers: {
@@ -388,7 +404,7 @@ export async function createUser(user: Partial<User>): Promise<User | { user: Us
 export async function updateUserRole(id: string, role: string, capabilities: string[]): Promise<User> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl(`/api/users/${id}/role`), {
+  const response = await fetchWithTimeout(getApiUrl(`/api/users/${id}/role`), {
     ...defaultFetchOptions(),
     method: 'PUT',
     headers: {
@@ -404,7 +420,7 @@ export async function updateUserRole(id: string, role: string, capabilities: str
 export async function updateUserCapabilities(id: string, capabilities: string[]): Promise<User> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl(`/api/users/${id}/capabilities`), {
+  const response = await fetchWithTimeout(getApiUrl(`/api/users/${id}/capabilities`), {
     ...defaultFetchOptions(),
     method: 'PUT',
     headers: {
@@ -420,7 +436,7 @@ export async function updateUserCapabilities(id: string, capabilities: string[])
 export async function getRoleDefaults(): Promise<Array<{ role: { key: string; label: string }; capabilities: Array<{ key: string; label: string }> }>> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl('/api/users/role-defaults'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/users/role-defaults'), {
     ...defaultFetchOptions(),
     headers: {
       ...defaultFetchOptions().headers,
@@ -434,7 +450,7 @@ export async function getRoleDefaults(): Promise<Array<{ role: { key: string; la
 export async function deleteUser(id: string): Promise<void> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(getApiUrl(`/api/users/${id}`), {
+  const response = await fetchWithTimeout(getApiUrl(`/api/users/${id}`), {
     ...defaultFetchOptions(),
     method: 'DELETE',
     headers: {
@@ -459,7 +475,7 @@ export async function upsertUserLeadPairs(userId: string, leadIds: (string | num
   console.log(`[UserService] API URL: ${getApiUrl('/api/group-pairs/upsert')}`);
   
   try {
-    const response = await fetch(getApiUrl('/api/group-pairs/upsert'), {
+    const response = await fetchWithTimeout(getApiUrl('/api/group-pairs/upsert'), {
       ...defaultFetchOptions(),
       method: 'POST',
       headers: {
@@ -495,7 +511,7 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
   console.log(`[UserService] API URL: ${getApiUrl(`/api/group-pairs/user/${userId}/leads`)}`);
   
   try {
-    const response = await fetch(getApiUrl(`/api/group-pairs/user/${userId}/leads`), {
+    const response = await fetchWithTimeout(getApiUrl(`/api/group-pairs/user/${userId}/leads`), {
       ...defaultFetchOptions(),
       headers: {
         ...defaultFetchOptions().headers,
@@ -544,7 +560,7 @@ export async function getLeadAssignedUsers(leadId: string | number): Promise<Use
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
   
-  const response = await fetch(getApiUrl(`/api/group-pairs/lead/${leadId}/users`), {
+  const response = await fetchWithTimeout(getApiUrl(`/api/group-pairs/lead/${leadId}/users`), {
     ...defaultFetchOptions(),
     headers: {
       ...defaultFetchOptions().headers,
@@ -561,7 +577,7 @@ export async function removeUserLeadPairs(userId: string, leadIds: (string | num
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
   
-  const response = await fetch(getApiUrl('/api/group-pairs/remove'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/group-pairs/remove'), {
     ...defaultFetchOptions(),
     method: 'DELETE',
     headers: {

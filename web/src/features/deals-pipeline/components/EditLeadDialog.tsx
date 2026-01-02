@@ -3,7 +3,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Chip } from '@/components/ui/chip';
 import { useSelector, useDispatch } from 'react-redux';
@@ -14,7 +14,7 @@ import {
   setEditingLead,
   resetEditingLead 
 } from '@/store/slices/uiSlice';
-import { Lead } from '../leads/types';
+import type { Lead } from '../types';
 import { Stage } from '../store/slices/pipelineSlice';
 
 interface EditLeadDialogProps {
@@ -121,6 +121,20 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
     }
   };
 
+  const handleSelectChange = (field: keyof typeof editingLead) => (value: string) => {
+    dispatch(setEditingLead({
+      ...editingLead,
+      [field]: value,
+    }));
+
+    if (errors[field]) {
+      setErrors({
+        ...errors,
+        [field]: '',
+      });
+    }
+  };
+
   const handleGoalsChange = (newGoals: string[]) => {
     dispatch(setEditingLead({
       ...editingLead,
@@ -188,23 +202,28 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
               </div>
             </div>
 
-            {/* Status and Stage */}
+            {/* Pipeline & Deal Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-500">Status and Stage</h3>
+              <h3 className="text-sm font-medium text-gray-500">Pipeline & Deal Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-status">Status *</Label>
                   <Select
-                    id="edit-status"
-                    value={editingLead.status || ''}
-                    onChange={handleChange('status')}
-                    className={errors.status ? 'border-red-500' : ''}
+                    value={editingLead.status || undefined}
+                    onValueChange={handleSelectChange('status')}
                   >
-                    {statusOptions.map((statusOption) => (
-                      <option key={statusOption.key} value={statusOption.key}>
-                        {statusOption.label}
-                      </option>
-                    ))}
+                    <SelectTrigger id="edit-status" className={errors.status ? 'border-red-500 w-full' : 'w-full'}>
+                      <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions
+                        .filter((option) => option.key && String(option.key).trim() !== '')
+                        .map((statusOption) => (
+                          <SelectItem key={statusOption.key} value={String(statusOption.key)}>
+                            {statusOption.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                   {errors.status && (
                     <p className="text-sm text-red-500">{errors.status}</p>
@@ -213,54 +232,64 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="edit-stage">Stage *</Label>
                   <Select
-                    id="edit-stage"
-                    value={editingLead.stage || ''}
-                    onChange={handleChange('stage')}
-                    className={errors.stage ? 'border-red-500' : ''}
+                    value={editingLead.stage || undefined}
+                    onValueChange={handleSelectChange('stage')}
                   >
-                    {stages.map((stage) => (
-                      <option key={stage.key} value={stage.key}>
-                        {stage.label}
-                      </option>
-                    ))}
+                    <SelectTrigger id="edit-stage" className={errors.stage ? 'border-red-500 w-full' : 'w-full'}>
+                      <SelectValue placeholder="Select stage..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages
+                        .filter((stage) => stage.key && String(stage.key).trim() !== '')
+                        .map((stage) => (
+                          <SelectItem key={stage.key} value={String(stage.key)}>
+                            {stage.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                   {errors.stage && (
                     <p className="text-sm text-red-500">{errors.stage}</p>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Deal Information */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-500">Deal Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-priority">Priority</Label>
                   <Select
-                    id="edit-priority"
-                    value={editingLead.priority || ''}
-                    onChange={handleChange('priority')}
+                    value={editingLead.priority || undefined}
+                    onValueChange={handleSelectChange('priority')}
                   >
-                    {priorityOptions.map((priority) => (
-                      <option key={priority.key} value={priority.key}>
-                        {priority.label}
-                      </option>
-                    ))}
+                    <SelectTrigger id="edit-priority" className="w-full">
+                      <SelectValue placeholder="Select priority..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorityOptions
+                        .filter((option) => option.key && String(option.key).trim() !== '')
+                        .map((priority) => (
+                          <SelectItem key={priority.key} value={String(priority.key)}>
+                            {priority.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-source">Lead Source</Label>
                   <Select
-                    id="edit-source"
-                    value={editingLead.source || ''}
-                    onChange={handleChange('source')}
+                    value={editingLead.source || undefined}
+                    onValueChange={handleSelectChange('source')}
                   >
-                    {sourceOptions.map((source) => (
-                      <option key={source.key} value={source.key}>
-                        {source.label}
-                      </option>
-                    ))}
+                    <SelectTrigger id="edit-source" className="w-full">
+                      <SelectValue placeholder="Select source..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sourceOptions
+                        .filter((option) => option.key && String(option.key).trim() !== '')
+                        .map((source) => (
+                          <SelectItem key={source.key} value={String(source.key)}>
+                            {source.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -313,7 +342,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 <Label>Goals</Label>
                 <div className="flex flex-wrap gap-2">
                   {editingLead.goals?.map((goal, index) => (
-                    <Badge key={index} variant="outline">
+                    <Chip key={index} variant="outline">
                       {goal}
                       <button
                         onClick={() => handleGoalsChange(editingLead.goals?.filter((_, i) => i !== index) || [])}
@@ -321,7 +350,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                       >
                         ×
                       </button>
-                    </Badge>
+                    </Chip>
                   ))}
                   <Input
                     placeholder="Add goal"
@@ -339,7 +368,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 <Label>Labels</Label>
                 <div className="flex flex-wrap gap-2">
                   {editingLead.labels?.map((label, index) => (
-                    <Badge key={index} variant="outline">
+                    <Chip key={index} variant="outline">
                       {label}
                       <button
                         onClick={() => handleLabelsChange(editingLead.labels?.filter((_, i) => i !== index) || [])}
@@ -347,7 +376,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                       >
                         ×
                       </button>
-                    </Badge>
+                    </Chip>
                   ))}
                   <Input
                     placeholder="Add label"

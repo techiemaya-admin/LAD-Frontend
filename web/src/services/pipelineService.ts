@@ -5,8 +5,8 @@
 
 import api from './api';
 import { enhanceLeadsWithLabels, getStatusOptions } from '../utils/statusMappings';
-import { Lead } from '../features/deals-pipeline/components/leads/types';
-import { Stage } from '../store/slices/pipelineSlice';
+import { Lead } from '../features/deals-pipeline/types';
+import { Stage } from '../features/deals-pipeline/store/slices/pipelineSlice';
 import { Status, Priority, Source } from '../store/slices/masterDataSlice';
 
 const API_ENDPOINTS = {
@@ -17,6 +17,7 @@ const API_ENDPOINTS = {
 };
 
 let stagesCache: Stage[] | null = null;
+let stagesCachePromise: Promise<Stage[]> | null = null;
 let statusOptionsCache: unknown[] | null = null;
 let stagesCacheExpiry: number | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -41,6 +42,19 @@ export const fetchPipelineData = async (): Promise<PipelineData> => {
   try {
     const response = await api.get(API_ENDPOINTS.pipeline);
     const data = response.data as PipelineData;
+
+    if (Array.isArray(data.leads)) {
+      data.leads = data.leads.map((rawLead: any) => {
+        const firstName = rawLead.first_name || rawLead.firstName || '';
+        const lastName = rawLead.last_name || rawLead.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        return {
+          ...rawLead,
+          name: rawLead.name || fullName || undefined,
+        } as Lead;
+      });
+    }
     
     // Enhance leads with status and stage labels
     if (data.leads && data.stages) {
@@ -56,14 +70,39 @@ export const fetchPipelineData = async (): Promise<PipelineData> => {
 
 // Get pipeline overview/statistics
 export const fetchPipelineOverview = async (): Promise<unknown> => {
-  const response = await api.get('/api/deals-pipeline/stats');
+  const response = await api.get('/api/deals-pipeline/leads/stats');
   return response.data;
 };
 
 // Move lead between pipeline stages
 export const moveLeadToStage = async (leadId: string | number, newStage: string): Promise<Lead> => {
-  const response = await api.put(`/api/pipeline/leads/${leadId}/stage`, { stage: newStage });
-  return response.data as Lead;
+  // Prefer the feature-scoped routes
+  const preferredUrls = [
+    `/api/deals-pipeline/pipeline/leads/${leadId}/stage`,
+  ];
+
+  for (const url of preferredUrls) {
+    try {
+      try {
+        const response = await api.put(url, { stage: newStage });
+        return response.data as Lead;
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const message = String(error?.response?.data?.error || error?.response?.data?.message || '');
+        if (status === 400 && message.toLowerCase().includes('stagekey')) {
+          const retry = await api.put(url, { stageKey: newStage, stage: newStage });
+          return retry.data as Lead;
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404) continue;
+      throw error;
+    }
+  }
+
+  throw new Error('Failed to update lead stage (no matching endpoint)');
 };
 
 // Update lead status
@@ -76,11 +115,38 @@ export const updateLeadStatus = async (leadId: string | number, status: string):
     if (process.env.NODE_ENV === 'development') {
       console.log('[pipelineService.updateLeadStatus] ->', { leadId, status });
     }
-    const response = await api.put(`/api/pipeline/leads/${leadId}/status`, { status });
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[pipelineService.updateLeadStatus] <- response', response.status, response.data);
+    const preferredUrls = [
+      `/api/deals-pipeline/pipeline/leads/${leadId}/status`,
+    ];
+
+    for (const url of preferredUrls) {
+      try {
+        try {
+          const response = await api.put(url, { status });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[pipelineService.updateLeadStatus] <- response', response.status, response.data);
+          }
+          return response.data as Lead;
+        } catch (error: any) {
+          const statusCode = error?.response?.status;
+          const message = String(error?.response?.data?.error || error?.response?.data?.message || '');
+          if (statusCode === 400 && message.toLowerCase().includes('statuskey')) {
+            const retry = await api.put(url, { statusKey: status, status });
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[pipelineService.updateLeadStatus] <- retry response', retry.status, retry.data);
+            }
+            return retry.data as Lead;
+          }
+          throw error;
+        }
+      } catch (error: any) {
+        const statusCode = error?.response?.status;
+        if (statusCode === 404) continue;
+        throw error;
+      }
     }
-    return response.data as Lead;
+
+    throw new Error('Failed to update lead status (no matching endpoint)');
   } catch (error) {
     console.error('Error updating lead status:', error);
     throw error;
@@ -96,11 +162,23 @@ export const fetchStages = async (): Promise<Stage[]> => {
   if (stagesCache) {
     return stagesCache;
   }
+
+  if (stagesCachePromise) {
+    return stagesCachePromise;
+  }
   
   try {
-    const response = await api.get(API_ENDPOINTS.stages);
-    stagesCache = response.data as Stage[];
-    return stagesCache;
+    stagesCachePromise = api
+      .get(API_ENDPOINTS.stages)
+      .then((response) => {
+        stagesCache = response.data as Stage[];
+        return stagesCache;
+      })
+      .finally(() => {
+        stagesCachePromise = null;
+      });
+
+    return await stagesCachePromise;
   } catch (error) {
     console.error('Error fetching stages:', error);
     throw error;
@@ -132,6 +210,7 @@ export const addStage = async (name: string, positionStageId: string | null = nu
   if (positionStageId) {
     // Always fetch fresh stages data (don't use cache) to avoid stale data
     stagesCache = null;
+    stagesCachePromise = null;
     const stages = await fetchStages();
     console.log('[addStage] All stages ordered by display_order:', stages.map(s => ({ 
       key: s.key, 
@@ -170,6 +249,7 @@ export const addStage = async (name: string, positionStageId: string | null = nu
   console.log('[addStage] Backend response:', response.data);
   // Invalidate cache
   stagesCache = null;
+  stagesCachePromise = null;
   return response.data as Stage;
 };
 
@@ -183,6 +263,7 @@ export const updateStage = async (stageKey: string, updates: Partial<Stage> | st
   const response = await api.put(`/api/deals-pipeline/stages/${stageKey}`, updateData);
   // Invalidate cache
   stagesCache = null;
+  stagesCachePromise = null;
   return response.data as Stage;
 };
 
@@ -191,6 +272,7 @@ export const deleteStage = async (stageKey: string): Promise<void> => {
   await api.delete(`/api/deals-pipeline/stages/${stageKey}`);
   // Invalidate cache
   stagesCache = null;
+  stagesCachePromise = null;
 };
 
 // Reorder stages
@@ -198,6 +280,7 @@ export const reorderStages = async (stageOrders: StageOrders[]): Promise<void> =
   await api.put('/api/deals-pipeline/stages/reorder', { stageOrders });
   // Invalidate cache
   stagesCache = null;
+  stagesCachePromise = null;
 };
 
 // Create stage (alias for consistency)
@@ -215,13 +298,13 @@ export const fetchStatuses = async (): Promise<Status[]> => {
 
 // Get all sources for dropdowns  
 export const fetchSources = async (): Promise<Source[]> => {
-  const response = await api.get('/api/deals-pipeline/sources');
+  const response = await api.get('/api/deals-pipeline/reference/sources');
   return response.data as Source[];
 };
 
 // Get all priorities for dropdowns
 export const fetchPriorities = async (): Promise<Priority[]> => {
-  const response = await api.get('/api/deals-pipeline/priorities');
+  const response = await api.get('/api/deals-pipeline/reference/priorities');
   return response.data as Priority[];
 };
 
@@ -269,7 +352,7 @@ export const createLead = async (leadData: Partial<Lead>): Promise<Lead> => {
 // Update lead
 export const updateLead = async (leadId: string | number, leadData: Partial<Lead>): Promise<Lead> => {
   try {
-    const response = await api.put(`/api/deals-pipeline/${leadId}`, leadData);
+    const response = await api.put(`/api/deals-pipeline/leads/${leadId}`, leadData);
     
     // Invalidate caches after successful update
     stagesCache = null;
@@ -289,7 +372,7 @@ export const updateLeadStage = async (leadId: string | number, stageName: string
 // Delete lead
 export const deleteLead = async (leadId: string | number): Promise<void> => {
   try {
-    await api.delete(`/api/deals-pipeline/${leadId}`);
+    await api.delete(`/api/deals-pipeline/leads/${leadId}`);
   } catch (error) {
     const axiosError = error as { response?: { data?: { error?: string } } };
     throw new Error(axiosError.response?.data?.error || 'Failed to delete lead');
@@ -335,7 +418,7 @@ export const postComment = async (leadId: string | number, commentText: string):
 // Get all attachments for a lead
 export const fetchAttachments = async (leadId: string | number): Promise<unknown[]> => {
   try {
-    const { data } = await api.get(`/api/deals-pipeline/${leadId}/attachments`);
+    const { data } = await api.get(`/api/deals-pipeline/leads/${leadId}/attachments`);
     return data as unknown[];
   } catch (error) {
     const err = error as Error;
@@ -350,7 +433,7 @@ export const uploadAttachment = async (leadId: string | number, file: File): Pro
     const formData = new FormData();
     formData.append('file', file);
 
-    const { data } = await api.post(`/api/deals-pipeline/${leadId}/attachments`, formData, {
+    const { data } = await api.post(`/api/deals-pipeline/leads/${leadId}/attachments`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

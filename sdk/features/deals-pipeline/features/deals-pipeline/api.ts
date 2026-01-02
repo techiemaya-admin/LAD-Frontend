@@ -17,6 +17,14 @@ import type {
   CreateStagePayload,
   UpdateStagePayload,
   ApiError,
+  EducationStudent,
+  Counsellor,
+  StudentAppointment,
+  CreateStudentPayload,
+  UpdateStudentPayload,
+  AssignCounsellorPayload,
+  StudentWithLead,
+  StudentListFilter,
 } from './types';
 
 export class DealsPipelineAPI {
@@ -24,7 +32,7 @@ export class DealsPipelineAPI {
   private headers: HeadersInit;
 
   constructor(baseUrl: string = 'http://localhost:3004/api/deals-pipeline', headers: HeadersInit = {}) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/$/, '');
     this.headers = {
       'Content-Type': 'application/json',
       ...headers,
@@ -197,7 +205,7 @@ export class DealsPipelineAPI {
   async moveLeadToStage(leadId: string, stageKey: string): Promise<Lead> {
     return this.fetch<Lead>(`/pipeline/leads/${leadId}/stage`, {
       method: 'PUT',
-      body: JSON.stringify({ stageKey }),
+      body: JSON.stringify({ stageKey, stage: stageKey }),
     });
   }
 
@@ -207,7 +215,7 @@ export class DealsPipelineAPI {
   async updateLeadStatus(leadId: string, statusKey: string): Promise<Lead> {
     return this.fetch<Lead>(`/pipeline/leads/${leadId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ statusKey }),
+      body: JSON.stringify({ statusKey, status: statusKey }),
     });
   }
 
@@ -260,6 +268,105 @@ export class DealsPipelineAPI {
     return this.fetch<void>(`/leads/${leadId}/notes/${noteId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ==================== EDUCATION VERTICAL ====================
+  // Education-specific endpoints (only work when tenant has education vertical enabled)
+
+  /**
+   * List all students (education vertical)
+   * Filtered by user's assigned leads if counsellor role
+   */
+  async listStudents(filters?: StudentListFilter): Promise<StudentWithLead[]> {
+    const params = new URLSearchParams();
+    if (filters?.assigned_user_id) params.append('assigned_user_id', filters.assigned_user_id);
+    if (filters?.target_country) params.append('target_country', filters.target_country);
+    if (filters?.education_level) params.append('education_level', filters.education_level);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.stage) params.append('stage', filters.stage);
+    if (filters?.search) params.append('search', filters.search);
+    
+    const query = params.toString() ? `?${params}` : '';
+    return this.fetch<StudentWithLead[]>(`/students${query}`);
+  }
+
+  /**
+   * Get a single student with full details
+   */
+  async getStudent(id: string): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${id}`);
+  }
+
+  /**
+   * Create a new student (creates lead + education_student records)
+   */
+  async createStudent(payload: CreateStudentPayload): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>('/students', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
+   * Update a student's information
+   */
+  async updateStudent(id: string, payload: UpdateStudentPayload): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
+   * Delete a student (soft delete both lead and education_student)
+   */
+  async deleteStudent(id: string): Promise<void> {
+    return this.fetch<void>(`/students/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Assign a counsellor to a student
+   */
+  async assignCounsellor(studentId: string, payload: AssignCounsellorPayload): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${studentId}/assign-counsellor`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
+   * Get all counsellors for the tenant
+   */
+  async listCounsellors(): Promise<Counsellor[]> {
+    return this.fetch<Counsellor[]>('/counsellors');
+  }
+
+  /**
+   * Get appointments for a specific student
+   */
+  async getStudentAppointments(studentId: string): Promise<StudentAppointment[]> {
+    return this.fetch<StudentAppointment[]>(`/bookings/student/${studentId}`);
+  }
+
+  /**
+   * Get appointments for a specific counsellor
+   */
+  async getCounsellorAppointments(counsellorId: string): Promise<StudentAppointment[]> {
+    return this.fetch<StudentAppointment[]>(`/bookings/counsellor/${counsellorId}`);
+  }
+
+  /**
+   * Get counsellor availability for a date range
+   */
+  async getCounsellorAvailability(counsellorId: string, startDate: string, endDate: string): Promise<any> {
+    const params = new URLSearchParams({
+      counsellor_id: counsellorId,
+      start_date: startDate,
+      end_date: endDate,
+    });
+    return this.fetch<any>(`/bookings/availability?${params}`);
   }
 }
 

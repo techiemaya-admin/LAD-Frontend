@@ -15,6 +15,9 @@ interface TimeSlot {
   endTime: string;
   date: string;
   isBooked: boolean;
+  status?: string;
+  bookingType?: string;
+  retryCount?: number;
   bookedBy?: string;
   userId?: string;
   userName?: string;
@@ -23,6 +26,10 @@ interface TimeSlot {
 
 interface BookingSlotProps {
   leadId: string | number;
+  tenantId?: string;
+  studentId?: string;
+  assignedUserId?: string;
+  createdBy?: string;
   users?: Array<{
     id: string | number;
     name: string;
@@ -44,7 +51,15 @@ const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'suc
   }, 3000);
 };
 
-const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMode = false }) => {
+const BookingSlot: React.FC<BookingSlotProps> = ({
+  leadId,
+  tenantId,
+  studentId,
+  assignedUserId,
+  createdBy,
+  users = [],
+  isEditMode = false,
+}) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -60,6 +75,89 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
   const [endTime, setEndTime] = useState<string>('18:00');
   // Add state to track booked time ranges for validation
   const [bookedTimeRanges, setBookedTimeRanges] = useState<Array<{ startTime: string; endTime: string }>>([]);
+
+  const [showAllBookedAppointments, setShowAllBookedAppointments] = useState(false);
+
+  // New bookings payload field
+  const [bookingType, setBookingType] = useState<string>('manual_followup');
+
+  // If logged-in user is present, use it as default counsellor/user.
+  useEffect(() => {
+    if (!selectedUser && createdBy) {
+      setSelectedUser(String(createdBy));
+    }
+  }, [createdBy, selectedUser]);
+
+  // Availability + existing bookings for the selected user/day
+  const [availableSlots, setAvailableSlots] = useState<Array<{ startTime: string; endTime: string }>>([]);
+  const [previousBookingsForUser, setPreviousBookingsForUser] = useState<Array<{ startTime: string; endTime: string }>>([]);
+
+  const toZonedIsoLikeBackend = (date: string, time: string): string => {
+    // Backend examples use a Z suffix without local conversion.
+    return `${date}T${time}:00Z`;
+  };
+
+  const extractHHMM = (value: string): string => {
+    if (!value) return '';
+    // If already HH:MM
+    if (/^\d{2}:\d{2}$/.test(value)) return value;
+    // If ISO-like
+    const tIndex = value.indexOf('T');
+    if (tIndex !== -1 && value.length >= tIndex + 6) {
+      return value.slice(tIndex + 1, tIndex + 6);
+    }
+    // If HH:MM:SS
+    const parts = value.split(':');
+    if (parts.length >= 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    return value;
+  };
+
+  const normalizeSlot = (slot: any): { startTime: string; endTime: string } | null => {
+    const start = slot?.start || slot?.startTime || slot?.start_time || slot?.scheduled_at || '';
+    const end = slot?.end || slot?.endTime || slot?.end_time || slot?.ends_at || '';
+    const startTime = extractHHMM(String(start));
+    const endTime = extractHHMM(String(end));
+    if (!startTime || !endTime) return null;
+    return { startTime, endTime };
+  };
+
+  const expandTo15MinSlots = (
+    ranges: Array<{ startTime: string; endTime: string }>,
+    intervalMinutes = 15
+  ): Array<{ startTime: string; endTime: string }> => {
+    const parseMinutes = (t: string): number => {
+      const [h, m] = t.split(':').map(Number);
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return -1;
+      return h * 60 + m;
+    };
+    const toHHMM = (mins: number): string => {
+      const h = Math.floor(mins / 60) % 24;
+      const m = mins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    const expanded: Array<{ startTime: string; endTime: string }> = [];
+    for (const r of ranges) {
+      const startMins = parseMinutes(r.startTime);
+      const endMins = parseMinutes(r.endTime);
+      if (startMins < 0 || endMins < 0) continue;
+      if (endMins <= startMins) continue;
+
+      // Expand into 15-min chunks.
+      for (let t = startMins; t + intervalMinutes <= endMins; t += intervalMinutes) {
+        expanded.push({ startTime: toHHMM(t), endTime: toHHMM(t + intervalMinutes) });
+      }
+    }
+
+    // De-dupe
+    const seen = new Set<string>();
+    return expanded.filter((s) => {
+      const key = `${s.startTime}-${s.endTime}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   // Generate time slots for the selected date (15-minute intervals from start time to end time)
   const generateTimeSlots = (date: string, start: string, end: string): TimeSlot[] => {
@@ -121,56 +219,110 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
 
       // Map API response to component format
       const mappedBookings: TimeSlot[] = bookings.map((booking: any) => {
-        // Extract date and time from ISO timestamp or use provided values
-        const startTimeISO = booking.start_time || booking.startTime;
-        const endTimeISO = booking.end_time || booking.endTime;
-        
-        let dateStr = '';
-        let startTimeStr = '';
-        let endTimeStr = '';
-        
-        if (startTimeISO) {
-          const startDate = new Date(startTimeISO);
-          const year = startDate.getFullYear();
-          const month = String(startDate.getMonth() + 1).padStart(2, '0');
-          const day = String(startDate.getDate()).padStart(2, '0');
-          dateStr = `${year}-${month}-${day}`;
-          
-          const hours = String(startDate.getHours()).padStart(2, '0');
-          const minutes = String(startDate.getMinutes()).padStart(2, '0');
-          startTimeStr = `${hours}:${minutes}`;
-        } else if (booking.date && booking.startTime) {
-          dateStr = booking.date;
-          startTimeStr = booking.startTime;
-        }
-        
-        if (endTimeISO) {
-          const endDate = new Date(endTimeISO);
-          const hours = String(endDate.getHours()).padStart(2, '0');
-          const minutes = String(endDate.getMinutes()).padStart(2, '0');
-          endTimeStr = `${hours}:${minutes}`;
-        } else if (booking.endTime) {
-          endTimeStr = booking.endTime;
-        }
+        // New bookings API: scheduled_at = start, buffer_until = end
+        const startValue =
+          booking.scheduled_at ||
+          booking.start_time ||
+          booking.startTime ||
+          booking.booking_time ||
+          '';
+        const endValue = booking.buffer_until || booking.end_time || booking.endTime || '';
 
-        const userId = booking.counsellor_id || booking.counsellorId || booking.user_id || booking.userId;
-        const user = users.find(c => String(c.id) === String(userId));
+        const dateStr =
+          typeof startValue === 'string' && startValue.includes('T')
+            ? startValue.slice(0, 10)
+            : booking.booking_date || booking.date || '';
+
+        const startTimeStr = extractHHMM(String(startValue || '')) || extractHHMM(String(booking.startTime || ''));
+        const endTimeStr = extractHHMM(String(endValue || '')) || extractHHMM(String(booking.endTime || ''));
+
+        const status = String(booking.status || '').toLowerCase();
+
+        const bookingTypeValue =
+          booking.booking_type ||
+          booking.bookingType ||
+          booking.type ||
+          '';
+
+        const retryCountValueRaw = booking.retry_count ?? booking.retryCount;
+        const retryCountValue =
+          typeof retryCountValueRaw === 'number'
+            ? retryCountValueRaw
+            : retryCountValueRaw != null
+              ? Number(retryCountValueRaw)
+              : 0;
+
+        const userId =
+          booking.counsellor_id ||
+          booking.counsellorId ||
+          booking.user_id ||
+          booking.userId ||
+          booking.assigned_user_id ||
+          booking.created_by;
+        const user = users.find((c) => String(c.id) === String(userId));
 
         return {
           id: booking.id || String(Date.now() + Math.random()),
-          date: dateStr || booking.date || '',
-          startTime: startTimeStr || booking.startTime || '',
-          endTime: endTimeStr || booking.endTime || '',
+          date: dateStr,
+          startTime: startTimeStr,
+          endTime: endTimeStr,
           isBooked: true,
+          status,
+          bookingType: String(bookingTypeValue || ''),
+          retryCount: Number.isFinite(retryCountValue) ? retryCountValue : 0,
           userId: userId,
-          userName: user?.name || booking.counsellor_name || booking.counsellorName || booking.user_name || booking.userName || '',
-          userEmail: user?.email || booking.counsellor_email || booking.counsellorEmail || booking.user_email || booking.userEmail || '',
-          bookedBy: user?.name || booking.counsellor_name || booking.counsellorName || booking.user_name || booking.userName || '',
+          userName:
+            user?.name ||
+            booking.counsellor_name ||
+            booking.counsellorName ||
+            booking.user_name ||
+            booking.userName ||
+            '',
+          userEmail:
+            user?.email ||
+            booking.counsellor_email ||
+            booking.counsellorEmail ||
+            booking.user_email ||
+            booking.userEmail ||
+            '',
+          bookedBy:
+            user?.name ||
+            booking.counsellor_name ||
+            booking.counsellorName ||
+            booking.user_name ||
+            booking.userName ||
+            '',
         };
       });
 
-      console.log('[BookingSlot.fetchBookedSlots] Final mapped bookings:', mappedBookings);
-      setBookedSlots(mappedBookings);
+      // Sort: completed at bottom, newest scheduled_at first
+      const statusRank = (s?: string) => {
+        const v = String(s || '').toLowerCase();
+        if (v === 'completed') return 2;
+        if (v === 'cancelled' || v === 'canceled') return 3;
+        return 1; // scheduled/other
+      };
+
+      const toSortDate = (slot: TimeSlot) => {
+        if (slot.date && slot.startTime) {
+          const iso = `${slot.date}T${slot.startTime}:00Z`;
+          const d = new Date(iso);
+          if (!isNaN(d.getTime())) return d.getTime();
+        }
+        return 0;
+      };
+
+      const sortedBookings = [...mappedBookings]
+        .filter((b) => b.date && b.startTime)
+        .sort((a, b) => {
+          const rank = statusRank(a.status) - statusRank(b.status);
+          if (rank !== 0) return rank;
+          return toSortDate(b) - toSortDate(a); // newest first
+        });
+
+      console.log('[BookingSlot.fetchBookedSlots] Final mapped bookings:', sortedBookings);
+      setBookedSlots(sortedBookings);
+      setShowAllBookedAppointments(false);
 
       // Mark slots as booked (only in edit mode when we have time slots)
       if (isEditMode && date) {
@@ -231,202 +383,71 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
     loadBookedSlots();
   }, [selectedDate, leadId, startTime, endTime, isEditMode, users.length]);
 
-  // Fetch unavailable slots for a user on a specific date
-  // This marks slots as unavailable for ALL students (not
-  const fetchUnavailableSlotsForUser = async (userId: string, date: string) => {
+  const fetchAvailabilityForUserDay = async (userId: string, date: string) => {
     if (!userId || !date) return;
-    
+
     try {
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Fetching AVAILABLE slots for user:', { userId, date });
-      
-      const availableSlotsData = await bookingService.fetchUnavailableSlots(userId, date);
-      
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] 🔥 RAW RESPONSE from backend:', JSON.stringify(availableSlotsData, null, 2));
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Received AVAILABLE slots from backend:', availableSlotsData);
-      console.log(`
-✅ TIMEZONE HANDLING:
-• Frontend sends tzOffset (client timezone offset in minutes)
-• Backend receives tzOffset and generates slots in local timezone
-• Backend converts slots back to UTC-equivalent times for JSON transmission
-• Frontend receives "2025-12-19T03:30:00Z" (UTC) which represents local 09:00 (for IST)
-• Frontend's normalizeTime() uses getHours() to get local time (09:00)
-• Result: Slots displayed in user's local timezone!
-      `);
-      
-      // Extract available slots from the response
-      // Backend returns { available_slots: [...] } with times when user IS available
-      // Each slot has { start: "ISO_TIMESTAMP", end: "ISO_TIMESTAMP" } format (15-minute intervals)
-      let rawSlots: Array<any> = [];
-      
-      if (Array.isArray(availableSlotsData)) {
-        rawSlots = availableSlotsData;
-      } else if (availableSlotsData?.available_slots && Array.isArray(availableSlotsData.available_slots)) {
-        // available_slots contains times when counselor IS available
-        rawSlots = availableSlotsData.available_slots;
-      } else if (availableSlotsData?.bookedSlots && Array.isArray(availableSlotsData.bookedSlots)) {
-        rawSlots = availableSlotsData.bookedSlots;
-      } else if (availableSlotsData?.bookings && Array.isArray(availableSlotsData.bookings)) {
-        rawSlots = availableSlotsData.bookings;
-      } else if (availableSlotsData?.data && Array.isArray(availableSlotsData.data)) {
-        rawSlots = availableSlotsData.data;
+      // Prefer legacy /availability endpoint for slot lists (per requirement), with fallback.
+      let rawAvailable: any[] = [];
+      let rawBookings: any[] = [];
+
+      try {
+        const availability = await bookingService.fetchAvailabilitySlots({
+          userId,
+          date,
+          slotMinutes: 15,
+        });
+        rawAvailable = availability.availableSlots || [];
+        rawBookings = availability.bookings || [];
+      } catch {
+        // Fallback to /bookings/availability if /availability isn't supported.
+        const dayStart = `${date}T00:00:00Z`;
+        const dayEnd = `${date}T23:59:59Z`;
+
+        const result = await bookingService.fetchBookingAvailability({
+          userId,
+          dayStart,
+          dayEnd,
+          slotMinutes: 15,
+        });
+        rawAvailable = result.availableSlots || [];
+        rawBookings = result.bookings || [];
       }
-      
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Raw AVAILABLE slots extracted:', rawSlots);
-      
-      // Helper to get local date string (YYYY-MM-DD) from ISO timestamp
-      const getLocalDateFromISO = (isoStr: string): string => {
-        try {
-          const dateObj = new Date(isoStr);
-          if (!isNaN(dateObj.getTime())) {
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-          }
-        } catch (e) {
-          console.warn('[getLocalDateFromISO] Failed to parse:', isoStr, e);
+
+      const normalizedAvailableRanges = (rawAvailable || [])
+        .map(normalizeSlot)
+        .filter(Boolean) as Array<{ startTime: string; endTime: string }>;
+
+      const normalizedBookings = (rawBookings || [])
+        .map(normalizeSlot)
+        .filter(Boolean) as Array<{ startTime: string; endTime: string }>;
+
+      const expandedAvailable = expandTo15MinSlots(normalizedAvailableRanges, 15);
+      const sortedAvailable = [...expandedAvailable].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      setAvailableSlots(sortedAvailable);
+      setPreviousBookingsForUser(normalizedBookings);
+
+      // bookedTimeRanges is used for enabling the Book button.
+      setBookedTimeRanges(sortedAvailable);
+
+      // Auto-select the first available slot when date changes (or when current selection is no longer valid)
+      if (sortedAvailable.length === 0) {
+        setStartTime('');
+        setEndTime('');
+      } else {
+        const hasCurrent = sortedAvailable.some((s) => s.startTime === startTime && s.endTime === endTime);
+        if (!hasCurrent) {
+          setStartTime(sortedAvailable[0].startTime);
+          setEndTime(sortedAvailable[0].endTime);
         }
-        return '';
-      };
-      
-      // Normalize time formats: convert ISO timestamps to "HH:MM" format in local timezone
-      const normalizeTime = (timeStr: string): string => {
-        if (!timeStr) return '';
-        
-        // If it's an ISO timestamp, extract time part in local timezone
-        if (timeStr.includes('T') || timeStr.includes('Z') || timeStr.includes('+')) {
-          try {
-            const dateObj = new Date(timeStr);
-            if (!isNaN(dateObj.getTime())) {
-              // Get local time hours and minutes
-              // JavaScript's Date automatically converts to local timezone
-              const localHours = dateObj.getHours();
-              const localMinutes = dateObj.getMinutes();
-              const hours = String(localHours).padStart(2, '0');
-              const minutes = String(localMinutes).padStart(2, '0');
-              const normalized = `${hours}:${minutes}`;
-              
-              // Enhanced debug: show timezone conversion
-              const userTimezoneOffset = new Date().getTimezoneOffset(); // in minutes
-              const tzHours = Math.abs(userTimezoneOffset / 60);
-              const tzSign = userTimezoneOffset > 0 ? '-' : '+';
-              
-              console.log(`[normalizeTime] ⭐ RAW: "${timeStr}" → UTC: ${dateObj.toUTCString()} → LOCAL (UTC${tzSign}${tzHours}): "${normalized}"`);
-              return normalized;
-            }
-          } catch (e) {
-            console.warn('[normalizeTime] Failed to parse ISO timestamp:', timeStr, e);
-          }
-        }
-        
-        // If it's "HH:MM:SS" or "HH:MM:SS.SSS", convert to "HH:MM"
-        const timeParts = timeStr.split(':');
-        if (timeParts.length >= 2) {
-          const hours = timeParts[0].padStart(2, '0');
-          const minutes = timeParts[1].padStart(2, '0');
-          return `${hours}:${minutes}`;
-        }
-        
-        // If it's already "HH:MM", return as is
-        return timeStr;
-      };
-      
-      // Normalize all slots - handle both "start"/"end" and "startTime"/"endTime" field names
-      // IMPORTANT: Filter to only include slots on the selected date (in local timezone)
-      // This ensures UTC timestamps are correctly matched to the selected local date
-      const normalizedSlots = rawSlots
-        .filter((slot: any) => {
-          // Check if slot has time fields (either format)
-          if (!slot || (!(slot.start || slot.startTime) || !(slot.end || slot.endTime))) {
-            return false;
-          }
-          
-          // Extract time values
-          const startValue = slot.start || slot.startTime || slot.start_time || '';
-          
-          // If it's an ISO timestamp, check if the date (in local time) matches the selected date
-          // This is crucial because UTC times converted to local time might fall on a different date
-          if (startValue.includes('T') || startValue.includes('Z') || startValue.includes('+')) {
-            const localDate = getLocalDateFromISO(startValue);
-            console.log(`[fetchUnavailableSlotsForUser] Date check: slot date="${localDate}", selected date="${date}", match=${localDate === date}`);
-            if (localDate && localDate !== date) {
-              console.log(`[fetchUnavailableSlotsForUser] ❌ Filtering out slot from different date: ${localDate} !== ${date} (UTC timestamp: ${startValue})`);
-              return false; // Filter out slots from different dates
-            } else if (localDate && localDate === date) {
-              console.log(`[fetchUnavailableSlotsForUser] ✅ Keeping slot from matching date: ${localDate} === ${date}`);
-            }
-          }
-          
-          return true;
-        })
-        .map((slot: any) => {
-          // Extract time from either "start"/"end" or "startTime"/"endTime"
-          const startValue = slot.start || slot.startTime || slot.start_time || '';
-          const endValue = slot.end || slot.endTime || slot.end_time || '';
-          
-          return {
-            startTime: normalizeTime(startValue),
-            endTime: normalizeTime(endValue),
-          };
-        })
-        .filter((slot: { startTime: string; endTime: string }) => slot.startTime && slot.endTime);
-      
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Normalized AVAILABLE slots (local time):', normalizedSlots);
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Total AVAILABLE slots for this date:', normalizedSlots.length);
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Selected date for booking:', date);
-      
-      // Store AVAILABLE time ranges - user can only book within these slots
-      // These represent times when the user IS available for new bookings
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] ⭐ SETTING bookedTimeRanges to:', normalizedSlots.map(s => `${s.startTime}-${s.endTime}`).join(', '));
-      setBookedTimeRanges(normalizedSlots);
-      
-      // Debug: Log the stored available ranges for troubleshooting
-      console.log('[BookingSlot.fetchUnavailableSlotsForUser] Stored AVAILABLE time ranges (for enabling bookings):', normalizedSlots);
-      
-      // Mark matching time slots as booked/unavailable
-      setTimeSlots((prevSlots) =>
-        prevSlots.map((slot) => {
-          // Check if this slot overlaps with any unavailable slot (use normalized slots)
-          const isUnavailable = normalizedSlots.some((unavailable) => {
-            const slotStart = slot.startTime;
-            const slotEnd = slot.endTime;
-            const unavailableStart = unavailable.startTime;
-            const unavailableEnd = unavailable.endTime;
-            
-            // Normalize time strings (handle HH:MM format)
-            const parseTime = (timeStr: string): number => {
-              const [hours, minutes] = timeStr.split(':').map(Number);
-              return hours * 60 + minutes;
-            };
-            
-            const slotStartMinutes = parseTime(slotStart);
-            const slotEndMinutes = parseTime(slotEnd);
-            const unavailableStartMinutes = parseTime(unavailableStart);
-            const unavailableEndMinutes = parseTime(unavailableEnd);
-            
-            // Check for overlap: slots overlap if they share any time
-            return (
-              (slotStartMinutes >= unavailableStartMinutes && slotStartMinutes < unavailableEndMinutes) ||
-              (slotEndMinutes > unavailableStartMinutes && slotEndMinutes <= unavailableEndMinutes) ||
-              (slotStartMinutes <= unavailableStartMinutes && slotEndMinutes >= unavailableEndMinutes)
-            );
-          });
-          
-          if (isUnavailable && !slot.isBooked) {
-            return {
-              ...slot,
-              isBooked: true,
-              // Keep existing bookedBy info if present
-            };
-          }
-          
-          return slot;
-        })
-      );
+      }
     } catch (error) {
-      console.error('[BookingSlot.fetchUnavailableSlotsForUser] Error:', error);
-      setBookedTimeRanges([]); // Clear on error
-      // On error, don't mark any slots as unavailable (fail open - allow booking attempts)
+      console.error('[BookingSlot.fetchAvailabilityForUserDay] Error:', error);
+      setAvailableSlots([]);
+      setPreviousBookingsForUser([]);
+      setBookedTimeRanges([]);
+      setStartTime('');
+      setEndTime('');
     }
   };
 
@@ -533,18 +554,13 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
     if (selectedDate) {
       const slots = generateTimeSlots(selectedDate, startTime, endTime);
       setTimeSlots(slots);
-      
-      // If user is already selected, fetch unavailable slots
-      if (isEditMode && selectedUser) {
-        fetchUnavailableSlotsForUser(selectedUser, selectedDate);
-      }
     }
   }, [selectedDate, startTime, endTime]);
 
   // Fetch unavailable slots when user and date are selected (in edit mode)
   useEffect(() => {
     if (isEditMode && selectedUser && selectedDate) {
-      fetchUnavailableSlotsForUser(selectedUser, selectedDate);
+      fetchAvailabilityForUserDay(selectedUser, selectedDate);
     }
   }, [selectedUser, selectedDate, isEditMode]);
 
@@ -569,30 +585,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
       return;
     }
 
+    // student_id is same as lead_id; allow fallback when studentId is not available
+    if (!tenantId || !createdBy) {
+      showToast('Missing tenant/createdBy. Please refresh and try again.', 'error');
+      return;
+    }
+
     try {
       setLoading(true);
       const user = users.find((c) => String(c.id) === selectedUser);
 
-      // Check availability before booking
-      try {
-        const availabilityResult = await bookingService.checkAvailability({
-          userId: selectedUser,
-          date: selectedDate,
-          startTime: selectedSlotForBooking.startTime,
-          endTime: selectedSlotForBooking.endTime,
-        });
-
-        if (!availabilityResult.available) {
-          showToast(availabilityResult.message || 'Slot is no longer available. Please select another time.', 'warning');
-          // Refresh booked slots to update UI
-          await fetchBookedSlots(isEditMode ? selectedDate : undefined);
-          setLoading(false);
-          return;
-        }
-      } catch (availabilityError: any) {
-        // If availability check fails, log but continue with booking attempt
-        // The backend booking API should also validate availability
-        console.warn('[BookingSlot.handleConfirmBooking] Availability check failed, proceeding with booking:', availabilityError);
+      // Ensure the selected time range is within available slots (client-side guard)
+      if (!isTimeRangeBooked(selectedSlotForBooking.startTime, selectedSlotForBooking.endTime)) {
+        showToast('This time range is not within available slots. Please select a different time.', 'warning');
+        return;
       }
 
       // Use bookingService to book the slot
@@ -602,6 +608,13 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
         date: selectedDate,
         startTime: selectedSlotForBooking.startTime,
         endTime: selectedSlotForBooking.endTime,
+
+        tenantId,
+        studentId: studentId || String(leadId),
+        assignedUserId: assignedUserId || createdBy,
+        createdBy,
+        bookingType,
+        bookingSource: 'user_ui',
       };
 
       console.log('[BookingSlot.handleConfirmBooking] Booking with data:', bookingData);
@@ -628,7 +641,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
       
       // Refresh unavailable slots to mark the newly booked slot as unavailable for other students
       if (isEditMode && selectedUser && selectedDate) {
-        await fetchUnavailableSlotsForUser(selectedUser, selectedDate);
+        await fetchAvailabilityForUserDay(selectedUser, selectedDate);
       }
       
       setConfirmDialogOpen(false);
@@ -662,9 +675,9 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
         setTimeSlots(slots);
         await fetchBookedSlots(selectedDate);
         
-        // Also refresh unavailable slots
+        // Also refresh availability
         if (selectedUser) {
-          await fetchUnavailableSlotsForUser(selectedUser, selectedDate);
+          await fetchAvailabilityForUserDay(selectedUser, selectedDate);
         }
       }
     } finally {
@@ -702,7 +715,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
       
       // Refresh unavailable slots to update availability for other students
       if (isEditMode && selectedUser && selectedDate) {
-        await fetchUnavailableSlotsForUser(selectedUser, selectedDate);
+        await fetchAvailabilityForUserDay(selectedUser, selectedDate);
       }
       
       // Show success toast
@@ -720,15 +733,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
   };
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
+    if (!time || !time.includes(':')) return time || '—';
+    const [hours, minutes = '00'] = time.split(':');
     const hour = parseInt(hours, 10);
+    if (Number.isNaN(hour)) return time;
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    if (!dateString) return '—';
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+    const date = new Date(dateOnly ? `${dateString}T00:00:00` : dateString);
+    if (isNaN(date.getTime())) return '—';
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
@@ -739,6 +757,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
 
   // If in edit mode, show appointment details view
   if (isEditMode) {
+    const visibleBookedSlots = showAllBookedAppointments ? bookedSlots : bookedSlots.slice(0, 5);
     return (
       <div className="space-y-4">
         {/* Booked Appointments List - Enhanced View in Edit Mode */}
@@ -748,7 +767,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
               Booked Appointments ({bookedSlots.length})
             </Label>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {bookedSlots.map((slot) => (
+              {visibleBookedSlots.map((slot) => (
                 <div
                   key={slot.id}
                   className="p-4 bg-white border border-green-200 rounded-lg hover:border-green-300 transition-colors"
@@ -756,10 +775,18 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        {String(slot.status || '').toLowerCase() === 'completed' ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                        )}
                           <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {formatDate(slot.date)}
+                            <div className="text-sm font-semibold text-gray-900 flex flex-wrap items-center gap-x-2">
+                              <span>{formatDate(slot.date)}</span>
+                              {slot.bookingType ? (
+                                <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
+                              ) : null}
+                              <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
                             </div>
                             <div className="text-sm text-gray-700 mt-1">
                               {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
@@ -790,6 +817,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                   </div>
                 ))}
               </div>
+
+              {bookedSlots.length > 5 && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-700"
+                    onClick={() => setShowAllBookedAppointments((v) => !v)}
+                  >
+                    {showAllBookedAppointments ? 'View less' : 'View more'}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
@@ -820,28 +861,59 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
             </div>
 
             {/* User Selection */}
-            {users.length > 0 && (
-              <div>
-                <Label htmlFor="user-select-edit" className="text-sm text-gray-600 mb-2 block">
-                  Select User
-                </Label>
-                <Select
-                  value={selectedUser}
-                  onValueChange={(value: string) => setSelectedUser(value)}
-                >
-                  <SelectTrigger id="user-select-edit" className="w-full">
-                    <SelectValue placeholder="Choose a user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={String(user.id)}>
-                        {user.name} {user.email ? `(${user.email})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <Label htmlFor="user-select-edit" className="text-sm text-gray-600 mb-2 block">
+                Select User
+              </Label>
+              <Select
+                value={selectedUser}
+                onValueChange={(value: string) => setSelectedUser(value)}
+                disabled={Boolean(createdBy) || users.length === 0}
+              >
+                <SelectTrigger id="user-select-edit" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      createdBy
+                        ? 'Using logged-in user'
+                        : users.length === 0
+                          ? 'No users available'
+                          : 'Choose a user...'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={String(user.id)}>
+                      {user.name} {user.email ? `(${user.email})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {createdBy ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  Auto-selected from your login.
+                </p>
+              ) : users.length === 0 ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  No counsellors/users loaded, so booking is disabled.
+                </p>
+              ) : null}
+            </div>
+
+            {/* Booking Type */}
+            <div>
+              <Label htmlFor="booking-type" className="text-sm text-gray-600 mb-2 block">
+                Booking Type
+              </Label>
+              <Select value={bookingType} onValueChange={(value: string) => setBookingType(value)}>
+                <SelectTrigger id="booking-type" className="w-full">
+                  <SelectValue placeholder="Select booking type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual_followup">manual_followup</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Start Time and End Time Selection - 15 minute intervals */}
             <div className="grid grid-cols-2 gap-4">
@@ -855,34 +927,23 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                   onChange={(e) => {
                     const newStartTime = e.target.value;
                     setStartTime(newStartTime);
-                    // Auto-adjust end time if needed
-                    const [startHour, startMin] = newStartTime.split(':').map(Number);
-                    const startTotalMin = startHour * 60 + startMin;
-                    const [endHour, endMin] = endTime.split(':').map(Number);
-                    const endTotalMin = endHour * 60 + endMin;
-                    
-                    // If end time is before or equal to new start time, set end time to 15 min after start
-                    if (endTotalMin <= startTotalMin) {
-                      const newEndTotalMin = startTotalMin + 15;
-                      const newEndHour = Math.floor(newEndTotalMin / 60) % 24;
-                      const newEndMin = newEndTotalMin % 60;
-                      setEndTime(`${newEndHour.toString().padStart(2, '0')}:${newEndMin.toString().padStart(2, '0')}`);
+                    const matching = availableSlots.find((s) => s.startTime === newStartTime);
+                    if (matching) {
+                      setEndTime(matching.endTime);
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={availableSlots.length === 0}
                 >
-                  {/* Generate time slots in 15-minute intervals from 09:00 to 18:00 (9 AM to 6 PM) */}
-                  {Array.from({ length: 37 }, (_, i) => {
-                    const totalMinutes = 9 * 60 + i * 15; // Start from 09:00
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = totalMinutes % 60;
-                    const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    return (
-                      <option key={timeStr} value={timeStr}>
-                        {timeStr}
+                  {availableSlots.length === 0 ? (
+                    <option value="">No available slots</option>
+                  ) : (
+                    Array.from(new Set(availableSlots.map((s) => s.startTime))).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
                       </option>
-                    );
-                  })}
+                    ))
+                  )}
                 </select>
               </div>
               <div>
@@ -906,27 +967,80 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={availableSlots.length === 0}
                 >
-                  {/* Generate time slots in 15-minute intervals from 09:00 to 18:00 (9 AM to 6 PM) */}
-                  {Array.from({ length: 37 }, (_, i) => {
-                    const totalMinutes = 9 * 60 + i * 15; // Start from 09:00
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = totalMinutes % 60;
-                    const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    return (
-                      <option key={timeStr} value={timeStr}>
-                        {timeStr}
+                  {availableSlots.length === 0 ? (
+                    <option value="">No available slots</option>
+                  ) : (
+                    Array.from(
+                      new Set(
+                        (availableSlots.filter((s) => s.startTime === startTime).length > 0
+                          ? availableSlots.filter((s) => s.startTime === startTime).map((s) => s.endTime)
+                          : availableSlots.map((s) => s.endTime))
+                      )
+                    ).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
                       </option>
-                    );
-                  })}
+                    ))
+                  )}
                 </select>
               </div>
             </div>
 
+            {/* Availability Preview */}
+            {selectedUser && selectedDate && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-white border border-gray-200 rounded-lg p-3">
+                    <Label className="text-xs text-gray-600 block mb-2">
+                      Available Slots ({availableSlots.length})
+                    </Label>
+                    {availableSlots.length === 0 ? (
+                      <p className="text-xs text-gray-500">No available slots returned</p>
+                    ) : (
+                      <div className="max-h-28 overflow-y-auto space-y-1">
+                        {availableSlots.map((s, idx) => (
+                          <div key={`${s.startTime}-${s.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between">
+                            <span>{s.startTime}</span>
+                            <span className="text-gray-500">-</span>
+                            <span>{s.endTime}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-3">
+                    <Label className="text-xs text-gray-600 block mb-2">
+                      Previous Bookings ({previousBookingsForUser.length})
+                    </Label>
+                    {previousBookingsForUser.length === 0 ? (
+                      <p className="text-xs text-gray-500">No previous bookings</p>
+                    ) : (
+                      <div className="max-h-28 overflow-y-auto space-y-1">
+                        {previousBookingsForUser.map((b, idx) => (
+                          <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between">
+                            <span>{b.startTime}</span>
+                            <span className="text-gray-500">-</span>
+                            <span>{b.endTime}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Book Slot Button */}
-            {startTime && endTime && endTime > startTime && selectedUser && (
+            {startTime && endTime && endTime > startTime && (
               <Button
                 onClick={() => {
+                  if (!selectedUser) {
+                    showToast('Please select a user first', 'warning');
+                    return;
+                  }
+
                   // Final validation before booking
                   // isTimeRangeBooked() returns true if time IS WITHIN available slots (valid for booking)
                   // So we should show error only if it returns false (NOT within available slots)
@@ -934,7 +1048,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                     showToast('This time range is not within available slots. Please select a different time.', 'warning');
                     return;
                   }
-                  
+
                   const customSlot: TimeSlot = {
                     id: `${selectedDate}-${startTime}`,
                     startTime: startTime,
@@ -946,10 +1060,16 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                   setConfirmDialogOpen(true);
                 }}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all"
-                disabled={loading || !isTimeRangeBooked(startTime, endTime)}
+                disabled={
+                  loading ||
+                  !selectedUser ||
+                  !isTimeRangeBooked(startTime, endTime)
+                }
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                {!isTimeRangeBooked(startTime, endTime) ? (
+                {!selectedUser ? (
+                  <>User not available</>
+                ) : !isTimeRangeBooked(startTime, endTime) ? (
                   <>Select Valid Time Within Available Slots</>
                 ) : (
                   <>Book Slot ({formatTime(startTime)} - {formatTime(endTime)})</>
@@ -983,6 +1103,12 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                         <strong>Time:</strong> {formatTime(selectedSlotForBooking.startTime)} - {formatTime(selectedSlotForBooking.endTime)}
                       </span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-blue-500" />
+                      <span className="text-gray-700">
+                        <strong>Booking Type:</strong> {bookingType}
+                      </span>
+                    </div>
                     {selectedUser && (
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-500" />
@@ -999,6 +1125,50 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
                     )}
                   </div>
                 </div>
+
+                {/* Payload Preview */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">Payload Preview</h4>
+                  <pre className="text-xs bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto max-h-56 whitespace-pre-wrap">
+{JSON.stringify(
+  {
+    tenant_id: tenantId || '',
+    student_id: studentId || String(leadId),
+    lead_id: String(leadId),
+    counsellor_id: String(selectedUser || ''),
+    assigned_user_id: String(assignedUserId || createdBy || ''),
+    booking_type: bookingType,
+    booking_source: 'user_ui',
+    booking_time: selectedSlotForBooking.startTime,
+    booking_date: selectedDate,
+    scheduled_at: `${selectedDate}T${selectedSlotForBooking.startTime}:00Z`,
+    created_by: String(createdBy || ''),
+  },
+  null,
+  2
+)}
+                  </pre>
+                  {(!tenantId || !createdBy) && (
+                    <p className="text-xs text-red-600 mt-2">
+                      Missing required fields (tenant_id/created_by). Booking will be blocked until present.
+                    </p>
+                  )}
+                </div>
+
+                {previousBookingsForUser.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2 text-sm">Existing bookings for selected user</h4>
+                    <div className="max-h-24 overflow-y-auto space-y-1">
+                      {previousBookingsForUser.map((b, idx) => (
+                        <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between">
+                          <span>{b.startTime}</span>
+                          <span className="text-gray-500">-</span>
+                          <span>{b.endTime}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
                   <p className="text-xs text-amber-700">
@@ -1020,7 +1190,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
               </Button>
               <Button
                 onClick={handleConfirmBooking}
-                disabled={loading}
+                disabled={loading || !tenantId || !createdBy}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 {loading ? 'Booking...' : 'Confirm Booking'}
@@ -1033,15 +1203,24 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
   }
 
   // Normal view mode - show simple display of booked appointments (like other sections)
+  const visibleBookedSlots = showAllBookedAppointments ? bookedSlots : bookedSlots.slice(0, 5);
   return (
     <>
       <div className="flex flex-col gap-3">
         {bookedSlots.length > 0 ? (
-          bookedSlots.map((slot) => (
+          visibleBookedSlots.map((slot) => (
             <div key={slot.id} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-500" />
+                {String(slot.status || '').toLowerCase() === 'completed' ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 text-blue-500" />
+                )}
                 <span className="text-gray-900 font-medium">{formatDate(slot.date)}</span>
+                {slot.bookingType ? (
+                  <span className="text-gray-600 text-sm">• {slot.bookingType}</span>
+                ) : null}
+                <span className="text-gray-600 text-sm">• Retry: {slot.retryCount ?? 0}</span>
               </div>
               <div className="flex items-center gap-2 ml-6">
                 <Clock className="h-4 w-4 text-gray-500" />
@@ -1061,6 +1240,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({ leadId, users = [], isEditMod
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500" />
             <span className="text-gray-600">No Slot Scheduled</span>
+          </div>
+        )}
+
+        {bookedSlots.length > 5 && (
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-blue-600 hover:text-blue-700"
+              onClick={() => setShowAllBookedAppointments((v) => !v)}
+            >
+              {showAllBookedAppointments ? 'View less' : 'View more'}
+            </Button>
           </div>
         )}
       </div>
