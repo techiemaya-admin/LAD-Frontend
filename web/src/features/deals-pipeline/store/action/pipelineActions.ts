@@ -24,7 +24,7 @@ import {
 import * as pipelineService from '../../../../services/pipelineService';
 import { AppDispatch, RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
-import { Lead } from '../../../../components/leads/types';
+import { Lead } from '../../types';
 
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
@@ -306,18 +306,32 @@ export const bulkUpdateLeadsAction = (updates: Array<{ id: string | number; data
 // Load all pipeline data (stages + leads)
 export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
   try {
-    console.log('[Redux] Loading complete pipeline data...');
-    
-    // Load stages and leads in parallel
-    await Promise.all([
-      dispatch(fetchStagesAction()),
-      dispatch(fetchLeadsAction())
-    ]);
-    
-    console.log('[Redux] Pipeline data loaded successfully');
+    console.log('[Redux] Loading complete pipeline data (single request)...');
+
+    dispatch(setStagesLoading(true));
+    dispatch(setLeadsLoading(true));
+    dispatch(clearStagesError());
+    dispatch(clearLeadsError());
+
+    const data = await pipelineService.fetchPipelineData();
+    const stages = (data as unknown as { stages?: Stage[] }).stages || [];
+    const leads = (data as unknown as { leads?: Lead[] }).leads || [];
+
+    dispatch(setStages(stages));
+    dispatch(setLeads(leads));
+
+    console.log('[Redux] Pipeline data loaded successfully:', {
+      stages: stages.length,
+      leads: leads.length
+    });
   } catch (error) {
+    const err = error as Error;
     console.error('[Redux] Failed to load pipeline data:', error);
-    // Individual actions handle their own error states
+    dispatch(setStagesError(err.message || 'Failed to load stages'));
+    dispatch(setLeadsError(err.message || 'Failed to load leads'));
+  } finally {
+    dispatch(setStagesLoading(false));
+    dispatch(setLeadsLoading(false));
   }
 };
 
@@ -329,12 +343,11 @@ export const refreshPipelineDataAction = (): AppThunk => async (dispatch) => {
     // Force refresh by setting loading states
     dispatch(setStagesLoading(true));
     dispatch(setLeadsLoading(true));
-    
-    const [stages, leads] = await Promise.all([
-      pipelineService.fetchStages(),
-      pipelineService.fetchLeads()
-    ]);
-    
+
+    const data = await pipelineService.fetchPipelineData();
+    const stages = (data as unknown as { stages?: Stage[] }).stages || [];
+    const leads = (data as unknown as { leads?: Lead[] }).leads || [];
+
     dispatch(setStages(stages));
     dispatch(setLeads(leads));
     

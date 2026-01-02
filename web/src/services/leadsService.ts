@@ -1,6 +1,6 @@
 import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
-import { Lead } from '../components/leads/types';
+import { Lead } from '../features/deals-pipeline/types';
 
 // Cache for performance
 interface LeadsCache {
@@ -39,6 +39,27 @@ interface AttachmentData {
   [key: string]: unknown;
 }
 
+const buildDealsPipelineLeadSubresourceUrl = (leadId: string | number, subPath: string) => {
+  // Preferred (matches backend + Postman): /api/deals-pipeline/leads/:id/...
+  const preferred = getApiUrl(`/api/deals-pipeline/leads/${leadId}/${subPath}`);
+  // Legacy fallback seen in some older client code: /api/deals-pipeline/:id/...
+  const legacy = getApiUrl(`/api/deals-pipeline/${leadId}/${subPath}`);
+  return { preferred, legacy };
+};
+
+const fetchDealsPipelineLeadSubresource = async (
+  leadId: string | number,
+  subPath: string,
+  init?: RequestInit,
+): Promise<Response> => {
+  const { preferred, legacy } = buildDealsPipelineLeadSubresourceUrl(leadId, subPath);
+  const response = await fetch(preferred, init);
+  if (response.status !== 404) return response;
+  return fetch(legacy, init);
+};
+
+const getAuthToken = () => safeStorage.getItem('auth_token') || safeStorage.getItem('token') || '';
+
 const leadsService = {
   // Get all leads with optional filters
   async getAllLeads(filters: LeadFilters = {}): Promise<Lead[]> {
@@ -73,7 +94,7 @@ const leadsService = {
   // Get a single lead by ID
   async getLeadById(id: string | number): Promise<Lead> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${id}`), defaultFetchOptions());
+      const response = await fetch(getApiUrl(`/api/deals-pipeline/leads/${id}`), defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -102,7 +123,7 @@ const leadsService = {
   // Update an existing lead
   async updateLead(id: string | number, leadData: Partial<Lead>): Promise<Lead> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${id}`), {
+      const response = await fetch(getApiUrl(`/api/deals-pipeline/leads/${id}`), {
         ...defaultFetchOptions(),
         method: 'PUT',
         body: JSON.stringify(leadData)
@@ -119,7 +140,7 @@ const leadsService = {
   // Delete a lead
   async deleteLead(id: string | number): Promise<void> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${id}`), {
+      const response = await fetch(getApiUrl(`/api/deals-pipeline/leads/${id}`), {
         ...defaultFetchOptions(),
         method: 'DELETE'
       });
@@ -135,10 +156,10 @@ const leadsService = {
   // Move lead to different stage
   async moveLeadToStage(leadId: string | number, stageKey: string): Promise<Lead> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/stage`), {
+      const response = await fetch(getApiUrl(`/api/deals-pipeline/pipeline/leads/${leadId}/stage`), {
         ...defaultFetchOptions(),
         method: 'PUT',
-        body: JSON.stringify({ stage: stageKey })
+        body: JSON.stringify({ stage: stageKey, stageKey })
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       this.clearCache(); // Clear cache after moving
@@ -164,7 +185,7 @@ const leadsService = {
   // Get lead tags
   async getLeadTags(leadId: string | number): Promise<unknown[]> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/tags`), defaultFetchOptions());
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'tags', defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -176,7 +197,7 @@ const leadsService = {
   // Add tag to lead
   async addTagToLead(leadId: string | number, tagData: TagData): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/tags`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'tags', {
         ...defaultFetchOptions(),
         method: 'POST',
         body: JSON.stringify(tagData)
@@ -192,7 +213,7 @@ const leadsService = {
   // Get lead notes
   async getLeadNotes(leadId: string | number): Promise<unknown[]> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/notes`), defaultFetchOptions());
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'notes', defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -204,7 +225,7 @@ const leadsService = {
   // Add note to lead
   async addNoteToLead(leadId: string | number, noteData: NoteData): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/notes`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'notes', {
         ...defaultFetchOptions(),
         method: 'POST',
         body: JSON.stringify(noteData)
@@ -220,7 +241,7 @@ const leadsService = {
   // Get lead comments
   async getLeadComments(leadId: string | number): Promise<unknown[]> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/comments`), defaultFetchOptions());
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'comments', defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -232,7 +253,7 @@ const leadsService = {
   // Add comment to lead
   async addCommentToLead(leadId: string | number, commentData: CommentData): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/comments`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'comments', {
         ...defaultFetchOptions(),
         method: 'POST',
         body: JSON.stringify(commentData)
@@ -248,7 +269,7 @@ const leadsService = {
   // Get lead attachments
   async getLeadAttachments(leadId: string | number): Promise<unknown[]> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/attachments`), defaultFetchOptions());
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'attachments', defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -260,10 +281,15 @@ const leadsService = {
   // Add attachment to lead
   async addAttachmentToLead(leadId: string | number, attachmentData: AttachmentData): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/attachments`), {
-        ...defaultFetchOptions(),
+      const formData = new FormData();
+      formData.append('file', attachmentData.file);
+
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'attachments', {
         method: 'POST',
-        body: JSON.stringify(attachmentData)
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: formData
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
@@ -276,7 +302,7 @@ const leadsService = {
   // Add lead note
   async addLeadNote(leadId: string | number, content: string): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/notes`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'notes', {
         ...defaultFetchOptions(),
         method: 'POST',
         body: JSON.stringify({ content })
@@ -292,7 +318,7 @@ const leadsService = {
   // Delete note
   async deleteLeadNote(leadId: string | number, noteId: string | number): Promise<void> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/notes/${noteId}`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, `notes/${noteId}`, {
         ...defaultFetchOptions(),
         method: 'DELETE'
       });
@@ -307,7 +333,7 @@ const leadsService = {
   // Update note
   async updateLeadNote(leadId: string | number, noteId: string | number, content: string): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/notes/${noteId}`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, `notes/${noteId}`, {
         ...defaultFetchOptions(),
         method: 'PUT',
         body: JSON.stringify({ content })
@@ -323,7 +349,7 @@ const leadsService = {
   // Add lead comment
   async addLeadComment(leadId: string | number, content: string): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/comments`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, 'comments', {
         ...defaultFetchOptions(),
         method: 'POST',
         body: JSON.stringify({ content })
@@ -339,7 +365,7 @@ const leadsService = {
   // Delete comment
   async deleteLeadComment(leadId: string | number, commentId: string | number): Promise<void> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/comments/${commentId}`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, `comments/${commentId}`, {
         ...defaultFetchOptions(),
         method: 'DELETE'
       });
@@ -354,7 +380,7 @@ const leadsService = {
   // Update comment
   async updateLeadComment(leadId: string | number, commentId: string | number, content: string): Promise<unknown> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/comments/${commentId}`), {
+      const response = await fetchDealsPipelineLeadSubresource(leadId, `comments/${commentId}`, {
         ...defaultFetchOptions(),
         method: 'PUT',
         body: JSON.stringify({ content })
@@ -373,13 +399,19 @@ const leadsService = {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/attachments`), {
+      const { preferred, legacy } = buildDealsPipelineLeadSubresourceUrl(leadId, 'attachments');
+      const init: RequestInit = {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: formData
-      });
+      };
+
+      let response = await fetch(preferred, init);
+      if (response.status === 404) {
+        response = await fetch(legacy, init);
+      }
       
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
@@ -392,10 +424,16 @@ const leadsService = {
   // Delete attachment
   async deleteLeadAttachment(leadId: string | number, attachmentId: string | number): Promise<void> {
     try {
-      const response = await fetch(getApiUrl(`/api/deals-pipeline/${leadId}/attachments/${attachmentId}`), {
+      const { preferred, legacy } = buildDealsPipelineLeadSubresourceUrl(leadId, `attachments/${attachmentId}`);
+      const init: RequestInit = {
         ...defaultFetchOptions(),
         method: 'DELETE'
-      });
+      };
+
+      let response = await fetch(preferred, init);
+      if (response.status === 404) {
+        response = await fetch(legacy, init);
+      }
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       await response.json();
     } catch (error) {

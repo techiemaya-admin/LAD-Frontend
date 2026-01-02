@@ -161,6 +161,9 @@ export function Sidebar() {
           <img
             src={companyLogo || logo.src}
             alt="Company Logo"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="w-8 h-8 object-contain"
           />
           <span className="text-sm font-medium text-sidebar-foreground/90">{displayName}</span>
@@ -178,7 +181,14 @@ export function Sidebar() {
       >
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
-            <img src={companyLogo || logo.src} alt="Company Logo" className="w-8 h-8 object-contain" />
+            <img
+              src={companyLogo || logo.src}
+              alt="Company Logo"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-sm font-semibold text-sidebar-foreground">LAD</span>
           </div>
           <button aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-white/10">
@@ -265,6 +275,9 @@ export function Sidebar() {
         <img
           src={companyLogo || logo.src}
           alt="Company Logo"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           className={cn(
             "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
             isExpanded ? "w-24 h-24" : "w-10 h-10"

@@ -126,10 +126,11 @@ class DealsPipelineSDK {
     });
   }
   
-  async updateLeadStage(id, stageId) {
-    return this.request(`/leads/${id}/stage`, {
-      method: 'PATCH',
-      body: { stageId }
+  async updateLeadStage(id, stageKey) {
+    // Deployed backend: PUT /pipeline/leads/:id/stage
+    return this.request(`/pipeline/leads/${id}/stage`, {
+      method: 'PUT',
+      body: { stageKey, stage: stageKey }
     });
   }
   
@@ -163,10 +164,16 @@ class DealsPipelineSDK {
     });
   }
   
-  async reorderStages(stageIds) {
+  async reorderStages(stageIdsOrOrders) {
+    // Deployed backend: PUT /stages/reorder
+    // Accept legacy input (array of stage IDs) and convert to ordered payload.
+    const stageOrders = Array.isArray(stageIdsOrOrders)
+      ? stageIdsOrOrders.map((key, index) => ({ key, order: index }))
+      : stageIdsOrOrders;
+
     return this.request('/stages/reorder', {
-      method: 'POST',
-      body: { stageIds }
+      method: 'PUT',
+      body: { stageOrders }
     });
   }
   
@@ -204,7 +211,8 @@ class DealsPipelineSDK {
   // === ATTACHMENTS API ===
   
   async getAttachments(leadId) {
-    return this.request(`/attachments/${leadId}`);
+    // Deployed backend: GET /leads/:id/attachments
+    return this.request(`/leads/${leadId}/attachments`);
   }
   
   async uploadAttachment(leadId, file) {
@@ -216,7 +224,8 @@ class DealsPipelineSDK {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
     
-    const response = await fetch(`${this.baseURL}/attachments/${leadId}`, {
+    // Deployed backend: POST /leads/:id/attachments
+    const response = await fetch(`${this.baseURL}/leads/${leadId}/attachments`, {
       method: 'POST',
       headers,
       body: formData
@@ -229,8 +238,16 @@ class DealsPipelineSDK {
     return response.json();
   }
   
-  async deleteAttachment(attachmentId) {
-    return this.request(`/attachments/${attachmentId}`, {
+  async deleteAttachment(leadId, attachmentId) {
+    // Deployed backend: DELETE /leads/:id/attachments/:attachmentId
+    // Backward-compatible call style: deleteAttachment(attachmentId)
+    if (attachmentId === undefined) {
+      return this.request(`/attachments/${leadId}`, {
+        method: 'DELETE'
+      });
+    }
+
+    return this.request(`/leads/${leadId}/attachments/${attachmentId}`, {
       method: 'DELETE'
     });
   }

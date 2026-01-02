@@ -6,7 +6,7 @@ import type { AppDispatch } from '@/store/store';
 import { store } from '@/store/store';
 import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
 import { Button } from '@/components/ui/button';
-import type { Lead } from '@/features/deals-pipeline/components/leads/types';
+import type { Lead } from '@/features/deals-pipeline/types';
 import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 
 // Pipeline component imports
@@ -112,6 +112,7 @@ import {
   selectPriorities, 
   selectSources,
   selectMasterDataLoading,
+  selectMasterDataErrors,
   setStatuses,
   setSources, 
   setPriorities
@@ -165,6 +166,7 @@ const PipelineBoard: React.FC = () => {
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const masterDataLoading = useSelector(selectMasterDataLoading);
+  const masterDataErrors = useSelector(selectMasterDataErrors);
 
   // Get current user for role checking
   const currentUser = useSelector(selectUser);
@@ -221,7 +223,35 @@ const PipelineBoard: React.FC = () => {
   
   // Computed loading state combining all loading states
   const isLoading = reduxStagesLoading || reduxLeadsLoading || masterDataLoading || usersLoading || !preferencesLoaded;
-  const currentError = reduxStagesError || reduxLeadsError || usersError;
+  const currentError = reduxStagesError || reduxLeadsError || usersError || masterDataErrors?.[0] || null;
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    if (!isLoading) return;
+
+    console.log('[PipelineBoard] isLoading=true (reasons):', {
+      reduxStagesLoading,
+      reduxLeadsLoading,
+      masterDataLoading,
+      usersLoading,
+      preferencesLoaded,
+      reduxStagesError,
+      reduxLeadsError,
+      usersError,
+      masterDataErrors
+    });
+  }, [
+    isLoading,
+    reduxStagesLoading,
+    reduxLeadsLoading,
+    masterDataLoading,
+    usersLoading,
+    preferencesLoaded,
+    reduxStagesError,
+    reduxLeadsError,
+    usersError,
+    masterDataErrors
+  ]);
   
   // Use the filtered pipeline data from the selector
   const currentStages = pipelineBoardData.stages;
@@ -653,8 +683,7 @@ const PipelineBoard: React.FC = () => {
         description: '',
         priority: 'Medium',
         assignee: '',
-        dueDate: null,
-        amount: undefined
+        dueDate: null
       }));
       dispatch(setCreateLeadDialogOpen(false));
     } catch (error) {
@@ -678,8 +707,7 @@ const PipelineBoard: React.FC = () => {
         description: '',
         priority: 'Medium',
         assignee: '',
-        dueDate: null,
-        amount: undefined
+        dueDate: null
       }));
       dispatch(setCreateLeadDialogOpen(false));
     }
@@ -1110,7 +1138,7 @@ const PipelineBoard: React.FC = () => {
       filters: activeFilters as any,
       sortConfig: sortConfig,
       uiSettings: {
-        zoom: zoom,
+        zoom: constrainedZoom,
         autoRefresh: pipelineSettings.autoRefresh,
         refreshInterval: pipelineSettings.refreshInterval,
         compactView: pipelineSettings.compactView,
@@ -1119,7 +1147,6 @@ const PipelineBoard: React.FC = () => {
         enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
     });
-    autoSavePipelinePreferences(completePreferences);
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
 
   // Toolbar dialog handlers
@@ -1218,17 +1245,6 @@ const PipelineBoard: React.FC = () => {
     return Math.round(baseSpacing * zoom);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-32">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-2 text-sm text-gray-500">
-          Loading pipeline data{USE_REDUX_PIPELINE ? ' via Redux' : ''}...
-        </p>
-      </div>
-    );
-  }
-
   if (currentError) {
     return (
       <div className="flex flex-col justify-center items-center mt-32">
@@ -1242,6 +1258,36 @@ const PipelineBoard: React.FC = () => {
         >
           Retry Loading
         </Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center mt-32">
+        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-2 text-sm text-gray-500">
+          Loading pipeline data{USE_REDUX_PIPELINE ? ' via Redux' : ''}...
+        </p>
+        {process.env.NODE_ENV === 'development' && (
+          <pre className="mt-4 text-xs text-gray-400 max-w-[90vw] overflow-x-auto">
+            {JSON.stringify(
+              {
+                reduxStagesLoading,
+                reduxLeadsLoading,
+                masterDataLoading,
+                usersLoading,
+                preferencesLoaded,
+                reduxStagesError,
+                reduxLeadsError,
+                usersError,
+                masterDataErrors
+              },
+              null,
+              2
+            )}
+          </pre>
+        )}
       </div>
     );
   }

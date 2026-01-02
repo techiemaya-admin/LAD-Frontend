@@ -24,7 +24,7 @@ export class DealsPipelineAPI {
   private headers: HeadersInit;
 
   constructor(baseUrl: string = 'http://localhost:3004/api/deals-pipeline', headers: HeadersInit = {}) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/$/, '');
     this.headers = {
       'Content-Type': 'application/json',
       ...headers,
@@ -197,7 +197,7 @@ export class DealsPipelineAPI {
   async moveLeadToStage(leadId: string, stageKey: string): Promise<Lead> {
     return this.fetch<Lead>(`/pipeline/leads/${leadId}/stage`, {
       method: 'PUT',
-      body: JSON.stringify({ stageKey }),
+      body: JSON.stringify({ stageKey, stage: stageKey }),
     });
   }
 
@@ -207,7 +207,7 @@ export class DealsPipelineAPI {
   async updateLeadStatus(leadId: string, statusKey: string): Promise<Lead> {
     return this.fetch<Lead>(`/pipeline/leads/${leadId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ statusKey }),
+      body: JSON.stringify({ statusKey, status: statusKey }),
     });
   }
 
