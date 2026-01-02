@@ -88,6 +88,11 @@ class DealsPipelineSDK {
         throw new Error(error.message || `HTTP ${response.status}`);
       }
       
+      // Handle 204 No Content - no body to parse
+      if (response.status === 204) {
+        return null;
+      }
+      
       return await response.json();
     } catch (error) {
       console.error(`API Error [${config.method} ${endpoint}]:`, error);
@@ -204,10 +209,10 @@ class DealsPipelineSDK {
   // === ATTACHMENTS API ===
   
   async getAttachments(leadId) {
-    return this.request(`/attachments/${leadId}`);
+    return this.request(`/leads/${leadId}/attachments`);
   }
   
-  async uploadAttachment(leadId, file) {
+  async uploadAttachment(leadId, file, onProgress = null) {
     const formData = new FormData();
     formData.append('file', file);
     
@@ -216,21 +221,61 @@ class DealsPipelineSDK {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
     
-    const response = await fetch(`${this.baseURL}/attachments/${leadId}`, {
-      method: 'POST',
-      headers,
-      body: formData
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Track upload progress
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            onProgress(percentComplete);
+          }
+        });
+      }
+      
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status}`));
+        }
+      });
+      
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed'));
+      });
+      
+      xhr.open('POST', `${this.baseURL}/leads/${leadId}/attachments`);
+      Object.keys(headers).forEach(key => {
+        xhr.setRequestHeader(key, headers[key]);
+      });
+      
+      xhr.send(formData);
     });
-    
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status}`);
-    }
-    
-    return response.json();
   }
   
-  async deleteAttachment(attachmentId) {
-    return this.request(`/attachments/${attachmentId}`, {
+  async deleteAttachment(leadId, attachmentId) {
+    return this.request(`/leads/${leadId}/attachments/${attachmentId}`, {
+      method: 'DELETE'
+    });
+  }
+  
+  // === NOTES API ===
+  
+  async getNotes(leadId) {
+    return this.request(`/leads/${leadId}/notes`);
+  }
+  
+  async createNote(leadId, content) {
+    return this.request(`/leads/${leadId}/notes`, {
+      method: 'POST',
+      body: { content }
+    });
+  }
+  
+  async deleteNote(leadId, noteId) {
+    return this.request(`/leads/${leadId}/notes/${noteId}`, {
       method: 'DELETE'
     });
   }
