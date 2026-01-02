@@ -18,6 +18,13 @@ export {
   useLeadMutations,
   useReferenceData,
   useLeadStats,
+  // Education vertical hooks
+  useStudents,
+  useStudent,
+  useStudentMutations,
+  useCounsellors,
+  useStudentAppointments,
+  useCounsellorAppointments,
 } from './hooks';
 
 // Export TypeScript types
@@ -36,4 +43,13 @@ export type {
   UpdateStagePayload,
   ApiError,
   ApiResponse,
+  // Education vertical types
+  EducationStudent,
+  Counsellor,
+  StudentAppointment,
+  CreateStudentPayload,
+  UpdateStudentPayload,
+  AssignCounsellorPayload,
+  StudentWithLead,
+  StudentListFilter,
 } from './types';
