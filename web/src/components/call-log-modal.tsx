@@ -556,8 +556,8 @@ export function CallLogModal({
       }
 
       try {
-        // Call log - Using voice-agent API (VAPI integration disabled in backend)
-        const res = await apiGet<{ success: boolean; log: any }>(`/api/voice-agent/calls/${id}`);
+        // Call log - Using voice-agent API (V2 endpoint)
+        const res = await apiGet<{ success: boolean; log: any }>(`/api/voice-agent/calls/job/${id}`);
         const l = res.log;
         setLog(l);
 

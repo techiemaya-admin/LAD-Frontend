@@ -129,7 +129,7 @@ export default function CallLogsPage() {
     try {
       // Batch View
       if (timeFilter === "batch" && batchJobId) {
-        const res = await apiGet<BatchApiResponse>(`/api/voice-agent/calls/batch/${batchJobId}`);
+        const res = await apiGet<BatchApiResponse>(`/api/voice-agent/batch/batch-status/${batchJobId}`);
         const batch = res.batch || res.result;
 
         if (!batch) {

@@ -20,6 +20,16 @@ interface PipelineBoardToolbarProps {
   filteredLeadsCount: number;
   stagesCount: number;
   
+  // Labels (dynamic based on vertical)
+  labels?: {
+    entity: string;
+    entityPlural: string;
+    pipeline: string;
+    owner: string;
+    deal: string;
+    value: string;
+  };
+  
   // Search
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -41,6 +51,16 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   totalLeads,
   filteredLeadsCount,
   stagesCount,
+  
+  // Labels
+  labels = {
+    entity: 'Lead',
+    entityPlural: 'Leads',
+    pipeline: 'Pipeline',
+    owner: 'Owner',
+    deal: 'Deal',
+    value: 'Value'
+  },
   
   // Search
   searchQuery,
@@ -71,7 +91,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
             {/* Stats */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                {filteredLeadsCount !== totalLeads ? `${filteredLeadsCount} of ` : ''}{totalLeads} leads
+                {filteredLeadsCount !== totalLeads ? `${filteredLeadsCount} of ` : ''}{totalLeads} {labels.entityPlural.toLowerCase()}
               </span>
               <Badge 
                 variant="secondary"
@@ -95,7 +115,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-none h-9 text-sm"
             >
               <Plus className="mr-1.5 h-4 w-4" />
-              Add Lead
+              Add {labels.entity}
             </Button>
 
             {/* Zoom controls */}
@@ -135,7 +155,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"
-                placeholder="Search leads..."
+                placeholder={`Search ${labels.entityPlural.toLowerCase()}...`}
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="border-0 outline-none bg-transparent w-full text-sm text-gray-800 dark:text-gray-200 focus:ring-0 focus:outline-none p-0 h-full placeholder:text-gray-400"

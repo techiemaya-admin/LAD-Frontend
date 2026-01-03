@@ -6,6 +6,7 @@ import type { AppDispatch } from '@/store/store';
 import { store } from '@/store/store';
 import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
 import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 
@@ -23,7 +24,9 @@ import PipelineKanbanView from './PipelineKanbanView';
 
 import {
   selectStagesWithNames,
-  selectLeadsByStage
+  selectLeadsByStage,
+  selectFilteredLeadsByStageFromUI,
+  selectPipelineBoardDataWithFilters
 } from '../store/selector/pipelineSelectors';
 import { 
   selectStagesLoading, 
@@ -149,6 +152,20 @@ interface StageUpdateData {
 }
 
 const PipelineBoard: React.FC = () => {
+  // Education vertical context
+  const { hasFeature } = useAuth();
+  const isEducation = hasFeature('education_vertical');
+  
+  // Dynamic labels based on vertical
+  const labels = useMemo(() => ({
+    entity: isEducation ? 'Student' : 'Lead',
+    entityPlural: isEducation ? 'Students' : 'Leads',
+    pipeline: isEducation ? 'Admissions Pipeline' : 'Pipeline',
+    owner: isEducation ? 'Counsellor' : 'Owner',
+    deal: isEducation ? 'Application' : 'Deal',
+    value: isEducation ? 'Program Fee' : 'Value'
+  }), [isEducation]);
+  
   // Redux state and dispatch
   const dispatch = useDispatch<AppDispatch>();
   
@@ -209,14 +226,7 @@ const PipelineBoard: React.FC = () => {
   const pipelineSettings = useSelector(selectPipelineSettings);
   
   // Get filtered pipeline data from the new enhanced selector
-  const pipelineBoardData = useMemo(() => {
-    return {
-      stages: reduxStages.map((stage: { key: string; label?: string; name?: string; order?: number; display_order?: number }) => ({
-        ...stage,
-        leads: reduxLeadsByStage[stage.key]?.leads || []
-      }))
-    };
-  }, [reduxStages, reduxLeadsByStage]);
+  const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
   
   // Add preferences loading state (still local as it's component-specific)
   const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
@@ -253,7 +263,7 @@ const PipelineBoard: React.FC = () => {
     masterDataErrors
   ]);
   
-  // Use the filtered pipeline data from the selector
+  // Use the filtered data directly from selector instead of manual filtering
   const currentStages = pipelineBoardData.stages;
   const currentLeadsByStage = useMemo<LeadsByStage>(() => {
     return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: any) => {
@@ -261,6 +271,9 @@ const PipelineBoard: React.FC = () => {
       return acc;
     }, {});
   }, [pipelineBoardData]);
+
+  // Use filtered data directly (no manual filtering needed)
+  const filteredAndSortedLeadsByStage = currentLeadsByStage;
 
   // Search and filter state handlers (now dispatch to Redux)
   const handleSearchQueryChange = useCallback((query: string) => {
@@ -313,100 +326,7 @@ const PipelineBoard: React.FC = () => {
     }
   }, [isAuthenticated, dispatch]);
 
-  // Filter and sort leads
-  const filteredAndSortedLeadsByStage = useMemo<FilteredLeadsByStage>(() => {
-    const filterLead = (lead: Lead): boolean => {
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const searchable = [lead.name, lead.email, lead.phoneNumber, (lead as { company?: string }).company, (lead as { description?: string }).description].join(' ').toLowerCase();
-        if (!searchable.includes(query)) return false;
-      }
 
-      // Stage filter
-      if (activeFilters.stages.length > 0 && lead.stage && !activeFilters.stages.includes(lead.stage)) {
-        return false;
-      }
-
-      // Status filter
-      if (activeFilters.statuses.length > 0 && lead.status && !activeFilters.statuses.includes(lead.status)) {
-        return false;
-      }
-
-      // Priority filter
-      if (activeFilters.priorities.length > 0 && (lead as { priority?: string }).priority && !activeFilters.priorities.includes((lead as { priority?: string }).priority || '')) {
-        return false;
-      }
-
-      // Source filter
-      if (activeFilters.sources.length > 0 && (lead as { source?: string }).source && !activeFilters.sources.includes((lead as { source?: string }).source || '')) {
-        return false;
-      }
-
-      // Assignee filter
-      if (activeFilters.assignees.length > 0 && (lead as { assignee?: string }).assignee && !activeFilters.assignees.includes((lead as { assignee?: string }).assignee || '')) {
-        return false;
-      }
-
-      // Date range filter
-      if ((activeFilters as { dateRange?: { startDate?: string; endDate?: string } }).dateRange) {
-        const dateRange = (activeFilters as { dateRange?: { startDate?: string; endDate?: string } }).dateRange;
-        if (dateRange) {
-          const leadDate = new Date((lead as { createdAt?: string }).createdAt || 0);
-          const { startDate, endDate } = dateRange;
-          if (startDate && leadDate < new Date(startDate)) return false;
-          if (endDate && leadDate > new Date(endDate)) return false;
-        }
-      }
-
-      return true;
-    };
-
-    const sortLeads = (leads: Lead[]): Lead[] => {
-      return [...leads].sort((a, b) => {
-        const { field, direction } = sortConfig;
-        let aValue = (a as { [key: string]: unknown })[field];
-        let bValue = (b as { [key: string]: unknown })[field];
-
-        // Handle date fields
-        if (field === 'createdAt' || field === 'updatedAt' || field === 'closeDate' || 
-            field === 'dueDate' || field === 'expectedCloseDate' || field === 'lastActivity') {
-          aValue = new Date(aValue as string || 0);
-          bValue = new Date(bValue as string || 0);
-        }
-
-        // Handle string fields
-        if (typeof aValue === 'string') {
-          aValue = aValue.toLowerCase();
-          bValue = (bValue as string)?.toLowerCase() || '';
-        }
-
-        // Handle null/undefined values
-        if (aValue == null && bValue == null) return 0;
-        if (aValue == null) return direction === 'asc' ? -1 : 1;
-        if (bValue == null) return direction === 'asc' ? 1 : -1;
-
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    };
-
-    // Apply filters and sorting to each stage
-    const result: FilteredLeadsByStage = {};
-    Object.keys(currentLeadsByStage).forEach(stageKey => {
-      const stageData = currentLeadsByStage[stageKey];
-      const filteredLeads = stageData.leads.filter(filterLead);
-      const sortedLeads = sortLeads(filteredLeads);
-      
-      result[stageKey] = {
-        ...stageData,
-        leads: sortedLeads
-      };
-    });
-
-    return result;
-  }, [currentLeadsByStage, searchQuery, activeFilters, sortConfig]);
 
   // Calculate totals for toolbar
   const totalLeads = useMemo(() => {
@@ -414,8 +334,13 @@ const PipelineBoard: React.FC = () => {
   }, [currentLeadsByStage]);
 
   const filteredLeadsCount = useMemo(() => {
-    return Object.values(filteredAndSortedLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
-  }, [filteredAndSortedLeadsByStage]);
+    return Object.values(currentLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
+  }, [currentLeadsByStage]);
+
+  // Flattened leads for ListView
+  const sortedAndFilteredLeads = useMemo(() => {
+    return Object.values(currentLeadsByStage).flatMap(stageData => stageData.leads);
+  }, [currentLeadsByStage]);
   
   // Memoized stage column component to prevent unnecessary re-renders
   const StageColumnMemo = useMemo(() => {
@@ -1231,10 +1156,13 @@ const PipelineBoard: React.FC = () => {
     onEdit: handleEditLead,
     onDelete: handleDeleteLead,
     onStatusChange: handleStatusChange,
+    onStageChange: handleStageChangeInline,
+    onPriorityChange: handlePriorityChange,
+    onAssigneeChange: handleAssigneeChange,
     onCreateStage: handleCreateStage,
     onUpdateStage: handleUpdateStage,
     onDeleteStageAction: handleDeleteStage
-  } as Record<string, unknown>), [handleStageUpdate, handleStageDelete, handleEditLead, handleDeleteLead, handleStatusChange, handleCreateStage, handleUpdateStage, handleDeleteStage]);
+  } as Record<string, unknown>), [handleStageUpdate, handleStageDelete, handleEditLead, handleDeleteLead, handleStatusChange, handleStageChangeInline, handlePriorityChange, handleAssigneeChange, handleCreateStage, handleUpdateStage, handleDeleteStage]);
 
   // Calculate responsive sizes based on zoom
   const getZoomedSize = (baseSize: number): number => {
@@ -1301,6 +1229,7 @@ const PipelineBoard: React.FC = () => {
         totalLeads={totalLeads}
         filteredLeadsCount={filteredLeadsCount}
         stagesCount={currentStages.length}
+        labels={labels}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         zoom={zoom}
@@ -1357,7 +1286,21 @@ const PipelineBoard: React.FC = () => {
         style={{ height: 0 }} // Force flex item to respect container height
       >
         {(() => {
-          console.log('Rendering with viewMode:', pipelineSettings.viewMode, 'preferencesLoaded:', preferencesLoaded);
+          if (pipelineSettings.viewMode === 'list') {
+            return (
+              <PipelineListView
+                leads={sortedAndFilteredLeads}
+                stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
+                teamMembers={[]}
+                visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
+                onStatusChange={memoizedHandlers.onStatusChange as ((leadId: string | number, status: string) => Promise<void>) | undefined}
+                onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
+                onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
+                onAssigneeChange={memoizedHandlers.onAssigneeChange as ((leadId: string | number, assignee: string) => Promise<void>) | undefined}
+              />
+            );
+          }
+          
           return (
             <DndContext
               sensors={sensors}
@@ -1373,7 +1316,7 @@ const PipelineBoard: React.FC = () => {
                 zoom={zoom}
                 teamMembers={[]}
                 handlers={memoizedHandlers}
-                enableDragAndDrop={true}
+                enableDragAndDrop={pipelineSettings.enableDragAndDrop}
               />
             </DndContext>
           );

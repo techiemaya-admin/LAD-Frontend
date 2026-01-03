@@ -15,6 +15,10 @@ import type {
   LeadStats,
   CreateLeadPayload,
   UpdateLeadPayload,
+  StudentWithLead,
+  StudentListFilter,
+  CreateStudentPayload,
+  UpdateStudentPayload,
 } from './types';
 
 interface UseAPIOptions {
@@ -274,4 +278,140 @@ export function useLeadStats(options: UseAPIOptions = {}) {
   }, [fetchStats]);
 
   return { ...state, refetch: fetchStats };
+}
+
+// ==================== STUDENTS ====================
+
+/**
+ * Hook to use students data
+ */
+export function useStudents(filters?: StudentListFilter, options: UseAPIOptions = {}) {
+  const api = options.api || dealsPipelineAPI;
+  const [state, setState] = useState<AsyncState<StudentWithLead[]>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  const fetchStudents = useCallback(async () => {
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const data = await api.listStudents(filters);
+      setState({ data, loading: false, error: null });
+    } catch (error) {
+      setState({ data: null, loading: false, error: error as Error });
+    }
+  }, [api, filters]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  return { ...state, refetch: fetchStudents };
+}
+
+/**
+ * Hook to use single student data
+ */
+export function useStudent(id: string, options: UseAPIOptions = {}) {
+  const api = options.api || dealsPipelineAPI;
+  const [state, setState] = useState<AsyncState<StudentWithLead>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  const fetchStudent = useCallback(async () => {
+    if (!id) return;
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const data = await api.getStudent(id);
+      setState({ data, loading: false, error: null });
+    } catch (error) {
+      setState({ data: null, loading: false, error: error as Error });
+    }
+  }, [api, id]);
+
+  useEffect(() => {
+    fetchStudent();
+  }, [fetchStudent]);
+
+  return { ...state, refetch: fetchStudent };
+}
+
+/**
+ * Hook to use student mutations (create, update, delete)
+ */
+export function useStudentMutations(options: UseAPIOptions = {}) {
+  const api = options.api || dealsPipelineAPI;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const createStudent = useCallback(async (student: CreateStudentPayload): Promise<StudentWithLead> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await api.createStudent(student);
+      setLoading(false);
+      return result;
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, [api]);
+
+  const updateStudent = useCallback(async (id: string, student: UpdateStudentPayload): Promise<StudentWithLead> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await api.updateStudent(id, student);
+      setLoading(false);
+      return result;
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, [api]);
+
+  const deleteStudent = useCallback(async (id: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.deleteStudent(id);
+      setLoading(false);
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, [api]);
+
+  const assignCounsellor = useCallback(async (studentId: string, counsellorId: string): Promise<StudentWithLead> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await api.assignCounsellor(studentId, counsellorId);
+      setLoading(false);
+      return result;
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, [api]);
+
+  return {
+    createStudent,
+    updateStudent,
+    deleteStudent,
+    assignCounsellor,
+    loading,
+    error,
+  };
 }

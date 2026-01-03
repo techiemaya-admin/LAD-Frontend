@@ -7,9 +7,12 @@ import { safeStorage } from '../utils/storage';
 interface User {
   id: string;
   email: string;
+  name?: string;
   firstName?: string;
   lastName?: string;
   role?: string;
+  capabilities?: string[];
+  tenantFeatures?: string[];
 }
 
 interface AuthContextType {
@@ -20,6 +23,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   getToken: () => Promise<string | null>;
+  hasFeature: (featureKey: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,11 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
+    console.log('[AuthContext] Loading token from localStorage...');
     const storedToken = safeStorage.getItem('auth_token');
+    console.log('[AuthContext] Stored token found:', !!storedToken, storedToken?.substring(0, 20) + '...');
+    
     if (storedToken) {
       setToken(storedToken);
       fetchCurrentUser(storedToken);
     } else {
+      console.log('[AuthContext] No stored token found');
       setIsLoading(false);
     }
   }, []);
@@ -65,7 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData.user || userData);
+        console.log('[AuthContext] User data received:', userData);
+        const user = userData.user || userData;
+        console.log('[AuthContext] Setting user:', user);
+        setUser(user);
       } else {
         // Token is invalid, clear it
         safeStorage.removeItem('auth_token');
@@ -131,6 +142,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return token;
   };
 
+  // Feature checking based on user capabilities and tenant features
+  const hasFeature = (featureKey: string): boolean => {
+    if (!user || !token) {
+      return false;
+    }
+
+    // Check both capabilities and tenant features
+    const userCapabilities = user.capabilities || [];
+    const userTenantFeatures = user.tenantFeatures || [];
+    
+    // Feature can be enabled via either capabilities or tenant features
+    return userCapabilities.includes(featureKey) || userTenantFeatures.includes(featureKey);
+  };
+
   const value = {
     user,
     token,
@@ -139,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     getToken,
+    hasFeature,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

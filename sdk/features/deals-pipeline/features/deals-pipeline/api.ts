@@ -17,6 +17,11 @@ import type {
   CreateStagePayload,
   UpdateStagePayload,
   ApiError,
+  Student,
+  StudentWithLead,
+  StudentListFilter,
+  CreateStudentPayload,
+  UpdateStudentPayload,
 } from './types';
 
 export class DealsPipelineAPI {
@@ -260,6 +265,77 @@ export class DealsPipelineAPI {
     return this.fetch<void>(`/leads/${leadId}/notes/${noteId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ==================== STUDENTS ====================
+
+  /**
+   * List all students
+   */
+  async listStudents(filters?: { stage?: string; status?: string; search?: string; counsellor_id?: string; education_level?: string; country_of_interest?: string }): Promise<StudentWithLead[]> {
+    const params = new URLSearchParams();
+    if (filters?.stage) params.append('stage', filters.stage);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.counsellor_id) params.append('counsellor_id', filters.counsellor_id);
+    if (filters?.education_level) params.append('education_level', filters.education_level);
+    if (filters?.country_of_interest) params.append('country_of_interest', filters.country_of_interest);
+    
+    const query = params.toString() ? `?${params}` : '';
+    return this.fetch<StudentWithLead[]>(`/students${query}`);
+  }
+
+  /**
+   * Get a single student by ID
+   */
+  async getStudent(id: string): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${id}`);
+  }
+
+  /**
+   * Create a new student
+   */
+  async createStudent(student: CreateStudentPayload): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>('/students', {
+      method: 'POST',
+      body: JSON.stringify(student),
+    });
+  }
+
+  /**
+   * Update a student
+   */
+  async updateStudent(id: string, student: UpdateStudentPayload): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(student),
+    });
+  }
+
+  /**
+   * Delete a student
+   */
+  async deleteStudent(id: string): Promise<void> {
+    return this.fetch<void>(`/students/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Assign counsellor to student
+   */
+  async assignCounsellor(studentId: string, counsellorId: string): Promise<StudentWithLead> {
+    return this.fetch<StudentWithLead>(`/students/${studentId}/counsellor`, {
+      method: 'POST',
+      body: JSON.stringify({ counsellor_id: counsellorId }),
+    });
+  }
+
+  /**
+   * Get all counsellors
+   */
+  async getCounsellors(): Promise<any[]> {
+    return this.fetch<any[]>('/counsellors');
   }
 }
 

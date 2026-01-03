@@ -99,17 +99,18 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
             // Ensure unique key by combining option.key with index as fallback
             const uniqueKey = option.key || `option-${index}`;
             return (
-              <label
+              <div
                 key={uniqueKey}
                 className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleToggle(option.key)}
               >
                 <Checkbox
                   checked={isChecked}
-                  onChange={() => handleToggle(option.key)}
-                  className="mr-2"
+                  onCheckedChange={() => handleToggle(option.key)}
+                  className="mr-2 pointer-events-none"
                 />
-                <span className="text-sm">{option.label}</span>
-              </label>
+                <span className="text-sm select-none">{option.label}</span>
+              </div>
             );
           })}
         </div>
@@ -315,11 +316,19 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             <X className="mr-2 h-4 w-4" />
             Clear All
           </Button>
+          <div className="flex-1"></div>
+          <Button 
+            onClick={onClose}
+            variant="outline"
+            className="rounded-lg font-semibold bg-white text-gray-600 border-[1.5px] border-gray-300 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
           <Button 
             onClick={onClose}
             className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
           >
-            Close
+            Apply Filters
           </Button>
         </div>
       </DialogContent>

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from 'react-redux';
 import { logout as logoutAction } from '@/store/slices/authSlice';
 import authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import logo from "../assets/logo.png";
 import {
   DropdownMenu,
@@ -44,12 +45,16 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
+  const { hasFeature } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayName, setDisplayName] = useState('User');
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Education vertical context
+  const isEducation = hasFeature('education_vertical');
 
   // Hydration check
   useEffect(() => {
@@ -113,38 +118,19 @@ export function Sidebar() {
     },
     {
       href: "/pipeline",
-      label: "Pipeline",
-      icon: CircleDollarSign,
-      details: "Manage your sales pipeline and deals.",
+      label: isEducation ? "Students" : "Pipeline",
+      icon: isEducation ? GraduationCap : CircleDollarSign,
+      details: isEducation ? "Manage student admissions and counseling." : "Manage your sales pipeline and deals.",
       requiredCapability: 'view_pipeline'
-    },
-    {
-      href: "/pipeline/students",
-      label: "Students",
-      icon: GraduationCap,
-      details: "Manage student admissions and counseling.",
-      requiredFeature: 'education_vertical',
-      requiredCapability: 'education.students.view'
     },
   ];
 
-  // Filter navigation items based on user capabilities and features
-  const nav = allNavItems.filter(item => {
-    // If user is admin or owner, show all items (except feature-gated ones)
+  // Filter navigation items based on user capabilities (only after hydration)
+  const nav = isHydrated ? allNavItems.filter(item => {
+    // If user is admin or owner, show all items
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
     
-    // Check feature flag first (if required)
-    if (item.requiredFeature) {
-      // TODO: Implement proper feature flag check from backend
-      // For now, check if tenant has education_vertical feature enabled
-      // This should come from user context/tenant metadata
-      const hasEducationFeature = false; // Placeholder - should be from backend
-      if (!hasEducationFeature && !isAdminOrOwner) {
-        return false;
-      }
-    }
-    
-    // Admin/owner sees all non-feature-gated items
+    // Admin/owner sees all items
     if (isAdminOrOwner && !item.requiredCapability) return true;
     
     // If the item doesn't require any specific capability, show it
@@ -167,7 +153,7 @@ export function Sidebar() {
       hasCapability 
     });
     return hasCapability;
-  });
+  }) : []; // Show empty nav during SSR to prevent hydration mismatch
 
   return (
     <>

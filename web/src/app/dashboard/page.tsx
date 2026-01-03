@@ -763,9 +763,7 @@ useEffect(() => {
   useEffect(() => {
     const loadNumbers = async () => {
       try {
-        const res = await fetch(`${getApiBaseUrl()}/api/voice-agent/numbers`);
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/numbers');
         setNumbers(data?.numbers || data?.items || []);
       } catch {}
     };
@@ -776,11 +774,9 @@ useEffect(() => {
   useEffect(() => {
     const loadMetrics = async () => {
       try {
-        const res = await fetch(`${getApiBaseUrl()}/api/metrics`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (typeof data?.answerRate === "number") setAnswerRate(data.answerRate);
-        if (typeof data?.objectiveAchieved === "number") setObjectiveAchieved(data.objectiveAchieved);
+        const data = await apiGet<{ answerRate?: number; objectiveAchieved?: number }>('/api/metrics');
+        if (typeof data?.answerRate === 'number') setAnswerRate(data.answerRate);
+        if (typeof data?.objectiveAchieved === 'number') setObjectiveAchieved(data.objectiveAchieved);
       } catch {}
     };
     loadMetrics();

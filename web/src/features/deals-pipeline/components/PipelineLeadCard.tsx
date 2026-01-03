@@ -1488,7 +1488,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </Button>
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    {globalEditFormData.tags && globalEditFormData.tags.map((tag, index) => (
+                    {globalEditFormData.tags && Array.isArray(globalEditFormData.tags) && globalEditFormData.tags.map((tag, index) => (
                       <Badge 
                         key={index}
                         variant="secondary"

@@ -32,6 +32,14 @@ interface NewLeadForm {
   description: string;
   assignee: string;
   dueDate: string | null;
+  // Education-specific fields
+  program?: string;
+  intakeYear?: string;
+  gpa?: string;
+  previousEducation?: string;
+  preferredCounsellor?: string;
+  preferredTime?: string;
+  sessionNotes?: string;
 }
 
 interface EditingLeadForm {
@@ -233,7 +241,15 @@ const initialState: UIState = {
       amount: undefined,
       description: '',
       assignee: '',
-      dueDate: null
+      dueDate: null,
+      // Education-specific fields
+      program: '',
+      intakeYear: '',
+      gpa: '',
+      previousEducation: '',
+      preferredCounsellor: '',
+      preferredTime: '',
+      sessionNotes: ''
     },
     
     // Lead form for editing
@@ -553,7 +569,15 @@ const uiSlice = createSlice({
         amount: undefined,
         description: '',
         assignee: '',
-        dueDate: null
+        dueDate: null,
+        // Education-specific fields
+        program: '',
+        intakeYear: '',
+        gpa: '',
+        previousEducation: '',
+        preferredCounsellor: '',
+        preferredTime: '',
+        sessionNotes: ''
       };
       state.pipeline.formErrors.newLead = {};
       state.pipeline.aiInsights = {

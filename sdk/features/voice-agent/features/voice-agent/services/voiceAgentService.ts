@@ -23,10 +23,10 @@ class VoiceAgentService {
   }
 
   /**
-   * Make a call with a voice agent
+   * Make a call with a voice agent (V2 API)
    */
   async makeCall(voiceAgentId: string, phoneNumber: string, context?: string): Promise<CallLog> {
-    const response = await api.post('/voice-agent/calls', {
+    const response = await api.post('/voice-agent/calls/start-call', {
       voice_agent_id: voiceAgentId,
       phone_number: phoneNumber,
       added_context: context,

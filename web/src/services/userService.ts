@@ -31,7 +31,7 @@ export async function getUserSettings(): Promise<Record<string, unknown>> {
     throw new Error('Not authenticated');
   }
 
-  const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/users/settings'), {
     ...defaultFetchOptions(),
     headers: {
       ...defaultFetchOptions().headers,
@@ -53,7 +53,7 @@ export async function updateUserSettings(settings: Record<string, unknown>): Pro
   }
   
   // Backend accepts both flat and nested formats, so send as-is
-  const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
+  const response = await fetchWithTimeout(getApiUrl('/api/users/settings'), {
     ...defaultFetchOptions(),
     method: 'PUT',
     headers: {
@@ -98,54 +98,57 @@ interface PipelinePreferences {
 
 export async function getPipelinePreferences(): Promise<PipelinePreferences> {
   try {
-    const userSettings = await getUserSettings();
-    console.log('UserService: Raw user settings from API:', userSettings);
+    const token = getAccessToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
+      ...defaultFetchOptions(),
+      headers: {
+        ...defaultFetchOptions().headers,
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get pipeline settings');
+    }
+
+    const result = await response.json();
+    const settings = result.settings || {};
     
-    // Extract pipeline preferences from flat settings structure
-    const pipelinePrefs = extractPipelinePreferences(userSettings);
-    console.log('UserService: Extracted pipeline preferences:', pipelinePrefs);
-    
-    // Merge with defaults for any missing fields
-    const merged = mergeWithPipelineDefaults(pipelinePrefs);
-    console.log('UserService: Final merged preferences:', merged);
-    
-    return merged;
+    // Return the settings directly since backend now returns the correct structure
+    return settings;
   } catch (error) {
-    console.warn('Failed to load pipeline preferences, using defaults:', error);
     return getPipelineDefaults();
   }
 }
 
 export async function savePipelinePreferences(preferences: PipelinePreferences): Promise<PipelinePreferences> {
   try {
-    console.log('UserService: Saving pipeline preferences:', preferences);
-    
-    // Flatten pipeline preferences for backend storage
-    const flattened = flattenPipelinePreferences(preferences);
-    console.log('UserService: Flattened for backend:', flattened);
-    
-    // Send flattened preferences directly to backend (backend accepts flat format)
     const token = getAccessToken();
     if (!token) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetchWithTimeout(getApiUrl('/api/settings'), {
+    // Send preferences as structured object (not flattened)
+    const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
       ...defaultFetchOptions(),
       method: 'PUT',
       headers: {
         ...defaultFetchOptions().headers,
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(flattened)
+      body: JSON.stringify(preferences)
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save pipeline preferences');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Failed to save pipeline preferences: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     await response.json();
-    console.log('UserService: Backend save response received');
     
     return preferences;
   } catch (error) {

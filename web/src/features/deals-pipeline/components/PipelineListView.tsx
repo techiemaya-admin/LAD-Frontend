@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -82,13 +83,13 @@ const formatDate = (dateString?: string | Date | number | null): string => {
     
     return date.toLocaleDateString();
   } catch (error) {
-    console.warn('Date formatting error:', { dateString, error: (error as Error).message });
+    // Date formatting error - return invalid date message per LAD guidelines
     return 'Invalid date';
   }
 };
 
 interface PipelineListViewProps {
-  leadsByStage: Record<string, { stage: unknown; leads: unknown[] }>;
+  leads: Lead[];
   stages: Array<{ key: string; label: string; name?: string }>;
   visibleColumns: Record<string, boolean>;
   searchQuery?: string;
@@ -122,7 +123,7 @@ interface Lead {
 }
 
 const PipelineListView: React.FC<PipelineListViewProps> = ({ 
-  leadsByStage, 
+  leads, 
   stages, 
   visibleColumns, 
   searchQuery, 
@@ -193,28 +194,22 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
 
-  // Debug log to understand master data structure
-  console.log('[PipelineListView] Master data:', { statusOptions, priorityOptions });
-
-  // Flatten all leads from all stages with enhanced data
+  // Process leads with enhanced data
   const allLeads = useMemo(() => {
-    const leads = Object.values(leadsByStage).flatMap((stageData: { leads?: Lead[]; stage?: { label?: string; name?: string } }) => 
-      (stageData.leads || []).map((lead: Lead) => {
-        // Get proper labels from options
-        const statusOption = statusOptions.find(s => s.key === lead.status);
-        const priorityOption = priorityOptions.find(p => p.key === lead.priority);
-        
-        return {
-          ...lead,
-          stageName: stageData.stage?.label || stageData.stage?.name || 'Unknown',
-          statusLabel: statusOption?.label || lead.status || 'Unknown',
-          priorityLabel: priorityOption?.label || lead.priority || 'Unknown'
-        };
-      })
-    );
-    
-    return leads;
-  }, [leadsByStage, statusOptions, priorityOptions]);
+    return leads.map((lead: Lead) => {
+      // Get proper labels from options
+      const statusOption = statusOptions.find(s => s.key === lead.status);
+      const priorityOption = priorityOptions.find(p => p.key === lead.priority);
+      const stage = stages.find(s => s.key === lead.stage);
+      
+      return {
+        ...lead,
+        stageName: stage?.label || stage?.name || 'Unknown',
+        statusLabel: statusOption?.label || lead.status || 'Unknown',
+        priorityLabel: priorityOption?.label || lead.priority || 'Unknown'
+      };
+    });
+  }, [leads, statusOptions, priorityOptions, stages]);
 
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
@@ -233,20 +228,20 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
     // Apply column filters
     if (currentFilters.statuses?.length > 0) {
-      filtered = filtered.filter(lead => currentFilters.statuses.includes(lead.status));
+      filtered = filtered.filter(lead => lead.status && currentFilters.statuses.includes(lead.status));
     }
     if (currentFilters.priorities?.length > 0) {
-      filtered = filtered.filter(lead => currentFilters.priorities.includes(lead.priority));
+      filtered = filtered.filter(lead => lead.priority && currentFilters.priorities.includes(lead.priority));
     }
     if (currentFilters.stages?.length > 0) {
-      filtered = filtered.filter(lead => currentFilters.stages.includes(lead.stage));
+      filtered = filtered.filter(lead => lead.stage && currentFilters.stages.includes(lead.stage));
     }
 
     // Apply sorting
     if (globalSortConfig && globalSortConfig.field) {
       filtered.sort((a, b) => {
-        let aVal: unknown = a[globalSortConfig.field];
-        let bVal: unknown = b[globalSortConfig.field];
+        let aVal: any = (a as any)[globalSortConfig.field];
+        let bVal: any = (b as any)[globalSortConfig.field];
 
         // Handle date fields
         if (globalSortConfig.field === 'createdAt' || globalSortConfig.field === 'updatedAt' || globalSortConfig.field === 'closeDate' || 
@@ -283,16 +278,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         minWidth: Math.max(600, visibleColumnKeys.length * 100),
         cellMinWidth: '80px',
         cellMaxWidth: '150px',
-        firstColumnMinWidth: '150px',
-        firstColumnMaxWidth: '200px'
+        firstColumnMinWidth: '180px', // Increased for avatar space
+        firstColumnMaxWidth: '250px'  // Increased for avatar space
       };
     }
     return {
       minWidth: Math.max(800, visibleColumnKeys.length * 150),
       cellMinWidth: '120px',
       cellMaxWidth: '250px',
-      firstColumnMinWidth: '200px',
-      firstColumnMaxWidth: '300px'
+      firstColumnMinWidth: '220px', // Increased for avatar space
+      firstColumnMaxWidth: '350px'  // Increased for avatar space
     };
   };
 
@@ -345,8 +340,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
   const renderCellContent = (lead: Lead, column: string): React.ReactNode => {
     const handleDropdownChange = async (field: string, newValue: string) => {
-      console.log('[PipelineListView] Dropdown change:', { leadId: lead.id, field, newValue });
-      
       try {
         if (field === 'status' && onStatusChange) {
           await onStatusChange(lead.id, newValue);
@@ -358,22 +351,22 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           await onAssigneeChange(lead.id, newValue);
         }
       } catch (error) {
-        console.error('Failed to save dropdown change:', error);
+        // Error handling without console logging per LAD guidelines
       }
     };
     
     switch (column) {
       case 'name':
         return (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8 text-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="h-8 w-8 text-sm flex-shrink-0">
               {lead.name?.charAt(0)?.toUpperCase() || 'L'}
             </Avatar>
-            <div>
-              <p className="text-sm font-medium">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">
                 {lead.name || 'Unnamed Lead'}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 truncate">
                 {lead.email || lead.company || ''}
               </p>
             </div>
@@ -527,11 +520,11 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         // Non-admin users see read-only display
         const assigneeDisplayName = getAssigneeDisplayName(lead.assignee);
         return assigneeDisplayName ? (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="h-8 w-8 text-sm flex-shrink-0">
               {assigneeDisplayName.charAt(0).toUpperCase()}
             </Avatar>
-            <p className="text-sm">{assigneeDisplayName}</p>
+            <p className="text-sm truncate">{assigneeDisplayName}</p>
           </div>
         ) : (
           <p className="text-sm text-gray-500">
@@ -604,12 +597,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                     }
                     handleRowClick(lead);
                   }}
-                  className="hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                  className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 h-16"
                 >
                   {visibleColumnKeys.map((column) => (
                     <td 
                       key={column} 
-                      className="px-4 py-3 border-b border-gray-100 whitespace-nowrap overflow-hidden text-ellipsis"
+                      className={`px-4 py-3 border-b border-gray-100 align-middle ${
+                        column === 'name' || column === 'assignee' 
+                          ? 'whitespace-nowrap' 
+                          : 'whitespace-nowrap overflow-hidden text-ellipsis'
+                      }`}
                       style={{
                         minWidth: column === 'name' ? columnWidths.firstColumnMinWidth : columnWidths.cellMinWidth,
                         maxWidth: column === 'name' ? columnWidths.firstColumnMaxWidth : columnWidths.cellMaxWidth

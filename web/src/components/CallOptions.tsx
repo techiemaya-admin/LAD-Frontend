@@ -19,6 +19,12 @@ import ExcelJS from "exceljs";
 
 type BulkEntry = {
   to_number: string;
+  lead_name?: string;
+  added_context?: string;
+  lead_id?: string; // V2: UUID string instead of int
+  knowledge_base_store_ids?: string[]; // V2: New field
+  
+  // Legacy/UI fields for backward compatibility
   name?: string;
   company_name?: string;
   summary?: string;
@@ -106,6 +112,7 @@ export function CallOptions(props: CallOptionsProps) {
         if (!hasBulk) throw new Error("No numbers in the bulk list");
 // updated bulk payload - include per-row summary and top-level added_context
         const payload = {
+          voice_id: "default", // Required by V2 API
           agent_id: agentId,
           from_number: fromNumber,
           // optional global context (Additional Instructions from the UI)
@@ -114,16 +121,18 @@ export function CallOptions(props: CallOptionsProps) {
             .filter((r) => !!r.to_number)
             .map((r) => ({
               to_number: r.to_number,
-              name: r.name || undefined,
+              lead_name: r.name || r.lead_name || undefined,
               // row-level context (uses row.summary if present)
-              added_context: r.summary && String(r.summary).trim() ? r.summary.trim() : undefined,
+              added_context: r.summary && String(r.summary).trim() ? r.summary.trim() : r.added_context || undefined,
+              lead_id: r.lead_id ? String(r.lead_id) : undefined, // V2: Ensure UUID string
+              knowledge_base_store_ids: r.knowledge_base_store_ids || undefined, // V2: New field
             })),
-          ...(effectiveInitiator !== undefined ? { initiated_by: effectiveInitiator } : {}),
+          ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
         };
 
         console.log("📦 Sending bulk payload:", payload);
-        // Using backend voice-agent calls API (VAPI integration disabled in backend)
-        const res = await apiPost("/api/voice-agent/calls/batch", payload);
+        // Using backend voice-agent batch calls API (V2 endpoint)
+        const res = await apiPost("/api/voice-agent/batch/trigger-batch-call", payload);
 
         // Expect backend response like { success: true, result: { job_id: "batch-..." } }
         const anyRes: any = res;
@@ -150,17 +159,17 @@ export function CallOptions(props: CallOptionsProps) {
 
       if (!dial) throw new Error("Please enter a phone number to call");
       const singlePayload = {
+        voice_id: "default", // Required by V2 API
         agent_id: agentId,
         from_number: fromNumber,
         to_number: dial.replace(/\s+/g, ""), // Remove all spaces from phone number
-        client_name: clientName || undefined,
         lead_name: clientName || undefined,
         added_context: additionalInstructions || "Call initiated from dashboard",
-        ...(effectiveInitiator !== undefined ? { initiated_by: effectiveInitiator } : {}),
+        ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
       } as const;
       console.log("☎️ Sending single-call payload:", singlePayload);
-      // Using backend voice-agent calls API (VAPI integration disabled in backend)
-      await apiPost("/api/voice-agent/calls", singlePayload);
+      // Using backend voice-agent calls API (V2 endpoint)
+      await apiPost("/api/voice-agent/calls/start-call", singlePayload);
       push({ title: "Success", description: "Call initiated successfully!" });
       onDialChange("");
       onClientNameChange("");

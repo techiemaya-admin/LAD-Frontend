@@ -18,6 +18,10 @@ export {
   useLeadMutations,
   useReferenceData,
   useLeadStats,
+  // Student hooks
+  useStudents,
+  useStudent,
+  useStudentMutations,
 } from './hooks';
 
 // Export TypeScript types
@@ -36,4 +40,10 @@ export type {
   UpdateStagePayload,
   ApiError,
   ApiResponse,
+  // Student types
+  Student,
+  StudentWithLead,
+  StudentListFilter,
+  CreateStudentPayload,
+  UpdateStudentPayload,
 } from './types';

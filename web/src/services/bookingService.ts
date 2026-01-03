@@ -428,7 +428,7 @@ export interface User {
 
 export const fetchUsers = async (): Promise<User[]> => {
   try {
-    const response = await api.get('/api/deal-pipeline/counsellors');
+    const response = await api.get('/api/deals-pipeline/counsellors');
     
     const users = Array.isArray(response.data)
       ? response.data
