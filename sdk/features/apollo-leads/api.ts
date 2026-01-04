@@ -2,52 +2,10 @@
  * Apollo Leads Feature - API Functions
  * 
  * All HTTP API calls for the Apollo Leads feature.
- * LAD Architecture Compliant - Uses shared apiClient instead of direct fetch()
+ * LAD Architecture Compliant - Uses shared apiClient
  */
 
-// Try to use shared apiClient if available, otherwise create a simple wrapper
-let apiClient: any;
-
-try {
-  // Try to import from shared location (when integrated into LAD)
-  apiClient = require('../../shared/apiClient').apiClient;
-} catch (error) {
-  // Fallback: Create simple apiClient for standalone feature repo
-  apiClient = {
-    get: async (url: string, options?: any) => {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        ...options
-      });
-      return { data: await response.json() };
-    },
-    post: async (url: string, data?: any, options?: any) => {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify(data),
-        ...options
-      });
-      return { data: await response.json() };
-    }
-  };
-}
-
-/**
- * Get authentication headers
- */
-function getAuthHeaders(): HeadersInit {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
+import { apiClient } from '../../shared/apiClient';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
 const BASE_PATH = `${API_BASE_URL}/api/apollo-leads`;
