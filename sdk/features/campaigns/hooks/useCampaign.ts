@@ -38,7 +38,11 @@ export function useCampaign(campaignId: string | null): UseCampaignReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load campaign';
       setError(errorMessage);
-      console.error('[campaigns] Failed to load campaign:', err);
+      // Log error for debugging but don't expose to console in production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[campaigns] Failed to load campaign:', err);
+      }
+      // TODO: Replace with proper error reporting service
     } finally {
       setLoading(false);
     }

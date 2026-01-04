@@ -148,3 +148,65 @@ export async function generateLeadProfileSummary(
   return { summary: response.data.summary };
 }
 
+/**
+ * Reveal email for a campaign lead
+ * Calls campaigns API which proxies to Apollo Leads API
+ */
+export async function revealLeadEmail(
+  campaignId: string,
+  leadId: string,
+  apolloPersonId: string
+): Promise<{ email: string; from_cache: boolean; credits_used: number }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    email: string;
+    from_cache: boolean;
+    credits_used: number;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-email`, {
+    apollo_person_id: apolloPersonId
+  });
+  
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal email');
+  }
+  
+  return {
+    email: response.data.email,
+    from_cache: response.data.from_cache,
+    credits_used: response.data.credits_used
+  };
+}
+
+/**
+ * Reveal phone for a campaign lead
+ * Calls campaigns API which proxies to Apollo Leads API
+ */
+export async function revealLeadPhone(
+  campaignId: string,
+  leadId: string,
+  apolloPersonId: string
+): Promise<{ phone: string; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    phone: string | null;
+    from_cache: boolean;
+    credits_used: number;
+    processing?: boolean;
+    message?: string;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-phone`, {
+    apollo_person_id: apolloPersonId
+  });
+  
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal phone');
+  }
+  
+  return {
+    phone: response.data.phone || null,
+    from_cache: response.data.from_cache,
+    credits_used: response.data.credits_used,
+    processing: response.data.processing,
+    message: response.data.message
+  };
+}
+
