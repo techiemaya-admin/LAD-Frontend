@@ -15,15 +15,20 @@ import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 
 interface CallLogResponse {
-  id: string;
+  call_log_id: string;
+  id?: string;
   agent_name: string;
-  lead_name: string;
-  call_type: "inbound" | "outbound";
+  lead_first_name?: string;
+  lead_last_name?: string;
+  lead_name?: string;
+  direction: "inbound" | "outbound";
+  call_type?: "inbound" | "outbound";
   status: string;
   started_at: string;
-  call_duration: number;
-  call_cost?: number;
+  duration_seconds: number;
+  call_duration?: number;
   cost?: number;
+  call_cost?: number;
   batch_status?: string;
 }
 
@@ -159,17 +164,24 @@ export default function CallLogsPage() {
       // Normal mode — backend auto-filters by org based on JWT
       const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?limit=100`);
 
-      const logs = (res.logs || []).map((r) => ({
-        id: String(r.id || ''),
-        assistant: r.agent_name || '',
-        lead_name: r.lead_name || '',
-        type: r.call_type === "inbound" ? "Inbound" : "Outbound",
-        status: r.status || '',
-        startedAt: r.started_at,
-        duration: r.call_duration || 0,
-        cost: r.call_cost ?? r.cost ?? 0,
-        batch_status: r.batch_status,
-      }));
+      const logs = (res.logs || []).map((r) => {
+        // Construct lead name from first and last name
+        const leadName = [r.lead_first_name, r.lead_last_name]
+          .filter(Boolean)
+          .join(' ') || '';
+
+        return {
+          id: String(r.call_log_id || r.id || ''),
+          assistant: r.agent_name || '',
+          lead_name: leadName,
+          type: r.direction === "inbound" ? "Inbound" : "Outbound",
+          status: r.status || '',
+          startedAt: r.started_at,
+          duration: r.duration_seconds || r.call_duration || 0,
+          cost: r.cost ?? r.call_cost ?? 0,
+          batch_status: r.batch_status,
+        };
+      });
 
       setItems(logs);
     } catch (error) {

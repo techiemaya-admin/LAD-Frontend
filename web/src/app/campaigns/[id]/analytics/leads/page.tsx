@@ -93,9 +93,8 @@ export default function CampaignLeadsPage() {
       // Fetch summaries for all leads in parallel
       const summaryPromises = leads.map(async (lead) => {
         try {
-          // Note: This API call is from a different feature (profile-summary)
-          // It should ideally be in its own SDK feature
-          const response = await fetch(`/api/profile-summary/${lead.id}?campaignId=${campaignId}`);
+          // Use the correct campaigns endpoint for lead summary
+          const response = await fetch(`/api/campaigns/${campaignId}/leads/${lead.id}/summary`);
           const data = await response.json();
           if (data.success && data.summary) {
             return { leadId: lead.id, summary: data.summary };

@@ -556,14 +556,15 @@ export function CallLogModal({
       }
 
       try {
-        // Call log - Using voice-agent API (V2 endpoint)
-        const res = await apiGet<{ success: boolean; log: any }>(`/api/voice-agent/calls/job/${id}`);
-        const l = res.log;
+        // Call log - Using voice-agent API (get by call_log_id)
+        const res = await apiGet<{ success: boolean; log?: any; data?: any }>(`/api/voice-agent/calllogs/${id}`);
+        const l = res.data || res.log;
         setLog(l);
 
         // 2) Transcripts: accept string OR object, and several common keys
         try {
           const raw =
+            l?.transcripts ??
             l?.transcriptions ??
             l?.transcription ??
             l?.logs?.transcriptions ??
@@ -576,20 +577,26 @@ export function CallLogModal({
             const arr =
               Array.isArray(parsed?.segments) ? parsed.segments :
               Array.isArray(parsed) ? parsed : [];
-            segs = arr.map((s: any) => ({
-              time: s.timestamp ?? s.time ?? s.t,
-              speaker: s.speaker ?? s.role,
-              text: s.text ?? s.message ?? "",
-            })).filter((x: { text: any; }) => x.text);
+            segs = arr.map((s: any) => {
+              const text = (s.text || s.intended_text || s.message || "").trim();
+              return {
+                time: s.timestamp ?? s.time ?? s.t,
+                speaker: s.speaker ?? s.role,
+                text,
+              };
+            }).filter((x: { text: string; }) => x.text.length > 0);
           } else if (raw && typeof raw === "object") {
             const arr =
               Array.isArray(raw?.segments) ? raw.segments :
               Array.isArray(raw) ? raw : [];
-            segs = arr.map((s: any) => ({
-              time: s.timestamp ?? s.time ?? s.t,
-              speaker: s.speaker ?? s.role,
-              text: s.text ?? s.message ?? "",
-            })).filter((x: { text: any; }) => x.text);
+            segs = arr.map((s: any) => {
+              const text = (s.text || s.intended_text || s.message || "").trim();
+              return {
+                time: s.timestamp ?? s.time ?? s.t,
+                speaker: s.speaker ?? s.role,
+                text,
+              };
+            }).filter((x: { text: string; }) => x.text.length > 0);
           }
           setSegments(segs);
         } catch {
@@ -614,19 +621,24 @@ export function CallLogModal({
               console.warn("Failed to fetch signed recording URL, using fallback:", apiError);
             }
           }
+          if (!audioUrl && l?.signed_recording_url) {
+            audioUrl = l.signed_recording_url;
+          }
+          if (!audioUrl && l?.recording_url) {
+            audioUrl = l.recording_url;
+          }
           if (!audioUrl && l?.call_recording_url) {
             audioUrl = l.call_recording_url;
           }
           setSignedRecordingUrl(audioUrl);
         } catch (signErr) {
-          console.error("Signed URL fetch failed:", signErr);
-          setSignedRecordingUrl(l?.call_recording_url);
+          // Fallback to direct URLs if signed URL fetch fails
+          setSignedRecordingUrl(l?.signed_recording_url || l?.recording_url || l?.call_recording_url);
         }
 
-        // 4) Analysis - Using voice-agent API (VAPI integration disabled in backend)
+        // 4) Analysis - included in the main call log response
         try {
-          const ra = await apiGet<{ success: boolean; analysis: any }>(`/api/voice-agent/calls/${id}/analysis`);
-          const a = ra?.analysis ?? null;
+          const a = l?.analysis ?? null;
           setAnalysis(a);
           setMessages(a);
         } catch {
@@ -634,7 +646,10 @@ export function CallLogModal({
           setMessages(null);
         }
       } catch (e) {
-        console.error("Failed to load call log:", e);
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to load call log:", e);
+        }
         setLog(null);
         setSegments([]);
         setAnalysis(null);
