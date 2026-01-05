@@ -30,6 +30,7 @@ interface CallLogResponse {
   cost?: number;
   call_cost?: number;
   batch_status?: string;
+  batch_id?: string;
 }
 
 interface CallLogsResponse {
@@ -80,11 +81,13 @@ export default function CallLogsPage() {
       duration: number;
       cost: number;
       batch_status?: string;
+      batch_id?: string;
     }>
   >([]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | undefined>();
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   // Filters
   const [search, setSearch] = useState("");
@@ -120,12 +123,21 @@ export default function CallLogsPage() {
     const mode = searchParams.get("mode");
 
     if (jobId) {
-      setBatchJobId(jobId);
-      if (mode === "current-batch") {
-        setTimeFilter("batch");
+      // Only accept UUID format batch IDs (not external "batch-xxx" format)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId);
+      
+      if (isUUID) {
+        setBatchJobId(jobId);
+        if (mode === "current-batch") {
+          setTimeFilter("batch");
+        }
+      } else {
+        console.warn('[Call Logs] Invalid batch ID format (not UUID), ignoring:', jobId);
+        // Clear invalid batch ID from URL
+        router.replace('/call-logs');
       }
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   // ----------------------
   // LOAD CALLS (ORG handled in backend using JWT)
@@ -134,32 +146,45 @@ export default function CallLogsPage() {
     try {
       // Batch View
       if (timeFilter === "batch" && batchJobId) {
-        const res = await apiGet<BatchApiResponse>(`/api/voice-agent/batch/batch-status/${batchJobId}`);
-        const batch = res.batch || res.result;
+        try {
+          const res = await apiGet<BatchApiResponse>(`/api/voice-agent/batch/batch-status/${batchJobId}`);
+          const batch = res.batch || res.result;
 
-        if (!batch) {
-          setItems([]);
+          if (!batch) {
+            setItems([]);
+            return;
+          }
+
+          const batchStatus = batch.status || "";
+          const results = batch.results || [];
+
+          const logs = results.map((r, idx) => ({
+            id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
+            assistant: "", // not provided by this endpoint
+            lead_name: r.lead_name || "",
+            type: "Outbound",
+            status: r.status || "pending",
+            startedAt: "", // not exposed from this endpoint
+            duration: 0,
+            cost: 0,
+            batch_status: r.batch_status || batchStatus,
+            batch_id: batchJobId, // Set the batch_id so filtering works
+          }));
+
+          setItems(logs);
           return;
+        } catch (error) {
+          console.error('[Call Logs] Failed to load batch status:', error);
+          // Reset to normal mode when batch loading fails
+          setBatchJobId(null);
+          setTimeFilter("all");
+          // Clear URL parameters to prevent reload loop
+          router.replace('/call-logs');
+          // Fall through to load normal call logs
         }
-
-        const batchStatus = batch.status || "";
-        const results = batch.results || [];
-
-        const logs = results.map((r, idx) => ({
-          id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
-          assistant: "", // not provided by this endpoint
-          lead_name: r.lead_name || "",
-          type: "Outbound",
-          status: r.status || "pending",
-          startedAt: "", // not exposed from this endpoint
-          duration: 0,
-          cost: 0,
-          batch_status: r.batch_status || batchStatus,
-        }));
-
-        setItems(logs);
-        return;
       }
+
+
 
       // Normal mode — backend auto-filters by org based on JWT
       const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?limit=100`);
@@ -180,7 +205,14 @@ export default function CallLogsPage() {
           duration: r.duration_seconds || r.call_duration || 0,
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
+          batch_id: r.batch_id,
         };
+      });
+
+      console.log('[Call Logs] Loaded call logs:', {
+        total: logs.length,
+        withBatchId: logs.filter(l => l.batch_id).length,
+        sample: logs.slice(0, 3),
       });
 
       setItems(logs);
@@ -224,13 +256,12 @@ export default function CallLogsPage() {
       let matchTime = true;
 
       if (timeFilter === "current") {
-        if (i.batch_status) {
-          // For batch calls: running = current
-          matchTime = i.batch_status.toLowerCase() === "running";
-        } else if (i.startedAt) {
-          // Non-batch: last 24 hours
-          const dt = new Date(i.startedAt).getTime();
-          matchTime = now - dt < 24 * 60 * 60 * 1000;
+        // Current Batch: only show batch calls with running/pending/queued status
+        if (i.batch_id) {
+          const status = i.status?.toLowerCase() || '';
+          matchTime = ['running', 'pending', 'queued', 'ongoing', 'calling', 'in_progress'].includes(status);
+        } else {
+          matchTime = false; // Hide individual calls in Current Batch view
         }
       } else if (timeFilter === "previous") {
         if (i.batch_status) {
@@ -241,8 +272,14 @@ export default function CallLogsPage() {
           matchTime = now - dt > 24 * 60 * 60 * 1000;
         }
       } else if (timeFilter === "batch") {
-        // Batch mode: backend already limited to that job_id; show all
-        matchTime = true;
+        // Batch view: show ALL calls that have a batch_id (unless specific batchJobId is set)
+        if (batchJobId) {
+          // Specific batch view - only show this batch
+          matchTime = !!i.batch_id && i.batch_id === batchJobId;
+        } else {
+          // General batch view - show all batch calls
+          matchTime = !!i.batch_id;
+        }
       }
 
       return matchSearch && matchProvider && matchTime;
@@ -257,6 +294,45 @@ export default function CallLogsPage() {
   const totalPages = Math.ceil(filtered.length / perPage) || 1;
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
+  // Group calls by batch (from paginated items)
+  const batchGroups = useMemo(() => {
+    const groups: Record<string, typeof paginated> = {};
+    const noBatchCalls: typeof paginated = [];
+
+    paginated.forEach((call) => {
+      if (call.batch_id) {
+        if (!groups[call.batch_id]) {
+          groups[call.batch_id] = [];
+        }
+        groups[call.batch_id].push(call);
+      } else {
+        noBatchCalls.push(call);
+      }
+    });
+
+    console.log('[Call Logs] Batch grouping:', {
+      totalCalls: paginated.length,
+      batchGroups: Object.keys(groups).length,
+      noBatchCalls: noBatchCalls.length,
+      groups,
+    });
+
+    return { groups, noBatchCalls };
+  }, [paginated]);
+
+  // Toggle batch expansion
+  const toggleBatch = (batchId: string) => {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+      }
+      return next;
+    });
+  };
+
   // ----------------------
   // SELECTION
   // ----------------------
@@ -270,7 +346,14 @@ export default function CallLogsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelected(new Set(filtered.map((i) => i.id)));
+      // Collect all call IDs from batch groups or paginated items
+      const allCallIds = batchGroups
+        ? [
+            ...Object.values(batchGroups.groups).flat().map(c => c.id),
+            ...batchGroups.noBatchCalls.map(c => c.id)
+          ]
+        : paginated.map((i) => i.id);
+      setSelected(new Set(allCallIds));
     } else {
       setSelected(new Set());
     }
@@ -335,6 +418,9 @@ export default function CallLogsPage() {
         onSelectAll={handleSelectAll}
         onRowClick={(id) => setOpenId(id)}
         onEndCall={endSingleCall}
+        batchGroups={batchGroups}
+        expandedBatches={expandedBatches}
+        onToggleBatch={toggleBatch}
       />
 
       {/* Pagination */}

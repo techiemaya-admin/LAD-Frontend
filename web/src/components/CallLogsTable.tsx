@@ -1,4 +1,5 @@
-import { PhoneIncoming, PhoneOutgoing, StopCircle } from "lucide-react";
+import React from "react";
+import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import {
   Table,
@@ -19,6 +20,7 @@ interface CallLog {
   duration?: number;
   cost?: number;
   call_cost?: number;
+  batch_id?: string;
 }
 
 interface CallLogsTableProps {
@@ -28,6 +30,9 @@ interface CallLogsTableProps {
   onSelectAll: (checked: boolean) => void;
   onRowClick: (id: string) => void;
   onEndCall: (id: string) => void;
+  batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
+  expandedBatches?: Set<string>;
+  onToggleBatch?: (batchId: string) => void;
 }
 
 export function CallLogsTable({
@@ -37,6 +42,9 @@ export function CallLogsTable({
   onSelectAll,
   onRowClick,
   onEndCall,
+  batchGroups,
+  expandedBatches = new Set(),
+  onToggleBatch,
 }: CallLogsTableProps) {
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
@@ -50,6 +58,126 @@ export function CallLogsTable({
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
+  // Calculate total calls when using batch groups
+  const totalCalls = batchGroups 
+    ? Object.values(batchGroups.groups).flat().length + batchGroups.noBatchCalls.length
+    : items.length;
+  
+  const allSelected = selectedCalls.size > 0 && selectedCalls.size === totalCalls;
+
+  const renderCallRow = (item: CallLog, index: number, indent = false) => (
+    <TableRow
+      key={item.id || `call-${index}`}
+      onClick={() => onRowClick(item.id)}
+      className={`table-row-hover cursor-pointer border-b border-border/30 ${
+        selectedCalls.has(item.id) ? "bg-primary/5" : ""
+      } ${indent ? "bg-muted/20" : ""}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <TableCell onClick={(e) => e.stopPropagation()} className={indent ? "pl-8" : ""}>
+        <input
+          type="checkbox"
+          checked={selectedCalls.has(item.id)}
+          onChange={() => onSelectCall(item.id)}
+          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+        />
+      </TableCell>
+      <TableCell className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
+        {item.id.slice(0, 8)}...
+      </TableCell>
+      <TableCell className="font-medium">{item.assistant || "—"}</TableCell>
+      <TableCell className="text-muted-foreground">{item.lead_name || "—"}</TableCell>
+      <TableCell>
+        <span
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+            item.type === "Outbound"
+              ? "bg-warning/15 text-warning border border-warning/30"
+              : "bg-primary/15 text-primary border border-primary/30"
+          }`}
+        >
+          {item.type === "Outbound" ? (
+            <PhoneOutgoing className="w-3.5 h-3.5" />
+          ) : (
+            <PhoneIncoming className="w-3.5 h-3.5" />
+          )}
+          {item.type}
+        </span>
+      </TableCell>
+      <TableCell>
+        <StatusBadge status={item.status} />
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {formatDateTime(item.startedAt)}
+      </TableCell>
+      <TableCell className="font-mono text-sm">
+        {formatDuration(item.duration)}
+      </TableCell>
+      <TableCell className="font-mono text-sm">
+        {item.cost || item.call_cost
+          ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}`
+          : "—"}
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        {item.status?.toLowerCase().includes("ongoing") && (
+          <button
+            onClick={() => onEndCall(item.id)}
+            className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+            title="End Call"
+          >
+            <StopCircle className="w-5 h-5" />
+          </button>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+
+  const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
+    const isExpanded = expandedBatches.has(batchId);
+    const totalCalls = calls.length;
+    const completedCalls = calls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
+    const totalCost = calls.reduce((sum, call) => {
+      const cost = Number(call.cost || call.call_cost || 0);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    return (
+      <TableRow
+        key={`batch-${batchId}`}
+        onClick={() => onToggleBatch?.(batchId)}
+        className="bg-primary/5 hover:bg-primary/10 cursor-pointer border-b-2 border-primary/20 transition-colors"
+      >
+        <TableCell colSpan={10} className="py-4">
+          <div className="flex items-center gap-3">
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-primary" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-primary" />
+            )}
+            <div className="flex-1 flex items-center gap-6">
+              <div>
+                <span className="font-semibold text-foreground">Batch:</span>
+                <span className="ml-2 font-mono text-sm text-muted-foreground">
+                  {batchId.slice(0, 8)}...
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{totalCalls}</span> calls
+                </span>
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{completedCalls}</span> completed
+                </span>
+                <span className="text-muted-foreground">
+                  Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   return (
     <div className="glass-card rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
       <Table>
@@ -58,7 +186,7 @@ export function CallLogsTable({
             <TableHead className="w-12">
               <input
                 type="checkbox"
-                checked={selectedCalls.size > 0 && selectedCalls.size === items.length}
+                checked={allSelected}
                 onChange={(e) => onSelectAll(e.target.checked)}
                 className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
               />
@@ -75,72 +203,33 @@ export function CallLogsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.length > 0 ? (
-            items.map((item, index) => (
-              <TableRow
-                key={item.id || `call-${index}`}
-                onClick={() => onRowClick(item.id)}
-                className={`table-row-hover cursor-pointer border-b border-border/30 ${
-                  selectedCalls.has(item.id) ? "bg-primary/5" : ""
-                }`}
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedCalls.has(item.id)}
-                    onChange={() => onSelectCall(item.id)}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-                  />
-                </TableCell>
-                <TableCell className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
-                  {item.id.slice(0, 8)}...
-                </TableCell>
-                <TableCell className="font-medium">{item.assistant || "—"}</TableCell>
-                <TableCell className="text-muted-foreground">{item.lead_name || "—"}</TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                      item.type === "Outbound"
-                        ? "bg-warning/15 text-warning border border-warning/30"
-                        : "bg-primary/15 text-primary border border-primary/30"
-                    }`}
-                  >
-                    {item.type === "Outbound" ? (
-                      <PhoneOutgoing className="w-3.5 h-3.5" />
-                    ) : (
-                      <PhoneIncoming className="w-3.5 h-3.5" />
-                    )}
-                    {item.type}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={item.status} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDateTime(item.startedAt)}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {formatDuration(item.duration)}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {item.cost || item.call_cost
-                    ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}`
-                    : "—"}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {item.status?.toLowerCase().includes("ongoing") && (
-                    <button
-                      onClick={() => onEndCall(item.id)}
-                      className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                      title="End Call"
-                    >
-                      <StopCircle className="w-5 h-5" />
-                    </button>
+          {batchGroups ? (
+            <>
+              {/* Render batch groups */}
+              {Object.entries(batchGroups.groups).map(([batchId, calls]) => (
+                <React.Fragment key={`batch-group-${batchId}`}>
+                  {renderBatchHeader(batchId, calls)}
+                  {expandedBatches.has(batchId) &&
+                    calls.map((call, idx) => renderCallRow(call, idx, true))}
+                </React.Fragment>
+              ))}
+              
+              {/* Render non-batch calls */}
+              {batchGroups.noBatchCalls.length > 0 && (
+                <>
+                  {batchGroups.noBatchCalls.length > 0 && Object.keys(batchGroups.groups).length > 0 && (
+                    <TableRow className="bg-muted/30">
+                      <TableCell colSpan={10} className="py-3 text-sm font-semibold text-muted-foreground">
+                        Individual Calls
+                      </TableCell>
+                    </TableRow>
                   )}
-                </TableCell>
-              </TableRow>
-            ))
+                  {batchGroups.noBatchCalls.map((call, idx) => renderCallRow(call, idx, false))}
+                </>
+              )}
+            </>
+          ) : items.length > 0 ? (
+            items.map((item, index) => renderCallRow(item, index, false))
           ) : (
             <TableRow>
               <TableCell colSpan={10} className="text-center py-12">
