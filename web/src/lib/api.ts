@@ -9,7 +9,7 @@ function authHeaders() {
     console.log('[API] authHeaders: Running on server, no token');
     return {} as Record<string, string>;
   }
-  const token = safeStorage.getItem("token");
+  const token = safeStorage.getItem("token") || safeStorage.getItem("auth_token");
   console.log('[API] authHeaders: Token present:', !!token, token ? `(${token.substring(0, 30)}...)` : '(none)');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
