@@ -108,14 +108,21 @@ export default function CallLogsPage() {
       return;
     }
 
-    socketRef.current = io(socketUrl, { transports: ["websocket"], auth: { token } });
+    socketRef.current = io(socketUrl, { 
+      transports: ["websocket", "polling"], // Allow fallback to polling for Cloud Run
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+    });
 
     socketRef.current.on('connect', () => {
       console.log('[Call Logs] Socket connected', socketRef.current.id);
     });
 
     socketRef.current.on('connect_error', (err: any) => {
-      console.warn('[Call Logs] Socket connect_error', err);
+      console.warn('[Call Logs] Socket connect_error', err?.message || err);
     });
 
     return () => {
