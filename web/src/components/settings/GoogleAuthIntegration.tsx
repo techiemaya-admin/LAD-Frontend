@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiPost } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { safeStorage } from '@/utils/storage';
 
 export const GoogleAuthIntegration: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -99,9 +100,18 @@ export const GoogleAuthIntegration: React.FC = () => {
     
     try {
       // Get the logged-in user's id
+      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!meRes.ok) {
+        throw new Error('Failed to fetch user data');
+      }
 
       const meData = await meRes.json();
       // Use user.id from the response (architecture-compliant: core platform returns user.id)
@@ -142,9 +152,18 @@ export const GoogleAuthIntegration: React.FC = () => {
     setIsLoading(true);
     
     try {
+      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!meRes.ok) {
+        throw new Error('Failed to fetch user data');
+      }
 
       const meData = await meRes.json();
       // Use user.id from the response (architecture-compliant: core platform returns user.id)
