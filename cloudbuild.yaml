@@ -83,4 +83,4 @@ substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'lad-frontend-develop'
   _ENV: 'develop'
-  _API_URL: 'https://lad-backend-develop-3nddlneyya-uc.a.run.app'
+  _API_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'
