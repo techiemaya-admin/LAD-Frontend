@@ -14,6 +14,7 @@ export interface BookingParams {
   createdBy?: string;
   bookingType?: string;
   bookingSource?: string;
+  timezone?: string;
 }
 
 export interface BookingResponse {
@@ -364,6 +365,7 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
       booking_date,
       scheduled_at,
       created_by: bookingData.createdBy,
+      timezone: bookingData.timezone || 'UTC',
     };
 
     // Remove undefined keys to avoid backend validation issues.

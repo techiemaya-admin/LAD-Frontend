@@ -639,6 +639,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         createdBy,
         bookingType,
         bookingSource: 'user_ui',
+        timezone: pipelineSettings.timezone || 'GST',
       };
 
       console.log('[BookingSlot.handleConfirmBooking] Booking with data:', bookingData);
