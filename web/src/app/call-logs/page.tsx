@@ -96,7 +96,10 @@ export default function CallLogsPage() {
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
 
   const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3004";
-  const socket = useRef(io(socketUrl, { transports: ["websocket"] })).current;
+  const socket = useRef(io(socketUrl, { 
+    transports: ["websocket"],
+    reconnection: false // Disable reconnection to avoid console spam
+  })).current;
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -225,13 +228,18 @@ export default function CallLogsPage() {
   useEffect(() => {
     load(); // initial + whenever filter/batch changes
 
+    // Suppress socket connection errors
+    socket.on("connect_error", () => {
+      // Silently ignore connection errors since socket.io is optional for real-time updates
+    });
+
     socket.on("calllogs:update", () => {
-      console.log("📢 Received calllogs:update");
       load();
     });
 
     return () => {
       socket.off("calllogs:update");
+      socket.off("connect_error");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeFilter, batchJobId]);
