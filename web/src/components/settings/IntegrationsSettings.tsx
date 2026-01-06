@@ -44,7 +44,7 @@ export const IntegrationsSettings: React.FC = () => {
               <h4 className="text-gray-900 font-semibold text-lg">Slack</h4>
             </div>
             <p className="text-gray-600 text-sm mb-6">
-              Integrate FuseAI Agent to your Slack workspace to receive regular updates from different products about your business.
+              Integrate LAD Agent to your Slack workspace to receive regular updates from different products about your business.
             </p>
             <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
