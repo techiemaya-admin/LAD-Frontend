@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Lead } from '../../components/leads/types';
+import { Lead } from '../../features/deals-pipeline/types';
 
 /**
  * UI Slice
@@ -172,6 +172,9 @@ interface PipelineSettings {
   showCardCount: boolean;
   showStageValue: boolean;
   enableDragAndDrop: boolean;
+  businessHoursStart: string;
+  businessHoursEnd: string;
+  timezone: string;
 }
 
 interface UILoading {
@@ -367,7 +370,10 @@ const initialState: UIState = {
     compactView: false,
     showCardCount: true,
     showStageValue: true,
-    enableDragAndDrop: true
+    enableDragAndDrop: true,
+    businessHoursStart: '09:00',
+    businessHoursEnd: '18:00',
+    timezone: 'GST' // Gulf Standard Time (UTC+4)
   }
 };
 

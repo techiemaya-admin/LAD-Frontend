@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Calendar, Clock, User, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/ui/dialog';
 import * as bookingService from '@/services/bookingService';
+import { selectPipelineSettings } from '@/store/slices/uiSlice';
+import { selectUser } from '@/store/slices/authSlice';
 
 interface TimeSlot {
   id: string;
@@ -60,6 +63,10 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   users = [],
   isEditMode = false,
 }) => {
+  // Get pipeline settings from Redux
+  const pipelineSettings = useSelector(selectPipelineSettings);
+  const currentUser = useSelector(selectUser);
+  
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -387,6 +394,19 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     if (!userId || !date) return;
 
     try {
+      console.log('[BookingSlot] Fetching availability with settings:', {
+        userId,
+        date,
+        timezone: pipelineSettings.timezone,
+        businessHoursStart: pipelineSettings.businessHoursStart,
+        businessHoursEnd: pipelineSettings.businessHoursEnd
+      });
+      
+      // Calculate dayStart and dayEnd based on business hours and timezone
+      const businessStart = pipelineSettings.businessHoursStart || '00:00';
+      const businessEnd = pipelineSettings.businessHoursEnd || '23:59';
+      const timezone = pipelineSettings.timezone || 'UTC';
+      
       // Prefer legacy /availability endpoint for slot lists (per requirement), with fallback.
       let rawAvailable: any[] = [];
       let rawBookings: any[] = [];
@@ -396,19 +416,23 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
           userId,
           date,
           slotMinutes: 15,
+          timezone,
+          businessHoursStart: businessStart,
+          businessHoursEnd: businessEnd
         });
         rawAvailable = availability.availableSlots || [];
         rawBookings = availability.bookings || [];
       } catch {
         // Fallback to /bookings/availability if /availability isn't supported.
-        const dayStart = `${date}T00:00:00Z`;
-        const dayEnd = `${date}T23:59:59Z`;
+        const dayStart = `${date}T${businessStart}:00Z`;
+        const dayEnd = `${date}T${businessEnd}:59Z`;
 
         const result = await bookingService.fetchBookingAvailability({
           userId,
           dayStart,
           dayEnd,
           slotMinutes: 15,
+          timezone
         });
         rawAvailable = result.availableSlots || [];
         rawBookings = result.bookings || [];
@@ -618,7 +642,32 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
       };
 
       console.log('[BookingSlot.handleConfirmBooking] Booking with data:', bookingData);
-      await bookingService.bookSlot(bookingData);
+      
+      // Validate required fields before sending
+      if (!bookingData.leadId) {
+        showToast('Lead ID is missing. Cannot create booking.', 'error');
+        return;
+      }
+      if (!bookingData.assignedUserId) {
+        showToast('Assigned user ID is missing. Cannot create booking.', 'error');
+        return;
+      }
+      if (!bookingData.createdBy) {
+        showToast('Created by user ID is missing. Cannot create booking.', 'error');
+        return;
+      }
+      if (!bookingData.tenantId) {
+        showToast('Organization ID is missing. Cannot create booking.', 'error');
+        return;
+      }
+      
+      try {
+        await bookingService.bookSlot(bookingData);
+      } catch (error: any) {
+        console.error('[BookingSlot.handleConfirmBooking] Full error:', error);
+        console.error('[BookingSlot.handleConfirmBooking] Error response:', error.response?.data);
+        throw error; // Re-throw so the outer catch handles the toast
+      }
 
       // Update the slot as booked
       setTimeSlots((prevSlots) =>
@@ -873,13 +922,24 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 <SelectTrigger id="user-select-edit" className="w-full">
                   <SelectValue
                     placeholder={
-                      createdBy
+                      createdBy && currentUser?.email
+                        ? `Auto-selected: ${currentUser.email}`
+                        : createdBy
                         ? 'Using logged-in user'
                         : users.length === 0
                           ? 'No users available'
                           : 'Choose a user...'
                     }
-                  />
+                  >
+                    {selectedUser && currentUser && String(currentUser.id) === selectedUser && currentUser.email
+                      ? `${currentUser.name || 'Current User'} (${currentUser.email})`
+                      : selectedUser && users.find(u => String(u.id) === selectedUser)
+                        ? (() => {
+                            const user = users.find(u => String(u.id) === selectedUser);
+                            return `${user?.name} ${user?.email ? `(${user.email})` : ''}`;
+                          })()
+                        : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((user) => (
@@ -889,11 +949,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {createdBy ? (
-                <p className="text-xs text-gray-500 mt-2">
-                  Auto-selected from your login.
-                </p>
-              ) : users.length === 0 ? (
+              {!createdBy && users.length === 0 ? (
                 <p className="text-xs text-gray-500 mt-2">
                   No counsellors/users loaded, so booking is disabled.
                 </p>
@@ -1126,32 +1182,76 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                   </div>
                 </div>
 
-                {/* Payload Preview */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">Payload Preview</h4>
-                  <pre className="text-xs bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto max-h-56 whitespace-pre-wrap">
-{JSON.stringify(
-  {
-    tenant_id: tenantId || '',
-    student_id: studentId || String(leadId),
-    lead_id: String(leadId),
-    counsellor_id: String(selectedUser || ''),
-    assigned_user_id: String(assignedUserId || createdBy || ''),
-    booking_type: bookingType,
-    booking_source: 'user_ui',
-    booking_time: selectedSlotForBooking.startTime,
-    booking_date: selectedDate,
-    scheduled_at: `${selectedDate}T${selectedSlotForBooking.startTime}:00Z`,
-    created_by: String(createdBy || ''),
-  },
-  null,
-  2
-)}
-                  </pre>
+                {/* Booking Information */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                    <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Booking Information
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-3 bg-white rounded-md p-2.5">
+                      <svg className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-600 font-medium">Organization ID</span>
+                        <p className="text-gray-900 mt-0.5 font-mono break-all">{tenantId || <span className="text-red-500">Missing</span>}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 bg-white rounded-md p-2.5">
+                      <svg className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-600 font-medium">Student / Lead ID</span>
+                        <p className="text-gray-900 mt-0.5 font-mono break-all">{studentId || String(leadId)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 bg-white rounded-md p-2.5">
+                      <svg className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-600 font-medium">Counsellor / Assigned User</span>
+                        <p className="text-gray-900 mt-0.5 font-mono break-all">{String(assignedUserId || createdBy || selectedUser || '')}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 bg-white rounded-md p-2.5">
+                      <svg className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-600 font-medium">Booking Type & Source</span>
+                        <p className="text-gray-900 mt-0.5">
+                          <span className="font-medium">{bookingType}</span>
+                          <span className="text-gray-400 mx-1.5">•</span>
+                          <span className="text-gray-600">user_ui</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 bg-white rounded-md p-2.5">
+                      <svg className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-600 font-medium">Scheduled Time</span>
+                        <p className="text-gray-900 mt-0.5">{`${selectedDate}T${selectedSlotForBooking.startTime}:00Z`}</p>
+                      </div>
+                    </div>
+                  </div>
                   {(!tenantId || !createdBy) && (
-                    <p className="text-xs text-red-600 mt-2">
-                      Missing required fields (tenant_id/created_by). Booking will be blocked until present.
-                    </p>
+                    <div className="mt-3 flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-md">
+                      <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-600">
+                        Missing required fields (Organization ID / Created By). Booking cannot proceed until resolved.
+                      </p>
+                    </div>
                   )}
                 </div>
 

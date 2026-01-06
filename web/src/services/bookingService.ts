@@ -47,6 +47,7 @@ export interface BookingAvailabilityParams {
   dayStart: string; // ISO string (backend expects Z)
   dayEnd: string; // ISO string (backend expects Z)
   slotMinutes: number;
+  timezone?: string;
 }
 
 export interface BookingAvailabilitySlot {
@@ -202,6 +203,7 @@ export const fetchBookingAvailability = async (
         dayStart: params.dayStart,
         dayEnd: params.dayEnd,
         slotMinutes: params.slotMinutes,
+        timezone: params.timezone,
       },
     });
 
@@ -283,15 +285,26 @@ export const fetchAvailabilitySlots = async (params: {
   userId: string | number;
   date: string;
   slotMinutes?: number;
+  timezone?: string;
+  businessHoursStart?: string;
+  businessHoursEnd?: string;
 }): Promise<AvailabilitySlotsResult> => {
   try {
-    const tzOffsetMinutes = -new Date().getTimezoneOffset();
-    const response = await api.get('/api/deals-pipeline/availability', {
+    // Use business hours if provided, otherwise use full day
+    const startTime = params.businessHoursStart || '00:00';
+    const endTime = params.businessHoursEnd || '23:59';
+    
+    // Convert single date to dayStart/dayEnd range for backend
+    const dayStart = `${params.date}T${startTime}:00Z`;
+    const dayEnd = `${params.date}T${endTime}:59Z`;
+    
+    const response = await api.get(`${BOOKINGS_PATH}/availability`, {
       params: {
-        counsellorId: params.userId,
-        date: params.date,
-        slotMinutes: params.slotMinutes,
-        tzOffset: tzOffsetMinutes,
+        userId: params.userId,
+        dayStart,
+        dayEnd,
+        slotMinutes: params.slotMinutes || 15,
+        timezone: params.timezone,
       },
     });
 
@@ -378,10 +391,16 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
     return response.data?.data || response.data?.booking || response.data;
     
   } catch (error: any) {
+    console.error('[bookingService.bookSlot] Full error object:', error);
+    console.error('[bookingService.bookSlot] Error response:', error.response);
+    console.error('[bookingService.bookSlot] Error response data:', error.response?.data);
+    console.error('[bookingService.bookSlot] Error status:', error.response?.status);
+    
     const errorMessage = 
       error.response?.data?.error ||
       error.response?.data?.message ||
       error.response?.data?.detail ||
+      error.response?.data?.details ||
       error.message ||
       'Failed to book slot. Please try again.';
     

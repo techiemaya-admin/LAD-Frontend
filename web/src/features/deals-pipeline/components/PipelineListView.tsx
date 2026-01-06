@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
-import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
@@ -15,6 +14,22 @@ import {
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
+
+// UI-compatible Lead interface for pipeline list view
+interface Lead {
+  id: string | number;
+  name?: string;
+  email?: string;
+  company?: string;
+  phone?: string;
+  status?: string;
+  priority?: string;
+  stage?: string;
+  amount?: number | string;
+  assignee?: string;
+  source?: string;
+  [key: string]: unknown;
+}
 import { 
   selectPipelineSearchQuery,
   selectPipelineActiveFilters,
@@ -107,21 +122,6 @@ interface PipelineListViewProps {
   compactMode?: boolean;
 }
 
-interface Lead {
-  id: string | number;
-  name?: string;
-  email?: string;
-  company?: string;
-  phone?: string;
-  status?: string;
-  priority?: string;
-  stage?: string;
-  amount?: number | string;
-  assignee?: string;
-  source?: string;
-  [key: string]: unknown;
-}
-
 const PipelineListView: React.FC<PipelineListViewProps> = ({ 
   leads, 
   stages, 
@@ -193,13 +193,100 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Get master data for inline editing
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
+  
+  // Debug logging for dropdown data
+  console.log('[PipelineListView] statusOptions:', statusOptions);
+  console.log('[PipelineListView] priorityOptions:', priorityOptions);
+  
+  // Ensure we have at least some fallback data for dropdowns
+  const effectiveStatusOptions = useMemo(() => {
+    if (statusOptions.length > 0) return statusOptions;
+    return [
+      { key: 'active', label: 'Active' },
+      { key: 'on_hold', label: 'On Hold' },
+      { key: 'closed_won', label: 'Closed Won' },
+      { key: 'closed_lost', label: 'Closed Lost' },
+      { key: 'archived', label: 'Archived' },
+      { key: 'inactive', label: 'Inactive' }
+    ];
+  }, [statusOptions]);
+  
+  const effectivePriorityOptions = useMemo(() => {
+    if (priorityOptions.length > 0) return priorityOptions;
+    return [
+      { key: 'low', label: 'Low' },
+      { key: 'medium', label: 'Medium' },
+      { key: 'high', label: 'High' },
+      { key: 'urgent', label: 'Urgent' }
+    ];
+  }, [priorityOptions]);
+  
+  // Load master data if not loaded (bootstrap fallback)
+  useEffect(() => {
+    const loadMasterData = async () => {
+      if (statusOptions.length === 0) {
+        console.log('[PipelineListView] Loading master data - statusOptions empty');
+        try {
+          const { fetchStatuses, fetchPriorities, fetchSources } = await import('@/services/pipelineService');
+          const [statuses, priorities, sources] = await Promise.all([
+            fetchStatuses().catch(err => { 
+              console.warn('Failed to load statuses:', err); 
+              // Fallback to static statuses matching our backend
+              return [
+                { key: 'active', label: 'Active' },
+                { key: 'on_hold', label: 'On Hold' },
+                { key: 'closed_won', label: 'Closed Won' },
+                { key: 'closed_lost', label: 'Closed Lost' },
+                { key: 'archived', label: 'Archived' },
+                { key: 'inactive', label: 'Inactive' }
+              ];
+            }),
+            fetchPriorities().catch(err => { 
+              console.warn('Failed to load priorities:', err); 
+              // Fallback to static priorities
+              return [
+                { key: 'low', label: 'Low' },
+                { key: 'medium', label: 'Medium' },
+                { key: 'high', label: 'High' },
+                { key: 'urgent', label: 'Urgent' }
+              ];
+            }),
+            fetchSources().catch(err => { 
+              console.warn('Failed to load sources:', err); 
+              return [
+                { key: 'website', label: 'Website' },
+                { key: 'linkedin', label: 'LinkedIn' },
+                { key: 'referral', label: 'Referral' },
+                { key: 'cold_email', label: 'Cold Email' }
+              ];
+            })
+          ]);
+          
+          const { setStatuses, setPriorities, setSources } = await import('@/store/slices/masterDataSlice');
+          dispatch(setStatuses(statuses));
+          dispatch(setPriorities(priorities)); 
+          dispatch(setSources(sources));
+          
+          console.log('[PipelineListView] Master data loaded:', { 
+            statuses: statuses.length, 
+            priorities: priorities.length, 
+            sources: sources.length 
+          });
+        } catch (err) {
+          console.error('[PipelineListView] Failed to load master data:', err);
+        }
+      }
+    };
+    
+    loadMasterData();
+  }, [effectiveStatusOptions.length, dispatch]);
 
   // Process leads with enhanced data
   const allLeads = useMemo(() => {
     return leads.map((lead: Lead) => {
       // Get proper labels from options
-      const statusOption = statusOptions.find(s => s.key === lead.status);
-      const priorityOption = priorityOptions.find(p => p.key === lead.priority);
+      const statusOption = effectiveStatusOptions.find(s => s.key === lead.status);
+      const priorityOption = effectivePriorityOptions.find(p => p.key === lead.priority);
       const stage = stages.find(s => s.key === lead.stage);
       
       return {
@@ -209,7 +296,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         priorityLabel: priorityOption?.label || lead.priority || 'Unknown'
       };
     });
-  }, [leads, statusOptions, priorityOptions, stages]);
+  }, [leads, effectiveStatusOptions, effectivePriorityOptions, stages]);
 
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
@@ -278,16 +365,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         minWidth: Math.max(600, visibleColumnKeys.length * 100),
         cellMinWidth: '80px',
         cellMaxWidth: '150px',
-        firstColumnMinWidth: '180px', // Increased for avatar space
-        firstColumnMaxWidth: '250px'  // Increased for avatar space
+        firstColumnMinWidth: '150px',
+        firstColumnMaxWidth: '220px'
       };
     }
     return {
       minWidth: Math.max(800, visibleColumnKeys.length * 150),
       cellMinWidth: '120px',
       cellMaxWidth: '250px',
-      firstColumnMinWidth: '220px', // Increased for avatar space
-      firstColumnMaxWidth: '350px'  // Increased for avatar space
+      firstColumnMinWidth: '180px',
+      firstColumnMaxWidth: '300px'
     };
   };
 
@@ -326,7 +413,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
   // Lead details dialog handlers
   const handleRowClick = (lead: Lead) => {
-    dispatch(setSelectedLead(lead));
+    dispatch(setSelectedLead(lead as any));
     setDetailsOpen(true);
   };
 
@@ -359,9 +446,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       case 'name':
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar className="h-8 w-8 text-sm flex-shrink-0">
-              {lead.name?.charAt(0)?.toUpperCase() || 'L'}
-            </Avatar>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">
                 {lead.name || 'Unnamed Lead'}
@@ -378,81 +462,84 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={lead.stage || ''}
-              onChange={(e) => {
-                e.stopPropagation();
-                const newValue = e.target.value;
+              onValueChange={(newValue) => {
                 handleDropdownChange('stage', newValue);
               }}
-              className="min-w-[120px]"
             >
-              <option value="">Select stage...</option>
-              {stages.map((stage) => (
-                <option key={stage.key} value={stage.key}>
-                  {stage.label}
-                </option>
-              ))}
+              <SelectTrigger className="min-w-[120px]">
+                <SelectValue placeholder="Select stage..." />
+              </SelectTrigger>
+              <SelectContent>
+                {stages.map((stage) => (
+                  <SelectItem key={stage.key} value={stage.key}>
+                    {stage.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         );
       
       case 'status':
         // Validate that the lead's status exists in available options
-        const validStatusValue = statusOptions.find(option => option.key === lead.status) ? lead.status : '';
+        const validStatusValue = effectiveStatusOptions.find(option => option.key === lead.status) ? lead.status : '';
         
         // Log warning for invalid status values
         if (lead.status && !validStatusValue) {
-          console.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}. Available options:`, statusOptions.map(s => s.key));
+          console.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}. Available options:`, effectiveStatusOptions.map(s => s.key));
         }
         
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={validStatusValue}
-              onChange={(e) => {
-                e.stopPropagation();
-                const newValue = e.target.value;
+              onValueChange={(newValue) => {
                 console.log('[PipelineListView] Status change:', { leadId: lead.id, oldValue: lead.status, newValue });
                 handleDropdownChange('status', newValue);
               }}
-              className="min-w-[120px]"
             >
-              <option value="">Select Status</option>
-              {statusOptions.map((status) => (
-                <option key={status.key} value={status.key}>
-                  {status.label}
-                </option>
-              ))}
+              <SelectTrigger className="min-w-[120px]">
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {effectiveStatusOptions.map((status) => (
+                  <SelectItem key={status.key} value={status.key}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         );
       
       case 'priority':
         // Validate that the lead's priority exists in available options
-        const validPriorityValue = priorityOptions.find(option => option.key === lead.priority) ? lead.priority : '';
+        const validPriorityValue = effectivePriorityOptions.find(option => option.key === lead.priority) ? lead.priority : '';
         
         // Log warning for invalid priority values
         if (lead.priority && !validPriorityValue) {
-          console.warn(`[PipelineListView] Invalid priority value "${lead.priority}" for lead ${lead.id}. Available options:`, priorityOptions.map(p => p.key));
+          console.warn(`[PipelineListView] Invalid priority value "${lead.priority}" for lead ${lead.id}. Available options:`, effectivePriorityOptions.map(p => p.key));
         }
         
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={validPriorityValue}
-              onChange={(e) => {
-                e.stopPropagation();
-                const newValue = e.target.value;
+              onValueChange={(newValue) => {
                 console.log('[PipelineListView] Priority change:', { leadId: lead.id, oldValue: lead.priority, newValue });
                 handleDropdownChange('priority', newValue);
               }}
-              className="min-w-[120px]"
             >
-              <option value="">Select Priority</option>
-              {priorityOptions.map((priority) => (
-                <option key={priority.key} value={priority.key}>
-                  {priority.label}
-                </option>
-              ))}
+              <SelectTrigger className="min-w-[120px]">
+                <SelectValue placeholder="Select Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                {effectivePriorityOptions.map((priority) => (
+                  <SelectItem key={priority.key} value={priority.key}>
+                    {priority.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         );
@@ -499,19 +586,21 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             <div onClick={(e) => e.stopPropagation()}>
               <Select
                 value={getAssigneeValue(lead.assignee) || ''}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  const newValue = e.target.value;
+                onValueChange={(newValue) => {
                   handleDropdownChange('assignee', newValue);
                 }}
-                className="min-w-[150px]"
               >
-                <option value="">Unassigned</option>
-                {teamMembers.map((member) => (
-                  <option key={member.id || member.name} value={member.id || member._id}>
-                    {member.name || member.email}
-                  </option>
-                ))}
+                <SelectTrigger className="min-w-[150px]">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id || member.name} value={member.id || member._id || ''}>
+                      {member.name || member.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           );
@@ -521,9 +610,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         const assigneeDisplayName = getAssigneeDisplayName(lead.assignee);
         return assigneeDisplayName ? (
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar className="h-8 w-8 text-sm flex-shrink-0">
-              {assigneeDisplayName.charAt(0).toUpperCase()}
-            </Avatar>
             <p className="text-sm truncate">{assigneeDisplayName}</p>
           </div>
         ) : (
@@ -636,7 +722,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       {/* Lead Details Dialog */}
       {globalSelectedLead && (
         <PipelineLeadCard
-          lead={globalSelectedLead as Lead}
+          lead={globalSelectedLead as any}
           teamMembers={teamMembers}
           hideCard={true}
           externalDetailsOpen={detailsOpen}
