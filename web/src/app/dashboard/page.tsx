@@ -314,11 +314,11 @@ useEffect(() => {
         agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
         leadName:
           leadFullName ||
-          r.lead_name ??
+          (r.lead_name ??
           r.target ??
           r.client_name ??
           r.customer_name ??
-          undefined,
+          undefined),
       }});
 
 
