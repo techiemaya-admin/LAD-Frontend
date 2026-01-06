@@ -54,7 +54,7 @@ steps:
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL \
+          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL \
           --update-labels branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
 
 # Images to be pushed to Container Registry
@@ -78,4 +78,5 @@ substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'lad-frontend'
   _ENV: 'production'
-  _API_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'
+    _API_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'
+    _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'

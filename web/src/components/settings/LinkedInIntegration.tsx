@@ -178,8 +178,18 @@ export const LinkedInIntegration: React.FC = () => {
 
   const checkLinkedInConnection = async (email?: string) => {
     try {
-      // Use apiGet for authenticated requests
-      const data = await apiGet<LinkedInStatusResponse>('/api/social-integration/linkedin/status');
+      setLoading(true); // Explicitly set loading at start
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject({ timeout: true }), 15000) // Increased to 15s
+      );
+      
+      // Use apiGet for authenticated requests with timeout
+      const dataPromise = apiGet<LinkedInStatusResponse>('/api/social-integration/linkedin/status');
+      
+      const data = await Promise.race([dataPromise, timeoutPromise]) as LinkedInStatusResponse;
+      
       console.log('[LinkedIn Integration] Status response:', data);
       console.log('[LinkedIn Integration] Connections array:', data.connections);
       console.log('[LinkedIn Integration] Total connections:', data.connections?.length || 0);
@@ -193,8 +203,14 @@ export const LinkedInIntegration: React.FC = () => {
         console.log('[LinkedIn Integration] Using fallback format, setting 1 connection');
         setLinkedInConnections([data as LinkedInAccount]);
       }
-    } catch (error) {
-      console.error('Error checking LinkedIn connection:', error);
+    } catch (error: any) {
+      // Silently handle timeout - don't log as error since it's expected when backend is slow/unavailable
+      if (error?.timeout) {
+        console.warn('[LinkedIn Integration] Request timed out - LinkedIn service may be unavailable');
+      } else {
+        console.error('[LinkedIn Integration] Error checking connection:', error);
+      }
+      // Set empty connections array to show disconnected state
       setLinkedInConnections([]);
     } finally {
       setLoading(false);

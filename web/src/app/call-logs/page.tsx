@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
+import { getAccessToken } from '@/services/userService';
 import { apiGet } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -96,11 +97,39 @@ export default function CallLogsPage() {
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
 
   const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3004";
-  const socket = useRef(io(socketUrl, { transports: ["websocket"] })).current;
+  const socketRef = useRef<any>(null);
+
+  // Create socket only after authentication so token is present
+  useEffect(() => {
+    if (!authed) return;
+    const token = typeof window !== 'undefined' ? getAccessToken() : null;
+    if (!token) {
+      console.warn('[Call Logs] No auth token available for socket connection');
+      return;
+    }
+
+    socketRef.current = io(socketUrl, { transports: ["websocket"], auth: { token } });
+
+    socketRef.current.on('connect', () => {
+      console.log('[Call Logs] Socket connected', socketRef.current.id);
+    });
+
+    socketRef.current.on('connect_error', (err: any) => {
+      console.warn('[Call Logs] Socket connect_error', err);
+    });
+
+    return () => {
+      try {
+        socketRef.current?.disconnect();
+      } catch (e) {}
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, socketUrl]);
 
   // Pagination
   const [page, setPage] = useState(1);
-  const perPage = 10;
+  const perPage = 20; // Increased to show more records per page
 
   // ----------------------
   // AUTH
@@ -225,13 +254,16 @@ export default function CallLogsPage() {
   useEffect(() => {
     load(); // initial + whenever filter/batch changes
 
-    socket.on("calllogs:update", () => {
-      console.log("📢 Received calllogs:update");
-      load();
-    });
+    const s = socketRef.current;
+    if (s) {
+      s.on("calllogs:update", () => {
+        console.log("📢 Received calllogs:update");
+        load();
+      });
+    }
 
     return () => {
-      socket.off("calllogs:update");
+      if (s) s.off("calllogs:update");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeFilter, batchJobId]);

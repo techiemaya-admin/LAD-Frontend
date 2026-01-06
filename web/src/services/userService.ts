@@ -4,7 +4,7 @@ import { User } from '../store/slices/usersSlice';
 
 // Remove mockUserSettings, use API for user preferences
 
-function getAccessToken(): string | null {
+export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return safeStorage.getItem('token') || safeStorage.getItem('auth_token');
 }

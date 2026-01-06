@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiPost } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/api-utils';
 
 export const GoogleAuthIntegration: React.FC = () => {
@@ -24,10 +25,17 @@ export const GoogleAuthIntegration: React.FC = () => {
 
   const checkGoogleConnection = async () => {
     try {
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject({ timeout: true }), 15000) // Increased to 15s
+      );
+      
       // Check if user has Google Calendar connected
-      const meRes = await fetch('/api/auth/me', {
+      const mePromise = fetch('/api/auth/me', {
         method: 'GET',
       });
+      
+      const meRes = await Promise.race([mePromise, timeoutPromise]) as Response;
 
       if (meRes.ok) {
         const meData = await meRes.json();
@@ -35,24 +43,24 @@ export const GoogleAuthIntegration: React.FC = () => {
         const userId = meData?.user?.id || meData?.id;
 
         if (userId) {
-          // Check calendar connection status from our database
-          const statusRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId }),
-          });
-
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            setIsConnected(statusData.connected || false);
-            setUserEmail(statusData.email || null);
-          }
+          // Check calendar connection status from our database with timeout
+          const statusPromise = apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
+          
+          const statusData = await Promise.race([statusPromise, timeoutPromise]);
+          setIsConnected(statusData.connected || false);
+          setUserEmail(statusData.email || null);
         }
       }
-    } catch (error) {
-      console.error('Error checking Google connection:', error);
+    } catch (error: any) {
+      // Silently handle timeout - don't log as error since it's expected when backend is slow/unavailable
+      if (error?.timeout) {
+        console.warn('[Google Integration] Request timed out - Google Calendar service may be unavailable');
+      } else {
+        console.error('[Google Integration] Error checking connection:', error);
+      }
+      // Set default values on error to prevent stuck loading state
+      setIsConnected(false);
+      setUserEmail(null);
     }
   };
 
@@ -69,22 +77,12 @@ export const GoogleAuthIntegration: React.FC = () => {
 
         if (userId) {
           // Check status from our backend (which already has the data from VOAG callback)
-          const statusRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId }),
-          });
-
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
+          const statusData = await apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
             
-            if (statusData.connected && statusData.email) {
-              // Connection is already recorded in database from callback
-              setIsConnected(true);
-              setUserEmail(statusData.email);
-            }
+          if (statusData.connected && statusData.email) {
+            // Connection is already recorded in database from callback
+            setIsConnected(true);
+            setUserEmail(statusData.email);
           }
         }
       }
@@ -116,36 +114,22 @@ export const GoogleAuthIntegration: React.FC = () => {
       }
 
       // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
-      const startRes = await fetch(`${getApiBaseUrl()}/api/calendar/google/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId, frontend_id: 'settings' }),
+      const result = await apiPost<any>('/api/social-integration/calendar/google/start', { 
+        user_id: userId, 
+        frontend_id: 'settings' 
       });
-
-      const result = await startRes.json();
       
-      console.log('Google start response:', result);
-      console.log('Response status:', startRes.status);
+      console.log('[Google Integration] Start response:', result);
       
-      if (!startRes.ok) {
-        console.error('Google start failed:', result);
-        alert(`Failed to start Google Calendar sync: ${JSON.stringify(result)}`);
+      if (!result?.url) {
+        console.error('[Google Integration] No OAuth URL in response:', result);
+        alert('Failed to get Google authorization URL. Please try again.');
         setIsLoading(false);
         return;
       }
       
-      // Get the Google consent URL and redirect
-      const authUrl = result?.url;
-      if (authUrl) {
-        window.location.href = authUrl;
-      } else if (result.success) {
-        setIsConnected(true);
-        checkGoogleConnection();
-      } else {
-        alert('Failed to start Google Calendar sync');
-      }
+      // Redirect to Google OAuth URL
+      window.location.href = result.url;
     } catch (error) {
       console.error('Error connecting to Google:', error);
       alert('Failed to connect Google account');
@@ -168,21 +152,14 @@ export const GoogleAuthIntegration: React.FC = () => {
 
       if (userId) {
         // Call our backend to disconnect (it will update voag and database)
-        const response = await fetch(`${getApiBaseUrl()}/api/calendar/google/disconnect`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ user_id: userId }),
-        });
+        const response = await apiPost<any>('/api/social-integration/calendar/google/disconnect', { user_id: userId });
 
-        if (response.ok) {
+        if (response.success) {
           setIsConnected(false);
           setUserEmail(null);
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Failed to disconnect Google:', errorData);
-          alert(`Failed to disconnect: ${JSON.stringify(errorData)}`);
+          console.error('Failed to disconnect Google:', response);
+          alert(`Failed to disconnect: ${response.error || 'Unknown error'}`);
         }
       }
     } catch (error) {

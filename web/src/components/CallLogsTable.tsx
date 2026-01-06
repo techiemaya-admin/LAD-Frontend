@@ -46,6 +46,29 @@ export function CallLogsTable({
   expandedBatches = new Set(),
   onToggleBatch,
 }: CallLogsTableProps) {
+  // Helper function to clean lead names from placeholder text
+  const cleanLeadName = (leadName?: string): string => {
+    if (!leadName || !leadName.trim()) return "—";
+    
+    const cleaned = leadName.trim();
+    const placeholders = [
+      'optional name',
+      'optional',
+      '(optional)',
+      'lead name (optional)',
+      'enter name',
+      'name here',
+    ];
+    
+    const lowerName = cleaned.toLowerCase();
+    // Check if the entire name is a placeholder
+    if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
+      return "—";
+    }
+    
+    return cleaned;
+  };
+
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleString();
@@ -86,7 +109,7 @@ export function CallLogsTable({
         {item.id.slice(0, 8)}...
       </TableCell>
       <TableCell className="font-medium">{item.assistant || "—"}</TableCell>
-      <TableCell className="text-muted-foreground">{item.lead_name || "—"}</TableCell>
+      <TableCell className="text-muted-foreground">{cleanLeadName(item.lead_name)}</TableCell>
       <TableCell>
         <span
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${

@@ -96,6 +96,27 @@ export function CallOptions(props: CallOptionsProps) {
   }>({ to_number: "", name: "", summary: "" });
   const [savingSummary, setSavingSummary] = useState(false);
 
+  // Helper function to filter out placeholder/template text from names
+  const cleanLeadName = (name: string | undefined, phone: string): string => {
+    if (!name || !name.trim()) return phone;
+    const cleaned = name.trim();
+    // Filter out common placeholder text patterns
+    const placeholders = [
+      'optional name',
+      'optional',
+      '(optional',
+      'optional - phone used if empty',
+      'lead name (optional)',
+      'enter name',
+      'name here',
+    ];
+    const lowerName = cleaned.toLowerCase();
+    if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
+      return phone; // Use phone instead of placeholder
+    }
+    return cleaned;
+  };
+
   const handleSubmit = async () => {
     onLoadingChange?.(true);
     try {
@@ -121,7 +142,7 @@ export function CallOptions(props: CallOptionsProps) {
             .filter((r) => !!r.to_number)
             .map((r) => ({
               to_number: r.to_number,
-              lead_name: r.name || r.lead_name || undefined,
+              lead_name: cleanLeadName(r.name || r.lead_name, r.to_number), // Filter placeholders
               // row-level context (uses row.summary if present)
               added_context: r.summary && String(r.summary).trim() ? r.summary.trim() : r.added_context || undefined,
               lead_id: r.lead_id ? String(r.lead_id) : undefined, // V2: Ensure UUID string
@@ -158,12 +179,13 @@ export function CallOptions(props: CallOptionsProps) {
       }
 
       if (!dial) throw new Error("Please enter a phone number to call");
+      const normalizedPhone = dial.replace(/\s+/g, ""); // Remove all spaces from phone number
       const singlePayload = {
         voice_id: "default", // Required by V2 API
         agent_id: agentId,
         from_number: fromNumber,
-        to_number: dial.replace(/\s+/g, ""), // Remove all spaces from phone number
-        lead_name: clientName || undefined,
+        to_number: normalizedPhone,
+        lead_name: cleanLeadName(clientName, normalizedPhone), // Filter placeholders
         added_context: additionalInstructions || "Call initiated from dashboard",
         ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
       } as const;
@@ -311,8 +333,8 @@ export function CallOptions(props: CallOptionsProps) {
 
     ws.addRow({
       phone: "+1XXXXXXXXXX",
-      name: "Optional Name",
-      summary: "Optional summary for call context",
+      name: "(optional - phone used if empty)",
+      summary: "(optional context for the call)",
     });
 
     ws.eachRow((row) => {
