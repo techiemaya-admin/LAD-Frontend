@@ -1,382 +1,3 @@
- "use client";
-
-// import { useEffect, useMemo, useState } from 'react';
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Badge } from '@/components/ui/badge';
-// import { Button } from '@/components/ui/button';
-// import { Progress } from '@/components/ui/progress';
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-// import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-// import Header from '@/components/Header';
-// import { SignedIn, SignedOut, RedirectToSignIn, useAuth } from '@clerk/nextjs';
-
-
-// type BackendCallLog = {
-//   id: string;
-//   from: string;
-//   to: string;
-//   startedAt: string;
-//   status: string;
-//   recordingUrl?: string;
-//   timeline?: Array<{ t: string; title: string; desc?: string }>;
-// };
-
-// type PhoneNumber = {
-//   id: string;
-//   e164: string;
-//   label?: string;
-//   provider?: string;
-//   sid?: string;
-//   account?: string;
-// };
-
-// export default function DashboardPage() {
-//   const [minutesLeft] = useState(193); // 3h 13m ≈ 193 minutes
-//   const [calls, setCalls] = useState<BackendCallLog[]>([]);
-//   const [countToday, setCountToday] = useState(0);
-//   const [countThisMonth, setCountThisMonth] = useState(0);
-//   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
-//   const [answerRate, setAnswerRate] = useState<number>(0);
-//   const [objectiveAchieved, setObjectiveAchieved] = useState<number>(0);
-//   // local auth: redirect to /login if not authenticated
-
-//   const chartData = useMemo(() => {
-//     const counts = new Map<string, number>();
-//     for (const c of calls) {
-//       const d = new Date(c.startedAt);
-//       if (isNaN(d.getTime())) continue;
-//       const key = d.toISOString().slice(0, 10);
-//       counts.set(key, (counts.get(key) || 0) + 1);
-//     }
-//     const arr = Array.from(counts.entries())
-//       .map(([key, count]) => {
-//         const display = new Date(key).toLocaleDateString();
-//         return { dateKey: key, date: display, calls: count };
-//       })
-//       .sort((a, b) => (a.dateKey < b.dateKey ? -1 : a.dateKey > b.dateKey ? 1 : 0));
-//     return arr;
-//   }, [calls]);
-
-//   const chartRangeLabel = useMemo(() => {
-//     if (!chartData.length) return undefined;
-//     const first = chartData[0].date;
-//     const last = chartData[chartData.length - 1].date;
-//     return `From ${first} to ${last}`;
-//   }, [chartData]);
-
-//   const normalizeE164 = (v?: string) => {
-//     if (!v) return undefined;
-//     const s = v.replace(/[\s\-()]/g, '');
-//     return s;
-//   };
-
-//   useEffect(() => {
-//     const syncUser = async () => {
-//       try {
-//         let token: string | null | undefined = null;
-//         for (let i = 0; i < 10; i++) {
-//           token = await getToken({ template: 'backend' });
-//           if (!token) token = await getToken();
-//           if (token) break;
-//           await new Promise((r) => setTimeout(r, 300));
-//         }
-//         if (!token) {
-//           console.warn('Clerk token not available yet; skipping sync');
-//           return;
-//         }
-//         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-//         console.log('Syncing user with backend at', `${apiBase}/api/auth/login`);
-//         await fetch(`${apiBase}/api/auth/login`, {
-//           method: 'POST',
-//           headers: { Authorization: `Bearer ${token}` },
-//           credentials: 'include',
-//         });
-//       } catch {}
-//     };
-//     syncUser();
-//   }, [getToken, isSignedIn]);
-
-//   const numbersByE164 = useMemo(() => {
-//     const m = new Map<string, PhoneNumber>();
-//     for (const n of numbers) {
-//       const key = normalizeE164(n.e164);
-//       if (key) m.set(key, n);
-//     }
-//     return m;
-//   }, [numbers]);
-
-//   const numbersById = useMemo(() => {
-//     const m = new Map<string, PhoneNumber>();
-//     for (const n of numbers) m.set(n.id, n);
-//     return m;
-//   }, [numbers]);
-
-//   const resolvePhoneNumber = (value?: string): PhoneNumber | undefined => {
-//     if (!value) return undefined;
-//     const norm = normalizeE164(value);
-//     if (norm) {
-//       const byE = numbersByE164.get(norm);
-//       if (byE) return byE;
-//     }
-//     const direct = numbersById.get(value);
-//     if (direct) return direct;
-//     const m1 = value.match(/^mock_from_by_(.+)$/);
-//     const id1 = m1?.[1];
-//     if (id1) {
-//       const byId1 = numbersById.get(id1);
-//       if (byId1) return byId1;
-//     }
-//     const m2 = value.match(/(pn_[a-zA-Z0-9]+)/);
-//     const id2 = m2?.[1];
-//     if (id2) {
-//       const byId2 = numbersById.get(id2);
-//       if (byId2) return byId2;
-//     }
-//     return undefined;
-//   };
-
-//   useEffect(() => {
-//     const fetchLogs = async () => {
-//       try {
-//         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-//         const res = await fetch(`${apiBase}/api/calllogs?limit=10`);
-//         if (!res.ok) return;
-//         const data = await res.json();
-//         const rows: any[] = data?.logs || data?.items || [];
-//         const mapped: BackendCallLog[] = rows.map((r: any) => ({
-//           id: String(r.id ?? r.call_id ?? r.uuid ?? crypto.randomUUID()),
-//           from: r.from ?? r.from_number ?? r.fromnum ?? r.source ?? r.voice ?? r.agent_name ?? '-',
-//           to: r.to ?? r.to_number ?? r.tonum ?? r.target ?? r.lead_name ?? '-',
-//           startedAt: r.startedAt ?? r.started_at ?? r.created_at ?? r.createdAt ?? r.start_time ?? r.timestamp ?? '',
-//           status: r.status ?? r.call_status ?? r.result ?? 'unknown',
-//           recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
-//         }));
-//         setCalls(mapped);
-
-//         const now = new Date();
-//         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-//         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-//         const today = mapped.filter(i => new Date(i.startedAt) >= startOfToday).length;
-//         const month = mapped.filter(i => new Date(i.startedAt) >= startOfMonth).length;
-//         setCountToday(today);
-//         setCountThisMonth(month);
-//       } catch (e) {}
-//     };
-//     fetchLogs();
-//   }, []);
-
-//   useEffect(() => {
-//     const loadNumbers = async () => {
-//       try {
-//         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-//         const res = await fetch(`${apiBase}/api/voiceagents/numbers`);
-//         if (!res.ok) return;
-//         const data = await res.json();
-//         setNumbers(data?.numbers || data?.items || []);
-//       } catch (e) {}
-//     };
-//     loadNumbers();
-//   }, []);
-
-//   useEffect(() => {
-//     const loadMetrics = async () => {
-//       try {
-//         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-//         const res = await fetch(`${apiBase}/api/metrics`);
-//         if (!res.ok) return;
-//         const data = await res.json();
-//         if (typeof data?.answerRate === 'number') setAnswerRate(data.answerRate);
-//         if (typeof data?.objectiveAchieved === 'number') setObjectiveAchieved(data.objectiveAchieved);
-//       } catch (e) {}
-//     };
-//     loadMetrics();
-//   }, []);
-
-//   return (
-//     <>
-//       <SignedOut>
-//         <RedirectToSignIn />
-//       </SignedOut>
-//       <SignedIn>
-//         <div className="flex min-h-screen bg-background">
-//           {/* Main Content */}
-//           <main className="flex-1 p-6 space-y-6">
-//             {/* Header */}
-//             <Header />
-
-//             {/* Metrics Cards */}
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Calls (today)</CardTitle>
-//               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
-//                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-//               </svg>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">{countToday}</div>
-//               <p className="text-xs text-muted-foreground">0% compared to yesterday</p>
-//             </CardContent>
-//           </Card>
-
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Answer rate (this week)</CardTitle>
-//               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
-//                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-//                 <polyline points="22,4 12,14.01 9,11.01" />
-//               </svg>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">{answerRate}%</div>
-//               <p className="text-xs text-muted-foreground">-3% compared to previous week</p>
-//             </CardContent>
-//           </Card>
-
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Calls made (this month)</CardTitle>
-//               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
-//                 <path d="M12 2v20M2 12h20"  />
-//               </svg>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">{countThisMonth}</div>
-//               <p className="text-xs text-muted-foreground">100% compared to same period last mo.</p>
-//             </CardContent>
-//           </Card>
-//         </div>
-
-//         {/* Chart and Next Steps */}
-//         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Calls made</CardTitle>
-//               <CardDescription>{chartRangeLabel || 'No data yet'}</CardDescription>
-//             </CardHeader>
-//             <CardContent>
-//               <ResponsiveContainer width="100%" height={300}>
-//                 <LineChart data={chartData}>
-//                   <CartesianGrid strokeDasharray="3 3" />
-//                   <XAxis dataKey="date" />
-//                   <YAxis />
-//                   <Tooltip />
-//                   <Legend />
-//                   <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} />
-//                 </LineChart>
-//               </ResponsiveContainer>
-//             </CardContent>
-//           </Card>
-
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Next steps</CardTitle>
-//               <CardDescription>Follow these steps to get started with your new account.</CardDescription>
-//             </CardHeader>
-//             <CardContent className="space-y-4">
-//               <div className="flex items-center space-x-2">
-//                 <Badge variant="default">✓</Badge>
-//                 <span>Take platform tour</span>
-//                 <Button variant="outline" size="sm" className="ml-auto">Click here</Button>
-//               </div>
-//               <div className="flex items-center space-x-2">
-//                 <Badge variant="outline">📞+</Badge>
-//                 <span>Rent phone number</span>
-//                 <p className="text-sm text-muted-foreground ml-6">You will assign this phone number to your agents to start making calls.</p>
-//                 <Button variant="outline" size="sm" className="ml-auto">Next</Button>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         </div>
-
-//         {/* Objective and Latest Calls */}
-//         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Objective achieved</CardTitle>
-//               <CardDescription>From 04/08/2023 to 10/08/2023</CardDescription>
-//             </CardHeader>
-//             <CardContent className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <span className="text-sm font-medium">{objectiveAchieved}%</span>
-//                 <Progress value={objectiveAchieved} className="w-1/2" />
-//               </div>
-//               <div className="flex items-center justify-between text-sm">
-//                 <span>Minutes left</span>
-//                 <span className="font-medium">3h 13m 59s</span>
-//               </div>
-//               <div className="flex space-x-2">
-//                 <Button variant="outline" size="sm">Change plan</Button>
-//                 <Button variant="outline" size="sm">Add credits</Button>
-//               </div>
-//             </CardContent>
-//           </Card>
-
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Latest calls</CardTitle>
-//               <CardDescription>Here are the latest calls AI assistants has made</CardDescription>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="border rounded-md p-1 mb-4">
-//                 <div className="flex space-x-1">
-//                   <Button variant="ghost" size="sm" className="h-8 px-2">Status</Button>
-//                   <Button variant="ghost" size="sm" className="h-8 px-2">Client phone number</Button>
-//                   <Button variant="ghost" size="sm" className="h-8 px-2">Duration</Button>
-//                   <Button variant="ghost" size="sm" className="h-8 px-2">Assistant</Button>
-//                   <Button variant="ghost" size="sm" className="h-8 px-2">Date</Button>
-//                 </div>
-//               </div>
-//               <Table>
-//                 <TableHeader>
-//                   <TableRow>
-//                     <TableHead>Status</TableHead>
-//                     <TableHead>Client phone number</TableHead>
-//                     <TableHead>Duration</TableHead>
-//                     <TableHead>Assistant</TableHead>
-//                     <TableHead>Date</TableHead>
-//                   </TableRow>
-//                 </TableHeader>
-//                 <TableBody>
-//                   {calls.map((call) => {
-//                     const started = new Date(call.startedAt);
-//                     const dateStr = isNaN(started.getTime()) ? '-' : started.toLocaleString();
-//                     let duration = '-';
-//                     if (call.timeline && call.timeline.length >= 2) {
-//                       const start = new Date(call.timeline[0].t).getTime();
-//                       const end = new Date(call.timeline[call.timeline.length - 1].t).getTime();
-//                       const secs = Math.max(0, Math.round((end - start) / 1000));
-//                       duration = secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
-//                     }
-//                     return (
-//                       <TableRow key={call.id}>
-//                         <TableCell>
-//                           <Badge variant={call.status === 'completed' ? 'default' : 'secondary'}>
-//                             {call.status}
-//                           </Badge>
-//                         </TableCell>
-//                         <TableCell>{call.to}</TableCell>
-//                         <TableCell>{duration}</TableCell>
-//                         <TableCell>{(() => { const pn = resolvePhoneNumber(call.from); return pn?.label || pn?.e164 || call.from || '—'; })()}</TableCell>
-//                         <TableCell>{dateStr}</TableCell>
-//                       </TableRow>
-//                     );
-//                   })}
-//                 </TableBody>
-//               </Table>
-//             </CardContent>
-//           </Card>
-//           </div>
-//           </main>
-//         </div>
-//       </SignedIn>
-//     </>
-//   );
-// }
-
-
-
 "use client";
 
 // External libraries
@@ -441,9 +62,12 @@ export default function DashboardPage() {
   const [minutesLeft] = useState(193);
   const [calls, setCalls] = useState<BackendCallLog[]>([]);
   const [countToday, setCountToday] = useState(0);
+  const [countYesterday, setCountYesterday] = useState(0);
   const [countThisMonth, setCountThisMonth] = useState(0);
+  const [countLastMonth, setCountLastMonth] = useState(0);
   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [answerRate, setAnswerRate] = useState<number>(0);
+  const [answerRateLastWeek, setAnswerRateLastWeek] = useState<number>(0);
   const [objectiveAchieved, setObjectiveAchieved] = useState<number>(0);
   const [chartMode, setChartMode] = useState<"month" | "year">("month");
   const [creditsData, setCreditsData] = useState<CreditsData | null>(null);
@@ -610,52 +234,7 @@ export default function DashboardPage() {
 
     return undefined;
   };
-
-  // fetch call logs for last 30 days
-  // useEffect(() => {
-  //   const fetchLogs = async () => {
-  //     try {
-  //       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3002";
-  //       const since = new Date();
-  //       since.setDate(since.getDate() - (DAYS_RANGE - 1));
-  //       const res = await fetch(
-  //         `${apiBase}/api/calllogs?since=${encodeURIComponent(since.toISOString())}&limit=1000`
-  //       );
-  //       if (!res.ok) return;
-  //       const data = await res.json();
-  //       const rows: any[] = data?.logs || data?.items || [];
-  //       const mapped: BackendCallLog[] = rows.map((r: any) => ({
-  //         id: String(r.id ?? r.call_id ?? r.uuid ?? crypto.randomUUID()),
-  //         from:
-  //           r.from ??
-  //           r.from_number ??
-  //           r.fromnum ??
-  //           r.source ??
-  //           r.from_number_id ??
-  //           "-",
-  //         to: r.to ?? r.to_number ?? r.tonum ?? r.target ?? r.lead_name ?? "-",
-  //         startedAt:
-  //           r.startedAt ?? r.started_at ?? r.created_at ?? r.createdAt ?? r.start_time ?? r.timestamp ?? "",
-  //         endedAt: r.endedAt ?? r.ended_at ?? r.end_time ?? undefined,
-  //         status: r.status ?? r.call_status ?? r.result ?? "unknown",
-  //         recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
-  //         timeline: r.timeline,
-  //         agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
-  //         leadName: r.lead_name ?? r.client_name ?? r.customer_name ?? undefined,
-  //       }));
-  //       setCalls(mapped);
-
-  //       const now = new Date();
-  //       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  //       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  //       setCountToday(mapped.filter(i => new Date(i.startedAt) >= startOfToday).length);
-  //       setCountThisMonth(mapped.filter(i => new Date(i.startedAt) >= startOfMonth).length);
-  //     } catch {}
-  //   };
-  //   fetchLogs();
-  // }, []);
   
-
 // fetch call logs with the same role-based logic as CallLogsPage
 useEffect(() => {
   async function loadDashboardCallLogs() {
@@ -693,8 +272,15 @@ useEffect(() => {
       );
 
       const rows: any[] = res.logs || [];
-      const mapped: BackendCallLog[] = rows.map((r: any) => ({
-        id: String(r.id ?? r.call_id ?? r.uuid ?? crypto.randomUUID()),
+      const mapped: BackendCallLog[] = rows.map((r: any) => {
+        // Combine lead first and last name
+        const leadFullName = [r.lead_first_name, r.lead_last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        
+        return {
+        id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? crypto.randomUUID()),
         from:
           r.agent ||
           r.initiated_by ||
@@ -705,11 +291,9 @@ useEffect(() => {
           r.from_number_id ||
           "-",
         to:
-          r.target ||
           r.to ||
           r.to_number ||
           r.tonum ||
-          r.lead_name ||
           "-",
         startedAt:
           r.startedAt ||
@@ -729,26 +313,80 @@ useEffect(() => {
         timeline: r.timeline,
         agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
         leadName:
-          r.lead_name ?? r.client_name ?? r.customer_name ?? undefined,
-      }));
+          leadFullName ||
+          r.lead_name ??
+          r.target ??
+          r.client_name ??
+          r.customer_name ??
+          undefined,
+      }});
+
 
       setCalls(mapped);
 
-      // 📊 update today / this month counts from these logs
+      // 📊 Calculate metrics with proper date ranges
       const now = new Date();
+      
+      // Today's calls
       const startOfToday = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate()
       );
+      const todayCalls = mapped.filter((i) => new Date(i.startedAt) >= startOfToday);
+      setCountToday(todayCalls.length);
+      
+      // Yesterday's calls
+      const startOfYesterday = new Date(startOfToday);
+      startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+      const yesterdayCalls = mapped.filter((i) => {
+        const callDate = new Date(i.startedAt);
+        return callDate >= startOfYesterday && callDate < startOfToday;
+      });
+      setCountYesterday(yesterdayCalls.length);
+      
+      // This month's calls
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      setCountToday(
-        mapped.filter((i) => new Date(i.startedAt) >= startOfToday).length
-      );
-      setCountThisMonth(
-        mapped.filter((i) => new Date(i.startedAt) >= startOfMonth).length
-      );
+      const thisMonthCalls = mapped.filter((i) => new Date(i.startedAt) >= startOfMonth);
+      setCountThisMonth(thisMonthCalls.length);
+      
+      // Last month's calls (same day range)
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonthPeriod = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      const lastMonthCalls = mapped.filter((i) => {
+        const callDate = new Date(i.startedAt);
+        return callDate >= startOfLastMonth && callDate <= endOfLastMonthPeriod;
+      });
+      setCountLastMonth(lastMonthCalls.length);
+      
+      // Answer rate this week
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
+      const thisWeekCalls = mapped.filter((i) => new Date(i.startedAt) >= startOfWeek);
+      const answeredThisWeek = thisWeekCalls.filter((i) => 
+        i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+      ).length;
+      const answerRateThisWeek = thisWeekCalls.length > 0 
+        ? Math.round((answeredThisWeek / thisWeekCalls.length) * 100)
+        : 0;
+      setAnswerRate(answerRateThisWeek);
+      
+      // Answer rate last week
+      const startOfLastWeek = new Date(startOfWeek);
+      startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+      const endOfLastWeek = new Date(startOfWeek);
+      const lastWeekCalls = mapped.filter((i) => {
+        const callDate = new Date(i.startedAt);
+        return callDate >= startOfLastWeek && callDate < endOfLastWeek;
+      });
+      const answeredLastWeek = lastWeekCalls.filter((i) => 
+        i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+      ).length;
+      const answerRateLastWeekValue = lastWeekCalls.length > 0
+        ? Math.round((answeredLastWeek / lastWeekCalls.length) * 100)
+        : 0;
+      setAnswerRateLastWeek(answerRateLastWeekValue);
     } catch {
       // silently ignore errors for now
     }
@@ -756,6 +394,23 @@ useEffect(() => {
 
   loadDashboardCallLogs();
 }, []);
+
+  // Helper function to calculate percentage change
+  const calculatePercentageChange = (current: number, previous: number): string => {
+    if (previous === 0) {
+      if (current === 0) return "0%";
+      return "+100%"; // If previous was 0 and current is > 0
+    }
+    const change = ((current - previous) / previous) * 100;
+    const formatted = Math.round(change);
+    return formatted > 0 ? `+${formatted}%` : `${formatted}%`;
+  };
+
+  // Helper to format comparison text
+  const getComparisonText = (current: number, previous: number, label: string): string => {
+    const percentage = calculatePercentageChange(current, previous);
+    return `${percentage} compared to ${label}`;
+  };
 
 
 
@@ -781,26 +436,6 @@ useEffect(() => {
     };
     loadMetrics();
   }, []);
-
-  // chart data: continuous last 30 days with zeros
-  // const chartData = useMemo(() => {
-  //   const counts = new Map<string, number>();
-  //   for (const c of calls) {
-  //     const d = new Date(c.startedAt);
-  //     if (isNaN(d.getTime())) continue;
-  //     const key = d.toISOString().slice(0, 10);
-  //     counts.set(key, (counts.get(key) || 0) + 1);
-  //   }
-  //   const out: Array<{ dateKey: string; date: string; calls: number }> = [];
-  //   const today = new Date();
-  //   const start = new Date();
-  //   start.setDate(today.getDate() - (DAYS_RANGE - 1));
-  //   for (let dt = new Date(start); dt <= today; dt.setDate(dt.getDate() + 1)) {
-  //     const key = dt.toISOString().slice(0, 10);
-  //     out.push({ dateKey: key, date: dt.toLocaleDateString(), calls: counts.get(key) ?? 0 });
-  //   }
-  //   return out;
-  // }, [calls]);
 
   const chartData = useMemo(() => {
   // --- MONTH MODE (last 30 days) ---
@@ -902,7 +537,9 @@ useEffect(() => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{countToday}</div>
-                  <p className="text-xs text-muted-foreground">0% compared to yesterday</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getComparisonText(countToday, countYesterday, "yesterday")}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -913,7 +550,9 @@ useEffect(() => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{answerRate}%</div>
-                  <p className="text-xs text-muted-foreground">-3% compared to previous week</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getComparisonText(answerRate, answerRateLastWeek, "previous week")}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -924,7 +563,9 @@ useEffect(() => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{countThisMonth}</div>
-                  <p className="text-xs text-muted-foreground">100% compared to same period last mo.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getComparisonText(countThisMonth, countLastMonth, "same period last mo.")}
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -1007,8 +648,26 @@ useEffect(() => {
                     <TableBody>
                       {visibleCalls.map((call) => {
                         const started = new Date(call.startedAt);
-                        const dateStr = isNaN(started.getTime()) ? "-" : started.toLocaleString();
+                        // Better date formatting: "Jan 6, 2026 2:30 PM" instead of full locale string
+                        const dateStr = isNaN(started.getTime()) 
+                          ? "—" 
+                          : started.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            }) + ' ' + started.toLocaleTimeString('en-US', { 
+                              hour: 'numeric', 
+                              minute: '2-digit',
+                              hour12: true
+                            });
                         const duration = formatDuration(call);
+                        
+                        // Get assistant name with proper fallback logic
+                        const assistantName = call.agentName 
+                          || resolvePhoneNumber(call.from)?.label 
+                          || (call.from && call.from !== '-' ? call.from : undefined)
+                          || "—";
+                        
                         return (
                           <TableRow key={call.id}>
                             <TableCell>
@@ -1023,15 +682,11 @@ useEffect(() => {
                             <TableCell>{duration}</TableCell>
 
                             {/* ASSISTANT NAME = agent_name */}
-                            <TableCell>
-                              {call.agentName ||
-                                resolvePhoneNumber(call.from)?.label ||
-                                resolvePhoneNumber(call.from)?.e164 ||
-                                call.from ||
-                                "—"}
+                            <TableCell className="max-w-[200px] truncate">
+                              {assistantName}
                             </TableCell>
 
-                            <TableCell>{dateStr}</TableCell>
+                            <TableCell className="whitespace-nowrap">{dateStr}</TableCell>
                           </TableRow>
                         );
                       })}

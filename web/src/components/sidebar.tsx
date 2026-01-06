@@ -168,7 +168,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <img
-            src={companyLogo || logo.src}
+            src={isHydrated && companyLogo ? companyLogo : logo.src}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -191,7 +191,7 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <img
-              src={companyLogo || logo.src}
+              src={isHydrated && companyLogo ? companyLogo : logo.src}
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
@@ -282,7 +282,7 @@ export function Sidebar() {
         )}
       >
         <img
-          src={companyLogo || logo.src}
+          src={isHydrated && companyLogo ? companyLogo : logo.src}
           alt="Company Logo"
           loading="eager"
           fetchPriority="high"

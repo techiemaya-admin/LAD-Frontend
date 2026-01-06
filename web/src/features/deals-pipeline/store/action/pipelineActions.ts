@@ -313,7 +313,16 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
     dispatch(clearStagesError());
     dispatch(clearLeadsError());
 
-    const data = await pipelineService.fetchPipelineData();
+    // Add timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout - please check your connection')), 15000)
+    );
+
+    const data = await Promise.race([
+      pipelineService.fetchPipelineData(),
+      timeoutPromise
+    ]) as Awaited<ReturnType<typeof pipelineService.fetchPipelineData>>;
+    
     const stages = (data as unknown as { stages?: Stage[] }).stages || [];
     const leads = (data as unknown as { leads?: Lead[] }).leads || [];
 
@@ -327,8 +336,9 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
   } catch (error) {
     const err = error as Error;
     console.error('[Redux] Failed to load pipeline data:', error);
-    dispatch(setStagesError(err.message || 'Failed to load stages'));
-    dispatch(setLeadsError(err.message || 'Failed to load leads'));
+    const errorMessage = err.message || 'Failed to load pipeline data';
+    dispatch(setStagesError(errorMessage));
+    dispatch(setLeadsError(errorMessage));
   } finally {
     dispatch(setStagesLoading(false));
     dispatch(setLeadsLoading(false));

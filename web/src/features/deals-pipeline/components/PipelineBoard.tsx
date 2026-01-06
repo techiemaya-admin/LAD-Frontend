@@ -1195,27 +1195,8 @@ const PipelineBoard: React.FC = () => {
       <div className="flex flex-col justify-center items-center mt-32">
         <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
         <p className="mt-2 text-sm text-gray-500">
-          Loading pipeline data{USE_REDUX_PIPELINE ? ' via Redux' : ''}...
+          Loading pipeline data...
         </p>
-        {process.env.NODE_ENV === 'development' && (
-          <pre className="mt-4 text-xs text-gray-400 max-w-[90vw] overflow-x-auto">
-            {JSON.stringify(
-              {
-                reduxStagesLoading,
-                reduxLeadsLoading,
-                masterDataLoading,
-                usersLoading,
-                preferencesLoaded,
-                reduxStagesError,
-                reduxLeadsError,
-                usersError,
-                masterDataErrors
-              },
-              null,
-              2
-            )}
-          </pre>
-        )}
       </div>
     );
   }
@@ -1287,9 +1268,23 @@ const PipelineBoard: React.FC = () => {
       >
         {(() => {
           if (pipelineSettings.viewMode === 'list') {
+            // Normalize leads to ensure compatibility with PipelineListView's Lead interface
+            const normalizedLeads = sortedAndFilteredLeads.map(lead => ({
+              ...lead,
+              name: lead.name ?? undefined, // Convert null to undefined
+              email: lead.email ?? undefined,
+              company: lead.company ?? undefined,
+              phone: lead.phone ?? undefined,
+              status: lead.status ?? undefined,
+              priority: lead.priority ?? undefined,
+              source: lead.source ?? undefined,
+              amount: lead.amount ?? undefined, // Convert null to undefined for amount
+              assignee: lead.assignee ?? undefined,
+            }));
+            
             return (
               <PipelineListView
-                leads={sortedAndFilteredLeads}
+                leads={normalizedLeads}
                 stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
                 teamMembers={[]}
                 visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
