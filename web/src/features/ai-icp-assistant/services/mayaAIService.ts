@@ -57,7 +57,7 @@ class MayaAIService {
     context?: OnboardingContext
   ): Promise<MayaResponse> {
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await apiPost<MayaResponse>('/api/ai-icp-assistant/chat', {
         message,
         history,
         currentQuestionKey,
@@ -94,7 +94,7 @@ class MayaAIService {
     const prompt = `The user selected ${platform} platform. Present these features as selectable options: ${platformFeatures.map((f: PlatformFeature) => f.label).join(', ')}. Ask: "Which ${platform} features do you want? (You can select multiple)"`;
 
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await apiPost<MayaResponse>('/api/ai-icp-assistant/chat', {
         message: prompt,
         history,
         currentQuestionKey: `features_${platform}`,
@@ -143,7 +143,7 @@ class MayaAIService {
     const prompt = `Ask utility questions for ${platform} feature: ${feature}. Questions: ${utilityQuestions.join('; ')}. Ask one question at a time.`;
 
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await apiPost<MayaResponse>('/api/ai-icp-assistant/chat', {
         message: prompt,
         history,
         currentQuestionKey: `utilities_${platform}_${feature}`,
