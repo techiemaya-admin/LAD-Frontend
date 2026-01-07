@@ -1,23 +1,29 @@
 /**
  * AI ICP Assistant Feature Module
- * Export all public APIs for the AI ICP Assistant feature
+ * 
+ * Main exports for ICP onboarding questions system.
+ * Clean public exports only.
  */
 
-// Legacy service (if exists)
-export { 
-  AIICPAssistantService,
-  createAIICPAssistantService,
-  type AIICPAssistantAPI,
-  type ChatMessage,
-  type ChatResponse,
-  type ICPData
-} from './services/aiICPAssistantService';
+// API functions
+export {
+  fetchICPQuestions,
+  fetchICPQuestionByStep,
+  processICPAnswer,
+} from './api';
 
-// New Maya AI Service
-export { mayaAI, default as mayaAIService } from './services/mayaAIService';
+// Types
 export type {
-  MayaMessage,
-  MayaResponse,
-  OnboardingContext,
-  WorkflowNode,
+  ICPQuestion,
+  ICPQuestionsResponse,
+  ICPAnswerRequest,
+  ICPAnswerResponse,
 } from './types';
+
+// Hooks
+export {
+  useItem,
+  useItems,
+  useConversation,
+} from './hooks';
+
