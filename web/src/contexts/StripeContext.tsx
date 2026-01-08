@@ -42,29 +42,36 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeStripe = async () => {
       try {
-        // Fetch Stripe config from backend via Next.js API route in dev, direct in production
-        const apiUrl = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' 
-          ? '/api/stripe/config'
-          : `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3004'}/api/stripe/config`;
-        const response = await fetch(apiUrl);
+        // Fetch Stripe config from Next.js API route
+        const response = await fetch('/api/stripe/config', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch Stripe configuration');
+          throw new Error(`Failed to fetch Stripe configuration: ${response.status} ${response.statusText}`);
         }
         
         const config = await response.json();
+        
+        // Check if we have a valid publishable key
+        if (!config.publishableKey) {
+          console.warn('Stripe is not configured: Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+          // Don't throw - allow app to work without Stripe
+          setLoading(false);
+          return;
+        }
+        
         setStripeConfig(config);
 
         // Load Stripe with publishable key
-        if (config.publishableKey) {
-          const stripeInstance = await loadStripe(config.publishableKey);
-          setStripe(stripeInstance);
-        } else {
-          throw new Error('No Stripe publishable key found');
-        }
+        const stripeInstance = await loadStripe(config.publishableKey);
+        setStripe(stripeInstance);
       } catch (err) {
-        console.error('Error initializing Stripe:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize Stripe');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to initialize Stripe';
+        console.error('Error initializing Stripe:', errorMessage);
+        // Set error but still mark loading as false to allow app to continue
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

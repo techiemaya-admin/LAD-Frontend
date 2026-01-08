@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -13,6 +13,7 @@ import { CallLogsHeader } from "@/components/CallLogsHeader";
 import { CallLogsTable } from "@/components/CallLogsTable";
 import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
+import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 
 interface CallLogResponse {
   call_log_id: string;
@@ -88,6 +89,10 @@ export default function CallLogsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | undefined>();
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  
+
 
   // Filters
   const [search, setSearch] = useState("");
@@ -102,8 +107,47 @@ export default function CallLogsPage() {
   })).current;
 
   // Pagination
-  const [page, setPage] = useState(1);
-  const perPage = 20; // Increased to show more records per page
+const [page, setPage] = useState(1);
+const [perPage, setPerPage] = useState(20);
+
+// Date filter
+type DateFilter = "today" | "month" | "custom" | "all";
+const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+const [fromDate, setFromDate] = useState<string | null>(null);
+const [toDate, setToDate] = useState<string | null>(null);
+
+const resolveDateRange = () => {
+  const now = new Date();
+
+  if (dateFilter === "today") {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    return { from: start.toISOString(), to: end.toISOString() };
+  }
+
+  if (dateFilter === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { from: start.toISOString(), to: now.toISOString() };
+  }
+
+  if (dateFilter === "custom" && fromDate && toDate) {
+    // Parse dates and set to full day range
+    const from = new Date(fromDate);
+    from.setHours(0, 0, 0, 0);
+    
+    const to = new Date(toDate);
+    to.setHours(23, 59, 59, 999);
+    
+    return { from: from.toISOString(), to: to.toISOString() };
+  }
+
+  return {};
+};
+
 
   // ----------------------
   // AUTH
@@ -122,20 +166,30 @@ export default function CallLogsPage() {
 
   // Initialize batchJobId + mode from query params (when redirected from batch start)
   useEffect(() => {
+    // Wait for client-side hydration
+    if (!searchParams) return;
+    
     const jobId = searchParams.get("jobId");
     const mode = searchParams.get("mode");
 
+    console.log('[Call Logs] Query params detected - jobId:', jobId, 'mode:', mode);
+
     if (jobId) {
-      // Only accept UUID format batch IDs (not external "batch-xxx" format)
+      // Accept both UUID format and "batch-" prefixed format
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId);
+      const isBatchFormat = /^batch-[0-9a-f]{32}$/i.test(jobId);
       
-      if (isUUID) {
+      console.log('[Call Logs] Batch ID validation - isUUID:', isUUID, 'isBatchFormat:', isBatchFormat);
+      
+      if (isUUID || isBatchFormat) {
+        console.log('[Call Logs] Setting batchJobId to:', jobId);
         setBatchJobId(jobId);
         if (mode === "current-batch") {
+          console.log('[Call Logs] Setting timeFilter to "batch"');
           setTimeFilter("batch");
         }
       } else {
-        console.warn('[Call Logs] Invalid batch ID format (not UUID), ignoring:', jobId);
+        console.warn('[Call Logs] Invalid batch ID format:', jobId);
         // Clear invalid batch ID from URL
         router.replace('/call-logs');
       }
@@ -145,12 +199,17 @@ export default function CallLogsPage() {
   // ----------------------
   // LOAD CALLS (ORG handled in backend using JWT)
   // ----------------------
+  
   const load = async () => {
     try {
       // Batch View
       if (timeFilter === "batch" && batchJobId) {
+        console.log('[Call Logs] Loading batch view - batchJobId:', batchJobId);
         try {
-          const res = await apiGet<BatchApiResponse>(`/api/voice-agent/batch/batch-status/${batchJobId}`);
+          const url = `/api/voice-agent/batch/batch-status/${batchJobId}`;
+          console.log('[Call Logs] Calling batch API:', url);
+          const res = await apiGet<BatchApiResponse>(url);
+          console.log('[Call Logs] Batch API response:', res);
           const batch = res.batch || res.result;
 
           if (!batch) {
@@ -176,7 +235,9 @@ export default function CallLogsPage() {
 
           setItems(logs);
           return;
-        } catch (error) {
+        } 
+        
+        catch (error) {
           console.error('[Call Logs] Failed to load batch status:', error);
           // Reset to normal mode when batch loading fails
           setBatchJobId(null);
@@ -188,9 +249,19 @@ export default function CallLogsPage() {
       }
 
 
+      const { from, to } = resolveDateRange();
+
+      // Build query with ONLY date range (no limit param)
+      // API fetches all records for the date range
+      // Frontend handles pagination via perPage
+      const query = new URLSearchParams({
+        ...(from && { from_date: from }),
+        ...(to && { to_date: to }),
+      });
 
       // Normal mode — backend auto-filters by org based on JWT
-      const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?limit=100`);
+      // API returns ALL calls matching the date range (no pagination)
+      const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?${query.toString()}`);
 
       const logs = (res.logs || []).map((r) => {
         // Construct lead name from first and last name
@@ -223,9 +294,13 @@ export default function CallLogsPage() {
       console.error("Failed to load call logs:", error);
       setItems([]);
     }
+    finally {
+      setInitialLoading(false); // 👈 IMPORTANT
+    }
   };
 
   useEffect(() => {
+    console.log('[Call Logs] Load effect triggered - timeFilter:', timeFilter, 'batchJobId:', batchJobId);
     load(); // initial + whenever filter/batch changes
 
     // Suppress socket connection errors
@@ -236,13 +311,15 @@ export default function CallLogsPage() {
     socket.on("calllogs:update", () => {
       load();
     });
+    
 
     return () => {
       socket.off("calllogs:update");
       socket.off("connect_error");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeFilter, batchJobId]);
+    
+  }, [timeFilter, batchJobId, perPage, dateFilter, fromDate, toDate]);
 
   // ----------------------
   // FILTERS
@@ -354,27 +431,51 @@ export default function CallLogsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Collect all call IDs from batch groups or paginated items
-      const allCallIds = batchGroups
-        ? [
-            ...Object.values(batchGroups.groups).flat().map(c => c.id),
-            ...batchGroups.noBatchCalls.map(c => c.id)
-          ]
-        : paginated.map((i) => i.id);
+      // ✅ NEW: Collect ALL call IDs from FILTERED results (all pages, not just current page)
+      const allCallIds = filtered.map((i) => i.id);
       setSelected(new Set(allCallIds));
     } else {
       setSelected(new Set());
     }
   };
 
-  // Stubbed end-call actions (wire to your API if needed)
-  async function endSingleCall(id: string) {
-    alert("Ending call " + id);
-    await load();
-  }
+  // ✅ Handle row click - prevent modal for active calls
+  const handleRowClick = (id: string) => {
+    const call = items.find(i => i.id === id);
+    const status = call?.status.toLowerCase() || '';
+    
+    // Don't open modal for calling, queue, or ongoing calls
+    if (['calling', 'queue', 'queued', 'ongoing', 'in_queue'].includes(status)) {
+      return;
+    }
+    
+    setOpenId(id);
+  };
 
   async function endSelectedCalls() {
     alert("Ending " + selected.size + " calls");
+    await load();
+    setSelected(new Set());
+  }
+
+  // ✅ NEW: End a single call
+  async function endSingleCall(callId: string) {
+    try {
+      await apiPost(`/api/voice-agent/calls/${callId}/end`, {});
+      // Reload the call logs to reflect the updated status
+      await load();
+    } catch (error) {
+      console.error("Error ending call:", error);
+      alert("Failed to end call. Please try again.");
+    }
+  }
+
+  // ✅ NEW: Retry failed calls
+  async function retrySelectedCalls() {
+    const failedCallIds = Array.from(selected);
+    alert("Retrying " + failedCallIds.length + " failed calls");
+    // TODO: Call retry API endpoint
+    // await apiPost('/api/voice-agent/calls/retry', { call_ids: failedCallIds });
     await load();
     setSelected(new Set());
   }
@@ -392,13 +493,52 @@ export default function CallLogsPage() {
 
   if (authed === null) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-b-2 border-primary" />
+      <div className="max-w-7xl mx-auto space-y-8 p-6">
+        {/* Header */}
+        <CallLogsHeader
+          search={search}
+          onSearchChange={setSearch}
+          filterProvider={providerFilter}
+          onFilterProviderChange={setProviderFilter}
+          callFilter={timeFilter}
+          onCallFilterChange={(f) => {
+            setTimeFilter(f);
+            setPage(1);
+          }}
+          uniqueProviders={uniqueProviders}
+          selectedCount={selected.size}
+          onEndSelected={endSelectedCalls}
+          onRetrySelected={retrySelectedCalls}
+          hasFailedCalls={false}
+          failedCount={0}
+          dateFilter={dateFilter}
+          onDateFilterChange={(f) => {
+            setDateFilter(f);
+            setPage(1);
+          }}
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={setFromDate}
+          onToDateChange={setToDate}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
+        />
+        <CallLogsTableSkeleton />
       </div>
     );
   }
 
   if (!authed) return <></>;
+
+  // Check if any selected calls have "failed" status and count them
+  const failedCallIds = Array.from(selected).filter(id => {
+    const call = items.find(i => i.id === id);
+    return call && call.status.toLowerCase() === "failed";
+  });
+  const hasFailedCalls = failedCallIds.length > 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-6">
@@ -416,20 +556,43 @@ export default function CallLogsPage() {
         uniqueProviders={uniqueProviders}
         selectedCount={selected.size}
         onEndSelected={endSelectedCalls}
+        onRetrySelected={retrySelectedCalls}
+        hasFailedCalls={hasFailedCalls}
+        failedCount={failedCallIds.length}
+        dateFilter={dateFilter}
+        onDateFilterChange={(f) => {
+          setDateFilter(f);
+          setPage(1);
+        }}
+        fromDate={fromDate}
+        toDate={toDate}
+        onFromDateChange={setFromDate}
+        onToDateChange={setToDate}
+        perPage={perPage}
+        onPerPageChange={(value) => {
+          setPerPage(value);
+          setPage(1);
+        }}
       />
 
-      {/* Table */}
+     {/* Table */}
+{initialLoading ? (
+  <CallLogsTableSkeleton />
+) : (
       <CallLogsTable
         items={paginated}
         selectedCalls={selected}
         onSelectCall={handleSelectCall}
         onSelectAll={handleSelectAll}
-        onRowClick={(id) => setOpenId(id)}
+        onRowClick={handleRowClick}
         onEndCall={endSingleCall}
         batchGroups={batchGroups}
         expandedBatches={expandedBatches}
         onToggleBatch={toggleBatch}
+        totalFilteredCount={filtered.length}
       />
+)}
+
 
       {/* Pagination */}
       <Pagination

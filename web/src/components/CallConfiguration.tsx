@@ -748,27 +748,27 @@ export function CallConfiguration({
         </div>
 
         {/* Voice Agent + inline round play button */}
-        <div className="w-full space-y-2 mx-0">
+        <div className="w-full mx-0">
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Voice Agent
           </label>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row md:items-start items-center gap-3">
             {/* Select */}
-            <div className="flex-1">
+            <div className="w-full md:flex-shrink-0 md:w-80">
               <Select
                 value={agentId || ""}
                 onValueChange={(value) => onAgentIdChange(value)}
               >
-                <SelectTrigger className="h-12 rounded-[10px] border-gray-200 focus:ring-2 focus:ring-primary w-full">
+                <SelectTrigger className="h-12 rounded-[10px] border-gray-200 focus:ring-2 focus:ring-primary w-full md:w-80 overflow-hidden">
                   {selectedAgent ? (
-                    <div className="flex items-center gap-3 p-2 w-full">
+                    <div className="flex items-center gap-3 p-2 overflow-hidden">
                       <Mic className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <div className="flex flex-col items-start min-w-0 flex-1">
-                        <span className="font-medium truncate">
+                      <div className="flex flex-col items-start min-w-0 overflow-hidden whitespace-nowrap">
+                        <span className="font-medium overflow-hidden whitespace-nowrap text-ellipsis">
                           {selectedAgent.name}
                         </span>
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="text-xs text-muted-foreground overflow-hidden whitespace-nowrap text-ellipsis">
                           {selectedAgent.description} • {selectedAgent.accent} •{" "}
                           {selectedAgent.gender}
                         </span>
@@ -819,6 +819,7 @@ export function CallConfiguration({
                 "bg-[#0f1f5a]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0f1f5a]/40",
+                "md:ml-auto",
               ].join(" ")}
             >
               <span className="absolute inset-0 rounded-full bg-black/0 pointer-events-none" />
@@ -830,7 +831,7 @@ export function CallConfiguration({
             </button>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-2">
             Choose a voice agent for the call
           </p>
         </div>

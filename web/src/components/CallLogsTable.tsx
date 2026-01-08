@@ -1,6 +1,7 @@
 import React from "react";
 import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
+import { useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -33,6 +34,8 @@ interface CallLogsTableProps {
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
+  totalFilteredCount?: number;
+
 }
 
 export function CallLogsTable({
@@ -45,7 +48,10 @@ export function CallLogsTable({
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
+  totalFilteredCount = 0,
 }: CallLogsTableProps) {
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
     if (!leadName || !leadName.trim()) return "—";
@@ -82,11 +88,19 @@ export function CallLogsTable({
   };
 
   // Calculate total calls when using batch groups
-  const totalCalls = batchGroups 
+  const totalCalls = totalFilteredCount > 0 ? totalFilteredCount : (batchGroups 
     ? Object.values(batchGroups.groups).flat().length + batchGroups.noBatchCalls.length
-    : items.length;
+    : items.length);
   
-  const allSelected = selectedCalls.size > 0 && selectedCalls.size === totalCalls;
+  const allSelected = totalCalls > 0 && selectedCalls.size === totalCalls;
+  const someSelected = selectedCalls.size > 0 && selectedCalls.size < totalCalls;
+
+  // Update header checkbox indeterminate state
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
 
   const renderCallRow = (item: CallLog, index: number, indent = false) => (
     <TableRow
@@ -101,7 +115,10 @@ export function CallLogsTable({
         <input
           type="checkbox"
           checked={selectedCalls.has(item.id)}
-          onChange={() => onSelectCall(item.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelectCall(item.id);
+          }}
           className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
         />
       </TableCell>
@@ -208,9 +225,16 @@ export function CallLogsTable({
           <TableRow className="border-b border-border/50 bg-muted/30">
             <TableHead className="w-12">
               <input
+                ref={headerCheckboxRef}
                 type="checkbox"
                 checked={allSelected}
-                onChange={(e) => onSelectAll(e.target.checked)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  // If we're in indeterminate state or unchecked, select all
+                  // If all are already selected, deselect all
+                  const shouldSelectAll = !allSelected;
+                  onSelectAll(shouldSelectAll);
+                }}
                 className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
               />
             </TableHead>

@@ -321,33 +321,71 @@ export function CallOptions(props: CallOptionsProps) {
   // ----------------------------
   // Template download (xlsx) using ExcelJS
   // ----------------------------
-  const downloadTemplate = async () => {
+  // const downloadTemplate = async () => {
+  //   const wb = new ExcelJS.Workbook();
+  //   const ws = wb.addWorksheet("Template");
+
+  //   ws.columns = [
+  //     { header: "Phone", key: "phone", width: 20 },
+  //     { header: "Name", key: "name", width: 20 },
+  //     { header: "Summary", key: "summary", width: 40 },
+  //   ];
+
+  //   ws.addRow({
+  //     phone: "+1XXXXXXXXXX",
+  //     name: "(optional - phone used if empty)",
+  //     summary: "(optional context for the call)",
+  //   });
+
+  //   ws.eachRow((row) => {
+  //     row.eachCell((cell) => {
+  //       cell.numFmt = "@"; // TEXT format
+  //     });
+  //   });
+
+  //   const buffer = await wb.xlsx.writeBuffer();
+  //   const blob = new Blob([buffer], {
+  //     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  //   });
+
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement("a");
+  //   a.href = url;
+  //   a.download = "bulk_call_template.xlsx";
+  //   a.click();
+  //   URL.revokeObjectURL(url);
+  // };
+
+    const downloadTemplate = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Template");
-
+ 
+    // Force Text format for all template columns (prevents Excel from treating values as General/Number)
     ws.columns = [
-      { header: "Phone", key: "phone", width: 20 },
-      { header: "Name", key: "name", width: 20 },
-      { header: "Summary", key: "summary", width: 40 },
+      { header: "Phone", key: "phone", width: 20, style: { numFmt: "@" } },
+      { header: "Name", key: "name", width: 20, style: { numFmt: "@" } },
+      { header: "Summary", key: "summary", width: 40, style: { numFmt: "@" } },
     ];
-
+ 
     ws.addRow({
       phone: "+1XXXXXXXXXX",
-      name: "(optional - phone used if empty)",
-      summary: "(optional context for the call)",
+      name: "Optional Name",
+      summary: "Optional summary for call context",
     });
-
-    ws.eachRow((row) => {
-      row.eachCell((cell) => {
-        cell.numFmt = "@"; // TEXT format
-      });
+ 
+    // Also explicitly apply to existing cells (header + sample row) for maximum compatibility.
+    ws.getRow(1).eachCell((cell) => {
+      cell.numFmt = "@";
     });
-
+    ws.getRow(2).eachCell((cell) => {
+      cell.numFmt = "@";
+    });
+ 
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-
+ 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -623,6 +661,7 @@ export function CallOptions(props: CallOptionsProps) {
 
                 <td className="p-2">
                   <Input
+                    disabled
                     value={row.to_number}
                     onChange={(e) => {
                       const copy = [...bulkEntries];
@@ -631,11 +670,13 @@ export function CallOptions(props: CallOptionsProps) {
                       onBulkEntriesChange?.(copy);
                     }}
                     placeholder="+1..."
+                    className="bg-gray-100 cursor-not-allowed"
                   />
                 </td>
 
                 <td className="p-2">
                   <Input
+                  disabled
                     value={row.name || (row as any).company_name || ""}
                     onChange={(e) => {
                       const copy = [...bulkEntries];

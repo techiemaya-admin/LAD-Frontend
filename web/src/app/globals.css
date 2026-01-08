@@ -258,3 +258,32 @@ body {
   background: linear-gradient(to bottom right, #dbeafe, #f1f5f9);
   min-height: 100vh;
 }
+/* Mobile-friendly drag and drop styles */
+@layer utilities {
+  .pipeline-board-scrollable {
+    /* Improve touch interactions */
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Ensure draggable cards work well on touch devices */
+  [data-dnd-draggable] {
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Better feedback on touch drag */
+  @media (hover: none) and (pointer: coarse) {
+    /* Mobile devices */
+    .pipeline-board-scrollable {
+      touch-action: auto;
+      overscroll-behavior: contain;
+    }
+
+    /* Improve card visibility during drag on mobile */
+    [data-dnd-dragging] {
+      opacity: 0.5;
+    }
+  }
+}
