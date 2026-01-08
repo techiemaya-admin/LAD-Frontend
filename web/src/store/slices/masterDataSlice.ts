@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
+import { logger } from '@/lib/logger';
 
 export interface Status {
   key: string;
@@ -81,7 +82,6 @@ const masterDataSlice = createSlice({
       state.statusesLoading = action.payload;
     },
     setStatuses: (state, action: PayloadAction<Status[]>) => {
-      console.log('[MasterDataSlice] Setting statuses:', action.payload);
       state.statuses = action.payload;
       state.statusesLoading = false;
       state.statusesError = null;
@@ -97,7 +97,6 @@ const masterDataSlice = createSlice({
       state.prioritiesLoading = action.payload;
     },
     setPriorities: (state, action: PayloadAction<Priority[]>) => {
-      console.log('[MasterDataSlice] Setting priorities:', action.payload);
       state.priorities = action.payload;
       state.prioritiesLoading = false;
       state.prioritiesError = null;
@@ -113,7 +112,6 @@ const masterDataSlice = createSlice({
       state.sourcesLoading = action.payload;
     },
     setSources: (state, action: PayloadAction<Source[]>) => {
-      console.log('[MasterDataSlice] Setting sources:', action.payload);
       state.sources = action.payload;
       state.sourcesLoading = false;
       state.sourcesError = null;
@@ -152,15 +150,15 @@ interface RootState {
 }
 
 const selectMasterDataState = (state: RootState): MasterDataState => {
-  console.log('[MasterDataSlice] selectMasterDataState called with state keys:', Object.keys(state));
-  console.log('[MasterDataSlice] state.masterData:', state.masterData);
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug('[MasterDataSlice] selectMasterDataState', { stateKeys: Object.keys(state) });
+  }
   return state.masterData || initialState;
 };
 
 // Simplified selectors for debugging
 export const selectStatuses = (state: RootState): Status[] => {
   const masterData = selectMasterDataState(state);
-  console.log('[MasterDataSlice] selectStatuses - masterData.statuses:', masterData.statuses);
   return masterData.statuses || [];
 };
 
@@ -176,7 +174,6 @@ export const selectStatusesError = (state: RootState): string | null => {
 
 export const selectPriorities = (state: RootState): Priority[] => {
   const masterData = selectMasterDataState(state);
-  console.log('[MasterDataSlice] selectPriorities - masterData.priorities:', masterData.priorities);
   return masterData.priorities || [];
 };
 
@@ -192,7 +189,6 @@ export const selectPrioritiesError = (state: RootState): string | null => {
 
 export const selectSources = (state: RootState): Source[] => {
   const masterData = selectMasterDataState(state);
-  console.log('[MasterDataSlice] selectSources - masterData.sources:', masterData.sources);
   return masterData.sources || [];
 };
 

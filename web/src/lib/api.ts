@@ -1,16 +1,17 @@
 import { loadingFetch } from "@/lib/loading-fetch";
 import { safeStorage } from "@/utils/storage";
+import { logger } from "@/lib/logger";
 
 // Use backend URL directly
 const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3004").replace(/\/+$/, "");
 
 function authHeaders() {
   if (typeof window === "undefined") {
-    console.log('[API] authHeaders: Running on server, no token');
+    logger.debug('[API] authHeaders: Running on server, no token');
     return {} as Record<string, string>;
   }
   const token = safeStorage.getItem("token") || safeStorage.getItem("auth_token");
-  console.log('[API] authHeaders: Token present:', !!token, token ? `(${token.substring(0, 30)}...)` : '(none)');
+  logger.debug('[API] authHeaders: Token present:', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -22,7 +23,7 @@ function handleAuthError(status: number, path: string) {
     if (typeof window !== "undefined") {
       const hasToken = !!safeStorage.getItem("token");
       if (hasToken) {
-        console.warn('[API] Auth token rejected for core endpoint, clearing');
+        logger.warn('[API] Auth token rejected for core endpoint, clearing');
         safeStorage.removeItem("token");
         safeStorage.removeItem("user");
         safeStorage.removeItem("auth");

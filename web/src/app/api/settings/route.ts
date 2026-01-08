@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 function getBackendBase() {
   const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json(data);
   } catch (e: any) {
-    console.error('[/api/settings] GET Error:', e);
+    logger.error('[/api/settings] GET Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }
@@ -69,7 +70,7 @@ export async function PUT(req: NextRequest) {
     
     return NextResponse.json(data);
   } catch (e: any) {
-    console.error('[/api/settings] PUT Error:', e);
+    logger.error('[/api/settings] PUT Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }

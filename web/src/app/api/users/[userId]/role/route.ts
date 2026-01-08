@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 function getBackendBase() {
   const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
@@ -34,13 +35,13 @@ export async function PUT(
     const data = await resp.json().catch(() => ({}));
     
     if (!resp.ok) {
-      console.error(`[/api/users/${userId}/role] PUT Error:`, data);
+      logger.error('[/api/users/:userId/role] PUT Error', { userId, status: resp.status, data });
       return NextResponse.json(data, { status: resp.status });
     }
     
     return NextResponse.json(data);
   } catch (e: any) {
-    console.error('[/api/users/:userId/role] PUT Error:', e);
+    logger.error('[/api/users/:userId/role] PUT Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }

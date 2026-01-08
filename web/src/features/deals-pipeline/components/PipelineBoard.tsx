@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, TouchSensor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSelector, useDispatch } from 'react-redux';
 import type { AppDispatch } from '@/store/store';
@@ -296,9 +296,31 @@ const PipelineBoard: React.FC = () => {
   const [updating, setUpdating] = useState<boolean>(false);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
 
-  // Sensors for drag
+  // Detect if we're on a touch device
+  const isTouchDevice = () => {
+    return (
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(hover: none)').matches ||
+        window.matchMedia('(pointer: coarse)').matches ||
+        navigator.maxTouchPoints > 0)
+    );
+  };
+
+  // Sensors for drag - optimized for both desktop and mobile
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Increased slightly for desktop precision
+        delay: isTouchDevice() ? 200 : 0, // Add delay for touch to prevent accidental drags during scroll
+        tolerance: isTouchDevice() ? 5 : 0 // More tolerance for touch
+      }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // Delay to distinguish touch drag from scroll
+        tolerance: 5 // Tolerance for touch movement
+      }
+    }),
     useSensor(KeyboardSensor)
   );
 

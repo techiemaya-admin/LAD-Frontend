@@ -66,7 +66,28 @@ class VoiceAgentService {
    * Get available phone numbers for the authenticated user
    */
   async getUserAvailableNumbers(): Promise<PhoneNumber[]> {
-    const response = await api.get('/voice-agent/user/available-numbers');
+    const response = await api.get('/api/voice-agent/user/available-numbers');
+    return response.data?.data ?? response.data;
+  }
+
+  /**
+   * Get available voice agents for the authenticated user
+   */
+  async getAvailableAgents(): Promise<VoiceAgent[]> {
+    const response = await api.get('/api/voice-agent/user/available-agents');
+    return response.data?.data ?? response.data;
+  }
+
+  /**
+   * Resolve phone numbers from a list of IDs (Apollo or CRM IDs)
+   * @param ids - Array of IDs to resolve
+   * @param type - Type of data: 'company' or 'employee'
+   */
+  async resolvePhones(ids: string[], type: 'company' | 'employee' = 'company'): Promise<any[]> {
+    const response = await api.post('/voiceagent/resolve-phones', {
+      ids,
+      type,
+    });
     return response.data?.data ?? response.data;
   }
 }

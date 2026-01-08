@@ -111,7 +111,7 @@ export function VoiceAgentHighlights() {
             variant="outline"
             size="sm"
             className="rounded-full"
-            onClick={() => window.location.href = "/settings?tab=voice"}
+            onClick={() => window.location.href = "/settings?tab=API"}
           >
             View more →
           </Button>

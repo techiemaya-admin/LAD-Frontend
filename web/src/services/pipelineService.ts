@@ -3,6 +3,7 @@
  * Contains web-specific pipeline operations and API calls
  */
 
+import { logger } from '../lib/logger';
 import api from './api';
 import { enhanceLeadsWithLabels, getStatusOptions } from '../utils/statusMappings';
 import { Lead } from '../features/deals-pipeline/types';
@@ -63,7 +64,7 @@ export const fetchPipelineData = async (): Promise<PipelineData> => {
     
     return data;
   } catch (error) {
-    console.error('Error fetching pipeline data:', error);
+    logger.error('Error fetching pipeline data', error);
     throw error;
   }
 };
@@ -112,9 +113,7 @@ export const updateLeadStatus = async (leadId: string | number, status: string):
       throw new Error('Status is required');
     }
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[pipelineService.updateLeadStatus] ->', { leadId, status });
-    }
+    logger.debug('Updating lead status', { leadId, status });
     const preferredUrls = [
       `/api/deals-pipeline/pipeline/leads/${leadId}/status`,
     ];
@@ -123,18 +122,14 @@ export const updateLeadStatus = async (leadId: string | number, status: string):
       try {
         try {
           const response = await api.put(url, { status });
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[pipelineService.updateLeadStatus] <- response', response.status, response.data);
-          }
+          logger.debug('Lead status updated', { statusCode: response.status });
           return response.data as Lead;
         } catch (error: any) {
           const statusCode = error?.response?.status;
           const message = String(error?.response?.data?.error || error?.response?.data?.message || '');
           if (statusCode === 400 && message.toLowerCase().includes('statuskey')) {
             const retry = await api.put(url, { statusKey: status, status });
-            if (process.env.NODE_ENV === 'development') {
-              console.log('[pipelineService.updateLeadStatus] <- retry response', retry.status, retry.data);
-            }
+            logger.debug('Lead status updated (retry)', { statusCode: retry.status });
             return retry.data as Lead;
           }
           throw error;
@@ -148,7 +143,7 @@ export const updateLeadStatus = async (leadId: string | number, status: string):
 
     throw new Error('Failed to update lead status (no matching endpoint)');
   } catch (error) {
-    console.error('Error updating lead status:', error);
+    logger.error('Error updating lead status', error);
     throw error;
   }
 };
@@ -180,7 +175,7 @@ export const fetchStages = async (): Promise<Stage[]> => {
 
     return await stagesCachePromise;
   } catch (error) {
-    console.error('Error fetching stages:', error);
+    logger.error('Error fetching stages', error);
     throw error;
   }
 };
@@ -212,30 +207,24 @@ export const addStage = async (name: string, positionStageId: string | null = nu
     stagesCache = null;
     stagesCachePromise = null;
     const stages = await fetchStages();
-    console.log('[addStage] All stages ordered by display_order:', stages.map(s => ({ 
-      key: s.key, 
-      id: (s as { id?: string }).id,
-      name: (s as { name?: string }).name, 
-      order: s.order || s.display_order 
-    })).sort((a, b) => (a.order || 0) - (b.order || 0)));
+    logger.debug('All stages fetched', { stageCount: stages.length });
     
-    console.log('[addStage] Looking for positionStageId:', positionStageId);
-    console.log('[addStage] Available stage keys:', stages.map(s => s.key));
-    console.log('[addStage] Available stage ids:', stages.map(s => (s as { id?: string }).id));
+    logger.debug('Looking for position stage', { positionStageId });
+    logger.debug('Available stage count', { count: stages.length });
     
     const referenceStage = stages.find(s => (s as { id?: string }).id === positionStageId || s.key === positionStageId);
-    console.log('[addStage] Reference stage found:', referenceStage);
-    console.log('[addStage] Position type:', positionType);
+    logger.debug('Reference stage search result', { found: !!referenceStage });
+    logger.debug('Position type', { positionType });
     
     if (referenceStage) {
       const referenceOrder = referenceStage.order || referenceStage.display_order || 0;
       const newOrder = positionType === 'before' 
         ? referenceOrder 
         : referenceOrder + 1;
-      console.log('[addStage] Calculated new order:', newOrder, 'for', positionType, 'reference order:', referenceOrder);
+      logger.debug('Calculated new order for stage', { newOrder, positionType, referenceOrder });
       stageData.displayOrder = newOrder;
     } else {
-      console.error('[addStage] Reference stage NOT FOUND for positionStageId:', positionStageId);
+      logger.error('Reference stage not found', new Error(`positionStageId: ${positionStageId}`));
     }
   } else {
     // If no position specified, add at the end
@@ -244,9 +233,9 @@ export const addStage = async (name: string, positionStageId: string | null = nu
     stageData.displayOrder = maxOrder + 1;
   }
   
-  console.log('[addStage] Sending stage data to backend:', stageData);
+  logger.debug('Sending stage data to backend');
   const response = await api.post('/api/deals-pipeline/stages', stageData);
-  console.log('[addStage] Backend response:', response.data);
+  logger.debug('Stage created successfully');
   // Invalidate cache
   stagesCache = null;
   stagesCachePromise = null;
@@ -359,7 +348,7 @@ export const updateLead = async (leadId: string | number, leadData: Partial<Lead
     
     return response.data as Lead;
   } catch (error) {
-    console.error('Error updating lead:', error);
+    logger.error('Error updating lead', error);
     throw error;
   }
 };
@@ -384,7 +373,7 @@ export const fetchDealsPipelineBoard = async (): Promise<PipelineData> => {
   try {
     return await fetchPipelineData();
   } catch (error) {
-    console.error('Error fetching deals pipeline board:', error);
+    logger.error('Error fetching deals pipeline board', error);
     throw error;
   }
 };
@@ -398,8 +387,7 @@ export const getComments = async (leadId: string | number): Promise<unknown[]> =
     const { data } = await api.get(`/api/comments/${leadId}`);
     return data as unknown[];
   } catch (error) {
-    const err = error as Error;
-    console.error('Failed to fetch comments:', err.message);
+    logger.error('Failed to fetch comments', error);
     throw error;
   }
 };
@@ -409,8 +397,7 @@ export const postComment = async (leadId: string | number, commentText: string):
     const { data } = await api.post(`/api/comments/${leadId}`, { comment: commentText });
     return data;
   } catch (error) {
-    const err = error as Error;
-    console.error('Failed to post comment:', err.message);
+    logger.error('Failed to post comment', error);
     throw error;
   }
 };
@@ -421,8 +408,7 @@ export const fetchAttachments = async (leadId: string | number): Promise<unknown
     const { data } = await api.get(`/api/deals-pipeline/leads/${leadId}/attachments`);
     return data as unknown[];
   } catch (error) {
-    const err = error as Error;
-    console.error('Failed to fetch attachments:', err.message);
+    logger.error('Failed to fetch attachments', error);
     throw error;
   }
 };
@@ -440,9 +426,7 @@ export const uploadAttachment = async (leadId: string | number, file: File): Pro
     });
     return data;
   } catch (error) {
-    const err = error as Error;
-    console.error('Failed to upload attachment:', err.message);
+    logger.error('Failed to upload attachment', error);
     throw error;
   }
 };
-

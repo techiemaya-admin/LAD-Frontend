@@ -74,7 +74,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    console.log('Submitting stage', localStage);
     if (validateForm()) {
       setLoading(true);
       try {

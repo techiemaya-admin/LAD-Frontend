@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../../utils/backend';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('[/api/auth/login] Login attempt started');
+    logger.debug('[/api/auth/login] Login attempt started');
     const body = await req.json().catch(() => ({}));
     const { email, password } = body || {};
-    console.log('[/api/auth/login] Email:', email);
     
     if (!email || !password) {
-      console.log('[/api/auth/login] Missing email or password');
+      logger.warn('[/api/auth/login] Missing email or password');
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
 
     const backend = getBackendUrl();
-    console.log('[/api/auth/login] Backend URL:', backend);
-    console.log('[/api/auth/login] Forwarding to:', `${backend}/api/auth/login`);
+    logger.debug('[/api/auth/login] Forwarding to backend API', { backend });
     
     const resp = await fetch(`${backend}/api/auth/login`, {
       method: 'POST',
@@ -23,23 +22,21 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ email, password }),
     });
     
-    console.log('[/api/auth/login] Backend response status:', resp.status);
-    console.log('[/api/auth/login] Backend response status:', resp.status);
+    logger.debug('[/api/auth/login] Backend response received', { status: resp.status });
 
     const data = await resp.json().catch(() => ({}));
-    console.log('[/api/auth/login] Backend response data:', data);
     
     if (!resp.ok) {
-      console.log('[/api/auth/login] Backend returned error');
+      logger.warn('[/api/auth/login] Backend returned error', { status: resp.status });
       return NextResponse.json(data, { status: resp.status });
     }
 
     const token: string | undefined = data?.token;
     const user = data?.user;
-    console.log('[/api/auth/login] Token present:', !!token);
+    logger.debug('[/api/auth/login] Token present in response', { hasToken: !!token });
     
     if (!token) {
-      console.log('[/api/auth/login] Token missing from backend response');
+      logger.error('[/api/auth/login] Token missing from backend response');
       return NextResponse.json({ error: 'Token missing from backend response' }, { status: 502 });
     }
 
@@ -56,12 +53,12 @@ export async function POST(req: NextRequest) {
       if (capabilitiesResponse.ok) {
         const capabilitiesData = await capabilitiesResponse.json();
         capabilities = capabilitiesData.capabilities || [];
-        console.log('[/api/auth/login] Fetched user capabilities:', capabilities);
+        logger.debug('Fetched user capabilities', { capabilities });
       } else {
-        console.warn('[/api/auth/login] Failed to fetch user capabilities:', capabilitiesResponse.status);
+        logger.warn('Failed to fetch user capabilities', { status: capabilitiesResponse.status });
       }
     } catch (error) {
-      console.error('[/api/auth/login] Error fetching user capabilities:', error);
+      logger.error('Error fetching user capabilities', error);
     }
 
     console.log('[/api/auth/login] Login successful, setting cookie');
@@ -83,11 +80,10 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
     
-    console.log('[/api/auth/login] Cookie set with httpOnly:true, secure:', isProduction, 'sameSite:lax, path:/, maxAge: 7days');
-    console.log('[/api/auth/login] Cookie name: access_token, value length:', token.length);
+    logger.debug('Cookie set with production-safe settings', { httpOnly: true, secure: isProduction, sameSite: 'lax', path: '/', maxAge: '7days', tokenLength: token.length });
     return res;
   } catch (e: any) {
-    console.error('[/api/auth/login] Error:', e);
+    logger.error('Login endpoint error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }

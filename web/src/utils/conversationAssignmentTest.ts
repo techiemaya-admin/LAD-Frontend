@@ -3,6 +3,7 @@
 
 import chatService from '../services/chatService';
 import { getAllUsers } from '../services/userService';
+import { logger } from '@/lib/logger';
 
 interface User {
   id?: string | number;
@@ -39,31 +40,31 @@ interface AssignmentTestResult {
 
 // Test the filtering logic with real data
 export const testConversationFiltering = async (): Promise<TestResult | undefined> => {
-  console.log('=== Testing Conversation Filtering with Real Backend Data ===');
+  logger.info('=== Testing Conversation Filtering with Real Backend Data ===');
   
   try {
     // Fetch real conversations from backend
     const conversations = await chatService.getConversations() as Conversation[];
-    console.log('Fetched conversations from backend:', conversations.length);
+    logger.info('Fetched conversations from backend:', { count: conversations.length });
     
     // Fetch real users from backend
     const users = await getAllUsers() as User[];
-    console.log('Fetched users from backend:', users.length);
+    logger.info('Fetched users from backend:', { count: users.length });
     
     // Get current user from localStorage or Redux state
     const currentUserStr = localStorage.getItem('user') || '{}';
     const currentUser = JSON.parse(currentUserStr) as User;
-    console.log('Current user:', currentUser);
+    logger.info('Current user:', currentUser);
     
     if (!currentUser.id) {
-      console.error('No current user found. Please log in first.');
+      logger.error('No current user found. Please log in first.');
       return;
     }
     
     // Test admin filtering
     if (currentUser.role === 'admin') {
-      console.log('Admin should see all conversations:', conversations.length);
-      console.log('Available human agents:', users.filter(u => u.role === 'human_agent').length);
+      logger.info('Admin should see all conversations:', { count: conversations.length });
+      logger.info('Available human agents:', { count: users.filter(u => u.role === 'human_agent').length });
     }
     
     // Test human agent filtering
@@ -77,9 +78,9 @@ export const testConversationFiltering = async (): Promise<TestResult | undefine
         conv.previousAssignments.includes(currentUser.id as string | number)
       );
       
-      console.log('Conversations assigned to current agent:', assignedConversations.length);
-      console.log('AI conversations previously handled by current agent:', aiConversations.length);
-      console.log('Total conversations visible to current agent:', assignedConversations.length + aiConversations.length);
+      logger.info('Conversations assigned to current agent:', { count: assignedConversations.length });
+      logger.info('AI conversations previously handled by current agent:', { count: aiConversations.length });
+      logger.info('Total conversations visible to current agent:', { count: assignedConversations.length + aiConversations.length });
     }
     
     return {
@@ -89,24 +90,24 @@ export const testConversationFiltering = async (): Promise<TestResult | undefine
     };
     
   } catch (error) {
-    console.error('Error testing conversation filtering:', error);
+    logger.error('Error testing conversation filtering:', error);
     throw error;
   }
 };
 
 // Test assignment change logic with real data
 export const testAssignmentChangeLogic = async (conversationId: string | number | null | undefined): Promise<void> => {
-  console.log('=== Testing Assignment Change Logic ===');
+  logger.info('=== Testing Assignment Change Logic ===');
   
   if (!conversationId) {
-    console.error('Please provide a conversation ID to test assignment changes');
+    logger.error('Please provide a conversation ID to test assignment changes');
     return;
   }
   
   try {
     // Fetch the specific conversation
     const conversation = await chatService.getConversation(String(conversationId)) as Conversation;
-    console.log('Current conversation assignment:', {
+    logger.info('Current conversation assignment:', {
       id: conversation.id,
       humanAgentId: conversation.humanAgentId,
       owner: conversation.owner
@@ -116,7 +117,7 @@ export const testAssignmentChangeLogic = async (conversationId: string | number 
     const users = await getAllUsers() as User[];
     const humanAgents = users.filter(u => u.role === 'human_agent');
     
-    console.log('Available human agents for assignment:', humanAgents.map(u => ({ id: u.id, name: u.name })));
+    logger.info('Available human agents for assignment:', humanAgents.map(u => ({ id: u.id, name: u.name })));
     
     // Test different assignment scenarios
     const testCases: TestCase[] = [
@@ -147,11 +148,14 @@ export const testAssignmentChangeLogic = async (conversationId: string | number 
         (isNewlyAssignedToAssistant && !isCurrentlyAssignedToAssistant) ||
         (!isNewlyAssignedToAssistant && currentHumanAgentId !== newValue);
       
-      console.log(`${testCase.name}: ${assignmentChanged === shouldChange ? 'PASS' : 'FAIL'}`);
+      logger.info(`${testCase.name}: ${assignmentChanged === shouldChange ? 'PASS' : 'FAIL'}`, {
+        testName: testCase.name,
+        passed: assignmentChanged === shouldChange
+      });
     });
     
   } catch (error) {
-    console.error('Error testing assignment change logic:', error);
+    logger.error('Error testing assignment change logic:', error);
     throw error;
   }
 };
@@ -161,17 +165,17 @@ export const testCompleteAssignmentFlow = async (
   conversationId: string | number | null | undefined, 
   targetAgentId: string | number | null | undefined
 ): Promise<void> => {
-  console.log('=== Testing Complete Assignment Flow ===');
+  logger.info('=== Testing Complete Assignment Flow ===');
   
   if (!conversationId || !targetAgentId) {
-    console.error('Please provide both conversation ID and target agent ID');
+    logger.error('Please provide both conversation ID and target agent ID');
     return;
   }
   
   try {
     // 1. Get current conversation state
     const conversation = await chatService.getConversation(String(conversationId)) as Conversation;
-    console.log('1. Current conversation state:', {
+    logger.info('1. Current conversation state:', {
       id: conversation.id,
       humanAgentId: conversation.humanAgentId,
       owner: conversation.owner
@@ -186,7 +190,7 @@ export const testCompleteAssignmentFlow = async (
       (isNewlyAssignedToAssistant && !isCurrentlyAssignedToAssistant) ||
       (!isNewlyAssignedToAssistant && currentHumanAgentId !== targetAgentId);
     
-    console.log('2. Assignment change detected:', assignmentChanged);
+    logger.info('2. Assignment change detected:', { changed: assignmentChanged });
     
     if (assignmentChanged) {
       // 3. Prepare backend payload
@@ -197,14 +201,14 @@ export const testCompleteAssignmentFlow = async (
         backendPayload = { handler: 'human_agent', humanAgentId: targetAgentId };
       }
       
-      console.log('3. Backend payload prepared:', backendPayload);
+      logger.info('3. Backend payload prepared:', backendPayload);
       
       // 4. Call assignment API (commented out to prevent actual changes)
       // await chatService.assignConversationHandler(conversationId, backendPayload);
-      console.log('4. Assignment API call would be made here (commented out for safety)');
+      logger.info('4. Assignment API call would be made here (commented out for safety)');
       
       // 5. Verify the change would be reflected
-      console.log('5. Expected new state:', {
+      logger.info('5. Expected new state:', {
         id: conversation.id,
         humanAgentId: targetAgentId === 'assistant' ? null : targetAgentId,
         owner: targetAgentId === 'assistant' ? 'AI' : 'human_agent'
@@ -212,14 +216,14 @@ export const testCompleteAssignmentFlow = async (
     }
     
   } catch (error) {
-    console.error('Error testing complete assignment flow:', error);
+    logger.error('Error testing complete assignment flow:', error);
     throw error;
   }
 };
 
 // Test human agent dropdown functionality
 export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> => {
-  console.log('=== Testing Human Agent Dropdown Functionality ===');
+  logger.info('=== Testing Human Agent Dropdown Functionality ===');
   
   try {
     // Get current user
@@ -227,7 +231,7 @@ export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> =>
     const currentUser = JSON.parse(currentUserStr) as User;
     
     if (currentUser.role !== 'human_agent') {
-      console.log('Current user is not a human agent. Testing dropdown options for human agent role...');
+      logger.info('Current user is not a human agent. Testing dropdown options for human agent role...');
     }
     
     // Test dropdown options for human agent
@@ -236,7 +240,7 @@ export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> =>
       { value: 'assistant', label: 'Assistant' }
     ];
     
-    console.log(' Human agent dropdown options:', humanAgentDropdownOptions);
+    logger.info('Human agent dropdown options:', humanAgentDropdownOptions);
     
     // Test value mapping logic
     const testConversations: Conversation[] = [
@@ -249,7 +253,7 @@ export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> =>
         ? (conv.owner === 'human_agent' ? 'user' : 'assistant')
         : (conv.humanAgentId || (conv.owner === 'AI' ? 'assistant' : ''));
       
-      console.log(` Conversation ${index + 1} dropdown value:`, {
+      logger.info(`Conversation ${index + 1} dropdown value:`, {
         conversation: conv,
         dropdownValue: dropdownValue
       });
@@ -257,7 +261,7 @@ export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> =>
     
     // Test assignment logic for human agent selecting "user"
     if (currentUser.role === 'human_agent') {
-      console.log('Human agent "user" selection would assign conversation to:', currentUser.id);
+      logger.info('Human agent "user" selection would assign conversation to:', { agentId: currentUser.id });
     }
     
     return {
@@ -266,14 +270,14 @@ export const testHumanAgentDropdown = async (): Promise<AssignmentTestResult> =>
     };
     
   } catch (error) {
-    console.error('Error testing human agent dropdown:', error);
+    logger.error('Error testing human agent dropdown:', error);
     throw error;
   }
 };
 
 // Test actual assignment functionality for human agents
 export const testHumanAgentAssignment = async (conversationId: string | number | null | undefined): Promise<void> => {
-  console.log('=== Testing Human Agent Assignment Functionality ===');
+  logger.info('=== Testing Human Agent Assignment Functionality ===');
   
   try {
     // Get current user
@@ -281,62 +285,62 @@ export const testHumanAgentAssignment = async (conversationId: string | number |
     const currentUser = JSON.parse(currentUserStr) as User;
     
     if (currentUser.role !== 'human_agent') {
-      console.log(' Current user is not a human agent. Cannot test assignment.');
+      logger.info('Current user is not a human agent. Cannot test assignment.');
       return;
     }
     
     if (!conversationId) {
-      console.log(' Please provide a conversation ID to test assignment');
+      logger.info('Please provide a conversation ID to test assignment');
       return;
     }
     
-    console.log(' Testing assignment for human agent:', currentUser.name, 'ID:', currentUser.id);
+    logger.info('Testing assignment for human agent:', { name: currentUser.name, id: currentUser.id });
     
     // Test 1: Assign to themselves (User option)
-    console.log('1. Testing assignment to "User" (themselves)...');
+    logger.info('1. Testing assignment to "User" (themselves)...');
     try {
       const payload = { handler: 'human_agent', humanAgentId: currentUser.id };
-      console.log('   Sending payload:', payload);
+      logger.info('Sending payload:', payload);
       
       // This will make an actual API call - be careful!
       const result = await chatService.assignConversationHandler(String(conversationId), payload);
-      console.log('    Successfully assigned to themselves:', result);
+      logger.info('Successfully assigned to themselves:', result);
     } catch (error) {
       const err = error as Error;
-      console.log('    Failed to assign to themselves:', err.message);
+      logger.info('Failed to assign to themselves:', { message: err.message });
     }
     
     // Test 2: Assign to AI Assistant
-    console.log('2. Testing assignment to "Assistant" (AI)...');
+    logger.info('2. Testing assignment to "Assistant" (AI)...');
     try {
       const payload = { handler: 'AI', humanAgentId: null };
-      console.log('   Sending payload:', payload);
+      logger.info('Sending payload:', payload);
       
       // This will make an actual API call - be careful!
       const result = await chatService.assignConversationHandler(String(conversationId), payload);
-      console.log('    Successfully assigned to AI:', result);
+      logger.info('Successfully assigned to AI:', result);
     } catch (error) {
       const err = error as Error;
-      console.log('    Failed to assign to AI:', err.message);
+      logger.info('Failed to assign to AI:', { message: err.message });
     }
     
-    console.log('=== Assignment Test Complete ===');
+    logger.info('=== Assignment Test Complete ===');
     
   } catch (error) {
-    console.error('Error testing human agent assignment:', error);
+    logger.error('Error testing human agent assignment:', error);
     throw error;
   }
 };
 
 // Run all tests
 export const runAllTests = async (): Promise<void> => {
-  console.log('Running conversation assignment tests with real backend data...');
+  logger.info('Running conversation assignment tests with real backend data...');
   
   try {
     await testConversationFiltering();
-    console.log('Tests completed successfully!');
+    logger.info('Tests completed successfully!');
   } catch (error) {
-    console.error('Tests failed:', error);
+    logger.error('Tests failed:', error);
   }
 };
 

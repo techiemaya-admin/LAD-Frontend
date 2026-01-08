@@ -1,5 +1,6 @@
 import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
+import { logger } from '../lib/logger';
 import { Lead } from '../features/deals-pipeline/types';
 
 // Cache for performance
@@ -81,12 +82,12 @@ const leadsService = {
       // Handle case where API returns an object with leads/data property or direct array
       const leadsArray = Array.isArray(data) ? data : (data?.leads || data?.data || []);
       if (!Array.isArray(leadsArray)) {
-        console.warn('Invalid response format from getAllLeads, returning empty array');
+        logger.warn('Invalid response format from getAllLeads, returning empty array');
         return [];
       }
       return leadsArray;
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      logger.error('Error fetching leads', error);
       throw error;
     }
   },
@@ -98,7 +99,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching lead:', error);
+      logger.error('Error fetching lead', error);
       throw error;
     }
   },
@@ -115,7 +116,7 @@ const leadsService = {
       this.clearCache(); // Clear cache after creating
       return await response.json();
     } catch (error) {
-      console.error('Error creating lead:', error);
+      logger.error('Error creating lead', error);
       throw error;
     }
   },
@@ -132,7 +133,7 @@ const leadsService = {
       this.clearCache(); // Clear cache after updating
       return await response.json();
     } catch (error) {
-      console.error('Error updating lead:', error);
+      logger.error('Error updating lead', error);
       throw error;
     }
   },
@@ -148,7 +149,7 @@ const leadsService = {
       this.clearCache(); // Clear cache after deleting
       await response.json();
     } catch (error) {
-      console.error('Error deleting lead:', error);
+      logger.error('Error deleting lead', error);
       throw error;
     }
   },
@@ -165,7 +166,7 @@ const leadsService = {
       this.clearCache(); // Clear cache after moving
       return await response.json();
     } catch (error) {
-      console.error('Error moving lead to stage:', error);
+      logger.error('Error moving lead to stage', error);
       throw error;
     }
   },
@@ -177,7 +178,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching leads by stage:', error);
+      logger.error('Error fetching leads by stage', error);
       throw error;
     }
   },
@@ -189,7 +190,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching lead tags:', error);
+      logger.error('Error fetching lead tags', error);
       throw error;
     }
   },
@@ -205,7 +206,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding tag to lead:', error);
+      logger.error('Error adding tag to lead', error);
       throw error;
     }
   },
@@ -217,7 +218,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching lead notes:', error);
+      logger.error('Error fetching lead notes', error);
       throw error;
     }
   },
@@ -233,7 +234,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding note to lead:', error);
+      logger.error('Error adding note to lead', error);
       throw error;
     }
   },
@@ -245,7 +246,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching lead comments:', error);
+      logger.error('Error fetching lead comments', error);
       throw error;
     }
   },
@@ -261,7 +262,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding comment to lead:', error);
+      logger.error('Error adding comment to lead', error);
       throw error;
     }
   },
@@ -273,7 +274,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error fetching lead attachments:', error);
+      logger.error('Error fetching lead attachments', error);
       throw error;
     }
   },
@@ -294,7 +295,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding attachment to lead:', error);
+      logger.error('Error adding attachment to lead', error);
       throw error;
     }
   },
@@ -310,7 +311,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding lead note:', error);
+      logger.error('Error adding lead note', error);
       throw error;
     }
   },
@@ -325,7 +326,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       await response.json();
     } catch (error) {
-      console.error('Error deleting lead note:', error);
+      logger.error('Error deleting lead note', error);
       throw error;
     }
   },
@@ -341,7 +342,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error updating lead note:', error);
+      logger.error('Error updating lead note', error);
       throw error;
     }
   },
@@ -357,7 +358,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error adding lead comment:', error);
+      logger.error('Error adding lead comment', error);
       throw error;
     }
   },
@@ -372,7 +373,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       await response.json();
     } catch (error) {
-      console.error('Error deleting lead comment:', error);
+      logger.error('Error deleting lead comment', error);
       throw error;
     }
   },
@@ -388,7 +389,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error updating lead comment:', error);
+      logger.error('Error updating lead comment', error);
       throw error;
     }
   },
@@ -416,7 +417,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error uploading lead attachment:', error);
+      logger.error('Error uploading lead attachment', error);
       throw error;
     }
   },
@@ -437,7 +438,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       await response.json();
     } catch (error) {
-      console.error('Error deleting lead attachment:', error);
+      logger.error('Error deleting lead attachment', error);
       throw error;
     }
   },
@@ -449,7 +450,7 @@ const leadsService = {
       if (!response.ok) {
         // Handle 404 gracefully - endpoint may not be implemented yet
         if (response.status === 404) {
-          console.warn('Leads with conversations endpoint not found (404) - falling back to basic leads');
+          logger.warn('Leads with conversations endpoint not found (404) - falling back to basic leads');
           return this.getAllLeads();
         }
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -458,12 +459,12 @@ const leadsService = {
       // Handle case where API returns an object with leads/data property or direct array
       const leadsArray = Array.isArray(data) ? data : (data?.leads || data?.data || []);
       if (!Array.isArray(leadsArray)) {
-        console.warn('Invalid response format from getLeadsWithConversations, falling back to basic leads');
+        logger.warn('Invalid response format from getLeadsWithConversations, falling back to basic leads');
         return this.getAllLeads();
       }
       return leadsArray;
     } catch (error) {
-      console.warn('Leads with conversations endpoint not available, falling back to basic leads:', error);
+      logger.warn('Leads with conversations endpoint not available, falling back to basic leads', error);
       // Fallback to basic leads if the specific endpoint is not available
       return this.getAllLeads();
     }
@@ -480,7 +481,7 @@ const leadsService = {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('Error assigning leads to user:', error);
+      logger.error('Error assigning leads to user', error);
       throw error;
     }
   },
@@ -499,4 +500,3 @@ const leadsService = {
 };
 
 export default leadsService;
-

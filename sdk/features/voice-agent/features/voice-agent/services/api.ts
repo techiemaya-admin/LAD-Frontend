@@ -10,7 +10,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 class APIClient {
   private instance: AxiosInstance;
 
-  constructor(baseURL: string = '/api') {
+  constructor(baseURL: string = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '/api') {
     this.instance = axios.create({
       baseURL,
       headers: {
@@ -22,8 +22,8 @@ class APIClient {
     // Request interceptor for auth token
     this.instance.interceptors.request.use(
       (config) => {
-        // Get token from localStorage or sessionStorage
-        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        // Get token from localStorage or sessionStorage (using the correct key)
+        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
         
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;

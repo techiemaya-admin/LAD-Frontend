@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 function getBackendBase() {
   const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json(data);
   } catch (e: any) {
-    console.error('[/api/users] GET Error:', e);
+    logger.error('[/api/users] GET Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }
@@ -64,13 +65,13 @@ export async function POST(req: NextRequest) {
     const data = await resp.json().catch(() => ({}));
     
     if (!resp.ok) {
-      console.error('[/api/users] POST Error:', data);
+      logger.error('[/api/users] POST Error', { status: resp.status, data });
       return NextResponse.json(data, { status: resp.status });
     }
     
     return NextResponse.json(data, { status: resp.status });
   } catch (e: any) {
-    console.error('[/api/users] POST Error:', e);
+    logger.error('[/api/users] POST Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
 }

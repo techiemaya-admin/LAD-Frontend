@@ -1,6 +1,7 @@
 import { createSlice, createSelector, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { markConversationAsRead } from './notificationSlice';
 import { AppDispatch, RootState } from '../store';
+import { logger } from '@/lib/logger';
 
 interface Message {
   id?: string | number;
@@ -287,9 +288,8 @@ export const markConversationAsReadUnified = createAsyncThunk(
     try {
       // Note: notificationService is commented out in the original, so we'll skip it for now
       // const result = await notificationService.markConversationNotificationsRead(conversationId);
-      // console.log(`[ConversationSlice] Successfully marked conversation ${conversationId} as read on backend:`, result);
     } catch (error) {
-      console.warn('Error calling backend API for mark as read:', error);
+      logger.warn('Error calling backend API for mark as read', error);
       // Don't throw error - frontend state is already updated
       // The user experience is not affected by backend API failures
     }

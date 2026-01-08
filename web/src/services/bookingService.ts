@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import api from './api';
 
 export interface BookingParams {
@@ -393,10 +394,11 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
     return response.data?.data || response.data?.booking || response.data;
     
   } catch (error: any) {
-    console.error('[bookingService.bookSlot] Full error object:', error);
-    console.error('[bookingService.bookSlot] Error response:', error.response);
-    console.error('[bookingService.bookSlot] Error response data:', error.response?.data);
-    console.error('[bookingService.bookSlot] Error status:', error.response?.status);
+    logger.error('Failed to book slot', error);
+    logger.error('Booking error details', { 
+      status: error.response?.status,
+      errorData: error.response?.data 
+    });
     
     const errorMessage = 
       error.response?.data?.error ||
@@ -478,4 +480,3 @@ export const fetchUsers = async (): Promise<User[]> => {
     );
   }
 };
-

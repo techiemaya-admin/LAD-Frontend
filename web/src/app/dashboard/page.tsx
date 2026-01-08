@@ -172,12 +172,16 @@ export default function DashboardPage() {
     check();
   }, [router]);
 
-  // NEW: control how many calls are visible in the table
-  const [showAllCalls, setShowAllCalls] = useState(false);
+  // NEW: control how many calls are visible in the table with pagination
+  const [currentPage, setCurrentPage] = useState(1);
   const VISIBLE_DEFAULT = 5;
+  const totalPages = Math.ceil(calls.length / VISIBLE_DEFAULT);
   const visibleCalls = useMemo(
-    () => (showAllCalls ? calls : calls.slice(0, VISIBLE_DEFAULT)),
-    [calls, showAllCalls]
+    () => {
+      const startIdx = (currentPage - 1) * VISIBLE_DEFAULT;
+      return calls.slice(startIdx, startIdx + VISIBLE_DEFAULT);
+    },
+    [calls, currentPage]
   );
 
   const normalizeE164 = (v?: string) =>
@@ -234,6 +238,14 @@ export default function DashboardPage() {
 
     return undefined;
   };
+
+  const statusStyles: Record<string, string> = {
+  ended: "bg-green-100 text-green-700",
+  completed: "bg-green-100 text-green-700",
+  failed: "bg-red-100 text-red-700",
+  in_queue: "bg-yellow-100 text-yellow-700",
+  ringing: "bg-blue-100 text-blue-700",
+};
   
 // fetch call logs with the same role-based logic as CallLogsPage
 useEffect(() => {
@@ -618,98 +630,138 @@ useEffect(() => {
 
             {/* Objective + Latest calls */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent">
-                <CreditsHighlightCard 
-                  balance={creditsData?.balance || 0}
-                  totalMinutes={creditsData?.totalMinutes || 0}
-                  remainingMinutes={creditsData?.remainingMinutes || 0}
-                  usageThisMonth={creditsData?.usageThisMonth || 0}
-                  onRefresh={fetchCredits}
-                  isLoading={isLoadingCredits}
-                />
-              </Card>
+              <CreditsHighlightCard 
+                balance={creditsData?.balance || 0}
+                totalMinutes={creditsData?.totalMinutes || 0}
+                remainingMinutes={creditsData?.remainingMinutes || 0}
+                usageThisMonth={creditsData?.usageThisMonth || 0}
+                onRefresh={fetchCredits}
+                isLoading={isLoadingCredits}
+              />
 
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle>Latest calls</CardTitle>
-                  <CardDescription>Here are the latest calls AI assistants has made</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Lead Name</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Assistant</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visibleCalls.map((call) => {
-                        const started = new Date(call.startedAt);
-                        // Better date formatting: "Jan 6, 2026 2:30 PM" instead of full locale string
-                        const dateStr = isNaN(started.getTime()) 
-                          ? "—" 
-                          : started.toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric'
-                            }) + ' ' + started.toLocaleTimeString('en-US', { 
-                              hour: 'numeric', 
-                              minute: '2-digit',
-                              hour12: true
-                            });
-                        const duration = formatDuration(call);
-                        
-                        // Get assistant name with proper fallback logic
-                        const assistantName = call.agentName 
-                          || resolvePhoneNumber(call.from)?.label 
-                          || (call.from && call.from !== '-' ? call.from : undefined)
-                          || "—";
-                        
-                        return (
-                          <TableRow key={call.id}>
-                            <TableCell>
-                              <Badge variant={call.status === "completed" || call.status === "ended" ? "default" : "secondary"}>
-                                {call.status}
-                              </Badge>
-                            </TableCell>
+<Card>
+  <CardHeader className="border-b pb-3">
+    <CardTitle>Latest calls</CardTitle>
+    <CardDescription className="text-sm">
+      Recent AI-handled calls with live status & duration
+    </CardDescription>
+  </CardHeader>
 
-                            {/* CLIENT NAME = lead_name */}
-                            <TableCell>{call.leadName || "—"}</TableCell>
+  <CardContent className="pt-4 space-y-3">
+    {/* EMPTY STATE */}
+    {!visibleCalls.length && (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-sm font-medium">No calls yet</p>
+        <p className="text-xs text-muted-foreground">
+          Your AI assistants haven’t placed any calls.
+        </p>
+      </div>
+    )}
 
-                            <TableCell>{duration}</TableCell>
+    {/* CALL ROWS */}
+    {visibleCalls.map((call) => {
+      const started = new Date(call.startedAt);
+      const dateStr = isNaN(started.getTime())
+        ? "—"
+        : started.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }) +
+          " · " +
+          started.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
 
-                            {/* ASSISTANT NAME = agent_name */}
-                            <TableCell className="max-w-[200px] truncate">
-                              {assistantName}
-                            </TableCell>
+      const duration = formatDuration(call);
 
-                            <TableCell className="whitespace-nowrap">{dateStr}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+      const statusStyles: Record<string, string> = {
+        ended: "bg-green-100 text-green-700",
+        completed: "bg-green-100 text-green-700",
+        answered: "bg-green-100 text-green-700",
+        failed: "bg-red-100 text-red-700",
+        in_queue: "bg-yellow-100 text-yellow-700",
+        ringing: "bg-blue-100 text-blue-700",
+      };
 
-                  {/* Footer with View more / View less */}
-                  {calls.length > VISIBLE_DEFAULT && (
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-muted-foreground">
-                        Showing {visibleCalls.length} of {calls.length}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAllCalls((v) => !v)}
-                      >
-                        {showAllCalls ? "View less" : `View more (${calls.length - VISIBLE_DEFAULT})`}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+      const assistantName =
+        call.agentName ||
+        resolvePhoneNumber(call.from)?.label ||
+        (call.from && call.from !== "-" ? call.from : undefined) ||
+        "AI Assistant";
+
+      return (
+        <div
+          key={call.id}
+          className="flex items-center justify-between rounded-xl border bg-background px-4 py-3 transition hover:bg-muted/40"
+        >
+          {/* LEFT */}
+          <div className="flex items-center gap-4 min-w-0">
+            {/* STATUS */}
+            <Badge
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                statusStyles[call.status] ??
+                "bg-muted text-muted-foreground"
+              }`}
+            >
+              {call.status.replace("_", " ")}
+            </Badge>
+
+            {/* LEAD + ASSISTANT */}
+            <div className="min-w-0">
+              <p className="font-medium truncate">
+                {call.leadName || "Unknown Lead"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {assistantName}
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="text-right whitespace-nowrap">
+            <p className="text-sm font-medium">{duration}</p>
+            <p className="text-xs text-muted-foreground">{dateStr}</p>
+          </div>
+        </div>
+      );
+    })}
+
+    {/* PAGINATION */}
+    {calls.length > VISIBLE_DEFAULT && (
+      <div className="flex items-center justify-between pt-0">
+        <span className="text-xs text-muted-foreground">
+          Showing {(currentPage - 1) * VISIBLE_DEFAULT + 1}–
+          {Math.min(currentPage * VISIBLE_DEFAULT, calls.length)} of{" "}
+          {calls.length}
+        </span>
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            ← Prev
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Next →
+          </Button>
+        </div>
+      </div>
+    )}
+  </CardContent>
+</Card>
+
             </div>
           </main>
         </div>

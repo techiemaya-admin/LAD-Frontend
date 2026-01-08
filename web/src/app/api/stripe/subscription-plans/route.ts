@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching subscription plans:', error);
+    logger.error('Error fetching subscription plans', error);
     return NextResponse.json(
       { error: 'Failed to fetch subscription plans' },
       { status: 500 }
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error creating subscription plan:', error);
+    logger.error('Error creating subscription plan', error);
     return NextResponse.json(
       { error: 'Failed to create subscription plan' },
       { status: 500 }

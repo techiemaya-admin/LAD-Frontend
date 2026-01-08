@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../../utils/backend';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
       enabled: false
     }, { status: 200 });
   } catch (error: any) {
-    console.error('[/api/stripe/config] Error:', error.message);
+    logger.error('[/api/stripe/config] Error', error);
     return NextResponse.json({ 
       publishableKey: '',
       enabled: false 

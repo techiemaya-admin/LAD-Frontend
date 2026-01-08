@@ -1,6 +1,7 @@
 import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { User } from '../store/slices/usersSlice';
+import { logger } from '@/lib/logger';
 
 // Remove mockUserSettings, use API for user preferences
 
@@ -152,7 +153,7 @@ export async function savePipelinePreferences(preferences: PipelinePreferences):
     
     return preferences;
   } catch (error) {
-    console.error('Failed to save pipeline preferences:', error);
+    logger.error('Failed to save pipeline preferences:', error);
     throw error;
   }
 }
@@ -173,7 +174,7 @@ function extractPipelinePreferences(userSettings: Record<string, unknown>): Part
     }
   });
   
-  console.log('UserService: Total pipeline preferences extracted:', countNestedProperties(pipelinePrefs));
+  logger.debug('UserService: Total pipeline preferences extracted:', { count: countNestedProperties(pipelinePrefs) });
   return pipelinePrefs as Partial<PipelinePreferences>;
 }
 
@@ -474,8 +475,8 @@ export async function upsertUserLeadPairs(userId: string, leadIds: (string | num
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
   
-  console.log(`[UserService] Upserting leads for user ID: ${userId}`, leadIds);
-  console.log(`[UserService] API URL: ${getApiUrl('/api/group-pairs/upsert')}`);
+  logger.debug(`[UserService] Upserting leads for user ID: ${userId}`, { leadIds });
+  logger.debug(`[UserService] API URL: ${getApiUrl('/api/group-pairs/upsert')}`, { url: getApiUrl('/api/group-pairs/upsert') });
   
   try {
     const response = await fetchWithTimeout(getApiUrl('/api/group-pairs/upsert'), {
@@ -488,19 +489,19 @@ export async function upsertUserLeadPairs(userId: string, leadIds: (string | num
       body: JSON.stringify({ userId, leadIds })
     });
     
-    console.log(`[UserService] Response status: ${response.status} ${response.statusText}`);
+    logger.debug(`[UserService] Response status: ${response.status} ${response.statusText}`, { status: response.status });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[UserService] Backend error response:`, errorText);
+      logger.error(`[UserService] Backend error response:`, { errorText });
       throw new Error(`Failed to upsert user-lead pairs: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log(`[UserService] Successfully upserted leads:`, data);
+    logger.debug(`[UserService] Successfully upserted leads:`, { data });
     return data;
   } catch (error) {
-    console.error(`[UserService] Error upserting leads for user ID ${userId}:`, error);
+    logger.error(`[UserService] Error upserting leads for user ID ${userId}:`, error);
     throw error;
   }
 }
@@ -510,8 +511,8 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
   
-  console.log(`[UserService] Fetching leads for user ID: ${userId}`);
-  console.log(`[UserService] API URL: ${getApiUrl(`/api/group-pairs/user/${userId}/leads`)}`);
+  logger.debug(`[UserService] Fetching leads for user ID: ${userId}`, { userId });
+  logger.debug(`[UserService] API URL: ${getApiUrl(`/api/group-pairs/user/${userId}/leads`)}`, { url: getApiUrl(`/api/group-pairs/user/${userId}/leads`) });
   
   try {
     const response = await fetchWithTimeout(getApiUrl(`/api/group-pairs/user/${userId}/leads`), {
@@ -522,22 +523,22 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
       }
     });
     
-    console.log(`[UserService] Response status: ${response.status} ${response.statusText}`);
+    logger.debug(`[UserService] Response status: ${response.status} ${response.statusText}`, { status: response.status });
     
     if (!response.ok) {
       // Handle 404 gracefully - endpoint may not be implemented yet
       if (response.status === 404) {
-        console.warn(`[UserService] Endpoint not found (404) - returning empty array. This is expected during development.`);
+        logger.warn(`[UserService] Endpoint not found (404) - returning empty array. This is expected during development.`);
         return [];
       }
       
       const errorText = await response.text();
-      console.error(`[UserService] Backend error response:`, errorText);
+      logger.error(`[UserService] Backend error response:`, { errorText });
       throw new Error(`Failed to fetch user assigned leads: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json() as { success?: boolean; data?: unknown[]; leads?: unknown[] } | unknown[];
-    console.log(`[UserService] Successfully fetched leads:`, data);
+    logger.debug(`[UserService] Successfully fetched leads:`, { data });
     
     // Handle the new backend response format
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
@@ -550,10 +551,10 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
       return data; // Fallback for old format
     }
     
-    console.warn(`[UserService] Unexpected response format:`, data);
+    logger.warn(`[UserService] Unexpected response format:`, { data });
     return [];
   } catch (error) {
-    console.error(`[UserService] Error fetching leads for user ID ${userId}:`, error);
+    logger.error(`[UserService] Error fetching leads for user ID ${userId}:`, error);
     throw error;
   }
 }
@@ -616,7 +617,7 @@ export function autoSavePipelinePreferences(preferences: PipelinePreferences, de
   debouncedSave = setTimeout(() => {
     savePipelinePreferences(preferences)
       .catch(error => {
-        console.error('Auto-save pipeline preferences failed:', error);
+        logger.error('Auto-save pipeline preferences failed:', error);
       });
   }, delay);
 }
