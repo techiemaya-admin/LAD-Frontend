@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
+import { logger } from '@/lib/logger';
 
 import authReducer from './slices/authSlice';
 import conversationReducer from './slices/conversationSlice';
@@ -32,9 +33,13 @@ export const store = configureStore({
     })
 });
 
-// Debug: Log the initial state to verify masterData is initialized
-console.log('[Store] Main store initialized with keys:', Object.keys(store.getState()));
-console.log('[Store] masterData slice present:', !!store.getState().masterData);
+// Debug: Log the initial state to verify masterData is initialized (development only)
+if (process.env.NODE_ENV === 'development') {
+  logger.debug('[Store] Main store initialized with keys:', {
+    keys: Object.keys(store.getState()),
+    masterDataPresent: !!store.getState().masterData
+  });
+}
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

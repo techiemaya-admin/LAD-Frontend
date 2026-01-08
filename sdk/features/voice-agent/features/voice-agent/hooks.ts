@@ -11,11 +11,13 @@ import type { VoiceAgent, CallLog, PhoneNumber, BatchCallLogEntry } from './type
 export const voiceAgentKeys = {
   all: ['voiceAgent'] as const,
   agents: () => [...voiceAgentKeys.all, 'agents'] as const,
+  availableAgents: () => [...voiceAgentKeys.all, 'availableAgents'] as const,
   callLogs: () => [...voiceAgentKeys.all, 'callLogs'] as const,
   callLog: (id: string) => [...voiceAgentKeys.callLogs(), id] as const,
   batchCallLogs: (batchId: string) => [...voiceAgentKeys.all, 'batchCallLogs', batchId] as const,
   phoneNumbers: () => [...voiceAgentKeys.all, 'phoneNumbers'] as const,
   userAvailableNumbers: () => [...voiceAgentKeys.all, 'userAvailableNumbers'] as const,
+  resolvePhones: (ids: string[], type: string) => [...voiceAgentKeys.all, 'resolvePhones', ids, type] as const,
 };
 
 /**
@@ -85,6 +87,29 @@ export function useUserAvailableNumbers(): UseQueryResult<PhoneNumber[], Error> 
     queryKey: voiceAgentKeys.userAvailableNumbers(),
     queryFn: () => voiceAgentService.getUserAvailableNumbers(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch user's available voice agents
+ */
+export function useAvailableAgents(): UseQueryResult<VoiceAgent[], Error> {
+  return useQuery({
+    queryKey: voiceAgentKeys.availableAgents(),
+    queryFn: () => voiceAgentService.getAvailableAgents(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
+ * Hook to resolve phone numbers from IDs
+ */
+export function useResolvePhones(
+  ids: string[],
+  type: 'company' | 'employee' = 'company'
+): UseMutationResult<any[], Error, void> {
+  return useMutation({
+    mutationFn: () => voiceAgentService.resolvePhones(ids, type),
   });
 }
 

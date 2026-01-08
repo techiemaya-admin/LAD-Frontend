@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { logger } from '@/lib/logger';
 
 interface StripeContextType {
   stripe: Stripe | null;
@@ -56,7 +57,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         
         // Check if we have a valid publishable key
         if (!config.publishableKey) {
-          console.warn('Stripe is not configured: Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+          logger.warn('Stripe not configured: Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
           // Don't throw - allow app to work without Stripe
           setLoading(false);
           return;
@@ -69,7 +70,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         setStripe(stripeInstance);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to initialize Stripe';
-        console.error('Error initializing Stripe:', errorMessage);
+        logger.error('Error initializing Stripe', err);
         // Set error but still mark loading as false to allow app to continue
         setError(errorMessage);
       } finally {

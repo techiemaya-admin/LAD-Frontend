@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import type { WebhookEvent } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
 import { PrismaClient } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -16,22 +17,25 @@ export async function POST(req: NextRequest) {
     const svixTimestamp = (await headerPayload).get('svix-timestamp');
     const svixSignature = (await headerPayload).get('svix-signature');
 
-    // Debug logs (remove in production)
-    console.log('Webhook headers:', { svixId: !!svixId, svixTimestamp: !!svixTimestamp, svixSignature: !!svixSignature });
-    console.log('Payload preview:', payload.substring(0, 200) + '...');
+    // Debug logs (development only)
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('Webhook headers received', {
+        hasId: !!svixId,
+        hasTimestamp: !!svixTimestamp,
+        hasSignature: !!svixSignature
+      });
+    }
 
     if (!svixId || !svixTimestamp || !svixSignature) {
-      console.error('Missing Svix headers');
+      logger.error('Missing Svix headers');
       return NextResponse.json({ error: 'Missing Svix headers' }, { status: 400 });
     }
 
     const secret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
     if (!secret) {
-      console.error('Missing CLERK_WEBHOOK_SIGNING_SECRET');
+      logger.error('Missing CLERK_WEBHOOK_SIGNING_SECRET');
       return NextResponse.json({ error: 'Missing CLERK_WEBHOOK_SIGNING_SECRET' }, { status: 400 });
     }
-
-    console.log("payload", payload);
 
     const wh = new Webhook(secret);
     const evt = wh.verify(payload, {
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
     const { type: eventType } = evt;
     const clerkUserId = evt.data.id as string;
 
-    console.log(`Processing webhook: ${eventType} for user ${clerkUserId}`);
+    logger.debug('Processing webhook', { eventType, clerkUserId });
 
     switch (eventType) {
       case 'user.created':
@@ -84,12 +88,12 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        console.log(`Unhandled event type: ${eventType}`);
+        logger.warn('Unhandled webhook event type', { eventType });
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook processing error', error);
     return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 });
   } finally {
     await prisma.$disconnect();

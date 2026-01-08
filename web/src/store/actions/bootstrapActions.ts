@@ -5,10 +5,11 @@ import { setNotifications } from '../slices/notificationSlice';
 import { setStages, setStagesLoading, setStagesError } from '../../features/deals-pipeline/store/slices/pipelineSlice';
 import { setLeads, setLeadsLoading, setLeadsError } from '../../features/deals-pipeline/store/slices/leadsSlice';
 import { setStatuses, setSources, setPriorities } from '../slices/masterDataSlice';
-import chatService from '../../services/chatService';
-import { fetchStages, fetchStatuses, fetchSources, fetchPriorities, fetchLeads } from '../../services/pipelineService';
+import { logger } from '@/lib/logger';
 import { AppDispatch, RootState } from '../store';
 import { safeStorage } from '../../utils/storage';
+import * as chatService from '../../services/chatService';
+import * as pipelineService from '../../services/pipelineService';
 
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
@@ -26,49 +27,42 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
     if (!conversations || conversations.length === 0) {
       dispatch(setConversationLoading(true));
       const conversationsData = await chatService.getConversations();
-      console.log('Bootstrapped conversations:', conversationsData);
+      logger.debug('Bootstrapped conversations', { count: conversationsData?.length || 0 });
       dispatch(setConversations(conversationsData));
       dispatch(setConversationLoading(false));
     }
 
     // 2. Load notifications (if API exists) - only if backend has notifications
     try {
-      const res = await fetch('/api/conversations/notifications', {
-        headers: { Authorization: `Bearer ${safeStorage.getItem('token')}` },
-      });
-      if (res.ok) {
-        const backendNotifications = await res.json();
-        if (backendNotifications && Array.isArray(backendNotifications) && backendNotifications.length > 0) {
-          console.log('[Bootstrap] Loaded notifications from backend:', backendNotifications.length);
-          dispatch(setNotifications(backendNotifications));
-        } else {
-          console.log('[Bootstrap] No notifications from backend, keeping localStorage notifications');
-        }
+      const backendNotifications = await chatService.getConversationNotifications('');
+      if (backendNotifications && Array.isArray(backendNotifications) && backendNotifications.length > 0) {
+        logger.debug('[Bootstrap] Loaded notifications from backend', { count: backendNotifications.length });
+        dispatch(setNotifications(backendNotifications));
       } else {
-        console.log('[Bootstrap] Backend notifications API not available, keeping localStorage notifications');
+        logger.debug('[Bootstrap] No notifications from backend, keeping localStorage notifications');
       }
     } catch (error) {
       const err = error as Error;
-      console.log('[Bootstrap] Error fetching notifications from backend, keeping localStorage notifications:', err.message);
+      logger.debug('[Bootstrap] Error fetching notifications from backend, keeping localStorage notifications', { error: err.message });
     }
 
     // 3. Load pipeline data into Redux state
     try {
-      console.log('[Bootstrap] Loading pipeline data...');
+      logger.debug('[Bootstrap] Loading pipeline data...');
       dispatch(setStagesLoading(true));
       dispatch(setLeadsLoading(true));
       
       // Load stages and leads in parallel for better performance
       const [stages, leads] = await Promise.all([
-        fetchStages().catch(err => { 
+        pipelineService.fetchStages().catch(err => { 
           const error = err as Error;
-          console.warn('Failed to load stages:', err); 
+          logger.warn('Failed to load stages', err); 
           dispatch(setStagesError(error.message || 'Failed to load stages'));
           return []; 
         }),
-        fetchLeads().catch(err => { 
+        pipelineService.fetchLeads().catch(err => { 
           const error = err as Error;
-          console.warn('Failed to load leads:', err); 
+          logger.warn('Failed to load leads', err); 
           dispatch(setLeadsError(error.message || 'Failed to load leads'));
           return []; 
         })
@@ -80,7 +74,7 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       dispatch(setStagesLoading(false));
       dispatch(setLeadsLoading(false));
 
-      console.log('[Bootstrap] Pipeline data loaded:', { 
+      logger.debug('[Bootstrap] Pipeline data loaded', { 
         stages: stages.length, 
         leads: leads.length 
       });
@@ -88,16 +82,16 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       // Load master data and store in Redux
       try {
         const [statuses, sources, priorities] = await Promise.all([
-          fetchStatuses().catch(err => { 
-            console.warn('Failed to load statuses:', err); 
+          pipelineService.fetchStatuses().catch(err => { 
+            logger.warn('Failed to load statuses', err); 
             return []; 
           }),
-          fetchSources().catch(err => { 
-            console.warn('Failed to load sources:', err); 
+          pipelineService.fetchSources().catch(err => { 
+            logger.warn('Failed to load sources', err); 
             return []; 
           }),
-          fetchPriorities().catch(err => { 
-            console.warn('Failed to load priorities:', err); 
+          pipelineService.fetchPriorities().catch(err => { 
+            logger.warn('Failed to load priorities', err); 
             return []; 
           })
         ]);
@@ -107,17 +101,17 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
         dispatch(setSources(sources));
         dispatch(setPriorities(priorities));
         
-        console.log('[Bootstrap] Master data loaded and stored in Redux:', { 
+        logger.debug('[Bootstrap] Master data loaded and stored in Redux', { 
           statuses: statuses.length, 
           sources: sources.length, 
           priorities: priorities.length 
         });
       } catch (err) {
-        console.warn('[Bootstrap] Failed to load master data:', err);
+        logger.warn('[Bootstrap] Failed to load master data', err);
       }
       
     } catch (err) {
-      console.error('[Bootstrap] Failed to load pipeline data:', err);
+      logger.error('[Bootstrap] Failed to load pipeline data', err);
       dispatch(setStagesLoading(false));
       dispatch(setLeadsLoading(false));
       // Don't fail bootstrap if pipeline data fails

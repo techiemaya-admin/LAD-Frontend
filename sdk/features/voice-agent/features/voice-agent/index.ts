@@ -15,6 +15,8 @@ export {
   useBatchCallLogs,
   useTenantPhoneNumbers,
   useUserAvailableNumbers,
+  useAvailableAgents,
+  useResolvePhones,
   useMakeCall,
   voiceAgentKeys,
 } from './hooks';

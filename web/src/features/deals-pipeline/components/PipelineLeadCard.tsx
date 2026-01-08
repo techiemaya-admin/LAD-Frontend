@@ -2151,73 +2151,73 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             )}
           </div>
         </div>
+        </div>
 
-        {renderDetailsDialog()}
+      {renderDetailsDialog()}
 
-        <Dialog open={deleteDialogOpen}>
-          <DialogContent showCloseButton={false} className="p-6 pt-2">
-            <DialogTitle className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
-              <button
-                onClick={handleDeleteDialogClose}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogTitle>
-            <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
-            <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                disabled={isLoading}
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                {isLoading ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={deleteConfirmation.open}>
-          <DialogContent showCloseButton={false} className="p-6 pt-2">
-            <DialogTitle className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-[#3A3A4F]">
-                Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}
-              </span>
-              <button
-                onClick={handleDeleteConfirmationClose}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogTitle>
-            <p className="mt-4">Are you sure you want to delete this {String(deleteConfirmation.type)}? This action cannot be undone.</p>
-            <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={handleDeleteConfirmationClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                disabled={isLoading}
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                {isLoading ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {snackbar.open && (
-          <div
-            className={`fixed bottom-4 right-4 rounded-lg px-4 py-2 text-sm text-white shadow-lg ${snackbarClasses[snackbar.severity]}`}
-          >
-            {snackbar.message}
+      <Dialog open={deleteDialogOpen}>
+        <DialogContent showCloseButton={false} className="p-6 pt-2">
+          <DialogTitle className="flex justify-between items-center">
+            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
+            <button
+              onClick={handleDeleteDialogClose}
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogTitle>
+          <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
+          <div className="flex gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              disabled={isLoading}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isLoading ? 'Deleting...' : 'Delete'}
+            </Button>
           </div>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmation.open}>
+        <DialogContent showCloseButton={false} className="p-6 pt-2">
+          <DialogTitle className="flex justify-between items-center">
+            <span className="text-lg font-semibold text-[#3A3A4F]">
+              Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}
+            </span>
+            <button
+              onClick={handleDeleteConfirmationClose}
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogTitle>
+          <p className="mt-4">Are you sure you want to delete this {String(deleteConfirmation.type)}? This action cannot be undone.</p>
+          <div className="flex gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleDeleteConfirmationClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              disabled={isLoading}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {snackbar.open && (
+        <div
+          className={`fixed bottom-4 right-4 rounded-lg px-4 py-2 text-sm text-white shadow-lg ${snackbarClasses[snackbar.severity]}`}
+        >
+          {snackbar.message}
+        </div>
+      )}
     </div>
   );
 };

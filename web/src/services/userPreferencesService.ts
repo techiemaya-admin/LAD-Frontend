@@ -1,4 +1,5 @@
 import { getUserSettings, updateUserSettings } from './userService';
+import { logger } from '../lib/logger';
 
 /**
  * User Preferences Service
@@ -73,22 +74,21 @@ class UserPreferencesService {
   async getPipelinePreferences(): Promise<PipelinePreferences> {
     try {
       const userSettings = await getUserSettings() as UserSettings;
-      console.log('UserPreferencesService: Raw user settings from API:', userSettings);
-      console.log('UserPreferencesService: Available keys in user settings:', Object.keys(userSettings));
+      logger.debug('Raw user settings from API keys:', Object.keys(userSettings));
       
       // Log all keys that start with 'pipeline.'
       const pipelineKeys = Object.keys(userSettings).filter(key => key.startsWith('pipeline.'));
-      console.log('UserPreferencesService: Found pipeline keys directly:', pipelineKeys);
+      logger.debug('Found pipeline keys directly:', pipelineKeys);
       
       const pipelinePrefs = this.extractPipelinePreferences(userSettings);
-      console.log('UserPreferencesService: Extracted pipeline preferences:', pipelinePrefs);
+      logger.debug('Extracted pipeline preferences');
       
       const merged = this.mergeWithDefaults(pipelinePrefs);
-      console.log('UserPreferencesService: Final merged preferences:', merged);
+      logger.debug('Final merged preferences');
       
       return merged;
     } catch (error) {
-      console.warn('Failed to load user preferences, using defaults:', error);
+      logger.warn('Failed to load user preferences, using defaults', error);
       return this.getDefaultPreferences();
     }
   }
@@ -96,16 +96,16 @@ class UserPreferencesService {
   // Save user's pipeline preferences using existing user settings API
   async savePipelinePreferences(preferences: PipelinePreferences): Promise<PipelinePreferences> {
     try {
-      console.log('UserPreferencesService: Saving preferences:', preferences);
+      logger.debug('Saving preferences');
       const pipelineKeys = this.flattenPipelinePreferences(preferences);
-      console.log('UserPreferencesService: Flattened preferences for backend:', pipelineKeys);
+      logger.debug('Flattened preferences for backend');
       
       await updateUserSettings(pipelineKeys);
-      console.log('UserPreferencesService: Backend save response received');
+      logger.debug('Backend save response received');
       
       return preferences;
     } catch (error) {
-      console.error('Failed to save user preferences:', error);
+      logger.error('Failed to save user preferences', error);
       throw error;
     }
   }
@@ -120,29 +120,28 @@ class UserPreferencesService {
     // Check if settings are nested under preferences.general
     if (userSettings.preferences && userSettings.preferences.general) {
       settingsToSearch = userSettings.preferences.general as UserSettings;
-      console.log('UserPreferencesService: Found nested preferences structure, extracting from preferences.general');
+      logger.debug('Found nested preferences structure');
     } else if (userSettings.preferences) {
       settingsToSearch = userSettings.preferences as UserSettings;
-      console.log('UserPreferencesService: Found preferences structure, extracting from preferences');
+      logger.debug('Found preferences structure');
     } else {
       // Settings might be flat at root level (from getUserPreferences backend call)
       settingsToSearch = userSettings;
-      console.log('UserPreferencesService: Using flat structure from root level');
+      logger.debug('Using flat structure from root level');
     }
     
-    console.log('UserPreferencesService: Searching for pipeline keys in:', settingsToSearch);
-    console.log('UserPreferencesService: Keys available to search:', Object.keys(settingsToSearch));
+    logger.debug('Searching for pipeline keys');
     
     // Extract all pipeline-related keys
     Object.keys(settingsToSearch).forEach(key => {
       if (key.startsWith('pipeline.')) {
         const nestedKey = key.replace('pipeline.', '');
         this.setNestedValue(pipelineKeys, nestedKey, settingsToSearch[key]);
-        console.log(`UserPreferencesService: Found pipeline key: ${key} = ${settingsToSearch[key]}`);
+        logger.debug(`Found pipeline key: ${key}`);
       }
     });
     
-    console.log('UserPreferencesService: Total pipeline keys extracted:', Object.keys(pipelineKeys).length);
+    logger.debug(`Total pipeline keys extracted: ${Object.keys(pipelineKeys).length}`);
     return pipelineKeys as Partial<PipelinePreferences>;
   }
 
@@ -274,11 +273,10 @@ class UserPreferencesService {
     this.debouncedSave = setTimeout(() => {
       this.savePipelinePreferences(preferences)
         .catch(error => {
-          console.error('Auto-save preferences failed:', error);
+          logger.error('Auto-save preferences failed', error);
         });
     }, delay);
   }
 }
 
 export default new UserPreferencesService();
-

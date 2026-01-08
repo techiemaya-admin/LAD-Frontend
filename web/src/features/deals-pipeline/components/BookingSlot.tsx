@@ -11,6 +11,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/
 import * as bookingService from '@/services/bookingService';
 import { selectPipelineSettings } from '@/store/slices/uiSlice';
 import { selectUser } from '@/store/slices/authSlice';
+import { logger } from '@/lib/logger';
 
 interface TimeSlot {
   id: string;
@@ -219,10 +220,10 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         params.date = date;
       }
 
-      console.log('[BookingSlot.fetchBookedSlots] Fetching bookings with params:', params);
+      logger.debug('Fetching bookings with params', params);
       const bookings = await bookingService.fetchBookings(params);
 
-      console.log('[BookingSlot.fetchBookedSlots] Received bookings:', bookings);
+      logger.debug('Received bookings', { count: bookings?.length || 0 });
 
       // Map API response to component format
       const mappedBookings: TimeSlot[] = bookings.map((booking: any) => {
@@ -327,7 +328,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
           return toSortDate(b) - toSortDate(a); // newest first
         });
 
-      console.log('[BookingSlot.fetchBookedSlots] Final mapped bookings:', sortedBookings);
+      logger.debug('Final mapped bookings', { count: sortedBookings?.length || 0 });
       setBookedSlots(sortedBookings);
       setShowAllBookedAppointments(false);
 
@@ -354,7 +355,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         );
       }
     } catch (error) {
-      console.error('[BookingSlot.fetchBookedSlots] Error fetching booked slots:', error);
+      logger.error('Error fetching booked slots', error);
       setBookedSlots([]);
       if (isEditMode && date) {
         setTimeSlots(generateTimeSlots(date, startTime, endTime));
@@ -377,7 +378,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
           await fetchBookedSlots();
         }
       } catch (error) {
-        console.error('Error fetching booked slots:', error);
+        logger.error('Error in loadBookedSlots', error);
         // If endpoint doesn't exist, just initialize slots (only in edit mode)
         if (isEditMode && selectedDate) {
           setTimeSlots(generateTimeSlots(selectedDate, startTime, endTime));
@@ -394,7 +395,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     if (!userId || !date) return;
 
     try {
-      console.log('[BookingSlot] Fetching availability with settings:', {
+      logger.debug('Fetching availability with settings', {
         userId,
         date,
         timezone: pipelineSettings.timezone,
@@ -466,7 +467,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         }
       }
     } catch (error) {
-      console.error('[BookingSlot.fetchAvailabilityForUserDay] Error:', error);
+      logger.error('Error fetching availability', error);
       setAvailableSlots([]);
       setPreviousBookingsForUser([]);
       setBookedTimeRanges([]);
@@ -479,31 +480,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   // Returns true (button ENABLED) if the selected time is completely within at least one available slot
   // Returns false (button DISABLED) if the selected time falls outside all available slots or only partially overlaps
   const isTimeRangeBooked = (startTime: string, endTime: string): boolean => {
-    console.log(`\n[isTimeRangeBooked] ===== DEBUG START =====`);
-    console.log(`[isTimeRangeBooked] Input - startTime: "${startTime}", endTime: "${endTime}"`);
-    console.log(`[isTimeRangeBooked] Available slots count: ${bookedTimeRanges.length}`);
-    console.log(`[isTimeRangeBooked] Available slots data:`, bookedTimeRanges);
-    
     if (!startTime || !endTime) {
-      console.log(`[isTimeRangeBooked] ❌ Missing times: startTime=${startTime}, endTime=${endTime}`);
-      console.log(`[isTimeRangeBooked] ===== DEBUG END (MISSING TIMES) =====\n`);
       return false;
     }
     
     if (bookedTimeRanges.length === 0) {
-      console.log(`[isTimeRangeBooked] ❌ No available slots loaded yet. User cannot book any time.`);
-      console.log(`[isTimeRangeBooked] ===== DEBUG END (NO SLOTS) =====\n`);
       return false;
     }
     
     const parseTime = (timeStr: string): number => {
       if (!timeStr || !timeStr.includes(':')) {
-        console.warn(`[parseTime] Invalid time string: "${timeStr}"`);
         return -1;
       }
       const [hours, minutes] = timeStr.split(':').map(Number);
       if (isNaN(hours) || isNaN(minutes)) {
-        console.warn(`[parseTime] Failed to parse time: "${timeStr}"`);
         return -1;
       }
       return hours * 60 + minutes;
@@ -512,35 +502,23 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     const startMinutes = parseTime(startTime);
     const endMinutes = parseTime(endTime);
     
-    console.log(`[isTimeRangeBooked] Parsed user times - startMinutes: ${startMinutes}, endMinutes: ${endMinutes}`);
-    
     if (startMinutes < 0 || endMinutes < 0) {
-      console.log(`[isTimeRangeBooked] ❌ Failed to parse times`);
-      console.log(`[isTimeRangeBooked] ===== DEBUG END (PARSE ERROR) =====\n`);
       return false;
     }
-    
-    console.log(`[isTimeRangeBooked] User selected: ${startTime}-${endTime} (${startMinutes}-${endMinutes} minutes)`);
-    console.log(`[isTimeRangeBooked] Checking against ${bookedTimeRanges.length} available slots`);
     
     // Check if the selected time falls COMPLETELY WITHIN any available slot
     // User can select partial available slots (e.g., 09:00-09:30 within 09:00-10:00 available slot)
     for (let i = 0; i < bookedTimeRanges.length; i++) {
       const availableSlot = bookedTimeRanges[i];
-      console.log(`[isTimeRangeBooked] Slot ${i}: startTime="${availableSlot.startTime}", endTime="${availableSlot.endTime}"`);
       
       if (!availableSlot.startTime || !availableSlot.endTime) {
-        console.warn(`[isTimeRangeBooked] ⚠️ Invalid available slot at index ${i}:`, availableSlot);
         continue;
       }
       
       const slotStartMinutes = parseTime(availableSlot.startTime);
       const slotEndMinutes = parseTime(availableSlot.endTime);
       
-      console.log(`[isTimeRangeBooked] Slot ${i} parsed - startMinutes: ${slotStartMinutes}, endMinutes: ${slotEndMinutes}`);
-      
       if (slotStartMinutes < 0 || slotEndMinutes < 0) {
-        console.warn(`[isTimeRangeBooked] ⚠️ Failed to parse slot times`);
         continue;
       }
       
@@ -551,25 +529,16 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
       const normalizedSlotStart = slotStartMinutes;
       const normalizedSlotEnd = slotEndMinutes === 0 && availableSlot.endTime !== '00:00' ? 1440 : slotEndMinutes;
       
-      console.log(`[isTimeRangeBooked] Slot ${i} comparison:`);
-      console.log(`  User time (normalized): ${normalizedUserStart}-${normalizedUserEnd}`);
-      console.log(`  Available slot (normalized): ${normalizedSlotStart}-${normalizedSlotEnd}`);
-      
       // Check if user's selected time is COMPLETELY WITHIN the available slot
       // User can select partial available slot: userStart >= slotStart AND userEnd <= slotEnd
       const isWithinSlot = (normalizedUserStart >= normalizedSlotStart && normalizedUserEnd <= normalizedSlotEnd);
       
-      console.log(`[isTimeRangeBooked] Check: ${normalizedUserStart} >= ${normalizedSlotStart} && ${normalizedUserEnd} <= ${normalizedSlotEnd} = ${isWithinSlot}`);
-      
       if (isWithinSlot) {
-        console.log(`[isTimeRangeBooked] ✅ MATCH! User can book ${startTime}-${endTime} within slot ${availableSlot.startTime}-${availableSlot.endTime}`);
-        console.log(`[isTimeRangeBooked] ===== DEBUG END (SUCCESS) =====\n`);
+        logger.debug('Booking time slot match', { userTime: `${startTime}-${endTime}`, availableSlot: `${availableSlot.startTime}-${availableSlot.endTime}` });
         return true; // ENABLE THE BOOKING - button will be ENABLED
       }
     }
     
-    console.log(`[isTimeRangeBooked] ❌ NO MATCH! User-selected time ${startTime}-${endTime} is outside all available slots`);
-    console.log(`[isTimeRangeBooked] ===== DEBUG END (NO MATCH) =====\n`);
     return false; // DISABLE THE BOOKING - button will be DISABLED
   };
 
@@ -1363,4 +1332,3 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
 };
 
 export default BookingSlot;
-

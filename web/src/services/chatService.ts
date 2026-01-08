@@ -1,5 +1,6 @@
 import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
+import { logger } from '../lib/logger';
 import { io, Socket } from 'socket.io-client';
 import store from '../store/store';
 import {
@@ -114,7 +115,7 @@ class ChatService {
       this.socket = socket;
  
       socket.on('connect', () => {
-        console.log('[Socket.IO] Connected', socket?.id);
+        logger.debug('Socket connected', { socketId: socket?.id });
         // Only join the currently active conversation room after (re)connect
         try {
           const state = store.getState();
@@ -123,12 +124,12 @@ class ChatService {
             this.joinConversationRoom(activeConversationId);
           }
         } catch (e) {
-          console.error('[Socket.IO] Error joining active room:', e);
+          logger.error('Error joining active room', e);
         }
       });
       
       socket.on('disconnect', () => {
-        console.log('[Socket.IO] Disconnected', socket?.id);
+        logger.debug('Socket disconnected', { socketId: socket?.id });
       });
       
       // Listen for new conversations (always a single conversation object)
@@ -138,7 +139,7 @@ class ChatService {
       
       // Listen for notification:new events for badge/unread updates
       socket.on('notification:new', ({ conversation_id, message }: { conversation_id: string; message: Message }) => {
-        console.log('[Socket.IO] Received notification:new event:', { conversation_id, message });
+        logger.debug('Received notification event', { conversation_id });
         
         // Robust notification id fallback: prefer message.id, else message._id, else conversation_id+timestamp
         let notifId: string;
@@ -152,9 +153,9 @@ class ChatService {
         
         // Debug log
         const state = store.getState();
-        console.log('[Socket.IO] Processing notification:new', { conversation_id, notifId, message });
+        logger.debug('Processing notification', { conversation_id, notifId });
         const notifications = (state.notification as { notifications?: Array<{ id: string | number }> })?.notifications || [];
-        console.log('[Socket.IO] Current notification IDs:', notifications.map(n => n.id));
+        logger.debug('Current notification IDs', { count: notifications.length });
         
         // Prevent duplicate notifications (by id)
         const existing = notifications.find(n => String(n.id) === notifId);
@@ -169,20 +170,20 @@ class ChatService {
           };
           
           store.dispatch(addNotification(notificationPayload));
-          console.log('[Socket.IO] Dispatched addNotification', notifId, notificationPayload);
+          logger.debug('Notification dispatched', { notifId });
         } else {
-          console.log('[Socket.IO] Duplicate notification ignored', notifId);
+          logger.debug('Duplicate notification ignored', { notifId });
         }
       });
       
       // Log errors (keep error logs)
       socket.on('error', (err: Error) => {
-        console.error('[Socket.IO] Error:', err);
+        logger.error('Socket error', err);
       });
       
       // Test notification handler for development
       socket.on('test:notification', (data: { conversation_id?: string; message?: Message }) => {
-        console.log('[Socket.IO] Received test notification:', data);
+        logger.debug('Received test notification', { hasConversationId: !!data?.conversation_id });
         // Handle test notification the same way as regular notification:new
         const { conversation_id, message } = data;
         if (conversation_id && message) {
@@ -199,7 +200,7 @@ class ChatService {
               timestamp: message.created_at || Date.now(),
               message: message,
             }));
-            console.log('[Socket.IO] Created test notification:', notifId);
+            logger.debug('Created test notification', { notifId });
           }
         }
       });
@@ -208,7 +209,7 @@ class ChatService {
 
   // Join a single conversation room (corrected: pass only the conversationId)
   joinConversationRoom(conversationId: string): void {
-    console.log('[Socket.IO] Joining room', conversationId);
+    logger.debug('Joining room', { conversationId });
     if (socket) {
       socket.emit('join', conversationId);
     }
@@ -229,7 +230,7 @@ class ChatService {
 
   // Leave a single conversation room
   leaveConversationRoom(conversationId: string): void {
-    console.log('[Socket.IO] Leaving room', conversationId);
+    logger.debug('Leaving room', { conversationId });
     if (socket && conversationId) {
       socket.emit('leave', conversationId);
     }
@@ -255,10 +256,10 @@ class ChatService {
       }
 
       const data = await response.json();
-      console.log('[ChatService] Using conversations endpoint, fetched:', (data as Conversation[])?.length || 0, 'conversations');
+      logger.debug('Conversations fetched', { count: (data as Conversation[])?.length || 0 });
       return data as Conversation[];
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      logger.error('Error fetching conversations', error);
       throw error;
     }
   }
@@ -279,7 +280,7 @@ class ChatService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error fetching conversation:', error);
+      logger.error('Error fetching conversation', error);
       throw error;
     }
   }
@@ -344,7 +345,7 @@ class ChatService {
       }
       return newMessage;
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message', error);
       throw error;
     }
   }
@@ -381,7 +382,7 @@ class ChatService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error marking conversation as read:', error);
+      logger.error('Error marking conversation as read', error);
       throw error;
     }
   }
@@ -402,7 +403,7 @@ class ChatService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error searching conversations:', error);
+      logger.error('Error searching conversations', error);
       throw error;
     }
   }
@@ -432,18 +433,16 @@ class ChatService {
       timestamp: new Date().toISOString()
     };
     
-    console.log('[ChatService] 📊 Socket Status:', status);
+    logger.debug('Socket status:', status);
     return status;
   }
 
   // Extract conversation activity handling logic to reuse
   handleConversationActivity(payload: ConversationActivityPayload): void {
-    console.log('[Socket.IO] handleConversationActivity called with:', payload);
+    logger.debug('Handle conversation activity', { messageCount: payload.messages?.length });
     // Same logic as the conversation:activity event handler
     if (Array.isArray(payload.messages)) {
-      console.log('[Socket.IO] Processing', payload.messages.length, 'messages');
-      payload.messages.forEach((msg, index) => {
-        console.log(`[Socket.IO] Processing message ${index + 1}:`, {
+      logger.debug('Processing messages', { count: payload.messages.length });
           id: msg.id || msg._id,
           content: msg.content,
           senderId: msg.human_agent_id,
@@ -465,7 +464,7 @@ class ChatService {
                               (state.auth as { user?: { user?: { id?: string } } })?.user?.user?.id;
         
         if (msg.human_agent_id && String(msg.human_agent_id) !== String(currentUserId)) {
-          console.log('[Socket.IO] Creating notification for new message from backend');
+          logger.debug('Creating notification for new message', { conversationId: payload.conversationId });
           const notifId = `${payload.conversationId}_${msg.id || msg._id || Date.now()}`;
           
           const notifications = (state.notification as { notifications?: Array<{ id: string | number }> })?.notifications || [];
@@ -479,12 +478,12 @@ class ChatService {
               timestamp: msg.created_at || msg.timestamp || Date.now(),
               message: msg,
             }));
-            console.log('[Socket.IO] Created notification:', notifId);
+            logger.debug('Notification created', { notifId });
           } else {
-            console.log('[Socket.IO] Notification already exists, skipping:', notifId);
+            logger.debug('Notification already exists, skipping', { notifId });
           }
         } else {
-          console.log('[Socket.IO] Message is from current user, no notification needed');
+          logger.debug('Message is from current user, no notification needed');
         }
       });
     }
@@ -512,7 +511,7 @@ class ChatService {
         humanAgentId: humanAgentId === null ? null : humanAgentId 
       };
       
-      console.log(`[ChatService] Assigning conversation ${conversationId} to ${handler} with humanAgentId: ${humanAgentId}`);
+      logger.debug('Assigning conversation handler', { conversationId, handler, humanAgentId });
       
       const response = await fetch(getApiUrl(`/api/conversations/${conversationId}/handler`), {
         ...defaultFetchOptions(),
@@ -530,10 +529,10 @@ class ChatService {
       }
 
       const result = await response.json();
-      console.log(`[ChatService] Successfully assigned conversation ${conversationId}:`, result);
+      logger.debug('Conversation handler assigned successfully', { conversationId });
       return result;
     } catch (error) {
-      console.error('Error assigning conversation handler:', error);
+      logger.error('Error assigning conversation handler', error);
       throw error;
     }
   }
@@ -541,4 +540,3 @@ class ChatService {
 
 const chatService = new ChatService();
 export default chatService;
-

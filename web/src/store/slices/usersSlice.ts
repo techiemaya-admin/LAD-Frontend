@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
+import { logger } from '@/lib/logger';
 
 export interface User {
   id?: string;
@@ -62,7 +63,9 @@ const usersSlice = createSlice({
       state.error = null;
       state.loading = false;
       
-      console.log('[UsersSlice] Set users:', state.users.length, 'users loaded');
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('[UsersSlice] Set users', { count: state.users.length });
+      }
     },
     
     addUser(state, action: PayloadAction<User>) {

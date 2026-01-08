@@ -8,6 +8,7 @@ import { io } from "socket.io-client";
 import { apiGet, apiPost } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { CallLogsHeader } from "@/components/CallLogsHeader";
 import { CallLogsTable } from "@/components/CallLogsTable";
@@ -172,24 +173,24 @@ const resolveDateRange = () => {
     const jobId = searchParams.get("jobId");
     const mode = searchParams.get("mode");
 
-    console.log('[Call Logs] Query params detected - jobId:', jobId, 'mode:', mode);
+    logger.debug('[Call Logs] Query params detected', { jobId, mode });
 
     if (jobId) {
       // Accept both UUID format and "batch-" prefixed format
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId);
       const isBatchFormat = /^batch-[0-9a-f]{32}$/i.test(jobId);
       
-      console.log('[Call Logs] Batch ID validation - isUUID:', isUUID, 'isBatchFormat:', isBatchFormat);
+      logger.debug('[Call Logs] Batch ID validation', { isUUID, isBatchFormat });
       
       if (isUUID || isBatchFormat) {
-        console.log('[Call Logs] Setting batchJobId to:', jobId);
+        logger.debug('[Call Logs] Setting batchJobId', { jobId });
         setBatchJobId(jobId);
         if (mode === "current-batch") {
-          console.log('[Call Logs] Setting timeFilter to "batch"');
+          logger.debug('[Call Logs] Setting timeFilter to batch');
           setTimeFilter("batch");
         }
       } else {
-        console.warn('[Call Logs] Invalid batch ID format:', jobId);
+        logger.warn('[Call Logs] Invalid batch ID format', { jobId });
         // Clear invalid batch ID from URL
         router.replace('/call-logs');
       }
@@ -204,12 +205,12 @@ const resolveDateRange = () => {
     try {
       // Batch View
       if (timeFilter === "batch" && batchJobId) {
-        console.log('[Call Logs] Loading batch view - batchJobId:', batchJobId);
+        logger.debug('[Call Logs] Loading batch view', { batchJobId });
         try {
           const url = `/api/voice-agent/batch/batch-status/${batchJobId}`;
-          console.log('[Call Logs] Calling batch API:', url);
+          logger.debug('[Call Logs] Calling batch API', { url });
           const res = await apiGet<BatchApiResponse>(url);
-          console.log('[Call Logs] Batch API response:', res);
+          logger.debug('[Call Logs] Batch API response received');
           const batch = res.batch || res.result;
 
           if (!batch) {
@@ -238,7 +239,7 @@ const resolveDateRange = () => {
         } 
         
         catch (error) {
-          console.error('[Call Logs] Failed to load batch status:', error);
+          logger.error('[Call Logs] Failed to load batch status', error);
           // Reset to normal mode when batch loading fails
           setBatchJobId(null);
           setTimeFilter("all");
@@ -283,7 +284,7 @@ const resolveDateRange = () => {
         };
       });
 
-      console.log('[Call Logs] Loaded call logs:', {
+      logger.debug('[Call Logs] Loaded call logs with count:', {
         total: logs.length,
         withBatchId: logs.filter(l => l.batch_id).length,
         sample: logs.slice(0, 3),
@@ -291,7 +292,7 @@ const resolveDateRange = () => {
 
       setItems(logs);
     } catch (error) {
-      console.error("Failed to load call logs:", error);
+      logger.error('Failed to load call logs', error);
       setItems([]);
     }
     finally {
@@ -300,7 +301,7 @@ const resolveDateRange = () => {
   };
 
   useEffect(() => {
-    console.log('[Call Logs] Load effect triggered - timeFilter:', timeFilter, 'batchJobId:', batchJobId);
+    logger.debug('[Call Logs] Load effect triggered', { timeFilter, batchJobId });
     load(); // initial + whenever filter/batch changes
 
     // Suppress socket connection errors
@@ -395,7 +396,7 @@ const resolveDateRange = () => {
       }
     });
 
-    console.log('[Call Logs] Batch grouping:', {
+    logger.debug('[Call Logs] Batch grouping prepared', {
       totalCalls: paginated.length,
       batchGroups: Object.keys(groups).length,
       noBatchCalls: noBatchCalls.length,
@@ -465,7 +466,7 @@ const resolveDateRange = () => {
       // Reload the call logs to reflect the updated status
       await load();
     } catch (error) {
-      console.error("Error ending call:", error);
+      logger.error('Error ending call', error);
       alert("Failed to end call. Please try again.");
     }
   }

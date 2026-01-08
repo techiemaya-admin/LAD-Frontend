@@ -3,6 +3,8 @@
  * where localStorage/sessionStorage might be blocked
  */
 
+import { logger } from '@/lib/logger';
+
 class SafeStorage {
   private memoryStore: Map<string, string> = new Map();
 
@@ -27,7 +29,7 @@ class SafeStorage {
       }
       return this.memoryStore.get(key) || null;
     } catch (e) {
-      console.warn('Storage getItem failed:', e);
+      logger.warn('Storage getItem failed', e);
       return this.memoryStore.get(key) || null;
     }
   }
@@ -35,19 +37,25 @@ class SafeStorage {
   setItem(key: string, value: string): void {
     try {
       const storageAvailable = this.isStorageAvailable();
-      console.log(`[SafeStorage] setItem key='${key}' storage available:`, storageAvailable);
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('[SafeStorage] setItem', { key, storageAvailable });
+      }
       if (storageAvailable) {
         localStorage.setItem(key, value);
-        console.log(`[SafeStorage] ✅ Saved to localStorage key='${key}' value length:`, value.length);
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('[SafeStorage] Saved to localStorage', { key, valueLength: value.length });
+        }
         // Verify it was actually saved
         const retrieved = localStorage.getItem(key);
-        console.log(`[SafeStorage] ✅ Verified retrieval key='${key}':`, !!retrieved);
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('[SafeStorage] Verified retrieval', { key, retrieved: !!retrieved });
+        }
       } else {
-        console.warn(`[SafeStorage] ⚠️ localStorage not available, using memory store for key='${key}'`);
+        logger.warn('[SafeStorage] localStorage not available, using memory store', { key });
       }
       this.memoryStore.set(key, value);
     } catch (e) {
-      console.error('[SafeStorage] ❌ setItem failed:', e);
+      logger.error('[SafeStorage] setItem failed', e);
       this.memoryStore.set(key, value);
     }
   }
@@ -59,7 +67,7 @@ class SafeStorage {
       }
       this.memoryStore.delete(key);
     } catch (e) {
-      console.warn('Storage removeItem failed:', e);
+      logger.warn('Storage removeItem failed', e);
       this.memoryStore.delete(key);
     }
   }
@@ -71,7 +79,7 @@ class SafeStorage {
       }
       this.memoryStore.clear();
     } catch (e) {
-      console.warn('Storage clear failed:', e);
+      logger.warn('Storage clear failed', e);
       this.memoryStore.clear();
     }
   }

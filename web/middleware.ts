@@ -1,5 +1,6 @@
 // middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from './web/src/lib/logger';
 
 function isPublicPath(pathname: string): boolean {
   // Only these paths are public (no authentication required)
@@ -27,11 +28,11 @@ function isPublicPath(pathname: string): boolean {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  console.log('[Middleware] Processing:', pathname);
+  logger.debug('[Middleware] Processing', { pathname });
 
   // Allow public paths
   if (isPublicPath(pathname)) {
-    console.log('[Middleware] Public path allowed:', pathname);
+    logger.debug('[Middleware] Public path allowed', { pathname });
     return NextResponse.next();
   }
 
@@ -39,13 +40,13 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('access_token')?.value;
 
   if (!token) {
-    console.log('[Middleware] ⛔ No token - Redirecting to login from:', pathname);
+    logger.warn('[Middleware] No token - Redirecting to login', { pathname });
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('redirect_url', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  console.log('[Middleware] ✅ Token found - Access granted to:', pathname);
+  logger.debug('[Middleware] Token found - Access granted', { pathname });
   return NextResponse.next();
 }
 

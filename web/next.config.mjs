@@ -1,33 +1,60 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure Turbopack root - use current dir in production, workspace root in dev
-  turbopack: {
-    root: process.env.NODE_ENV === 'production' ? '.' : '../..',
+  // ✅ REQUIRED when importing ../sdk
+  experimental: {
+    externalDir: true,
   },
-  // Disable caching during development to prevent stale code issues
+
+  // ✅ Force single React Query instance
+  webpack: (config, { isServer }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
+      'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
+    };
+    
+    // Ensure node_modules is in resolve modules
+    config.resolve.modules = [
+      path.resolve(__dirname, 'node_modules'),
+      'node_modules',
+    ];
+    
+    return config;
+  },
+
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+            key: "Cache-Control",
+            value:
+              "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
           },
         ],
       },
     ];
   },
+
   typescript: {
     ignoreBuildErrors: true,
   },
+
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: 'standalone',
-  generateBuildId: async () => {
-    return 'production-build'
-  },
+
+  output: "standalone",
+
+  generateBuildId: async () => "production-build",
+
   images: {
     remotePatterns: [
       {
@@ -37,11 +64,16 @@ const nextConfig = {
       },
     ],
   },
+
   env: {
-    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3004",
-    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3004",
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3004",
-    NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3004",
+    NEXT_PUBLIC_API_BASE:
+      process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3004",
+    NEXT_PUBLIC_BACKEND_URL:
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3004",
+    NEXT_PUBLIC_API_URL:
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3004",
+    NEXT_PUBLIC_SOCKET_URL:
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3004",
   },
 };
 

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../utils/storage';
+import { logger } from '@/lib/logger';
 
 interface User {
   id: string;
@@ -36,15 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
-    console.log('[AuthContext] Loading token from localStorage...');
+    logger.debug('[AuthContext] Loading token from localStorage...');
     const storedToken = safeStorage.getItem('auth_token');
-    console.log('[AuthContext] Stored token found:', !!storedToken, storedToken?.substring(0, 20) + '...');
     
     if (storedToken) {
+      logger.debug('[AuthContext] Stored token found');
       setToken(storedToken);
       fetchCurrentUser(storedToken);
     } else {
-      console.log('[AuthContext] No stored token found');
+      logger.debug('[AuthContext] No stored token found');
       setIsLoading(false);
     }
   }, []);
@@ -52,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchCurrentUser = async (authToken: string) => {
     try {
       if (!authToken) {
-        console.error('[AuthContext] No auth token provided to fetchCurrentUser');
+        logger.error('[AuthContext] No auth token provided to fetchCurrentUser');
         setIsLoading(false);
         return;
       }
       
-      console.log('[AuthContext] Fetching current user with token:', authToken.substring(0, 20) + '...');
+      logger.debug('[AuthContext] Fetching current user');
       
       // Call the Next.js API route instead of directly calling the backend
       // This avoids CORS issues with Safari stripping Authorization headers
@@ -69,13 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      console.log('[AuthContext] Response status:', response.status);
+      logger.debug('[AuthContext] Auth response received', { status: response.status });
 
       if (response.ok) {
         const userData = await response.json();
-        console.log('[AuthContext] User data received:', userData);
+        logger.debug('[AuthContext] User data received');
         const user = userData.user || userData;
-        console.log('[AuthContext] Setting user:', user);
         setUser(user);
       } else {
         // Token is invalid, clear it

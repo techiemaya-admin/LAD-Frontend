@@ -1,5 +1,6 @@
 // Redux slice for user settings (theme, language, timezone, etc.)
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { logger } from '@/lib/logger';
 
 // Initial state for settings
 interface SettingsState {
@@ -21,11 +22,13 @@ const loadSettingsFromStorage = (): Partial<SettingsState> => {
     const stored = localStorage.getItem('app_settings');
     if (stored) {
       const parsed = JSON.parse(stored);
-      console.log('[Settings] Loaded from localStorage:', { companyLogo: parsed.companyLogo?.substring(0, 50) + '...' });
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('[Settings] Loaded from localStorage');
+      }
       return parsed;
     }
   } catch (error) {
-    console.warn('Failed to load settings from localStorage:', error);
+    logger.warn('Failed to load settings from localStorage', error);
   }
   return {};
 };
@@ -36,9 +39,11 @@ const saveSettingsToStorage = (settings: SettingsState): void => {
   
   try {
     localStorage.setItem('app_settings', JSON.stringify(settings));
-    console.log('[Settings] Saved to localStorage:', { companyLogo: settings.companyLogo?.substring(0, 50) + '...' });
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('[Settings] Saved to localStorage');
+    }
   } catch (error) {
-    console.warn('Failed to save settings to localStorage:', error);
+    logger.warn('Failed to save settings to localStorage', error);
   }
 };
 

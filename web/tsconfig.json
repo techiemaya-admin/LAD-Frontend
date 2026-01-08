@@ -21,7 +21,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/features/*": ["./src/features/*", "../sdk/features/*"]
+      "@/features/*": ["./src/features/*", "../sdk/features/*"],
+      "@sdk/*": ["../sdk/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/phone-numbers/page.jsx"],

@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";import { logger } from '@/lib/logger';import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
   try {
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
         }
 
         if (!token) {
-          console.error("[recording-proxy] No token found in cookies, headers, or query params");
+          logger.error('[recording-proxy] No token found in cookies, headers, or query params');
           return NextResponse.json(
             { error: "Authentication required" },
             { status: 401 }
@@ -79,7 +78,7 @@ export async function GET(req: NextRequest) {
         if (!signingResp.ok) {
           const errorData = await signingResp.json().catch(() => ({}));
           const errorMsg = errorData.error || errorData.message || 'Unknown error';
-          console.error("[recording-proxy] Backend signing endpoint failed:", {
+          logger.error('[recording-proxy] Backend signing endpoint failed', {
             status: signingResp.status,
             statusText: signingResp.statusText,
             error: errorMsg,
@@ -95,11 +94,11 @@ export async function GET(req: NextRequest) {
 
         if (!targetUrl) {
           const errorMsg = `Invalid signing response: ${JSON.stringify(payload)}`;
-          console.error("[recording-proxy] Missing signed_url in response:", payload);
+          logger.error('[recording-proxy] Missing signed_url in response', { payload });
           throw new Error(errorMsg);
         }
       } catch (err: any) {
-        console.error("[recording-proxy] signing failed:", err);
+        logger.error('[recording-proxy] signing failed', err);
         return NextResponse.json(
           { error: "Failed to sign gs:// URL", details: err.message },
           { status: 502 }
@@ -128,7 +127,7 @@ export async function GET(req: NextRequest) {
       if (!audioResp.ok) {
         // Don't log 206 (Partial Content) as error - it's expected for Range requests
         if (audioResp.status !== 206) {
-          console.error("[recording-proxy] Failed to fetch audio", {
+          logger.error('[recording-proxy] Failed to fetch audio', {
             url: targetUrl.substring(0, 100) + '...',
             status: audioResp.status,
             statusText: audioResp.statusText
@@ -201,7 +200,7 @@ export async function GET(req: NextRequest) {
         headers: responseHeaders,
       });
     } catch (fetchError: any) {
-      console.error("[recording-proxy] Error fetching audio", {
+      logger.error('[recording-proxy] Error fetching audio', {
         error: fetchError.message,
         url: targetUrl.substring(0, 100) + '...'
       });
@@ -214,7 +213,7 @@ export async function GET(req: NextRequest) {
       );
     }
   } catch (err: any) {
-    console.error("[recording-proxy] Top-level error:", err);
+    logger.error('[recording-proxy] Top-level error', err);
     return NextResponse.json(
       { error: "Internal server error", details: err.message },
       { status: 500 }

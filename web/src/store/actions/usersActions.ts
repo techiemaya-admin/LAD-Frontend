@@ -8,6 +8,7 @@ import {
   removeUser,
   selectUsersCacheValid
 } from '../slices/usersSlice';
+import { logger } from '@/lib/logger';
 
 // Fixed import - only importing functions that actually exist in userService
 import { 
@@ -34,7 +35,7 @@ export const fetchUsersAction = (): AppThunk => async (dispatch, getState) => {
   // Check cache validity
   const cacheValid = selectUsersCacheValid(state);
   if (cacheValid) {
-    console.log('[Redux] Users cache valid, skipping fetch');
+    logger.debug('[Redux] Users cache valid, skipping fetch');
     return;
   }
   
@@ -42,15 +43,15 @@ export const fetchUsersAction = (): AppThunk => async (dispatch, getState) => {
     dispatch(setUsersLoading(true));
     dispatch(clearUsersError());
     
-    console.log('[Redux] Fetching users from API...');
+    logger.debug('[Redux] Fetching users from API...');
     const users = await getAllUsers();
     
     dispatch(setUsers(users as User[]));
-    console.log('[Redux] Users loaded successfully:', (users as User[])?.length || 0);
+    logger.debug('[Redux] Users loaded successfully', { count: (users as User[])?.length || 0 });
     
   } catch (error) {
     const err = error as Error;
-    console.error('[Redux] Failed to fetch users:', error);
+    logger.error('[Redux] Failed to fetch users', error);
     dispatch(setUsersError(err.message || 'Failed to fetch users'));
   } finally {
     dispatch(setUsersLoading(false));
@@ -63,15 +64,15 @@ export const refreshUsersAction = (): AppThunk => async (dispatch) => {
     dispatch(setUsersLoading(true));
     dispatch(clearUsersError());
     
-    console.log('[Redux] Force refreshing users from API...');
+    logger.debug('[Redux] Force refreshing users from API...');
     const users = await getAllUsers();
     
     dispatch(setUsers(users as User[]));
-    console.log('[Redux] Users refreshed successfully:', (users as User[])?.length || 0);
+    logger.debug('[Redux] Users refreshed successfully', { count: (users as User[])?.length || 0 });
     
   } catch (error) {
     const err = error as Error;
-    console.error('[Redux] Failed to refresh users:', error);
+    logger.error('[Redux] Failed to refresh users', error);
     dispatch(setUsersError(err.message || 'Failed to refresh users'));
   } finally {
     dispatch(setUsersLoading(false));
@@ -81,15 +82,15 @@ export const refreshUsersAction = (): AppThunk => async (dispatch) => {
 // Create new user
 export const createUserAction = (userData: Partial<User>): AppThunk => async (dispatch) => {
   try {
-    console.log('[Redux] Creating new user...', userData);
+    logger.debug('[Redux] Creating new user', userData);
     const newUser = await createUser(userData);
     
     dispatch(addUser((newUser as { user?: User; id?: string }).user || newUser as User));
-    console.log('[Redux] User created successfully:', (newUser as { user?: User; id?: string }).user?.id || (newUser as { id?: string }).id);
+    logger.debug('[Redux] User created successfully', { userId: (newUser as { user?: User; id?: string }).user?.id || (newUser as { id?: string }).id });
     
   } catch (error) {
     const err = error as Error;
-    console.error('[Redux] Failed to create user:', error);
+    logger.error('[Redux] Failed to create user', error);
     dispatch(setUsersError(err.message || 'Failed to create user'));
     throw error;
   }
@@ -98,7 +99,7 @@ export const createUserAction = (userData: Partial<User>): AppThunk => async (di
 // Update existing user
 export const updateUserAction = (userId: string, userData: { role?: string; capabilities?: string[]; [key: string]: unknown }): AppThunk => async (dispatch) => {
   try {
-    console.log('[Redux] Updating user...', userId, userData);
+    logger.debug('[Redux] Updating user', { userId, data: userData });
     
     let updatedUser: User;
     if (userData.role !== undefined) {
@@ -112,11 +113,11 @@ export const updateUserAction = (userId: string, userData: { role?: string; capa
     }
     
     dispatch(updateUserInSlice({ id: userId, updatedData: updatedUser }));
-    console.log('[Redux] User updated successfully:', userId);
+    logger.debug('[Redux] User updated successfully', { userId });
     
   } catch (error) {
     const err = error as Error;
-    console.error('[Redux] Failed to update user:', error);
+    logger.error('[Redux] Failed to update user', error);
     dispatch(setUsersError(err.message || 'Failed to update user'));
     throw error;
   }
@@ -125,15 +126,15 @@ export const updateUserAction = (userId: string, userData: { role?: string; capa
 // Delete user
 export const deleteUserAction = (userId: string): AppThunk => async (dispatch) => {
   try {
-    console.log('[Redux] Deleting user...', userId);
+    logger.debug('[Redux] Deleting user', { userId });
     await deleteUser(userId);
     
     dispatch(removeUser(userId));
-    console.log('[Redux] User deleted successfully:', userId);
+    logger.debug('[Redux] User deleted successfully', { userId });
     
   } catch (error) {
     const err = error as Error;
-    console.error('[Redux] Failed to delete user:', error);
+    logger.error('[Redux] Failed to delete user', error);
     dispatch(setUsersError(err.message || 'Failed to delete user'));
     throw error;
   }
