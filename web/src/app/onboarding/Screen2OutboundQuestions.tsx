@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 
 export default function Screen2OutboundQuestions() {
@@ -52,7 +53,7 @@ export default function Screen2OutboundQuestions() {
     try {
       await apiPost('/api/onboarding/outbound/requirements', outboundData);
     } catch (error) {
-      console.error('Failed to save requirements:', error);
+      logger.error('Failed to save requirements', error);
     }
 
     setCurrentScreen(5); // Move to workflow setup
@@ -99,7 +100,7 @@ export default function Screen2OutboundQuestions() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
         <div className="w-full max-w-3xl mx-auto">
           {/* Back Button */}

@@ -16,6 +16,7 @@ import {
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 
 const getStepIcon = (type: string) => {
   if (type.includes('linkedin')) return <LinkedInIcon sx={{ fontSize: 24 }} />;
@@ -73,7 +74,7 @@ export default function Screen2AutoWorkflow() {
       setAutoFlow(workflow);
       setManualFlow(workflow); // Also set manual flow for editing
     } catch (err: any) {
-      console.error('Failed to generate workflow:', err);
+      logger.error('Failed to generate workflow', err);
       setError(err.message || 'Failed to generate workflow');
       
       // Fallback: Generate a simple workflow based on answers
@@ -231,7 +232,7 @@ export default function Screen2AutoWorkflow() {
       // Redirect to campaigns or dashboard
       router.push('/campaigns');
     } catch (error: any) {
-      console.error('Failed to save workflow:', error);
+      logger.error('Failed to save workflow', error);
       alert('Failed to save workflow. Please try again.');
     }
   };

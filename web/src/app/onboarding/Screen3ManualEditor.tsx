@@ -19,6 +19,7 @@ import 'reactflow/dist/style.css';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 import StepLibrary from '../../features/campaigns/components/StepLibrary';
 import StepSettings from '../../features/campaigns/components/StepSettings';
 import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
@@ -464,7 +465,7 @@ export default function Screen3ManualEditor() {
       setIsEditMode(false);
       setCurrentScreen(1);
     } catch (error: any) {
-      console.error('Failed to save workflow:', error);
+      logger.error('Failed to save workflow', error);
       alert('Failed to save workflow. Please try again.');
     } finally {
       setSaving(false);

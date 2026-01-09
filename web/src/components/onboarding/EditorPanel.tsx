@@ -6,6 +6,7 @@ import OnboardingStepLibrary from '@/components/onboarding/OnboardingStepLibrary
 import StepSettings from '../../features/campaigns/components/StepSettings';
 import { Save, BookOpen, Settings, Undo2, Redo2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 
 export default function EditorPanel() {
   const [activeTab, setActiveTab] = useState<'library' | 'settings'>('library');
@@ -75,7 +76,7 @@ export default function EditorPanel() {
       completeOnboarding();
       router.push('/campaigns');
     } catch (error) {
-      console.error('Failed to save workflow:', error);
+      logger.error('Failed to save workflow', error);
       alert('Failed to save workflow. Please try again.');
     }
   };

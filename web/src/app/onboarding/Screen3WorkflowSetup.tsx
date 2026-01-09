@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 import { 
   Linkedin, 
   Mail, 
@@ -40,7 +41,7 @@ export default function Screen3WorkflowSetup() {
         connected: !channels[channel],
       });
     } catch (error) {
-      console.error('Failed to connect channel:', error);
+      logger.error('Failed to connect channel', error);
     }
   };
 
@@ -63,7 +64,7 @@ export default function Screen3WorkflowSetup() {
         router.push('/campaigns');
       }, 1000);
     } catch (error) {
-      console.error('Failed to save workflow:', error);
+      logger.error('Failed to save workflow', error);
       alert('Failed to save workflow. Please try again.');
     } finally {
       setIsSaving(false);
@@ -76,7 +77,7 @@ export default function Screen3WorkflowSetup() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
         <div className="w-full max-w-4xl mx-auto">
           {/* Back Button */}

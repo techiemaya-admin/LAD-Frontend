@@ -262,7 +262,7 @@ export default function SplitScreenOnboarding() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-white">
+    <div className="flex w-full h-full bg-white">
       {/* LEFT PANEL - CHAT (60%) */}
       <div className="w-[60%] border-r border-gray-200 flex flex-col">
         {/* Chat Messages */}

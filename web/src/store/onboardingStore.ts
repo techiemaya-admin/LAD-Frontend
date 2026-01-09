@@ -81,6 +81,7 @@ interface OnboardingState {
   currentScreen: 0 | 1 | 2 | 3; // 0=Options, 1=AI Chat, 2=Preview, 3=Manual Editor
   isEditMode: boolean; // When true, show split view with all 3 screens
   workflowState: 'STATE_1' | 'STATE_2' | 'STATE_3' | 'STATE_4' | 'STATE_5'; // Strict state machine
+  onboardingMode: 'FORM' | 'CHAT'; // Onboarding mode: FORM (step-based) or CHAT (conversational)
   
   // AI Chat
   aiMessages: AIMessage[];
@@ -126,6 +127,7 @@ interface OnboardingState {
   
   // Editor Panel State
   isEditorPanelCollapsed: boolean;
+  hasRequestedEditor: boolean; // Track if user has clicked Edit button
   
   // Undo/Redo History
   history: {
@@ -134,6 +136,10 @@ interface OnboardingState {
     maxHistorySize: number;
   };
   
+  // ICP Onboarding (from ChatStepController)
+  icpAnswers: Record<string, any> | null; // Mapped ICP answers ready for campaign creation
+  icpOnboardingComplete: boolean; // Whether ICP onboarding has been completed
+  
   // Actions
   setCurrentScreen: (screen: 0 | 1 | 2 | 3) => void;
   setIsEditMode: (editMode: boolean) => void;
@@ -141,6 +147,7 @@ interface OnboardingState {
   setHasSelectedOption: (hasSelected: boolean) => void;
   setIsAIChatActive: (active: boolean) => void;
   setWorkflowState: (state: 'STATE_1' | 'STATE_2' | 'STATE_3' | 'STATE_4' | 'STATE_5') => void;
+  setOnboardingMode: (mode: 'FORM' | 'CHAT') => void;
   addAIMessage: (message: AIMessage) => void;
   setCurrentQuestionIndex: (index: number) => void;
   setIsProcessingAI: (processing: boolean) => void;
@@ -161,9 +168,9 @@ interface OnboardingState {
   setFeatureUtilities: (featureId: string, utilities: any) => void;
   setCurrentUtilityQuestion: (question: string | null) => void;
   addWorkflowNode: (node: any) => void;
-  addWorkflowEdge: (edge: any) => void;
-  setIsEditorPanelCollapsed: (collapsed: boolean) => void;
-  pushToHistory: (workflow: OnboardingWorkflow) => void;
+      addWorkflowEdge: (edge: any) => void;
+      setIsEditorPanelCollapsed: (collapsed: boolean) => void;
+      pushToHistory: (workflow: OnboardingWorkflow) => void;
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
@@ -172,13 +179,14 @@ interface OnboardingState {
   reset: () => void;
 }
 
-const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'addAIMessage' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'completeOnboarding' | 'reset'> = {
+const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'addAIMessage' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setOnboardingMode' | 'completeOnboarding' | 'reset'> = {
   currentScreen: 0,
   hasSelectedOption: false,
   selectedPath: null,
   isAIChatActive: false,
   isEditMode: false,
   workflowState: 'STATE_1',
+  onboardingMode: 'FORM', // Default to form-based onboarding
   aiMessages: [],
   currentQuestionIndex: 0,
   isProcessingAI: false,
@@ -206,11 +214,14 @@ const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' |
   manualFlow: null,
   selectedNodeId: null,
   isEditorPanelCollapsed: true, // Start collapsed (hidden) by default
+  hasRequestedEditor: false, // User hasn't clicked Edit yet
   history: {
     undoStack: [],
     redoStack: [],
     maxHistorySize: 50,
   },
+  icpAnswers: null,
+  icpOnboardingComplete: false,
 };
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -229,6 +240,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsAIChatActive: (active) => set({ isAIChatActive: active }),
       
       setWorkflowState: (state) => set({ workflowState: state }),
+      
+      setOnboardingMode: (mode) => set({ onboardingMode: mode }),
       
       addAIMessage: (message) =>
         set((state) => ({
@@ -305,6 +318,8 @@ export const useOnboardingStore = create<OnboardingState>()(
         })),
       
       setIsEditorPanelCollapsed: (collapsed) => set({ isEditorPanelCollapsed: collapsed }),
+      
+      setOnboardingMode: (mode) => set({ onboardingMode: mode }),
       
       pushToHistory: (workflow) =>
         set((state) => {
@@ -400,6 +415,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         platformFeatures: state.platformFeatures,
         workflowNodes: state.workflowNodes,
         workflowEdges: state.workflowEdges,
+        onboardingMode: state.onboardingMode, // Persist onboarding mode across refreshes
         // aiMessages is NOT persisted - always starts fresh
       }),
     }
