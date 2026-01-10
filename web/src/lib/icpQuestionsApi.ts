@@ -57,7 +57,15 @@ export async function fetchICPQuestions(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestionsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '');
+  
+  if (!baseUrl && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
+  }
+  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions?category=${category}`;
 
   try {
@@ -89,7 +97,15 @@ export async function fetchICPQuestionByStep(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestion | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '');
+  
+  if (!baseUrl && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
+  }
+  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions/${stepIndex}?category=${category}`;
 
   try {
@@ -123,7 +139,15 @@ export async function processICPAnswer(
   request: ICPAnswerRequest,
   apiClient?: any
 ): Promise<ICPAnswerResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '');
+  
+  if (!baseUrl && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
+  }
+  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-answer`;
 
   try {
