@@ -1,13 +1,97 @@
-'use client';
-
+"use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { Box, Typography, Chip, TextField, Button, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, Autocomplete, Slider, Switch, Card, CardContent, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { CheckCircle2, ArrowRight, Building2, Briefcase, MapPin, Users, Smartphone, MessageSquare, Phone, Linkedin, Mail, Zap, Calendar, TrendingUp, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { ICPQuestion, fetchICPQuestions } from '@/features/ai-icp-assistant/api';
 import { StepType } from '@/types/campaign';
 import StepLayout from './StepLayout';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
+
+// WhatsApp actions with recommended
+const WHATSAPP_ACTIONS = [
+  { value: 'send_broadcast', label: 'Send broadcast', recommended: true },
+  { value: 'send_1to1', label: 'Send 1:1 message', recommended: true },
+  { value: 'followup_message', label: 'Follow-up message', recommended: false },
+  { value: 'template_message', label: 'Template message', recommended: true },
+];
+
+// Email actions with recommended
+const EMAIL_ACTIONS = [
+  { value: 'send_email', label: 'Send email', recommended: true },
+  { value: 'followup_email', label: 'Follow-up email', recommended: true },
+];
+
+// Voice actions with recommended
+const VOICE_ACTIONS = [
+  { value: 'call', label: 'Call', recommended: true },
+  { value: 'leave_voicemail', label: 'Leave voicemail', recommended: false },
+];
+// Helper to render actions with auto-select and badge
+interface Action {
+  value: string;
+  label: string;
+  recommended?: boolean;
+}
+interface RenderActionsProps {
+  actions: Action[];
+  answersKey: string;
+  answers: Record<string, any>;
+  setAnswers: (answers: Record<string, any>) => void;
+  validationErrors: Record<string, boolean>;
+  setValidationErrors: (errors: Record<string, boolean>) => void;
+}
+function RenderActions({ actions, answersKey, answers, setAnswers, validationErrors, setValidationErrors }: RenderActionsProps) {
+  return (
+    <Stack spacing={2}>
+      {actions.map((action: Action) => (
+        <FormControlLabel
+          key={action.value}
+          control={
+            <Checkbox
+              checked={answers[answersKey]?.includes(action.value) || false}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const current = answers[answersKey] || [];
+                let updated;
+                if (e.target.checked) {
+                  updated = [...current, action.value];
+                } else {
+                  updated = current.filter((a: string) => a !== action.value);
+                }
+                setAnswers({ ...answers, [answersKey]: updated });
+                if (validationErrors[answersKey] && updated.length > 0) {
+                  setValidationErrors({ ...validationErrors, [answersKey]: false });
+                }
+              }}
+            />
+          }
+          label={
+            <span>
+              {action.label}
+              {action.recommended && (
+                <span style={{
+                  marginLeft: 8,
+                  background: '#E0F2FE',
+                  color: '#0284C7',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  padding: '2px 8px',
+                  fontWeight: 500,
+                  verticalAlign: 'middle',
+                }}>
+                  Recommended
+                </span>
+              )}
+            </span>
+          }
+        />
+      ))}
+    </Stack>
+  );
+}
+
 
 type GuidedStep = 
   | 'icp_questions'
@@ -133,11 +217,12 @@ const PLATFORM_OPTIONS = [
   { value: 'instagram', label: 'Instagram', comingSoon: true, disabled: false },
 ];
 
+// Add recommended property for actions
 const LINKEDIN_ACTIONS = [
-  { value: 'visit_profile', label: 'Visit profile' },
-  { value: 'follow_profile', label: 'Follow profile' },
-  { value: 'send_connection', label: 'Send connection request' },
-  { value: 'send_message', label: 'Send message (after accepted)' },
+  { value: 'visit_profile', label: 'Visit profile', recommended: true },
+  { value: 'follow_profile', label: 'Follow profile', recommended: false },
+  { value: 'send_connection', label: 'Send connection request', recommended: true },
+  { value: 'send_message', label: 'Send message (after accepted)', recommended: true },
 ];
 
 export default function GuidedFlowPanel() {
@@ -150,7 +235,13 @@ export default function GuidedFlowPanel() {
     setSelectedPlatforms,
     setChannelConnection,
     setHasSelectedOption,
+    onboardingMode,
   } = useOnboardingStore();
+
+  // Do not render form-based ICP questions when in CHAT mode
+  if (onboardingMode === 'CHAT') {
+    return null;
+  }
 
   const [currentStep, setCurrentStep] = useState<GuidedStep>('icp_questions');
   const [answers, setAnswers] = useState<GuidedAnswers>({});
@@ -162,6 +253,10 @@ export default function GuidedFlowPanel() {
   const [customTitleSearchTerm, setCustomTitleSearchTerm] = useState<string>('');
   const [showMoreIndustries, setShowMoreIndustries] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
+  
+  // ICP Questions state (fetched from API)
+  const [icpQuestions, setIcpQuestions] = useState<ICPQuestion[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
   
   // Campaign settings defaults
   const [campaignName, setCampaignName] = useState<string>('');
@@ -212,6 +307,37 @@ export default function GuidedFlowPanel() {
   const currentStepNumber = (stepConfig as Record<GuidedStep, { number: number; title: string }>)[currentStep].number;
   const currentStepTitle = (stepConfig as Record<GuidedStep, { number: number; title: string }>)[currentStep].title;
 
+  // Fetch ICP questions from API on mount
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        setIsLoadingQuestions(true);
+        const response = await fetchICPQuestions('lead_generation');
+        if (response.success) {
+          setIcpQuestions(response.questions);
+        }
+      } catch (error) {
+        logger.error('Error loading ICP questions', error);
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    };
+
+    loadQuestions();
+  }, []);
+
+  // Clear workflow preview on component mount (page refresh)
+  useEffect(() => {
+    logger.debug('Component mounted - clearing workflow preview');
+    setWorkflowPreview([]);
+    useOnboardingStore.setState({ workflowNodes: [], workflowEdges: [] });
+  }, []); // Empty dependency array = runs once on mount
+
+  // Helper function to get question by intent key
+  const getQuestionByIntent = (intentKey: string): ICPQuestion | null => {
+    return icpQuestions.find(q => q.intentKey === intentKey) || null;
+  };
+
   // Location suggestions for autocomplete
   const locationSuggestions = [
     'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'India',
@@ -230,23 +356,29 @@ export default function GuidedFlowPanel() {
   };
 
   const buildLeadFilters = (): Record<string, any> => {
+    // Check if we have mapped ICP answers from chat onboarding
+    const icpAnswers = useOnboardingStore.getState().icpAnswers;
+    const sourceAnswers = icpAnswers || answers;
+    
     const filters: Record<string, any> = {};
-    if (answers.roles && answers.roles.length > 0) {
-      filters.roles = answers.roles; // Backend expects 'roles' not 'jobTitles'
+    
+    // Map to Apollo API parameter names: person_titles, organization_industries, organization_locations
+    if (sourceAnswers.roles && sourceAnswers.roles.length > 0) {
+      filters.person_titles = sourceAnswers.roles; // Apollo expects 'person_titles'
     }
-    if (answers.industries && answers.industries.length > 0) {
+    if (sourceAnswers.industries && sourceAnswers.industries.length > 0) {
       // Filter out any incomplete/single-character industry entries
       // Keep only entries that are at least 2 characters and not just partial words
-      const validIndustries = answers.industries.filter(industry => {
-        const trimmed = industry.trim();
+      const validIndustries = sourceAnswers.industries.filter((industry: string) => {
+        const trimmed = String(industry).trim();
         return trimmed.length >= 2 && !trimmed.match(/^[a-z]$/i); // At least 2 chars and not just a single letter
       });
       if (validIndustries.length > 0) {
-        filters.industries = validIndustries;
+        filters.organization_industries = validIndustries; // Apollo expects 'organization_industries'
       }
     }
-    if (answers.location) {
-      filters.location = answers.location;
+    if (sourceAnswers.location) {
+      filters.organization_locations = Array.isArray(sourceAnswers.location) ? sourceAnswers.location : [sourceAnswers.location]; // Apollo expects 'organization_locations' as array
     }
     return filters;
   };
@@ -430,16 +562,20 @@ export default function GuidedFlowPanel() {
     const edges: any[] = [];
     let lastNodeId = 'start';
 
+    // Check if we have mapped ICP answers from chat onboarding
+    const icpAnswers = useOnboardingStore.getState().icpAnswers;
+    const sourceAnswers = icpAnswers || answers;
+
     // Add lead generation step if we have target criteria
     // Check if industries array has items, location string is not empty, roles array has items, or customIndustry exists
-    const hasIndustries = answers.industries && answers.industries.length > 0;
-    const hasLocation = answers.location && answers.location.trim().length > 0;
-    const hasRoles = answers.roles && answers.roles.length > 0;
-    const hasCustomIndustry = answers.customIndustry && answers.customIndustry.trim().length > 0;
+    const hasIndustries = sourceAnswers.industries && Array.isArray(sourceAnswers.industries) && sourceAnswers.industries.length > 0;
+    const hasLocation = sourceAnswers.location && String(sourceAnswers.location).trim().length > 0;
+    const hasRoles = sourceAnswers.roles && Array.isArray(sourceAnswers.roles) && sourceAnswers.roles.length > 0;
+    const hasCustomIndustry = sourceAnswers.customIndustry && String(sourceAnswers.customIndustry).trim().length > 0;
     
     if (hasIndustries || hasLocation || hasRoles || hasCustomIndustry) {
       // Use dailyLeadVolume from state (set in Step 6: Campaign Settings) or from answers, or default to 25
-      const leadsPerDay = dailyLeadVolume || answers.dailyLeadVolume || 25;
+      const leadsPerDay = dailyLeadVolume || sourceAnswers.leads_per_day || answers.dailyLeadVolume || 25;
       
       nodes.push({
         id: 'lead_gen_1',
@@ -460,8 +596,9 @@ export default function GuidedFlowPanel() {
       lastNodeId = 'lead_gen_1';
     }
 
-    // Add LinkedIn steps if LinkedIn is selected
-    if (answers.platforms?.includes('linkedin')) {
+    // Add LinkedIn steps if LinkedIn is selected (check both source answers and form answers)
+    const platforms = sourceAnswers.platforms || answers.platforms || [];
+    if (platforms.includes('linkedin') || platforms.some((p: string) => String(p).toLowerCase().includes('linkedin'))) {
       const linkedinSteps = buildLinkedInSteps(lastNodeId, nodes, edges);
       if (linkedinSteps.lastNodeId) {
         lastNodeId = linkedinSteps.lastNodeId;
@@ -469,7 +606,7 @@ export default function GuidedFlowPanel() {
     }
 
     // Add Email step if email is selected
-    if (answers.platforms?.includes('email')) {
+    if (platforms.includes('email') || platforms.some((p: string) => String(p).toLowerCase().includes('email'))) {
       const emailNodeId = `email_${Date.now()}`;
       nodes.push({
         id: emailNodeId,
@@ -534,7 +671,7 @@ export default function GuidedFlowPanel() {
         const userVoiceContext = answers.voiceContext || voiceContext || '';
         
         if (!userVoiceContext || userVoiceContext.trim() === '') {
-          console.warn('[Workflow Generation] Voice agent context is missing, using default');
+          logger.warn('Voice agent context is missing, using default');
         }
         
         const voiceNodeId = `voice_${Date.now()}`;
@@ -636,7 +773,15 @@ export default function GuidedFlowPanel() {
         channel: getChannelForStep(n.type),
       }));
 
+    logger.debug('Generated preview steps', { previewSteps });
+    logger.debug('Calling setWorkflowPreview', { stepCount: previewSteps.length });
     setWorkflowPreview(previewSteps);
+    
+    // Verify it was set
+    setTimeout(() => {
+      const currentPreview = useOnboardingStore.getState().workflowPreview;
+      logger.debug('Workflow preview in store after set', { currentPreview });
+    }, 100);
 
     // Update workflow nodes in store for WorkflowPreviewPanel
     // Clear existing nodes first
@@ -668,6 +813,7 @@ export default function GuidedFlowPanel() {
   // Only generate workflow when reaching confirmation step
   useEffect(() => {
     if (currentStep === 'confirmation') {
+      logger.debug('Confirmation step reached - generating workflow preview', { answers, campaignSettings: { campaignName, campaignDuration, dailyLeadVolume, workingDays } });
       generateWorkflowFromAnswers();
     } else {
       // Clear workflow preview and nodes for other steps
@@ -819,20 +965,22 @@ export default function GuidedFlowPanel() {
                 fontSize: '15px',
               }}
             >
-              1. Top 2–3 best customers (type their names or types)
+              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2–3 best customers?')}
             </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 2,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
-              Example: Logistics company, Real estate developer, SME retail chain
-            </Typography>
+            {getQuestionByIntent('ideal_customer')?.helperText && (
+              <Typography
+                variant="caption"
+                sx={{
+                  mb: 2,
+                  color: '#64748B',
+                  display: 'block',
+                  fontSize: '13px',
+                  fontStyle: 'italic',
+                }}
+              >
+                {getQuestionByIntent('ideal_customer')?.helperText}
+              </Typography>
+            )}
             
             <TextField
               fullWidth
@@ -880,8 +1028,22 @@ export default function GuidedFlowPanel() {
                 fontSize: '15px',
               }}
             >
-              2. Which of them brought you the most profit overall?
+              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('profitability')?.question || '2. Which of them brought you the most profit overall?')}
             </Typography>
+            {getQuestionByIntent('profitability')?.helperText && (
+              <Typography
+                variant="caption"
+                sx={{
+                  mb: 2,
+                  color: '#64748B',
+                  display: 'block',
+                  fontSize: '13px',
+                  fontStyle: 'italic',
+                }}
+              >
+                {getQuestionByIntent('profitability')?.helperText}
+              </Typography>
+            )}
             <Typography
               variant="caption"
               sx={{
@@ -930,7 +1092,7 @@ export default function GuidedFlowPanel() {
                 fontSize: '15px',
               }}
             >
-              3. Which one was the easiest to work with?
+              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('work_compatibility')?.question || '3. Which one was the easiest to work with?')}
             </Typography>
             <Typography
               variant="caption"
@@ -2077,45 +2239,14 @@ export default function GuidedFlowPanel() {
                   What should we do on LinkedIn?
                 </Typography>
                 <Stack spacing={2}>
-                  {LINKEDIN_ACTIONS.map((action) => (
-                    <FormControlLabel
-                      key={action.value}
-                      control={
-                        <Checkbox
-                          checked={answers.linkedinActions?.includes(action.value) || false}
-                          onChange={(e) => {
-                            const current = answers.linkedinActions || [];
-                            let updated: string[];
-                            
-                            if (e.target.checked) {
-                              updated = [...current, action.value];
-                              // Enforce: message requires connection
-                              if (action.value === 'send_message' && !updated.includes('send_connection')) {
-                                updated.push('send_connection');
-                              }
-                            } else {
-                              updated = current.filter(a => a !== action.value);
-                              // If removing connection, also remove message
-                              if (action.value === 'send_connection') {
-                                updated = updated.filter(a => a !== 'send_message');
-                              }
-                            }
-                            setAnswers({ ...answers, linkedinActions: updated });
-                            // Clear validation error
-                            if (validationErrors.linkedinActions && updated.length > 0) {
-                              setValidationErrors({ ...validationErrors, linkedinActions: false });
-                            }
-                          }}
-                        />
-                      }
-                      label={action.label}
-                      disabled={
-                        action.value === 'send_message' &&
-                        !answers.linkedinActions?.includes('send_connection') &&
-                        !answers.linkedinActions?.includes('send_message')
-                      }
-                    />
-                  ))}
+                  {/* LinkedIn Actions */}
+                  <RenderActions actions={LINKEDIN_ACTIONS} answersKey="linkedinActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+                  {/* WhatsApp Actions */}
+                  <RenderActions actions={WHATSAPP_ACTIONS} answersKey="whatsappActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+                  {/* Email Actions */}
+                  <RenderActions actions={EMAIL_ACTIONS} answersKey="emailActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+                  {/* Voice Actions */}
+                  <RenderActions actions={VOICE_ACTIONS} answersKey="voiceActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
                 </Stack>
               </Box>
 
@@ -3833,36 +3964,37 @@ export default function GuidedFlowPanel() {
         leads_per_day: dailyLeadVolume, // Also include for backwards compatibility
       };
 
-      console.log('[Campaign Creation] Creating campaign with data:', campaignData);
+      logger.debug('Creating campaign with data', { campaignData });
       const response = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
       
       if (response.success) {
-        console.log('[Campaign Creation] Campaign created successfully:', response.data);
+        logger.debug('Campaign created successfully', { data: response.data });
         const campaignId = response.data.id || response.data.data?.id;
         
-        // If user wants to start immediately, call the start endpoint
-        if (startImmediately && campaignId) {
+        // Always start the campaign immediately
+        if (campaignId) {
           try {
-            console.log('[Campaign Creation] Starting campaign immediately...');
+            logger.debug('Starting campaign immediately');
             await apiPost<{ success: boolean }>(`/api/campaigns/${campaignId}/start`, {});
-            console.log('[Campaign Creation] Campaign started successfully');
+            logger.debug('Campaign started successfully - Apollo lead generation and LinkedIn actions will begin automatically');
           } catch (startError: any) {
-            console.error('[Campaign Creation] Error starting campaign:', startError);
+            logger.error('Error starting campaign', startError);
             // Don't fail the whole creation if start fails - campaign is still created
-            setCreateError(`Campaign created but failed to start: ${startError.message || 'Unknown error'}`);
-            // Still navigate, but show the error
+            setCreateError(`Campaign created but failed to start: ${startError.message || 'Unknown error'}. You can start it manually from the campaigns page.`);
+            // Still navigate, but show the error briefly
             setTimeout(() => router.push('/campaigns'), 2000);
             return;
           }
         }
         
         // Navigate to campaigns page
+        logger.debug('Redirecting to campaigns page');
         router.push('/campaigns');
       } else {
         throw new Error('Failed to create campaign');
       }
     } catch (error: any) {
-      console.error('[Campaign Creation] Error creating campaign:', error);
+      logger.error('Error creating campaign', error);
       setCreateError(error.message || 'Failed to create campaign. Please try again.');
     } finally {
       setIsCreatingCampaign(false);
@@ -3905,8 +4037,8 @@ export default function GuidedFlowPanel() {
             }}
           >
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 600, color: '#1E293B' }}>
-                Campaign Summary
+              <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 600, color: '#1E293B', fontSize: '18px' }}>
+                🎯 Your Campaign Setup
               </Typography>
               
               <Box sx={{ mb: 2 }}>
@@ -3974,39 +4106,40 @@ export default function GuidedFlowPanel() {
             </CardContent>
           </Card>
 
-          {/* Start Campaign Option */}
+          {/* Campaign Creation Info */}
           <Card
             sx={{
               mb: 3,
               borderRadius: '12px',
               border: '1px solid #E2E8F0',
               boxShadow: 'none',
+              bgcolor: '#F8FAFC',
             }}
           >
             <CardContent sx={{ p: 3 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={startImmediately}
-                    onChange={(e) => setStartImmediately(e.target.checked)}
-                    sx={{
-                      '& .MuiCheckbox-root.Mui-checked': {
-                        color: '#6366F1',
-                      },
-                    }}
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
-                      Start Campaign Immediately
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748B', fontSize: '13px' }}>
-                      If checked, the campaign will start running as soon as it's created. Otherwise, you can start it later from the campaigns page.
-                    </Typography>
-                  </Box>
-                }
-              />
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: '8px',
+                    bgcolor: '#6366F1',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Zap size={20} />
+                </Box>
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                    Ready to Launch Your Campaign
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#64748B', fontSize: '13px' }}>
+                    Your campaign will be created and started automatically. Apollo will generate leads based on your criteria, then LinkedIn actions will begin executing immediately.
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
 
@@ -4053,7 +4186,7 @@ export default function GuidedFlowPanel() {
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              {isCreatingCampaign ? 'Creating Campaign...' : 'Create Campaign'}
+              {isCreatingCampaign ? 'Creating & Starting Campaign...' : 'Create and Start Campaign'}
             </Button>
           </Stack>
         </Box>

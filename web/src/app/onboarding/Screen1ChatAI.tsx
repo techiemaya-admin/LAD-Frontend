@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import ChatMessageBubble from '@/components/onboarding/ChatMessageBubble';
 import { Loader2, Bot } from 'lucide-react';
@@ -161,7 +162,7 @@ export default function Screen1ChatAI() {
         answers: { ...answers, ...updates },
       });
     } catch (error) {
-      console.error('Failed to save answers:', error);
+      logger.error('Failed to save answers', error);
     }
 
     setIsProcessing(false);
@@ -236,7 +237,7 @@ export default function Screen1ChatAI() {
   const hasMessages = chatHistory.length > 0;
 
   return (
-    <div className="relative w-full h-screen bg-white flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-white flex flex-col overflow-hidden">
       {!hasMessages && (
         <>
           {/* Centered Greeting and Input Container */}

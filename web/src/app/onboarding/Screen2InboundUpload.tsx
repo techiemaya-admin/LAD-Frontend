@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiUpload } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { Upload, FileText, X, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 
 export default function Screen2InboundUpload() {
@@ -70,7 +71,7 @@ export default function Screen2InboundUpload() {
         }
       }
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      logger.error('Failed to upload file', error);
       alert('Failed to upload file. Please try again.');
     } finally {
       setIsUploading(false);
@@ -114,7 +115,7 @@ export default function Screen2InboundUpload() {
     : [];
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
         <div className="w-full max-w-4xl mx-auto">
           {/* Back Button */}

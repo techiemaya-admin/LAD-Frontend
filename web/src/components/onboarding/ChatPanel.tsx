@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useOnboardingStore, ChannelConnection } from '@/store/onboardingStore';
+import { useOnboardingStore, ChannelConnection, WorkflowPreviewStep } from '@/store/onboardingStore';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import ChatMessageBubble from '@/components/onboarding/ChatMessageBubble';
+import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import WorkflowLibrary from '@/components/onboarding/WorkflowLibrary';
 import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
+import { useChatStepController } from '@/components/onboarding/ChatStepController';
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { mayaAI } from '@/features/ai-icp-assistant';
@@ -14,6 +16,7 @@ import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 
 type FlowState = 
   | 'initial'
@@ -65,7 +68,51 @@ export default function ChatPanel() {
     addWorkflowEdge,
     workflowState,
     setWorkflowState,
+    onboardingMode,
+    setOnboardingMode,
   } = useOnboardingStore();
+
+  // Initialize workflow preview on mount to show just Start/End
+  useEffect(() => {
+    // Set initial empty workflow preview (will show just Start/End)
+    logger.debug('Initializing with empty workflow - will show Start/End');
+    setWorkflowPreview([]);
+  }, [setWorkflowPreview]);
+
+  // Ensure onboardingMode is CHAT when leads path is selected
+  useEffect(() => {
+    if (selectedPath === 'leads' && onboardingMode === 'FORM') {
+      logger.debug('Auto-correcting: leads path should use CHAT mode, switching from FORM to CHAT');
+      setOnboardingMode('CHAT');
+    }
+  }, [selectedPath, onboardingMode, setOnboardingMode]);
+
+  // Watch for workflow updates from global state
+  useEffect(() => {
+    const handleWorkflowUpdate = () => {
+      const currentAnswers = (window as any).__icpAnswers || {};
+      const currentStepIndex = (window as any).__currentStepIndex || 0;
+      
+      logger.debug('Workflow update triggered', { currentAnswers, currentStepIndex });
+      
+      if (Object.keys(currentAnswers).length > 0) {
+        import('@/lib/workflowGenerator').then(({ generateProgressiveWorkflowPreview }) => {
+          const workflowSteps = generateProgressiveWorkflowPreview(currentAnswers, currentStepIndex);
+          logger.debug('Generated progressive workflow', { workflowSteps });
+          setWorkflowPreview(workflowSteps);
+        }).catch(err => {
+          logger.error('Error generating progressive workflow', err);
+        });
+      }
+    };
+
+    // Listen for custom workflow update events
+    window.addEventListener('workflowUpdate', handleWorkflowUpdate);
+    
+    return () => {
+      window.removeEventListener('workflowUpdate', handleWorkflowUpdate);
+    };
+  }, [setWorkflowPreview]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
@@ -75,10 +122,142 @@ export default function ChatPanel() {
   const [currentUtilityAnswers, setCurrentUtilityAnswers] = useState<Record<string, any>>({});
   const [utilityQuestionIndex, setUtilityQuestionIndex] = useState(0);
   const [showWorkflowLibrary, setShowWorkflowLibrary] = useState(false);
+  const [isICPOnboardingActive, setIsICPOnboardingActive] = useState(false);
+  
+  // Chat step controller for ICP onboarding
+  const chatStepController = useChatStepController(
+    async (answers) => {
+      // On completion, create and start campaign automatically
+      logger.debug('ICP onboarding completed', { answers });
+      
+      // Import mapper dynamically to avoid circular dependencies
+      const { mapICPAnswersToCampaign } = await import('@/lib/icpToCampaignMapper');
+      const mappedAnswers = mapICPAnswersToCampaign(answers);
+      logger.debug('Mapped ICP answers to campaign format', { mappedAnswers });
+      
+      // Store mapped answers in onboarding store
+      useOnboardingStore.setState({
+        icpAnswers: mappedAnswers,
+        icpOnboardingComplete: true,
+      });
+      
+      // Generate workflow preview for UI
+      logger.debug('Generating workflow preview from completed answers');
+      const { generateWorkflowPreview } = await import('@/lib/workflowGenerator');
+      const workflowSteps = generateWorkflowPreview(mappedAnswers);
+      logger.debug('Generated workflow steps', { workflowSteps });
+      setWorkflowPreview(workflowSteps);
+      
+      setIsICPOnboardingActive(false);
+      
+      // Show creating campaign message
+      addAIMessage({
+        role: 'ai',
+        content: "Perfect! Creating and starting your campaign now...",
+        timestamp: new Date(),
+      });
+      
+      // Create and start campaign automatically
+      try {
+        // Import function to generate full campaign steps with configs
+        const { generateCampaignSteps } = await import('@/lib/workflowGenerator');
+        const campaignSteps = generateCampaignSteps(mappedAnswers);
+        logger.debug('Generated campaign steps with configs', { campaignSteps });
+        
+        // Prepare campaign data
+        const campaignData = {
+          name: mappedAnswers.campaign_name || 'My Campaign',
+          status: 'draft',
+          steps: campaignSteps,
+          config: {
+            leads_per_day: mappedAnswers.leads_per_day || 10,
+            lead_gen_offset: 0,
+            last_lead_gen_date: null,
+          },
+          leads_per_day: mappedAnswers.leads_per_day || 10,
+        };
+        
+        logger.debug('Creating campaign with data', { campaignData });
+        const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
+        
+        if (createResponse.success) {
+          const campaignId = createResponse.data.id || createResponse.data.data?.id;
+          logger.debug('Campaign created successfully', { campaignId });
+          
+          // Start the campaign
+          if (campaignId) {
+            logger.debug('Starting campaign');
+            await apiPost<{ success: boolean }>(`/api/campaigns/${campaignId}/start`, {});
+            logger.debug('Campaign started successfully');
+            
+            // Show success message
+            addAIMessage({
+              role: 'ai',
+              content: "✅ Campaign created and started successfully! Redirecting to campaigns page...",
+              timestamp: new Date(),
+            });
+            
+            // Redirect after short delay
+            setTimeout(() => {
+              router.push('/campaigns');
+            }, 1500);
+          }
+        }
+      } catch (error: any) {
+        logger.error('Error creating/starting campaign', error);
+        addAIMessage({
+          role: 'ai',
+          content: `❌ Error creating campaign: ${error.message || 'Unknown error'}. Please try again from the campaigns page.`,
+          timestamp: new Date(),
+        });
+      }
+    },
+    (stepIndex, answer) => {
+      // Update workflow preview as steps are answered
+      logger.debug('Step answered', { stepIndex, answer });
+      
+      // Special case: stepIndex = -1 means "generate workflow now"
+      if (stepIndex === -1 && typeof answer === 'object') {
+        logger.debug('Generating workflow from answers', { answer });
+        
+        // Import mapper and generator dynamically
+        import('@/lib/icpToCampaignMapper').then(({ mapICPAnswersToCampaign }) => {
+          const mappedAnswers = mapICPAnswersToCampaign(answer);
+          logger.debug('Mapped answers for workflow', { mappedAnswers });
+          
+          // Generate workflow preview
+          import('@/lib/workflowGenerator').then(({ generateWorkflowPreview }) => {
+            const workflowSteps = generateWorkflowPreview(mappedAnswers);
+            logger.debug('Generated workflow steps', { workflowSteps });
+            setWorkflowPreview(workflowSteps);
+          }).catch(err => {
+            logger.error('Error generating workflow', err);
+          });
+        }).catch(err => {
+          logger.error('Error mapping answers', err);
+        });
+      } else {
+        // Progressive workflow update for individual answers
+        logger.debug('Updating progressive workflow for step', { stepIndex, answer });
+        
+        // Get current answers from chat controller and update workflow
+        import('@/lib/workflowGenerator').then(({ generateProgressiveWorkflowPreview }) => {
+          // Get current answers by merging existing answers with new answer from the controller
+          const currentAnswers = (window as any).__icpAnswers || {};
+          // Pass the stepIndex to make workflow truly progressive
+          const workflowSteps = generateProgressiveWorkflowPreview(currentAnswers, stepIndex);
+          logger.debug('Updated progressive workflow', { workflowSteps });
+          setWorkflowPreview(workflowSteps);
+        }).catch(err => {
+          logger.error('Error updating progressive workflow', err);
+        });
+      }
+    }
+  );
 
   // Handle workflow selection from library
   const handleWorkflowSelect = async (workflow: { naturalLanguage: string }) => {
-    console.log('[ChatPanel] Workflow selected:', workflow.naturalLanguage);
+    logger.debug('Workflow selected', { naturalLanguage: workflow.naturalLanguage });
     setShowWorkflowLibrary(false);
     
     // If on initial screen, transition to chat interface
@@ -124,7 +303,7 @@ export default function ChatPanel() {
         fastMode: true, // Enable FastMode for workflow library
       };
 
-      console.log('[ChatPanel] Sending workflow command:', { msg, context });
+      logger.debug('Sending workflow command', { msg, context });
       
       const response = await sendGeminiPrompt(
         msg,
@@ -135,7 +314,7 @@ export default function ChatPanel() {
         context
       );
       
-      console.log('[ChatPanel] Received response:', {
+      logger.debug('Received response', {
         hasText: !!response.text,
         hasSearchResults: !!response.searchResults,
         searchResultsCount: response.searchResults?.length || 0,
@@ -164,7 +343,7 @@ export default function ChatPanel() {
         processWorkflowUpdates(response.workflowUpdates);
       }
     } catch (error: any) {
-      console.error('[ChatPanel] Error sending workflow command:', error);
+      logger.error('Error sending workflow command', error);
       addAIMessage({
         role: 'ai',
         content: error.response?.data?.text || error.message || 'I encountered an error. Please try again.',
@@ -189,6 +368,30 @@ export default function ChatPanel() {
       startAIConversation('automation');
     }
   }, [selectedPath]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-start ICP onboarding flow on page load if in CHAT mode with leads selected
+  useEffect(() => {
+    if (
+      hasSelectedOption &&
+      selectedPath === 'leads' &&
+      onboardingMode === 'CHAT' &&
+      !isICPOnboardingActive &&
+      !chatStepController.isComplete
+    ) {
+      logger.debug('Auto-starting ICP onboarding flow on page load', {
+        hasSelectedOption,
+        selectedPath,
+        onboardingMode,
+        isICPOnboardingActive,
+        isComplete: chatStepController.isComplete
+      });
+      setIsICPOnboardingActive(true);
+      // Use setTimeout to ensure state is set before starting flow
+      setTimeout(() => {
+        chatStepController.startFlow();
+      }, 100);
+    }
+  }, [hasSelectedOption, selectedPath, onboardingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startAIConversation = async (path: 'automation' | 'leads') => {
     setIsProcessingAI(true);
@@ -221,6 +424,7 @@ export default function ChatPanel() {
   };
 
   const handleOptionSelect = (option: 'automation' | 'leads') => {
+    logger.debug('handleOptionSelect called', { option });
     setSelectedPath(option);
     setHasSelectedOption(true);
     setIsAIChatActive(true);
@@ -231,7 +435,14 @@ export default function ChatPanel() {
     if (option === 'leads') {
       setSelectedCategory('leadops');
       setWorkflowState('STATE_2'); // Move to platform selection
-      // For "leads", we'll use GuidedFlowPanel instead of chat
+      // Switch to CHAT mode and start ICP conversational onboarding
+      logger.debug('Setting onboardingMode to CHAT and starting ICP flow');
+      setOnboardingMode('CHAT');
+      setIsICPOnboardingActive(true);
+      // Use setTimeout to ensure state updates are applied before starting flow
+      setTimeout(() => {
+        chatStepController.startFlow();
+      }, 0);
     } else if (option === 'automation') {
       // "automation" could be SocialOps - will be clarified, but start in STATE_1
       setWorkflowState('STATE_1');
@@ -413,10 +624,10 @@ export default function ChatPanel() {
     // Convert utility answers to node settings
     const schedule = currentUtilityAnswers.schedule || 'immediate';
     const delayType = currentUtilityAnswers.delay || 'none';
-    const delay: { type: string; value?: number } | undefined = delayType === 'hours' 
-      ? { type: 'hours', value: currentUtilityAnswers.delayHours || 0 }
+    const delay: { days?: number; hours?: number } | undefined = delayType === 'hours' 
+      ? { hours: currentUtilityAnswers.delayHours || 0 }
       : delayType === 'days'
-      ? { type: 'days', value: currentUtilityAnswers.delayDays || 0 }
+      ? { days: currentUtilityAnswers.delayDays || 0 }
       : undefined;
     
     const condition = currentUtilityAnswers.condition === 'none' ? null : currentUtilityAnswers.condition;
@@ -435,12 +646,12 @@ export default function ChatPanel() {
     addWorkflowNode(node);
 
     // Add to preview
-    const previewStep = {
+    const previewStep: WorkflowPreviewStep = {
       id: node.id,
       type: node.type as any,
       title: node.title,
       description: `${currentPlatform} - ${node.title}`,
-      channel: node.channel,
+      channel: (node.channel as 'linkedin' | 'email' | 'whatsapp' | 'voice' | 'instagram') || undefined,
     };
     addWorkflowStep(previewStep);
 
@@ -804,14 +1015,16 @@ export default function ChatPanel() {
         );
 
         // Add AI response with options and requirements data
+        // Don't show RequirementsCollection during ICP onboarding
+        const shouldShowRequirements = !isICPOnboardingActive && response.status === 'need_input' && response.missing;
         addAIMessage({
           role: 'ai',
           content: response.text,
           timestamp: new Date(),
           options: response.options || undefined, // Store options from AI response
-          status: response.status, // 'need_input' or 'ready'
+          status: shouldShowRequirements ? response.status : undefined, // Only set status if not in ICP flow
           searchResults: response.searchResults, // Search results from scraping
-          missing: response.missing, // Missing fields object
+          missing: shouldShowRequirements ? response.missing : undefined, // Only set missing if not in ICP flow
           workflow: response.workflow, // Generated workflow steps
         });
 
@@ -844,7 +1057,7 @@ export default function ChatPanel() {
         await processUtilityAnswer(currentUtilityQuestion, answer);
       }
     } catch (error) {
-      console.error('Error handling answer:', error);
+      logger.error('Error handling answer', error);
       addAIMessage({
         role: 'ai',
         content: 'I encountered an error processing your answer. Please try again.',
@@ -856,6 +1069,9 @@ export default function ChatPanel() {
   };
 
   const handleBackToOptions = () => {
+    // Reset to FORM mode when going back to options
+    setOnboardingMode('FORM');
+    setIsICPOnboardingActive(false);
     useOnboardingStore.getState().reset();
     setHasSelectedOption(false);
     setSelectedPath(null);
@@ -964,18 +1180,69 @@ export default function ChatPanel() {
             <ChatInputClaude
               onShowWorkflowLibrary={() => setShowWorkflowLibrary(true)}
               onSend={async (msg) => {
-                console.log('[ChatPanel] User sent message from initial screen:', msg);
+                logger.debug('User sent message from initial screen', { msg });
                 
-                // Check if message is related to lead generation/outreach
-                const leadKeywords = ['lead', 'outreach', 'find customers', 'generate leads', 'prospect', 'target audience'];
-                const isLeadRelated = leadKeywords.some(keyword => 
-                  msg.toLowerCase().includes(keyword)
-                );
+                // AUTO-REDIRECT: When user types and sends a message, automatically switch to chat interface
+                if (!hasSelectedOption) {
+                  setHasSelectedOption(true);
+                  setIsAIChatActive(true);
+                  setCurrentScreen(1);
+                  setOnboardingMode('CHAT'); // IMPORTANT: Set to CHAT mode to show chat interface, not form
+                  
+                  // Add user message to chat (even if it's just "hello")
+                  addAIMessage({
+                    role: 'user',
+                    content: msg,
+                    timestamp: new Date(),
+                  });
+                  
+                  // Set default path if none selected
+                  if (!selectedPath) {
+                    setSelectedPath('leads'); // Default to leads for general chat
+                    setSelectedCategory('leadops');
+                    setWorkflowState('STATE_2');
+                    // Start ICP onboarding flow for leads path
+                    setIsICPOnboardingActive(true);
+                    // Use a small delay to ensure state is set before starting flow
+                    setTimeout(() => {
+                      if (!chatStepController.isComplete && chatStepController.currentStepIndex === 0) {
+                        chatStepController.startFlow();
+                      }
+                    }, 100);
+                    // Don't process "hello" as an answer, just start the flow
+                    return;
+                  }
+                }
                 
-                if (isLeadRelated && !hasSelectedOption) {
-                  // Redirect to Lead Generation & Outreach guided flow
-                  handleOptionSelect('leads');
-                  return;
+                // PRIORITY: If in leads path with CHAT mode, use ICP flow (not general AI)
+                if (selectedPath === 'leads' && onboardingMode === 'CHAT') {
+                  // Start ICP flow if not already active and not already started
+                  if (!isICPOnboardingActive && !chatStepController.isComplete && chatStepController.currentStepIndex === 0) {
+                    setIsICPOnboardingActive(true);
+                    setTimeout(() => {
+                      chatStepController.startFlow();
+                    }, 100);
+                    return;
+                  }
+                  
+                  // Handle ICP onboarding flow
+                  if (isICPOnboardingActive && !chatStepController.isComplete) {
+                    // Check for back command
+                    if (msg.toLowerCase().trim() === 'back') {
+                      chatStepController.handleBack();
+                      return;
+                    }
+                    
+                    // Handle answer
+                    addAIMessage({
+                      role: 'user',
+                      content: msg,
+                      timestamp: new Date(),
+                    });
+                    
+                    chatStepController.handleAnswer(msg);
+                    return;
+                  }
                 }
                 
                 // Add user message
@@ -1007,7 +1274,7 @@ export default function ChatPanel() {
                     fastMode: true, // Enable FastMode for direct user input
                   };
 
-                  console.log('[ChatPanel] Sending to backend from initial screen:', { msg, context });
+                  logger.debug('Sending to backend from initial screen', { msg, context });
                   
                   const response = await sendGeminiPrompt(
                     msg,
@@ -1018,7 +1285,7 @@ export default function ChatPanel() {
                     context
                   );
                   
-                  console.log('[ChatPanel] Received response from initial screen:', {
+                  logger.debug('Received response from initial screen', {
                     hasText: !!response.text,
                     hasSearchResults: !!response.searchResults,
                     searchResultsCount: response.searchResults?.length || 0,
@@ -1047,8 +1314,8 @@ export default function ChatPanel() {
                     processWorkflowUpdates(response.workflowUpdates);
                   }
                 } catch (error: any) {
-                  console.error('[ChatPanel] Error sending message from initial screen:', error);
-                  console.error('[ChatPanel] Error details:', {
+                  logger.error('Error sending message from initial screen', error);
+                  logger.error('Error details', {
                     message: error.message,
                     response: error.response?.data,
                     status: error.response?.status,
@@ -1063,8 +1330,16 @@ export default function ChatPanel() {
                   setIsProcessingAI(false);
                 }
               }}
-              disabled={isProcessingAI}
-              placeholder="How can I help you today?"
+          disabled={isProcessingAI}
+          placeholder={
+            isICPOnboardingActive && !chatStepController.isComplete
+              ? chatStepController.currentQuestion?.type === 'boolean'
+                ? 'Type "yes" or "no"...'
+                : chatStepController.currentQuestion?.type === 'select'
+                ? 'Type your answer or select from options...'
+                : 'Type your answer...'
+              : 'How can I help you today?'
+          }
             />
           </div>
         </div>
@@ -1080,8 +1355,10 @@ export default function ChatPanel() {
     );
   }
 
-  // Show GuidedFlowPanel for Lead Generation & Outreach
-  if (hasSelectedOption && selectedPath === 'leads') {
+  // Show GuidedFlowPanel for Lead Generation & Outreach (only if in FORM mode)
+  // When onboardingMode === 'CHAT', the chat interface handles everything
+  // Also check that ICP onboarding is not active to avoid showing form during chat flow
+  if (hasSelectedOption && selectedPath === 'leads' && onboardingMode === 'FORM' && !isICPOnboardingActive) {
     return (
       <div className="flex flex-col h-full bg-white overflow-hidden max-h-full">
         {/* Header with Back Button */}
@@ -1109,13 +1386,34 @@ export default function ChatPanel() {
       {/* Header with Back Button and Clear */}
       {hasSelectedOption && (
         <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <button
-            onClick={handleBackToOptions}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to options</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBackToOptions}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to options</span>
+            </button>
+            {isICPOnboardingActive && chatStepController.currentStepIndex > 0 && (
+              <button
+                onClick={() => {
+                  chatStepController.handleBack();
+                  // Remove last user message and system question
+                  const newMessages = [...aiMessages];
+                  // Remove last 2 messages (user answer + system question)
+                  if (newMessages.length >= 2) {
+                    newMessages.pop(); // Remove system question
+                    newMessages.pop(); // Remove user answer
+                    useOnboardingStore.setState({ aiMessages: newMessages });
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">Back</span>
+              </button>
+            )}
+          </div>
           {aiMessages.length > 0 && (
             <button
               onClick={() => {
@@ -1138,8 +1436,8 @@ export default function ChatPanel() {
       )}
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="py-8">
+      <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50">
+        <div className="py-4">
           {aiMessages.map((message, index) => (
             <React.Fragment key={index}>
               <ChatMessageBubble
@@ -1150,6 +1448,16 @@ export default function ChatPanel() {
                 missing={message.missing}
                 searchResults={message.searchResults}
                 workflow={message.workflow}
+                isLastMessage={index === aiMessages.length - 1}
+                onOptionSubmit={
+                  index === aiMessages.length - 1 && 
+                  selectedPath === 'leads' && 
+                  onboardingMode === 'CHAT' && 
+                  isICPOnboardingActive && 
+                  !chatStepController.isComplete
+                    ? chatStepController.handleOptionSubmit
+                    : undefined
+                }
                 onRequirementsComplete={async (data) => {
                   // Send completed requirements back to API
                   try {
@@ -1197,7 +1505,7 @@ export default function ChatPanel() {
                       processWorkflowUpdates(response.workflowUpdates);
                     }
                   } catch (error) {
-                    console.error('Error submitting requirements:', error);
+                    logger.error('Error submitting requirements', error);
                     addAIMessage({
                       role: 'ai',
                       content: 'I encountered an error processing your requirements. Please try again.',
@@ -1230,13 +1538,15 @@ export default function ChatPanel() {
           ))}
 
           {isProcessingAI && (
-            <div className="flex gap-4 w-full max-w-3xl mx-auto px-4 py-6 bg-white">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+            <div className="flex gap-3 w-full max-w-4xl mx-auto px-4 py-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Bot className="w-4 h-4 text-white" />
               </div>
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                <span className="text-gray-400 text-sm">Thinking...</span>
+              <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  <span className="text-gray-500 text-sm">Thinking...</span>
+                </div>
               </div>
             </div>
           )}
@@ -1303,22 +1613,133 @@ export default function ChatPanel() {
       <div className="border-t border-gray-200 bg-white py-4 px-4 flex-shrink-0">
         <ChatInputClaude
           onShowWorkflowLibrary={() => setShowWorkflowLibrary(true)}
+          disabled={
+            // Disable input if last AI message has selectable options OR template input
+            (() => {
+              if (aiMessages.length === 0) return false;
+              const lastMessage = aiMessages[aiMessages.length - 1];
+              if (lastMessage.role === 'ai') {
+                const parsedOptions = parseMessageOptions(lastMessage.content);
+                const hasSelectableOptions = parsedOptions !== null && 
+                       selectedPath === 'leads' && 
+                       onboardingMode === 'CHAT' && 
+                       isICPOnboardingActive && 
+                       !chatStepController.isComplete;
+                
+                // Also check for template input request
+                const isTemplateRequest = selectedPath === 'leads' && 
+                       onboardingMode === 'CHAT' && 
+                       isICPOnboardingActive && 
+                       !chatStepController.isComplete &&
+                       (lastMessage.content.toLowerCase().includes('template') ||
+                        lastMessage.content.toLowerCase().includes('message template') ||
+                        lastMessage.content.toLowerCase().includes('script') ||
+                        lastMessage.content.toLowerCase().includes('paste your')) &&
+                       !parsedOptions; // Not a selectable options message
+                
+                return hasSelectableOptions || isTemplateRequest;
+              }
+              return false;
+            })() || isProcessingAI
+          }
           onSend={async (msg) => {
-            console.log('[ChatPanel] User sent message:', msg);
+            logger.debug('User sent message', { msg });
+            logger.debug('Current state', {
+              selectedPath,
+              onboardingMode,
+              isICPOnboardingActive,
+              isComplete: chatStepController.isComplete,
+              currentStepIndex: chatStepController.currentStepIndex
+            });
             
-            // Check if message is related to lead generation/outreach (if not already in leads flow)
+            // PRIORITY 1: If in leads path with CHAT mode, always use ICP flow (not general AI)
+            if (selectedPath === 'leads' && onboardingMode === 'CHAT') {
+              // Start ICP flow if not already active
+              if (!isICPOnboardingActive && !chatStepController.isComplete) {
+                logger.debug('Starting ICP flow for leads path');
+                setIsICPOnboardingActive(true);
+                await chatStepController.startFlow();
+                // After flow starts, process the user message as an answer
+                if (msg.toLowerCase().trim() !== 'hello' && msg.toLowerCase().trim() !== 'hi') {
+                  addAIMessage({
+                    role: 'user',
+                    content: msg,
+                    timestamp: new Date(),
+                  });
+                  await chatStepController.handleAnswer(msg);
+                }
+                return;
+              }
+              
+              // If ICP flow is active, handle answer
+              if (isICPOnboardingActive && !chatStepController.isComplete) {
+                logger.debug('Handling answer in ICP flow');
+                // Check for back command
+                if (msg.toLowerCase().trim() === 'back' || msg.toLowerCase().trim() === 'go back') {
+                  chatStepController.handleBack();
+                  return;
+                }
+                
+                // Handle answer
+                addAIMessage({
+                  role: 'user',
+                  content: msg,
+                  timestamp: new Date(),
+                });
+                
+                await chatStepController.handleAnswer(msg);
+                return;
+              } else {
+                logger.warn('ICP flow check failed - falling back to general AI', {
+                  isICPOnboardingActive,
+                  isComplete: chatStepController.isComplete,
+                  currentStepIndex: chatStepController.currentStepIndex,
+                  selectedPath,
+                  onboardingMode
+                });
+                // Even if isICPOnboardingActive is false, if we're in leads/CHAT mode and have questions, use ICP flow
+                if (selectedPath === 'leads' && onboardingMode === 'CHAT' && chatStepController.currentQuestion) {
+                  logger.debug('Force-enabling ICP flow based on context');
+                  setIsICPOnboardingActive(true);
+                  addAIMessage({
+                    role: 'user',
+                    content: msg,
+                    timestamp: new Date(),
+                  });
+                  await chatStepController.handleAnswer(msg);
+                  return;
+                }
+              }
+            }
+            
+            // PRIORITY 2: Check if message is EXPLICITLY about lead generation/outreach (if not already in leads flow)
+            // Only redirect for explicit requests, not general chat
             if (selectedPath !== 'leads') {
-              const leadKeywords = ['lead', 'outreach', 'find customers', 'generate leads', 'prospect', 'target audience'];
-              const isLeadRelated = leadKeywords.some(keyword => 
-                msg.toLowerCase().includes(keyword)
+              const explicitLeadPhrases = [
+                'i want to find leads',
+                'help me find customers',
+                'i need to generate leads',
+                'start lead generation',
+                'set up lead outreach',
+                'create lead campaign',
+                'find prospects',
+                'target customers'
+              ];
+              
+              const msgLower = msg.toLowerCase().trim();
+              const isExplicitLeadRequest = explicitLeadPhrases.some(phrase => 
+                msgLower.includes(phrase)
               );
               
-              if (isLeadRelated) {
-                // Switch to Lead Generation & Outreach guided flow
+              if (isExplicitLeadRequest) {
+                // Switch to CHAT mode and redirect to Lead Generation & Outreach conversational flow
+                setOnboardingMode('CHAT');
                 handleOptionSelect('leads');
                 return;
               }
             }
+            
+            // PRIORITY 3: General AI chat (only if not in leads path)
             
             // Add user message
             addAIMessage({
@@ -1349,7 +1770,7 @@ export default function ChatPanel() {
                 fastMode: true, // Enable FastMode for direct user input
               };
 
-              console.log('[ChatPanel] Sending to backend:', { msg, context });
+              logger.debug('Sending to backend', { msg, context });
               
               const response = await sendGeminiPrompt(
                 msg,
@@ -1360,7 +1781,7 @@ export default function ChatPanel() {
                 context
               );
               
-              console.log('[ChatPanel] Received response:', {
+              logger.debug('Received response', {
                 hasText: !!response.text,
                 hasSearchResults: !!response.searchResults,
                 searchResultsCount: response.searchResults?.length || 0,
@@ -1368,13 +1789,15 @@ export default function ChatPanel() {
               });
 
               // Add AI response with requirements data
+              // Don't show RequirementsCollection during ICP onboarding
+              const shouldShowRequirements = !isICPOnboardingActive && response.status === 'need_input' && response.missing;
               addAIMessage({
                 role: 'ai',
                 content: response.text,
                 timestamp: new Date(),
                 options: response.options || undefined,
-                status: response.status, // 'need_input' or 'ready'
-                missing: response.missing, // Missing fields
+                status: shouldShowRequirements ? response.status : undefined, // Only set status if not in ICP flow
+                missing: shouldShowRequirements ? response.missing : undefined, // Only set missing if not in ICP flow
                 workflow: response.workflow, // Generated workflow
                 searchResults: response.searchResults, // Search results from scraping
               });
@@ -1389,8 +1812,8 @@ export default function ChatPanel() {
                 processWorkflowUpdates(response.workflowUpdates);
               }
             } catch (error: any) {
-              console.error('[ChatPanel] Error sending message:', error);
-              console.error('[ChatPanel] Error details:', {
+              logger.error('Error sending message', error);
+              logger.error('Error details', {
                 message: error.message,
                 response: error.response?.data,
                 status: error.response?.status,
@@ -1405,7 +1828,6 @@ export default function ChatPanel() {
               setIsProcessingAI(false);
             }
           }}
-          disabled={isProcessingAI}
           placeholder={
             (showOptions || (aiMessages.length > 0 && aiMessages[aiMessages.length - 1]?.role === 'ai' && aiMessages[aiMessages.length - 1]?.options && aiMessages[aiMessages.length - 1]?.options!.length > 0))
               ? 'Select an option above or type your message...'

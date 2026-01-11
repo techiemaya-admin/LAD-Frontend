@@ -3,6 +3,7 @@
 import React, { useState, useEffect, KeyboardEvent, useRef } from 'react';
 import { Send, Paperclip, Settings, Clock, Library } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface ChatInputClaudeProps {
   onSend: (message: string) => void;
@@ -23,7 +24,7 @@ export default function ChatInputClaude({
   
   // Debug: Log when component renders
   useEffect(() => {
-    console.log('[ChatInputClaude] Component rendered:', { disabled, placeholder, inputLength: input.length });
+    logger.debug('Component rendered', { disabled, placeholder, inputLength: input.length });
   }, [disabled, placeholder, input.length]);
 
   // Auto-resize textarea
@@ -39,12 +40,12 @@ export default function ChatInputClaude({
     e.stopPropagation();
     
     if (disabled) {
-      console.warn('[ChatInputClaude] Submit blocked - input is disabled');
+      logger.warn('Submit blocked - input is disabled');
       return;
     }
     
     const trimmedInput = input.trim();
-    console.log('[ChatInputClaude] handleSubmit called:', { trimmedInput, disabled, canSend: trimmedInput && !disabled });
+    logger.debug('handleSubmit called', { trimmedInput, disabled, canSend: trimmedInput && !disabled });
     if (trimmedInput) {
       onSend(trimmedInput);
       setInput('');
@@ -52,7 +53,7 @@ export default function ChatInputClaude({
         textareaRef.current.style.height = '24px';
       }
     } else {
-      console.warn('[ChatInputClaude] Cannot send - input is empty');
+      logger.warn('Cannot send - input is empty');
     }
   };
 
@@ -121,7 +122,7 @@ export default function ChatInputClaude({
           onChange={(e) => {
             // Always allow onChange - disabled attribute will handle visual state
             const newValue = e.target.value;
-            console.log('[ChatInputClaude] onChange:', { 
+            logger.debug('onChange', { 
               value: newValue, 
               disabled, 
               valueLength: newValue.length,
@@ -131,7 +132,7 @@ export default function ChatInputClaude({
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            console.log('[ChatInputClaude] onFocus:', { disabled });
+            logger.debug('onFocus', { disabled });
             setIsFocused(true);
           }}
           onBlur={() => setIsFocused(false)}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { 
   Zap, 
   Users, 
@@ -19,28 +20,33 @@ import {
 } from 'lucide-react';
 
 export default function Screen1MainOptions() {
-  const { setMainOption, setCurrentScreen } = useOnboardingStore();
+  const { setCurrentScreen, setOnboardingMode, setSelectedPath, setHasSelectedOption, setIsAIChatActive } = useOnboardingStore();
 
   const handleSelect = async (option: 'automation' | 'leads') => {
-    setMainOption(option);
+    setSelectedPath(option);
+    setHasSelectedOption(true);
+    setIsAIChatActive(true);
+    
+    // IMPORTANT: Set onboardingMode to CHAT for leads to show AI chat interface
+    if (option === 'leads') {
+      setOnboardingMode('CHAT');
+      // Go to chat interface (screen 1)
+      setCurrentScreen(1);
+    } else {
+      setOnboardingMode('FORM');
+      // Go to workflow setup for automation (screen 3)
+      setCurrentScreen(3);
+    }
     
     try {
       await apiPost('/api/onboarding/select-main-option', { option });
     } catch (error) {
-      console.error('Failed to save main option:', error);
-    }
-
-    if (option === 'automation') {
-      // Skip to workflow setup for automation
-      setCurrentScreen(5);
-    } else {
-      // Go to lead type selection
-      setCurrentScreen(2);
+      logger.error('Failed to save main option', error);
     }
   };
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-6xl">
           <div className="text-center mb-12">
