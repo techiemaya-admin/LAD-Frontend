@@ -7,7 +7,7 @@
 
 import { apiClient } from '../../shared/apiClient';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 const BASE_PATH = `${API_BASE_URL}/api/apollo-leads`;
 
 /**
