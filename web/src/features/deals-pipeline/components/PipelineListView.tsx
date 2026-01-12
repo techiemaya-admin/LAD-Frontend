@@ -120,6 +120,8 @@ interface PipelineListViewProps {
   teamMembers?: Array<{ id?: string; _id?: string; name?: string; email?: string }>;
   currentUser?: { role?: string; isAdmin?: boolean } | null;
   compactMode?: boolean;
+  showCardCount?: boolean;
+  showTotalValue?: boolean;
 }
 
 const PipelineListView: React.FC<PipelineListViewProps> = ({ 
@@ -138,7 +140,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   onAssigneeChange,
   teamMembers = [],
   currentUser = null,
-  compactMode = false
+  compactMode = false,
+  showCardCount = true,
+  showTotalValue = true
 }) => {
   // Redux dispatch
   const dispatch = useDispatch();
@@ -298,6 +302,27 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     });
   }, [leads, effectiveStatusOptions, effectivePriorityOptions, stages]);
 
+  // Group leads by stage
+  const leadsByStage = useMemo(() => {
+    const grouped: Record<string, Lead[]> = {};
+    
+    // Initialize all stages
+    stages.forEach(stage => {
+      grouped[stage.key] = [];
+    });
+    
+    // Group leads by stage
+    allLeads.forEach(lead => {
+      const stageKey = lead.stage || 'unknown';
+      if (!grouped[stageKey]) {
+        grouped[stageKey] = [];
+      }
+      grouped[stageKey].push(lead);
+    });
+    
+    return grouped;
+  }, [allLeads, stages]);
+  
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
     let filtered = [...allLeads];
@@ -672,38 +697,78 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedLeads.map((lead) => (
-                <tr 
-                  key={lead.id}
-                  onClick={(e) => {
-                    // Don't open details dialog if clicking on interactive elements
-                    if ((e.target as HTMLElement).closest('select, button, input')) {
-                      e.stopPropagation();
-                      return;
-                    }
-                    handleRowClick(lead);
-                  }}
-                  className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 h-16"
-                >
-                  {visibleColumnKeys.map((column) => (
-                    <td 
-                      key={column} 
-                      className={`px-4 py-3 border-b border-gray-100 align-middle ${
-                        column === 'name' || column === 'assignee' 
-                          ? 'whitespace-nowrap' 
-                          : 'whitespace-nowrap overflow-hidden text-ellipsis'
-                      }`}
-                      style={{
-                        minWidth: column === 'name' ? columnWidths.firstColumnMinWidth : columnWidths.cellMinWidth,
-                        maxWidth: column === 'name' ? columnWidths.firstColumnMaxWidth : columnWidths.cellMaxWidth
-                      }}
-                      title={column === 'name' ? `${lead.name || 'Unnamed Lead'} (${lead.email || lead.company || ''})` : undefined}
-                    >
-                      {renderCellContent(lead, column)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {stages.map(stage => {
+                const stageLeads = leadsByStage[stage.key] || [];
+                const filteredStageLeads = filteredAndSortedLeads.filter(lead => lead.stage === stage.key);
+                
+                if (filteredStageLeads.length === 0) return null;
+                
+                const totalValue = filteredStageLeads.reduce((sum, lead) => {
+                  const amount = typeof lead.amount === 'number' ? lead.amount : parseFloat(lead.amount as string || '0');
+                  return sum + amount;
+                }, 0);
+                
+                return (
+                  <React.Fragment key={stage.key}>
+                    {/* Stage Header Row */}
+                    <tr className="bg-blue-50">
+                      <td 
+                        colSpan={visibleColumnKeys.length}
+                        className="px-4 py-2 border-b border-gray-200"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-800">
+                            {stage.label || stage.name || stage.key}
+                          </span>
+                          {showCardCount && (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                              {filteredStageLeads.length}
+                            </Badge>
+                          )}
+                          {showTotalValue && totalValue > 0 && (
+                            <span className="text-xs text-gray-600 ml-2">
+                              {formatCurrency(totalValue)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Stage Leads */}
+                    {filteredStageLeads.map((lead) => (
+                      <tr 
+                        key={lead.id}
+                        onClick={(e) => {
+                          // Don't open details dialog if clicking on interactive elements
+                          if ((e.target as HTMLElement).closest('select, button, input')) {
+                            e.stopPropagation();
+                            return;
+                          }
+                          handleRowClick(lead);
+                        }}
+                        className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 h-16"
+                      >
+                        {visibleColumnKeys.map((column) => (
+                          <td 
+                            key={column} 
+                            className={`px-4 py-3 border-b border-gray-100 align-middle ${
+                              column === 'name' || column === 'assignee' 
+                                ? 'whitespace-nowrap' 
+                                : 'whitespace-nowrap overflow-hidden text-ellipsis'
+                            }`}
+                            style={{
+                              minWidth: column === 'name' ? columnWidths.firstColumnMinWidth : columnWidths.cellMinWidth,
+                              maxWidth: column === 'name' ? columnWidths.firstColumnMaxWidth : columnWidths.cellMaxWidth
+                            }}
+                            title={column === 'name' ? `${lead.name || 'Unnamed Lead'} (${lead.email || lead.company || ''})` : undefined}
+                          >
+                            {renderCellContent(lead, column)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
               {filteredAndSortedLeads.length === 0 && (
                 <tr>
                   <td 

@@ -38,6 +38,9 @@ interface PipelineBoardToolbarProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   
+  // View Mode
+  viewMode?: 'kanban' | 'list';
+  
   // Actions
   onAddStage: () => void;
   onAddLead: () => void;
@@ -69,6 +72,9 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   // Zoom
   zoom,
   onZoomChange,
+  
+  // View Mode
+  viewMode = 'kanban',
   
   // Actions
   onAddStage,
@@ -118,35 +124,37 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               Add {labels.entity}
             </Button>
 
-            {/* Zoom controls */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-              <button
-                onClick={handleZoomOut}
-                disabled={zoom <= 0.5}
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg disabled:text-gray-300 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </button>
-              
-              <span className="min-w-[45px] text-center text-xs text-gray-600 dark:text-gray-300 font-medium">
-                {Math.round(zoom * 100)}%
-              </span>
-              
-              <button
-                onClick={handleZoomIn}
-                disabled={zoom >= 2.0}
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg disabled:text-gray-300 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </button>
-              
-              <button
-                onClick={handleZoomReset}
-                className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg ml-1 flex items-center justify-center transition-colors"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-            </div>
+            {/* Zoom controls - only show in kanban view */}
+            {viewMode === 'kanban' && (
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+                <button
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 0.5}
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg disabled:text-gray-300 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+                
+                <span className="min-w-[45px] text-center text-xs text-gray-600 dark:text-gray-300 font-medium">
+                  {Math.round(zoom * 100)}%
+                </span>
+                
+                <button
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 2.0}
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg disabled:text-gray-300 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+                
+                <button
+                  onClick={handleZoomReset}
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-7 h-7 rounded-lg ml-1 flex items-center justify-center transition-colors"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right side - Search and control buttons */}

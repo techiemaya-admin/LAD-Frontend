@@ -250,7 +250,27 @@ export default function DashboardPage() {
 // fetch call logs with the same role-based logic as CallLogsPage
 useEffect(() => {
   async function loadDashboardCallLogs() {
-    let qs = `?limit=100`;
+    let qs = ``;
+
+    // A
+    // dd date range filters based on chart mode
+    const now = new Date();
+    let startDate: Date;
+    
+    if (chartMode === "month") {
+      // Last 30 days
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - (DAYS_RANGE - 1));
+    } else {
+      // Last 12 months
+      startDate = new Date(now);
+      startDate.setFullYear(now.getFullYear() - 1);
+    }
+
+    const startDateISO = startDate.toISOString();
+    const endDateISO = now.toISOString();
+    
+    qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
 
     // 🔐 figure out role, org, userId (architecture-compliant: use user.id from core platform)
     try {
@@ -274,7 +294,7 @@ useEffect(() => {
         }
       }
     } catch {
-      // ignore and just use ?limit=100
+      // ignore and just use base query
     }
 
     try {
@@ -405,7 +425,7 @@ useEffect(() => {
   }
 
   loadDashboardCallLogs();
-}, []);
+}, [chartMode]);
 
   // Helper function to calculate percentage change
   const calculatePercentageChange = (current: number, previous: number): string => {

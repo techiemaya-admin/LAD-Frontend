@@ -6,14 +6,27 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { getApiBaseUrl } from "@/lib/api-utils";
 import { safeStorage } from "@/utils/storage";
+import { getCurrentUser } from "@/lib/auth";
 import { Brain, Volume2, Mic, Sparkles } from "lucide-react";
 
 export function VoiceAgentHighlights() {
   const [data, setData] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
+        setIsLoading(true);
+        
+        // Check if user has voice-agent capability
+        const user: any = await getCurrentUser().catch(() => null);
+        const capabilities = user?.capabilities || [];
+        const hasVoiceAgentCapability = capabilities.includes('voice-agent-settings');
+        setHasAccess(hasVoiceAgentCapability);
+
+        // Try to fetch voice agent settings regardless of capability
+        // This allows showing the "View more" button even without access
         const res = await fetch(`${getApiBaseUrl()}/api/voice-agent/settings`, {
           headers: {
             "Authorization": `Bearer ${safeStorage.getItem("auth_token")}`
@@ -25,7 +38,11 @@ export function VoiceAgentHighlights() {
           // Extract data from the response wrapper
           setData(json.data || json);
         }
-      } catch (err) {}
+      } catch (err) {
+        // Silently fail - still show the card with View more button
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     load();
@@ -45,8 +62,22 @@ export function VoiceAgentHighlights() {
 
       <CardContent className="space-y-4 text-sm">
 
-        {!data ? (
+        {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : !hasAccess ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="p-3 bg-yellow-100 rounded-full mb-3">
+              <Sparkles className="h-5 w-5 text-yellow-600" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Access Required</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              You don't have access to Voice Agent settings yet
+            </p>
+            {/* View more button - Only show when no access */}
+          
+          </div>
+        ) : !data ? (
+          <p className="text-sm text-muted-foreground">No settings configured</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -102,20 +133,19 @@ export function VoiceAgentHighlights() {
               </div>
             </div>
 
+  <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => window.location.href = "/settings?tab=api"}
+              >
+                View more →
+              </Button>
+            </div>
           </div>
+          
         )}
-
-        {/* Footer Button */}
-        <div className="flex justify-end pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            onClick={() => window.location.href = "/settings?tab=API"}
-          >
-            View more →
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

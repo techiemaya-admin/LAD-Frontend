@@ -3,6 +3,63 @@
 import React, { useState } from 'react';
 import { Calculator, DollarSign } from 'lucide-react';
 
+interface SliderRowProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  formatValue?: (value: number) => string;
+  helperText?: string;
+}
+
+const SliderRow: React.FC<SliderRowProps> = ({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  formatValue,
+  helperText
+}) => {
+  const getSliderBackground = (val: number, minVal: number, maxVal: number) => {
+    const percentage = ((val - minVal) / (maxVal - minVal)) * 100;
+    return `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${percentage}%, #E5E7EB ${percentage}%, #E5E7EB 100%)`;
+  };
+
+  const displayValue = formatValue ? formatValue(value) : value.toLocaleString();
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
+          style={{ background: getSliderBackground(value, min, max) }}
+        />
+        <span className="text-lg font-semibold text-gray-900 min-w-[5rem] text-right tabular-nums">
+          {displayValue}
+        </span>
+      </div>
+      {helperText && (
+        <p className="text-xs text-gray-500 leading-tight">
+          {helperText}
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const UsageCalculator: React.FC = () => {
   const [callsPerMonth, setCallsPerMonth] = useState(1000);
   const [callLength, setCallLength] = useState(1);
@@ -41,12 +98,6 @@ export const UsageCalculator: React.FC = () => {
   };
 
   const costs = calculateCosts();
-
-  // Calculate percentage for gradient fill
-  const getSliderBackground = (value: number, min: number, max: number) => {
-    const percentage = ((value - min) / (max - min)) * 100;
-    return `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${percentage}%, #E5E7EB ${percentage}%, #E5E7EB 100%)`;
-  };
 
   return (
     <div className="py-16 bg-white">
@@ -108,99 +159,47 @@ export const UsageCalculator: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Controls */}
-          <div className="space-y-8">
-            {/* Calls per month */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Calls per month
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="100"
-                  value={callsPerMonth}
-                  onChange={(e) => setCallsPerMonth(Number(e.target.value))}
-                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer slider"
-                  style={{ background: getSliderBackground(callsPerMonth, 0, 10000) }}
-                />
-                <span className="text-lg font-semibold text-gray-900 w-20 text-right">
-                  {callsPerMonth.toLocaleString()}
-                </span>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <SliderRow
+              label="Calls per month"
+              value={callsPerMonth}
+              min={0}
+              max={10000}
+              step={100}
+              onChange={setCallsPerMonth}
+            />
 
-            {/* Call length */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Call length (mins)
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="30"
-                  step="1"
-                  value={callLength}
-                  onChange={(e) => setCallLength(Number(e.target.value))}
-                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer slider"
-                  style={{ background: getSliderBackground(callLength, 1, 30) }}
-                />
-                <span className="text-lg font-semibold text-gray-900 w-20 text-right">
-                  {callLength}
-                </span>
-              </div>
-            </div>
+            <SliderRow
+              label="Call length (mins)"
+              value={callLength}
+              min={1}
+              max={30}
+              step={1}
+              onChange={setCallLength}
+            />
 
-            {/* Messages per month */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                WhatsApp messages per month
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="100"
-                  value={messagesPerMonth}
-                  onChange={(e) => setMessagesPerMonth(Number(e.target.value))}
-                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer slider"
-                  style={{ background: getSliderBackground(messagesPerMonth, 0, 10000) }}
-                />
-                <span className="text-lg font-semibold text-gray-900 w-20 text-right">
-                  {messagesPerMonth.toLocaleString()}
-                </span>
-              </div>
-            </div>
+            <SliderRow
+              label="WhatsApp messages per month"
+              value={messagesPerMonth}
+              min={0}
+              max={10000}
+              step={100}
+              onChange={setMessagesPerMonth}
+            />
 
-            {/* Lead Credits */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lead Credits per month
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="100"
-                  value={leadCredits}
-                  onChange={(e) => setLeadCredits(Number(e.target.value))}
-                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer slider"
-                  style={{ background: getSliderBackground(leadCredits, 0, 10000) }}
-                />
-                <span className="text-lg font-semibold text-gray-900 w-20 text-right">
-                  {leadCredits.toLocaleString()}
-                </span>
-              </div>
-              {leadCredits > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Can extract up to {costs.companiesExtractable.toLocaleString()} companies or {costs.decisionMakersExtractable} decision makers
-                </p>
-              )}
-            </div>
+            <SliderRow
+              label="Lead Credits per month"
+              value={leadCredits}
+              min={0}
+              max={10000}
+              step={100}
+              onChange={setLeadCredits}
+              helperText={
+                leadCredits > 0
+                  ? `Can extract up to ${costs.companiesExtractable.toLocaleString()} companies or ${costs.decisionMakersExtractable} decision makers`
+                  : undefined
+              }
+            />
           </div>
 
           {/* Cost Breakdown */}
