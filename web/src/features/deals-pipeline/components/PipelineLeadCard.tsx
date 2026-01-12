@@ -291,10 +291,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   }, []);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Critical: Don't disable sortable - use handle strategy instead to prevent re-initialization issues
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
     data: { type: 'lead', lead },
-    disabled: isPreview || isDetailsOpen
+    disabled: isPreview // Only disable for preview, NOT for dialog state
   });
 
   const style: React.CSSProperties = {
@@ -356,8 +357,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
   }, [isDetailsOpen, globalActiveTab]);
 
-  // Fetch users from API
+  // Fetch users from API only once and only when needed
   useEffect(() => {
+    // Skip if users are already loaded from Redux or component state
+    if (users.length > 0 || globalTeamMembers.length > 0 || usersLoading) {
+      return;
+    }
+
     const loadUsers = async () => {
       try {
         setUsersLoading(true);
@@ -374,7 +380,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     };
 
     loadUsers();
-  }, []);
+  }, []); // Only run once on mount
 
   // Load data for specific tab
   const loadTabData = async (tabIndex: number) => {
@@ -434,23 +440,35 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
 
 // Fetch comments
 
-  const handleCardClick = (event?: React.MouseEvent) => {
+  // Memoize click handler to prevent stale closures and unnecessary re-renders
+  const handleCardClick = useCallback((event?: React.MouseEvent) => {
     if (!event) return;
+    
+    // Prevent click if event happened during drag
+    if (isDragging || isDraggable) {
+      return;
+    }
+    
     const target = event.target as HTMLElement;
+    
+    // Only ignore clicks on interactive elements (buttons, dropdowns) and drag handle
     if (
-      isDragging ||
-      isDraggable ||
       target.closest('[data-ignore-card-click]') ||
       target.closest('[role="dialog"]') ||
-      target.closest('.drag-handle')
+      target.closest('.drag-handle') ||
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'A' ||
+      target.tagName === 'INPUT'
     ) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
+    
+    console.log('[PipelineLeadCard] Card clicked, opening details for lead:', lead.id);
     setDetailsOpen(true);
-  };
+  }, [isDragging, isDraggable, lead.id]);
 
   const handleDeleteDialogClose = () => {
     setDeleteDialogOpen(false);
@@ -1972,17 +1990,19 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      onClick={handleCardClick}
-      onKeyDown={handleKeyPress}
-      onTouchStart={handleTouchStart}
-      role="button"
-      tabIndex={0}
+      // CRITICAL: Do NOT spread {...listeners} here - it blocks ALL click events
+      role="presentation"
     >
       <div
         className={`relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition ${
-          isDragging ? 'opacity-50' : 'hover:shadow-md'
+          isDragging ? 'opacity-50 cursor-grabbing' : 'hover:shadow-md'
         }`}
+        // Enable pointer events on card for clicks
+        style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
+        onClick={handleCardClick}
+        onKeyDown={handleKeyPress}
+        role="button"
+        tabIndex={0}
       >
         <div className="absolute top-0 left-0 h-1 w-full rounded-t-2xl bg-gray-100 overflow-hidden">
           <div
@@ -1992,11 +2012,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         </div>
 
         <div className="flex items-start gap-3">
+          {/* CRITICAL: Apply drag listeners ONLY to drag handle */}
           <button
             type="button"
             data-ignore-card-click
-            className="drag-handle text-gray-400 hover:text-gray-600 mt-1"
+            className="drag-handle text-gray-400 hover:text-gray-600 mt-1 cursor-grab active:cursor-grabbing"
+            {...listeners}
             onMouseDown={handleDragHandleMouseDown}
+            style={{ touchAction: 'none' }}
           >
             <GripVertical className="h-4 w-4" />
           </button>
@@ -2222,4 +2245,19 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   );
 };
 
-export default PipelineLeadCard; 
+export default React.memo(PipelineLeadCard, (prevProps, nextProps) => {
+  // Comprehensive comparison to prevent unnecessary re-renders
+  return (
+    prevProps.lead.id === nextProps.lead.id &&
+    prevProps.lead.status === nextProps.lead.status &&
+    prevProps.lead.priority === nextProps.lead.priority &&
+    prevProps.lead.stage === nextProps.lead.stage &&
+    prevProps.lead.name === nextProps.lead.name &&
+    prevProps.lead.amount === nextProps.lead.amount &&
+    prevProps.lead.company === nextProps.lead.company &&
+    prevProps.hideCard === nextProps.hideCard &&
+    prevProps.isPreview === nextProps.isPreview &&
+    prevProps.externalDetailsOpen === nextProps.externalDetailsOpen
+    // Note: activeCardId intentionally excluded - handled by parent's activeCard state
+  );
+}); 

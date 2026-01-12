@@ -1,10 +1,11 @@
 // PipelineStageColumn.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
 import PipelineLeadCard from './PipelineLeadCard';
@@ -13,7 +14,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { updateStage, deleteStage } from '@/services/pipelineService';
 import { useDispatch } from 'react-redux';
 import { Stage } from '../store/slices/pipelineSlice';
-import { Lead } from '@/components/leads/types';
+import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
 
 interface PipelineStageColumnProps {
@@ -32,6 +33,9 @@ interface PipelineStageColumnProps {
     onDeleteStageAction?: (stageKey: string) => Promise<void>;
   };
   allStages?: Array<Stage & { name?: string; label?: string; order?: number; display_order?: number; key?: string; id?: string }>;
+  compactView?: boolean;
+  showCardCount?: boolean;
+  showTotalValue?: boolean;
 }
 
 interface EditFormData {
@@ -52,9 +56,15 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
   onEdit,
   onDelete,
   handlers,
-  allStages = []
+  allStages = [],
+  compactView = false,
+  showCardCount = true,
+  showTotalValue = true
 }) => {
   const cleanDroppableId = String(droppableId);
+  
+  // Debug log to check props
+  console.log('[PipelineStageColumn]', stage.name, 'showCardCount:', showCardCount, 'showTotalValue:', showTotalValue, 'compactView:', compactView);
 
   // Provide stage metadata on the droppable so handleDragEnd can read it
   const { setNodeRef, isOver } = useDroppable({
@@ -73,13 +83,36 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
   });
   const [error, setError] = useState<string>('');
 
-  // hide card being dragged from original column
+  // Memoize visible leads to prevent unnecessary recalculation
   const visibleLeads = useMemo(
     () => (activeCardId ? leads.filter((lead) => String(lead.id) !== String(activeCardId)) : leads),
     [leads, activeCardId]
   );
 
-  const handleEditClick = (): void => {
+  // Calculate total value for the stage
+  const totalValue = useMemo(() => {
+    return leads.reduce((sum, lead) => {
+      const amount = typeof lead.amount === 'number' ? lead.amount : parseFloat(String(lead.amount || 0));
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  }, [leads]);
+
+  // Format currency
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Memoize sortable items array
+  const sortableItems = useMemo(
+    () => visibleLeads.map((l) => String(l.id)),
+    [visibleLeads]
+  );
+
+  const handleEditClick = useCallback((): void => {
     setEditFormData({
       stageName: stage.name || stage.label || '',
       position: '',
@@ -87,11 +120,11 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
     });
     setEditDialogOpen(true);
     setError('');
-  };
+  }, [stage.name, stage.label]);
 
-  const handleDeleteClick = (): void => {
+  const handleDeleteClick = useCallback((): void => {
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const handleEditStage = async (): Promise<void> => {
     if (!editFormData.stageName.trim()) {
@@ -173,9 +206,23 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
         }}
       >
         <div className="flex justify-between items-center mb-2 min-h-[32px]">
-          <h3 className="text-lg font-semibold text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis max-w-[90%]">
-            {stage.name || stage.label}
-          </h3>
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis">
+                {stage.name || stage.label}
+              </h3>
+              {showCardCount && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                  {leads.length}
+                </Badge>
+              )}
+            </div>
+            {showTotalValue && totalValue > 0 && (
+              <p className="text-xs text-gray-600">
+                {formatCurrency(totalValue)}
+              </p>
+            )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -200,8 +247,8 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
         </div>
 
         {/* SortableContext for leads inside the column */}
-        <SortableContext items={visibleLeads.map((l) => String(l.id))} strategy={verticalListSortingStrategy}>
-          <div className="min-h-2 flex-grow">
+        <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
+          <div className="min-h-2 flex-grow space-y-3">
             {visibleLeads.map((lead) => (
               <PipelineLeadCard
                 key={lead.id}
@@ -212,6 +259,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
                 onStatusChange={onStatusChange}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                compactMode={compactView}
               />
             ))}
           </div>
@@ -325,5 +373,21 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
   );
 };
 
-export default PipelineStageColumn;
+// Wrap in React.memo with custom comparison to prevent unnecessary re-renders
+export default React.memo(PipelineStageColumn, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.stage.key === nextProps.stage.key &&
+    prevProps.stage.name === nextProps.stage.name &&
+    prevProps.stage.label === nextProps.stage.label &&
+    prevProps.leads.length === nextProps.leads.length &&
+    prevProps.activeCardId === nextProps.activeCardId &&
+    prevProps.droppableId === nextProps.droppableId &&
+    prevProps.compactView === nextProps.compactView &&
+    prevProps.showCardCount === nextProps.showCardCount &&
+    prevProps.showTotalValue === nextProps.showTotalValue &&
+    // Deep compare lead IDs to detect if leads array actually changed
+    JSON.stringify(prevProps.leads.map(l => l.id)) === JSON.stringify(nextProps.leads.map(l => l.id))
+  );
+});
 

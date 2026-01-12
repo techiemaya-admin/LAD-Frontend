@@ -7,7 +7,8 @@ import {
   Trash2, 
   CheckCircle,
   XCircle,
-  ChevronDown
+  ChevronDown,
+  Eye, EyeOff 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../../utils/storage';
@@ -51,6 +52,8 @@ export const TeamManagement: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCapabilitiesDropdown, setShowCapabilitiesDropdown] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const [newUser, setNewUser] = useState({
     name: '',
@@ -401,15 +404,34 @@ export const TeamManagement: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="••••••••"
-                />
-              </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Password
+  </label>
+
+  <div className="relative">
+    <input
+      type={showPassword ? 'text' : 'password'}
+      value={newUser.password}
+      onChange={(e) =>
+        setNewUser({ ...newUser, password: e.target.value })
+      }
+      placeholder="••••••••"
+      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg
+                 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword((prev) => !prev)}
+      className="absolute inset-y-0 right-3 flex items-center text-gray-500
+                 hover:text-gray-700 focus:outline-none"
+      aria-label={showPassword ? 'Hide password' : 'Show password'}
+    >
+      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  </div>
+</div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
                 <input
@@ -436,43 +458,61 @@ export const TeamManagement: React.FC = () => {
               </div>
               <div className="relative capabilities-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Page Access</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between bg-white hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-sm text-gray-700">
-                      {newUser.capabilities.length === 0
-                        ? 'Select pages...'
-                        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </button>
-                  {showCapabilitiesDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      <div className="p-2 space-y-1">
-                        {PAGE_CAPABILITIES.map(cap => (
-                          <label key={cap.key} className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={newUser.capabilities.includes(cap.key)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewUser({ ...newUser, capabilities: [...newUser.capabilities, cap.key] });
-                                } else {
-                                  setNewUser({ ...newUser, capabilities: newUser.capabilities.filter(c => c !== cap.key) });
-                                }
-                              }}
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">{cap.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+               <div className="relative">
+  <button
+    type="button"
+    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
+    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between
+      bg-white transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+      ${showCapabilitiesDropdown ? 'border-blue-500' : 'border-gray-300'}
+    `}
+  >
+    <span className="text-sm text-gray-700">
+      {newUser.capabilities.length === 0
+        ? 'Select pages...'
+        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
+    </span>
+    <ChevronDown
+      className={`w-4 h-4 text-gray-500 transition-transform ${
+        showCapabilitiesDropdown ? 'rotate-180' : ''
+      }`}
+    />
+  </button>
+
+  {showCapabilitiesDropdown && (
+    <div
+      className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500
+                 rounded-lg shadow-lg max-h-56 overflow-y-auto"
+    >
+      <div className="py-2">
+        {PAGE_CAPABILITIES.map(cap => (
+          <label
+            key={cap.key}
+            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50
+                       cursor-pointer transition-colors"
+          >
+            <input
+              type="checkbox"
+              checked={newUser.capabilities.includes(cap.key)}
+              onChange={(e) => {
+                setNewUser({
+                  ...newUser,
+                  capabilities: e.target.checked
+                    ? [...newUser.capabilities, cap.key]
+                    : newUser.capabilities.filter(c => c !== cap.key),
+                });
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded
+                         focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">{cap.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
