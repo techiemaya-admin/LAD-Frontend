@@ -1375,12 +1375,7 @@ const PipelineBoard: React.FC = () => {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              {console.log('[PipelineBoard] Passing to KanbanView:', { 
-                showCardCount: pipelineSettings.showCardCount, 
-                showTotalValue: pipelineSettings.showStageValue,
-                compactView: pipelineSettings.compactView,
-                enableDragAndDrop: pipelineSettings.enableDragAndDrop
-              })}
+
               <PipelineKanbanView
                 stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 leadsByStage={currentLeadsByStage}
