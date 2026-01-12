@@ -20,17 +20,34 @@ import type {
 function getBackendUrl(): string {
   const url = (
     process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.REACT_APP_API_URL
   );
   
-  // PRODUCTION: Fail fast if env var missing
-  if (process.env.NODE_ENV === 'production' && !url) {
+  // PRODUCTION: Fail fast if env var missing (but only at runtime, not during build)
+  if (process.env.NODE_ENV === 'production' && !url && typeof window !== 'undefined') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL or NEXT_PUBLIC_API_URL is required in production');
   }
   
   // DEVELOPMENT: Use localhost fallback
-  return url || 'http://localhost:3000';
+  return url || 'http://localhost:3004';
+}
+
+/**
+ * Get authorization headers from browser storage
+ */
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    return {};
+  }
 }
 
 /**
@@ -46,6 +63,7 @@ export async function fetchICPQuestions(
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
   });
@@ -71,6 +89,7 @@ export async function fetchICPQuestionByStep(
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
   });
@@ -99,6 +118,7 @@ export async function processICPAnswer(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
     body: JSON.stringify({

@@ -1301,7 +1301,7 @@ const PipelineBoard: React.FC = () => {
               priority: lead.priority ?? undefined,
               source: lead.source ?? undefined,
               amount: lead.amount ?? undefined, // Convert null to undefined for amount
-              assignee: lead.assignee ?? undefined,
+              assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
             }));
             
             return (

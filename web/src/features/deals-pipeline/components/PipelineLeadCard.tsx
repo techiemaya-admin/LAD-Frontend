@@ -340,7 +340,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   // Initialize Redux editFormData when lead changes
   useEffect(() => {
     if (lead) {
-      dispatch(resetLeadCardEditFormData(lead));
+      // Convert Lead to Partial<Lead> with proper type conversions
+      const leadForForm: Partial<Lead> = {
+        ...lead,
+        amount: typeof lead.amount === 'string' ? parseFloat(lead.amount) || null : lead.amount
+      };
+      dispatch(resetLeadCardEditFormData(leadForForm));
     }
   }, [lead, dispatch]);
 

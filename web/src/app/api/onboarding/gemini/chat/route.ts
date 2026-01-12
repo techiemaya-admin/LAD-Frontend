@@ -5,17 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// Use ICP feature backend for AI chat (port 3001)
-// Fallback to main backend if ICP backend not available
-const ICP_BACKEND_URL = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
-                        (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '');
-const MAIN_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
-const BACKEND_URL = ICP_BACKEND_URL; // Use ICP backend for chat
-
-// Validate backend URL in production
-if (!BACKEND_URL && process.env.NODE_ENV === 'production') {
-  throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
-}
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 
+                    process.env.NEXT_PUBLIC_BACKEND_URL || 
+                    process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
+                    'http://localhost:3004';
 
 export async function POST(request: NextRequest) {
   try {

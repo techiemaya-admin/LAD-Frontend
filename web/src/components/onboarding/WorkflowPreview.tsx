@@ -21,8 +21,8 @@ import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import TemplateInput from './TemplateInput';
 
-// Register node types
-const nodeTypes: NodeTypes = {
+// Register node types (defined outside component to prevent recreation on each render)
+const NODE_TYPES: NodeTypes = {
   start: CustomNode,
   end: CustomNode,
   linkedin_visit: CustomNode,
@@ -235,7 +235,7 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            nodeTypes={nodeTypes}
+            nodeTypes={NODE_TYPES}
             fitView
             attributionPosition="bottom-left"
             defaultEdgeOptions={{ animated: true, style: { stroke: '#7c3aed', strokeWidth: 2 } }}

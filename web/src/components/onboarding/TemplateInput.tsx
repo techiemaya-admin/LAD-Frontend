@@ -7,6 +7,7 @@ interface TemplateInputProps {
   onSubmit: (template: string) => void;
   placeholder?: string;
   label?: string;
+  onSkip?: () => void;
 }
 
 export default function TemplateInput({

@@ -25,8 +25,8 @@ import StepSettings from '../../features/campaigns/components/StepSettings';
 import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
 
-// Register node types
-const nodeTypes: NodeTypes = {
+// Register node types (defined outside component to prevent recreation on each render)
+const NODE_TYPES: NodeTypes = {
   start: CustomNode,
   end: CustomNode,
   linkedin_visit: CustomNode,
@@ -85,8 +85,6 @@ export default function Screen3ManualEditor() {
         type: step.type,
         position: { x: 400, y: 150 + index * 150 },
         data: {
-          title: step.title,
-          type: step.type,
           description: step.description,
           ...step,
         },
@@ -125,8 +123,6 @@ export default function Screen3ManualEditor() {
           type: step.type as StepType,
           position: { x: 400, y: 150 + index * 150 },
           data: {
-            title: step.title,
-            type: step.type,
             description: step.description,
             ...step,
           },
@@ -634,7 +630,7 @@ export default function Screen3ManualEditor() {
             onNodesDelete={onNodesDelete}
             onDragOver={onDragOver}
             onDrop={onDrop}
-            nodeTypes={nodeTypes}
+            nodeTypes={NODE_TYPES}
             fitView
             attributionPosition="bottom-left"
           >

@@ -18,7 +18,8 @@ const getBaseUrl = (): string => {
   }
   
   // Only allow localhost fallback in development
-  if (process.env.NODE_ENV === 'production') {
+  // Check for browser environment to avoid build-time errors
+  if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL environment variable is required in production');
   }
   
