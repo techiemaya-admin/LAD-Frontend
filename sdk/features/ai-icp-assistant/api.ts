@@ -31,7 +31,7 @@ function getBackendUrl(): string {
   }
   
   // DEVELOPMENT: Use localhost fallback
-  return url || 'http://localhost:3004';
+  return url || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 }
 
 /**

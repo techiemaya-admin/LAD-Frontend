@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 
                     process.env.NEXT_PUBLIC_BACKEND_URL || 
                     process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-                    'http://localhost:3004';
+                    'https://lad-backend-develop-741719885039.us-central1.run.app';
 
 export async function POST(request: NextRequest) {
   try {

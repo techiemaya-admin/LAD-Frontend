@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/app-toaster";
 import { logger } from "@/lib/logger";
@@ -121,6 +121,10 @@ export default function MakeCallContent() {
 
   // User ID (UUID) - backend uses JWT req.user.id, so this is mainly for local state
   const [voiceAgentUserId, setVoiceAgentUserId] = useState<string | null>(null);
+
+  // Refs to track last processed data and prevent infinite loops
+  const lastProcessedNumbersRef = useRef<string>("");
+  const lastProcessedAgentsRef = useRef<string>("");
 
   // SDK Hooks for fetching numbers and agents
   const { data: availableNumbers = [], isLoading: numbersLoading, error: numbersError } = useUserAvailableNumbers();
@@ -477,16 +481,21 @@ export default function MakeCallContent() {
         assignedAgentId: n.assignedAgentId,
       })) as NumberItem[];
 
-      setNumbers(formatted);
+      // Only update if numbers actually changed
+      const currentHash = `${formatted.length}-${formatted[0]?.id || ''}`;
+      if (currentHash !== lastProcessedNumbersRef.current) {
+        lastProcessedNumbersRef.current = currentHash;
+        setNumbers(formatted);
 
-      logger.debug("[make-call] loaded available numbers", { count: formatted.length });
+        logger.debug("[make-call] loaded available numbers", { count: formatted.length });
 
-      if (formatted.length) {
-        setSelectedNumberId((prev) => prev ?? formatted[0].id);
-        if (formatted[0].assignedAgentId) {
-          setAgentId(
-            (prev) => prev ?? String(formatted[0].assignedAgentId)
-          );
+        if (formatted.length) {
+          setSelectedNumberId((prev) => prev ?? formatted[0].id);
+          if (formatted[0].assignedAgentId) {
+            setAgentId(
+              (prev) => prev ?? String(formatted[0].assignedAgentId)
+            );
+          }
         }
       }
     }
@@ -509,34 +518,42 @@ export default function MakeCallContent() {
           voice_sample_url: v.voice_sample_url || null,
         })
       );
-      setAgents(voiceAgents);
 
-      logger.debug("[make-call] loaded available agents", { count: voiceAgents.length });
+      // Only update if agents actually changed
+      const currentHash = `${voiceAgents.length}-${voiceAgents[0]?.id || ''}`;
+      if (currentHash !== lastProcessedAgentsRef.current) {
+        lastProcessedAgentsRef.current = currentHash;
+        setAgents(voiceAgents);
 
-      if (!agentId && voiceAgents.length) {
-        setAgentId(voiceAgents[0].id);
-      }
+        logger.debug("[make-call] loaded available agents", { count: voiceAgents.length });
 
-      const accents = Array.from(
-        new Set(voiceAgents.map((a) => a.accent).filter(Boolean))
-      ) as string[];
-      setUniqueAccents(accents);
-      if (accents.length > 0 && !selectedAccentId) {
-        setSelectedAccentId(accents[0]);
+        if (!agentId && voiceAgents.length) {
+          setAgentId(voiceAgents[0].id);
+        }
+
+        const accents = Array.from(
+          new Set(voiceAgents.map((a) => a.accent).filter(Boolean))
+        ) as string[];
+        setUniqueAccents(accents);
+        if (accents.length > 0 && !selectedAccentId) {
+          setSelectedAccentId(accents[0]);
+        }
       }
     }
 
     if (agentsError) {
       logger.warn("[make-call] Failed to load agents (non-fatal)", { error: agentsError });
     }
-  }, [voiceAgentUserId, availableNumbers, availableAgents, numbersError, agentsError]);
+  }, [voiceAgentUserId, availableNumbers, availableAgents, numbersError, agentsError, agentId, selectedAccentId]);
 
   // Keep agent selection in sync with chosen number (if assigned)
   useEffect(() => {
     if (!selectedNumberId) return;
     const num = numbers.find((n) => n.id === selectedNumberId);
-    if (num?.assignedAgentId) setAgentId(String(num.assignedAgentId));
-  }, [selectedNumberId, numbers]);
+    if (num?.assignedAgentId && agentId !== String(num.assignedAgentId)) {
+      setAgentId(String(num.assignedAgentId));
+    }
+  }, [selectedNumberId, numbers, agentId]);
 
   // Sync bulkEntries → localStorage
   useEffect(() => {

@@ -23,7 +23,7 @@ const getBaseUrl = (): string => {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL environment variable is required in production');
   }
   
-  return 'http://localhost:3001';
+  return 'https://lad-backend-develop-741719885039.us-central1.run.app';
 };
 
 export const API_CONFIG = {
