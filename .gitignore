@@ -1,0 +1,72 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+*.test.log
+test-results/
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Test artifacts (from tests/ directory)
+/tmp/test_token.txt
+*.test.json
+
+# Documentation and scripts at root level
+/*.md
+/*.sh
+
+# Documentation folder
+/lad-docs/
+
+# Test scripts
+/tests/
+
+test-output/
+
+# Backend specific
+backend/uploads/
+backend/logs/
+
+# Don't ignore tests directory itself (we want it in git)
+# But exclude test results
+!tests/
+tests/*.log
+tests/test-results/

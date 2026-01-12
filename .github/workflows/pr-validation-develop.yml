@@ -1,0 +1,37 @@
+name: PR Validation – Develop
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Path Guard – Architecture Rules
+        run: |
+          bash scripts/path-guard.sh
+
+      - name: Backend Tests
+        run: |
+          cd backend
+          npm ci
+          npm test
+
+      - name: SDK Tests
+        run: |
+          cd frontend/sdk
+          npm ci
+          npm test
