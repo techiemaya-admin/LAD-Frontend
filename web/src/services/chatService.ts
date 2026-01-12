@@ -10,8 +10,8 @@ import {
 import { addNotification } from '../store/slices/notificationSlice';
 
 // Use backend URL directly
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3004';
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3004';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 let socket: Socket | null = null;
 
 interface Conversation {
@@ -37,15 +37,6 @@ interface Message {
   };
   message_status?: string;
   [key: string]: unknown;
-}
-
-interface NotificationPayload {
-  id: string;
-  conversationId: string;
-  content?: string;
-  senderName?: string;
-  timestamp: string | number;
-  message?: Message;
 }
 
 interface ConversationActivityPayload {
@@ -160,16 +151,13 @@ class ChatService {
         // Prevent duplicate notifications (by id)
         const existing = notifications.find(n => String(n.id) === notifId);
         if (!existing) {
-          const notificationPayload: NotificationPayload = {
+          store.dispatch(addNotification({
             id: notifId,
             conversationId: conversation_id,
             content: message?.content,
             senderName: message?.sender_name || message?.senderName,
             timestamp: message?.created_at || message?.timestamp || Date.now(),
-            message,
-          };
-          
-          store.dispatch(addNotification(notificationPayload));
+          }));
           logger.debug('Notification dispatched', { notifId });
         } else {
           logger.debug('Duplicate notification ignored', { notifId });
@@ -198,7 +186,6 @@ class ChatService {
               content: message.content || 'Test notification',
               senderName: message.sender_name || 'Test User',
               timestamp: message.created_at || Date.now(),
-              message: message,
             }));
             logger.debug('Created test notification', { notifId });
           }
@@ -443,6 +430,8 @@ class ChatService {
     // Same logic as the conversation:activity event handler
     if (Array.isArray(payload.messages)) {
       logger.debug('Processing messages', { count: payload.messages.length });
+      payload.messages.forEach((msg: Message) => {
+        logger.debug('Processing individual message', {
           id: msg.id || msg._id,
           content: msg.content,
           senderId: msg.human_agent_id,
@@ -476,7 +465,6 @@ class ChatService {
               content: msg.content || 'New message received',
               senderName: msg.sender_name || msg.senderName || 'Unknown User',
               timestamp: msg.created_at || msg.timestamp || Date.now(),
-              message: msg,
             }));
             logger.debug('Notification created', { notifId });
           } else {

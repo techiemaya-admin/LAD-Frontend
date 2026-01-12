@@ -6,7 +6,7 @@ export type User = { id: string | number; email: string; name?: string; [k: stri
 // Use proxy routes when NEXT_PUBLIC_USE_API_PROXY is enabled, otherwise use direct backend URL
 const API_BASE = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true'
   ? ''
-  : (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3004');
+  : (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app');
 
 function getApiUrl(path: string) {
   // Ensure Next.js API routes (auth) hit the same-origin Next server (e.g., :3000)

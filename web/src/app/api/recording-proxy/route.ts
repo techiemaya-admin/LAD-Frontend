@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
           );
         }
 
-        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3004";
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
         const signingEndpoint = `${backendUrl}/api/voice-agent/agents/${agentId}/sample-signed-url`;
 
         const signingResp = await fetch(signingEndpoint, {

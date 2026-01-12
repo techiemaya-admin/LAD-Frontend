@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 
 function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
+  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
   return backendInternal.replace(/\/$/, '');
 }
 

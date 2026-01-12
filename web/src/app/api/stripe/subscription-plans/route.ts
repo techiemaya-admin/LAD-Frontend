@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { cookies } from 'next/headers';
 
-const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3004';
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 
 export async function GET(request: NextRequest) {
   try {
