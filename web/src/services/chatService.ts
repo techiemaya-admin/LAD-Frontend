@@ -102,7 +102,16 @@ class ChatService {
 
   initSocket(): void {
     if (!socket) {
-      socket = io(SOCKET_URL, { transports: ['websocket'] });
+      socket = io(SOCKET_URL, { 
+        transports: ['websocket'],
+        forceNew: true,
+        autoConnect: true,
+        timeout: 20000,
+        secure: true,
+        rejectUnauthorized: false,
+        upgrade: false,
+        rememberUpgrade: false
+      });
       this.socket = socket;
  
       socket.on('connect', () => {

@@ -104,7 +104,14 @@ export default function CallLogsPage() {
   const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
   const socket = useRef(io(socketUrl, { 
     transports: ["websocket"],
-    reconnection: false // Disable reconnection to avoid console spam
+    reconnection: false, // Disable reconnection to avoid console spam
+    forceNew: true,
+    autoConnect: true,
+    timeout: 20000,
+    secure: true,
+    rejectUnauthorized: false,
+    upgrade: false,
+    rememberUpgrade: false
   })).current;
 
   // Pagination
