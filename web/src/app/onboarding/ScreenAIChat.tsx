@@ -181,6 +181,7 @@ export default function ScreenAIChat() {
             icon: 'whatsapp',
           });
           setChannelConnection('whatsapp', true);
+          addAIMessage({ role: 'ai', content: 'Please add a WhatsApp message template on the right panel (or skip).', timestamp: new Date() });
         }
         if (platform.toLowerCase().includes('voice')) {
           addWorkflowStep({
@@ -191,6 +192,7 @@ export default function ScreenAIChat() {
             icon: 'phone',
           });
           setChannelConnection('voiceAgent', true);
+          addAIMessage({ role: 'ai', content: 'Please provide any voice call script or instructions in the right panel (or skip).', timestamp: new Date() });
         }
       });
     }
@@ -227,6 +229,7 @@ export default function ScreenAIChat() {
             channel: 'linkedin',
             icon: 'message',
           });
+          addAIMessage({ role: 'ai', content: 'Please provide a LinkedIn message template on the right panel (or skip).', timestamp: new Date() });
         }
       });
     }
@@ -286,6 +289,7 @@ export default function ScreenAIChat() {
           icon: 'email',
         });
         setChannelConnection('email', true);
+        addAIMessage({ role: 'ai', content: 'Please add an Email template in the right panel (or skip).', timestamp: new Date() });
       }
       if (channels.some((c) => c.toLowerCase().includes('whatsapp'))) {
         steps.push({
@@ -296,6 +300,7 @@ export default function ScreenAIChat() {
           icon: 'whatsapp',
         });
         setChannelConnection('whatsapp', true);
+        addAIMessage({ role: 'ai', content: 'Please add a WhatsApp message template in the right panel (or skip).', timestamp: new Date() });
       }
       
       setWorkflowPreview(steps);
@@ -322,7 +327,7 @@ export default function ScreenAIChat() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-white">
+    <div className="flex w-full h-full bg-white">
       {/* LEFT PANEL - CHAT (60%) */}
       <div className="w-[60%] border-r border-gray-200 flex flex-col">
         {/* Back Button */}

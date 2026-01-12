@@ -5,8 +5,8 @@
 
 class DealsPipelineSDK {
   constructor(config = {}) {
-    this.baseURL = config.baseURL || 'http://localhost:3004/api/deals-pipeline';
-    this.authURL = config.authURL || 'http://localhost:3004/api/auth';
+    this.baseURL = config.baseURL || 'https://lad-backend-develop-741719885039.us-central1.run.app/api/deals-pipeline';
+    this.authURL = config.authURL || 'https://lad-backend-develop-741719885039.us-central1.run.app/api/auth';
     this.timeout = config.timeout || 30000;
     this.token = config.token || null;
     

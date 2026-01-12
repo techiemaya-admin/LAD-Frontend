@@ -1348,7 +1348,7 @@ const PipelineBoard: React.FC = () => {
               priority: lead.priority ?? undefined,
               source: lead.source ?? undefined,
               amount: lead.amount ?? undefined, // Convert null to undefined for amount
-               assignee: typeof lead.assignee === 'string' ? lead.assignee : undefined, // Convert number to undefined
+              assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
             }));
             
             return (
@@ -1375,12 +1375,7 @@ const PipelineBoard: React.FC = () => {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              {console.log('[PipelineBoard] Passing to KanbanView:', { 
-                showCardCount: pipelineSettings.showCardCount, 
-                showTotalValue: pipelineSettings.showStageValue,
-                compactView: pipelineSettings.compactView,
-                enableDragAndDrop: pipelineSettings.enableDragAndDrop
-              })}
+
               <PipelineKanbanView
                 stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 leadsByStage={currentLeadsByStage}

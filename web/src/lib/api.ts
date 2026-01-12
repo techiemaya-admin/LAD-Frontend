@@ -3,7 +3,7 @@ import { safeStorage } from "@/utils/storage";
 import { logger } from "@/lib/logger";
 
 // Use backend URL directly
-const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3004").replace(/\/+$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app").replace(/\/+$/, "");
 
 function authHeaders() {
   if (typeof window === "undefined") {

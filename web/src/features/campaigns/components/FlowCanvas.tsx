@@ -19,7 +19,8 @@ import { useCampaignStore } from '../store/campaignStore';
 import CustomNode from './nodes/CustomNode';
 
 // Register all node types - React Flow uses the 'type' field from nodes
-const nodeTypes: NodeTypes = {
+// Defined outside component to prevent recreation on each render
+const NODE_TYPES: NodeTypes = {
   start: CustomNode,
   end: CustomNode,
   linkedin_visit: CustomNode,
@@ -116,7 +117,7 @@ export default function FlowCanvas() {
   );
 
   const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: ReactFlowNode) => {
+    (_: React.MouseEvent, node: Node) => {
       selectStep(node.id);
     },
     [selectStep]
@@ -136,7 +137,7 @@ export default function FlowCanvas() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
-        nodeTypes={nodeTypes}
+        nodeTypes={NODE_TYPES}
         fitView
         attributionPosition="bottom-left"
         defaultEdgeOptions={{ animated: true, style: { stroke: '#7c3aed', strokeWidth: 2 } }}

@@ -4,6 +4,10 @@ import React from 'react';
 import OnboardingLayout from './OnboardingLayout';
 
 export default function OnboardingPage() {
-  return <OnboardingLayout />;
+  return (
+    <div className="w-full h-screen overflow-hidden">
+      <OnboardingLayout />
+    </div>
+  );
 }
 

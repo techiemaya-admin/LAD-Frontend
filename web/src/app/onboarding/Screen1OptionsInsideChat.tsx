@@ -16,7 +16,7 @@ export default function Screen1OptionsInsideChat() {
   };
 
   return (
-    <div className="flex flex-col w-full h-screen bg-white items-center justify-center">
+    <div className="flex flex-col w-full h-full bg-white items-center justify-center">
       {/* Options and Chat Bar - Centered in middle of screen */}
       <div className="w-full max-w-6xl px-8 space-y-6">
         {/* Option Cards - Side by side, reduced size */}

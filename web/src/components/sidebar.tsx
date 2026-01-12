@@ -266,7 +266,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
-          "bg-sidebar/95 backdrop-blur-2xl",
+          "bg-white",
           "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
           "overflow-hidden fixed left-0 top-0 z-50",
           isExpanded ? "w-64" : "w-16"
@@ -320,7 +320,7 @@ export function Sidebar() {
                     "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
                     isActive
                       ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-                      : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-md group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]"
+                      : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]"
                   )}
                 />
 
@@ -338,11 +338,12 @@ export function Sidebar() {
                 >
                   <Icon
                     className={cn(
-                      "h-5 w-5 transition-colors duration-300",
+                      "h-5 w-5 transition-colors duration-300 relative z-10",
                       isActive
                         ? "text-white"
-                        : "text-sidebar-foreground group-hover:text-black"
+                        : "text-gray-900 group-hover:text-black"
                     )}
+                    style={!isActive ? { color: '#1a1a1a !important' } : undefined}
                   />
                 </div>
 
@@ -352,8 +353,9 @@ export function Sidebar() {
                     className={cn(
                       "relative z-10 text-sm font-medium whitespace-nowrap ml-3",
                       "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
-                      isActive ? "text-white group-hover:text-white" : "text-sidebar-foreground/90 group-hover:text-black"
+                      isActive ? "text-white group-hover:text-white" : "text-gray-900 group-hover:text-black"
                     )}
+                    style={!isActive ? { color: '#1a1a1a !important' } : undefined}
                   >
                     {n.label}
                   </span>
@@ -373,7 +375,7 @@ export function Sidebar() {
                     "whitespace-nowrap z-[100] top-0"
                   )}
                 >
-                  <span className="block text-xs font-medium text-sidebar-foreground">
+                  <span className="block text-xs font-medium text-gray-900" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
                     {n.label}
                   </span>
                   {n.details && (
@@ -415,7 +417,7 @@ export function Sidebar() {
               {isExpanded && (
                 <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
                   <div className="flex flex-col items-start justify-center min-w-0 flex-1">
-                    <div className="text-sm text-sidebar-foreground font-medium leading-tight truncate w-full">
+                    <div className="text-sm text-gray-900 font-medium leading-tight truncate w-full" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
                       {displayName}
                     </div>
                     <div className="text-xs text-muted-foreground/80 leading-tight">

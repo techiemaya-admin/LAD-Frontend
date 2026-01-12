@@ -28,7 +28,7 @@ export class DealsPipelineAPI {
   private baseUrl: string;
   private headers: HeadersInit;
 
-  constructor(baseUrl: string = 'http://localhost:3004/api/deals-pipeline', headers: HeadersInit = {}) {
+  constructor(baseUrl: string = 'https://lad-backend-develop-741719885039.us-central1.run.app/api/deals-pipeline', headers: HeadersInit = {}) {
     this.baseUrl = baseUrl;
     this.headers = {
       'Content-Type': 'application/json',

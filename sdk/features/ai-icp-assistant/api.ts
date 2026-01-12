@@ -1,76 +1,60 @@
 /**
- * ICP Questions API Service
+ * AI ICP Assistant API Service
  * 
- * Fetches ICP questions from backend API (database-driven).
- * NO hardcoded ICP text in frontend.
+ * Raw API calls for ICP onboarding.
+ * No state logic, no UI logic - only HTTP communication.
  */
 
-export interface ICPQuestion {
-  id: string;
-  stepIndex: number;
-  title?: string;
-  question: string;
-  helperText?: string;
-  category: string;
-  intentKey: string;
-  questionType: 'text' | 'select' | 'multi-select' | 'boolean';
-  options?: Array<{ label: string; value: string }>;
-  validationRules?: {
-    minLength?: number;
-    maxLength?: number;
-    required?: boolean;
-    maxItems?: number;
-  };
-  isActive: boolean;
-  displayOrder?: number;
-}
+import type {
+  ICPQuestion,
+  ICPQuestionsResponse,
+  ICPAnswerRequest,
+  ICPAnswerResponse,
+} from './types';
 
-export interface ICPQuestionsResponse {
-  success: boolean;
-  questions: ICPQuestion[];
-  totalSteps: number;
-}
-
-export interface ICPAnswerRequest {
-  sessionId?: string;
-  currentStepIndex: number;
-  currentIntentKey?: string;
-  userAnswer: string;
-  category?: string;
-  collectedAnswers?: Record<string, any>;
-}
-
-export interface ICPAnswerResponse {
-  success: boolean;
-  nextStepIndex: number | null;
-  nextQuestion: ICPQuestion | null;
-  clarificationNeeded?: boolean;
-  completed?: boolean;
-  message?: string;
-  confidence?: 'high' | 'medium' | 'low';
-  extractedData?: Record<string, any>;
-  updatedCollectedAnswers?: Record<string, any>;
-  error?: string;
+/**
+ * Get the backend API URL from environment variables
+ * PRODUCTION: Fails if no env var set
+ * DEVELOPMENT: Falls back to localhost:3000
+ */
+function getBackendUrl(): string {
+  const url = (
+    process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.REACT_APP_API_URL
+  );
+  
+  // PRODUCTION: Fail fast if env var missing (but only at runtime, not during build)
+  if (process.env.NODE_ENV === 'production' && !url && typeof window !== 'undefined') {
+    throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL or NEXT_PUBLIC_API_URL is required in production');
+  }
+  
+  // DEVELOPMENT: Use localhost fallback
+  return url || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 }
 
 /**
- * Get backend URL from environment variables
+ * Get authorization headers from browser storage
  */
-function getBackendUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.REACT_APP_API_URL ||
-    'http://localhost:3000'
-  );
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    return {};
+  }
 }
 
 /**
  * Fetch all ICP questions for a category
  */
 export async function fetchICPQuestions(
-  category: string = 'lead_generation',
-  apiClient?: any
+  category: string = 'lead_generation'
 ): Promise<ICPQuestionsResponse> {
   const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions?category=${encodeURIComponent(category)}`;
@@ -79,6 +63,7 @@ export async function fetchICPQuestions(
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
   });
@@ -95,8 +80,7 @@ export async function fetchICPQuestions(
  */
 export async function fetchICPQuestionByStep(
   stepIndex: number,
-  category: string = 'lead_generation',
-  apiClient?: any
+  category: string = 'lead_generation'
 ): Promise<ICPQuestion | null> {
   const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions/${stepIndex}?category=${encodeURIComponent(category)}`;
@@ -105,6 +89,7 @@ export async function fetchICPQuestionByStep(
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
   });
@@ -124,8 +109,7 @@ export async function fetchICPQuestionByStep(
  * Process user answer and get next step
  */
 export async function processICPAnswer(
-  request: ICPAnswerRequest,
-  apiClient?: any
+  request: ICPAnswerRequest
 ): Promise<ICPAnswerResponse> {
   const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-answer`;
@@ -134,6 +118,7 @@ export async function processICPAnswer(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     credentials: 'include',
     body: JSON.stringify({
