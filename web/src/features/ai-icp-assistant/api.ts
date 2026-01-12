@@ -7,12 +7,24 @@
 
 import { getApiUrl, API_CONFIG } from './config/api.config';
 import { logger } from './utils/logger';
+import { safeStorage } from '@/utils/storage';
 import type {
   ICPQuestion,
   ICPQuestionsResponse,
   ICPAnswerRequest,
   ICPAnswerResponse,
 } from './types';
+
+/**
+ * Get authentication headers
+ */
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 /**
  * Fetch all ICP questions for a category
@@ -28,6 +40,7 @@ export async function fetchICPQuestions(
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
     });
@@ -79,6 +92,7 @@ export async function fetchICPQuestionByStep(
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
     });
@@ -126,6 +140,7 @@ export async function processICPAnswer(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
       body: JSON.stringify(requestBody),
