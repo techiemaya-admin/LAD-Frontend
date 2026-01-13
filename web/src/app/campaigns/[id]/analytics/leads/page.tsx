@@ -101,7 +101,6 @@ export default function CampaignLeadsPage() {
           }
         } catch (err) {
           // Silently fail - summary might not exist yet
-          console.log(`[Campaign Leads] No summary for lead ${lead.id}`);
         }
         return null;
       });
@@ -168,7 +167,6 @@ export default function CampaignLeadsPage() {
         }
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
-        console.log('[Profile Summary] No existing summary found, generating new one...');
       }
 
       // Generate new summary

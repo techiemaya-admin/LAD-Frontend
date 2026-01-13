@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getDependentActionsToRemove } from '@/lib/actionDependencies';
+import { getDependentActionsToRemove, getRequiredActionsFromOptions } from '@/lib/actionDependencies';
 
 interface SelectableOptionsProps {
   options: string[];
@@ -30,6 +30,34 @@ export default function SelectableOptions({
   const [selected, setSelected] = useState<Set<string>>(
     new Set(preSelectedOptions.length > 0 ? preSelectedOptions : [])
   );
+
+  // Update workflow in real-time when selections change (for platform actions)
+  useEffect(() => {
+    const platform = detectPlatform();
+    if (platform && variant === 'checkboxes') {
+      // This is a platform actions question - update workflow immediately
+      const selectedArray = Array.from(selected);
+      
+      // Get current ICP answers from global state
+      const currentAnswers = (window as any).__icpAnswers || {};
+      
+      // Update the platform actions in the answers
+      const actionKey = `${platform}_actions`;
+      const updatedAnswers = {
+        ...currentAnswers,
+        [actionKey]: selectedArray,
+      };
+      
+      // Store updated answers globally
+      (window as any).__icpAnswers = updatedAnswers;
+      
+      // Trigger workflow update event
+      const updateEvent = new CustomEvent('workflowUpdate', { 
+        detail: { answers: updatedAnswers, stepIndex: (window as any).__currentStepIndex || 0 } 
+      });
+      window.dispatchEvent(updateEvent);
+    }
+  }, [selected, variant]);
 
   // Detect platform from props or options (for platform actions)
   const detectPlatform = (): string | null => {
@@ -76,6 +104,17 @@ export default function SelectableOptions({
         // Checking an option
         if (multiSelect) {
           next.add(option);
+          
+          // AUTO-CHECK REQUIRED ACTIONS: If this action requires other actions, auto-check them
+          const platform = detectPlatform();
+          if (platform && variant === 'checkboxes') {
+            const requiredActions = getRequiredActionsFromOptions(platform, option, options);
+            for (const requiredAction of requiredActions) {
+              if (!next.has(requiredAction)) {
+                next.add(requiredAction);
+              }
+            }
+          }
         } else {
           // Single select - replace selection
           next.clear();

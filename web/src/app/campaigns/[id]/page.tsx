@@ -46,13 +46,6 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     if (campaign) {
-      console.log('Loading campaign:', {
-        id: campaign.id,
-        name: campaign.name,
-        stepsCount: campaign.steps?.length || 0,
-        stepTypes: campaign.steps?.map((s: any) => s.type) || []
-      });
-      
       // Load campaign into store - this will convert steps to nodes
       loadCampaign({
         name: campaign.name,
@@ -82,13 +75,6 @@ export default function CampaignDetailPage() {
     try {
       setSaving(true);
       const campaignData = serialize();
-      
-      console.log('Saving campaign:', {
-        id: campaignId,
-        name: campaignData.name,
-        stepsCount: campaignData.steps.length,
-        stepTypes: campaignData.steps.map((s: any) => s.type)
-      });
       
       if (campaignId === 'new') {
         // Create new campaign
@@ -187,11 +173,10 @@ export default function CampaignDetailPage() {
 
   const handlePreview = () => {
     const campaignData = serialize();
-    console.log('Campaign Preview:', campaignData);
     push({
       variant: 'info',
       title: 'Preview',
-      description: 'Check console for campaign data',
+      description: 'Campaign preview generated',
     });
   };
 

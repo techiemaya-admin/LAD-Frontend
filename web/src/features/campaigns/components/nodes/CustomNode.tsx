@@ -49,21 +49,7 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
   const colors = getNodeColor(stepType);
   const isSelected = selectedNodeId === id;
   
-  // Debug: Log data for delay and condition nodes to help troubleshoot
-  if (stepType === 'delay' || stepType === 'condition') {
-    // Only log in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[CustomNode] ${stepType} node data:`, { 
-        id, 
-        data, 
-        delayDays: data?.delayDays, 
-        delayHours: data?.delayHours, 
-        delayMinutes: data?.delayMinutes,
-        conditionType: data?.conditionType,
-        title: data?.title 
-      });
-    }
-  }
+
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();

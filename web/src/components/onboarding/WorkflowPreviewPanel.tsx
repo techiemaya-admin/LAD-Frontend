@@ -1,138 +1,23 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
-import { Linkedin, Mail, MessageCircle, Phone, ArrowRight, Clock, Filter, Play, Square, PersonStanding } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useOnboardingStore } from '@/store/onboardingStore';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Linkedin, Mail, MessageCircle, Phone, Play, Edit3 } from 'lucide-react';
+import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
 import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background,
   useNodesState,
   useEdgesState,
-  BackgroundVariant,
-  Node,
-  Edge,
-  Handle,
-  Position,
-  NodeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { StepType } from '@/types/campaign';
 import { logger } from '@/lib/logger';
-
-// Custom Node Component
-function CustomWorkflowNode({ data, id, selected }: NodeProps) {
-  const stepType: StepType = data?.type as StepType || 'linkedin_visit';
-  
-  const getNodeColor = (type: StepType) => {
-    if (type === 'start') return { bg: '#10B981', border: '#059669' };
-    if (type === 'end') return { bg: '#EF4444', border: '#DC2626' };
-    if (type === 'lead_generation') return { bg: '#FBBF24', border: '#F59E0B' };
-    if (type.includes('linkedin')) return { bg: '#0077B5', border: '#005885' };
-    if (type.includes('email')) return { bg: '#14B8A6', border: '#0D9488' };
-    if (type.includes('whatsapp')) return { bg: '#25D366', border: '#128C7E' };
-    if (type.includes('voice')) return { bg: '#8B5CF6', border: '#7C3AED' };
-    if (type === 'delay') return { bg: '#F59E0B', border: '#D97706' };
-    if (type === 'condition') return { bg: '#A855F7', border: '#9333EA' };
-    return { bg: '#7c3aed', border: '#6D28D9' };
-  };
-  
-  const getNodeIcon = (type: StepType) => {
-    if (type === 'start') return <Play className="w-4 h-4" />;
-    if (type === 'end') return <Square className="w-4 h-4" />;
-    if (type === 'lead_generation') return <PersonStanding className="w-4 h-4" />;
-    if (type.includes('linkedin')) return <Linkedin className="w-4 h-4" />;
-    if (type.includes('email')) return <Mail className="w-4 h-4" />;
-    if (type.includes('whatsapp')) return <MessageCircle className="w-4 h-4" />;
-    if (type.includes('voice')) return <Phone className="w-4 h-4" />;
-    if (type === 'delay') return <Clock className="w-4 h-4" />;
-    if (type === 'condition') return <Filter className="w-4 h-4" />;
-    return <ArrowRight className="w-4 h-4" />;
-  };
-  
-  const colors = getNodeColor(stepType);
-  
-  const getPreviewText = () => {
-    if (data?.description) return data.description;
-    if (data?.message) return data.message.substring(0, 40) + '...';
-    if (data?.subject) return data.subject;
-    return stepType;
-  };
-  
-  return (
-    <div
-      className={cn(
-        'min-w-[180px] bg-white rounded-[20px] shadow-md transition-all overflow-hidden',
-        selected ? 'ring-2 ring-purple-500 shadow-lg' : ''
-      )}
-    >
-      <Handle type="target" position={Position.Top} style={{ background: colors.bg }} />
-      
-      {/* Colored Header */}
-      <div
-        className="px-4 py-2.5 flex items-center justify-between"
-        style={{ backgroundColor: colors.bg }}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0 text-white">
-          {getNodeIcon(stepType)}
-          <span className="text-[13px] font-semibold truncate">{data?.title || stepType}</span>
-        </div>
-      </div>
-      
-      {/* White Body */}
-      <div className="px-4 py-2.5">
-        {stepType === 'condition' && (
-          <div>
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-              Checking:
-            </div>
-            <div className="text-[13px] font-semibold text-gray-900">
-              {data?.conditionType || 'Condition'}
-            </div>
-          </div>
-        )}
-        {stepType === 'delay' && (
-          <div>
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-              Wait Time:
-            </div>
-            <div className="text-[13px] font-semibold text-gray-900">
-              {data?.title || 'Delay'}
-            </div>
-          </div>
-        )}
-        {stepType !== 'delay' && stepType !== 'condition' && stepType !== 'start' && stepType !== 'end' && (
-          <div className="text-[11px] text-gray-600 truncate">
-            {getPreviewText()}
-          </div>
-        )}
-      </div>
-      
-      {stepType === 'condition' ? (
-        <>
-          <Handle type="source" position={Position.BottomLeft} id="false" style={{ background: '#EF4444' }} />
-          <Handle type="source" position={Position.BottomRight} id="true" style={{ background: '#10B981' }} />
-        </>
-      ) : (
-        <Handle type="source" position={Position.Bottom} style={{ background: colors.bg }} />
-      )}
-    </div>
-  );
-}
+import { CustomWorkflowNode } from './workflow/CustomWorkflowNode';
+import { WorkflowCanvas } from './workflow/WorkflowCanvas';
+import { createReactFlowNodes, createReactFlowEdges } from './workflow/workflowFlowBuilder';
+import StepEditor from './workflow/StepEditor';
 
 // Register custom node types
 const nodeTypes = {
   custom: CustomWorkflowNode,
 };
-
-interface WorkflowStep {
-  platform?: string;
-  actions?: string[];
-  template?: string;
-  delay?: string;
-  condition?: string;
-}
 
 interface WorkflowPreviewPanelProps {
   platforms?: string[];
@@ -165,123 +50,28 @@ export default function WorkflowPreviewPanel({
   // Read from store if no props provided
   const workflowPreview = useOnboardingStore((state) => state.workflowPreview);
   const workflowNodes = useOnboardingStore((state) => state.workflowNodes);
+  const setIsEditorPanelCollapsed = useOnboardingStore((state) => state.setIsEditorPanelCollapsed);
+  const setHasRequestedEditor = useOnboardingStore((state) => state.setHasRequestedEditor);
   
   // Debug logging
   logger.debug('Rendered with workflowPreview', { workflowPreview, length: workflowPreview?.length || 0 });
   
   // Convert workflow preview steps to React Flow nodes and edges
-  const reactFlowNodes: Node[] = useMemo(() => {
-    const nodes: Node[] = [];
-    
-    // Always add Start node
-    nodes.push({
-      id: 'start',
-      type: 'custom',
-      position: { x: 250, y: 20 },
-      data: {
-        title: 'Start',
-        type: 'start',
-        description: 'Start',
-      },
-    });
-    
-    // Add workflow step nodes (if any)
-    if (workflowPreview && workflowPreview.length > 0) {
-      workflowPreview.forEach((step, idx) => {
-        const channelKey = step.channel || 'linkedin';
-        const stepType = step.type || '';
-        
-        nodes.push({
-          id: step.id,
-          type: 'custom',
-          position: { x: 250, y: 140 + idx * 140 },
-          data: {
-            title: step.title,
-            type: step.type,
-            description: step.description,
-            ...step,
-          },
-        });
-      });
-    }
-    
-    // Always add End node
-    const endY = workflowPreview && workflowPreview.length > 0 
-      ? 140 + workflowPreview.length * 140 
-      : 140;
-    
-    nodes.push({
-      id: 'end',
-      type: 'custom',
-      position: { x: 250, y: endY },
-      data: {
-        title: 'End',
-        type: 'end',
-        description: 'End',
-      },
-    });
-    
-    return nodes;
-  }, [workflowPreview]);
-  
-  const reactFlowEdges: Edge[] = useMemo(() => {
-    const edges: Edge[] = [];
-    
-    // If we have workflow steps, connect them
-    if (workflowPreview && workflowPreview.length > 0) {
-      // Connect Start to first step
-      edges.push({
-        id: `e-start-${workflowPreview[0].id}`,
-        source: 'start',
-        target: workflowPreview[0].id,
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#94A3B8', strokeWidth: 2 },
-      });
-      
-      // Connect workflow steps
-      for (let i = 0; i < workflowPreview.length - 1; i++) {
-        edges.push({
-          id: `e${workflowPreview[i].id}-${workflowPreview[i + 1].id}`,
-          source: workflowPreview[i].id,
-          target: workflowPreview[i + 1].id,
-          type: 'smoothstep',
-          animated: true,
-          style: { stroke: '#94A3B8', strokeWidth: 2 },
-        });
-      }
-      
-      // Connect last step to End
-      edges.push({
-        id: `e-${workflowPreview[workflowPreview.length - 1].id}-end`,
-        source: workflowPreview[workflowPreview.length - 1].id,
-        target: 'end',
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#94A3B8', strokeWidth: 2 },
-      });
-    } else {
-      // If no workflow steps, connect Start directly to End
-      edges.push({
-        id: 'e-start-end',
-        source: 'start',
-        target: 'end',
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#E5E7EB', strokeWidth: 2, strokeDasharray: '5,5' },
-      });
-    }
-    
-    return edges;
-  }, [workflowPreview]);
+  const reactFlowNodes = useMemo(() => createReactFlowNodes(workflowPreview), [workflowPreview]);
+  const reactFlowEdges = useMemo(() => createReactFlowEdges(workflowPreview), [workflowPreview]);
   
   const [flowNodes, setNodes, onNodesChange] = useNodesState(reactFlowNodes);
   const [flowEdges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
   
-  // Custom node types
-  const nodeTypes = {
-    custom: CustomWorkflowNode,
-  };
+  // Sync nodes when reactFlowNodes changes
+  React.useEffect(() => {
+    setNodes(reactFlowNodes);
+  }, [reactFlowNodes, setNodes]);
+  
+  // Sync edges when reactFlowEdges changes
+  React.useEffect(() => {
+    setEdges(reactFlowEdges);
+  }, [reactFlowEdges, setEdges]);
 
   // Use props if provided, otherwise extract from store
   const platforms = propsPlatforms || [];
@@ -298,32 +88,119 @@ export default function WorkflowPreviewPanel({
   const hasPropsContent = platforms.length > 0 || delays || conditions || campaignName;
   const hasContent = hasPropsContent || hasStoreWorkflow;
 
+  // State for step editor
+  const [editingStep, setEditingStep] = useState<WorkflowPreviewStep | null>(null);
+  
+  // Listen for openStepEditor events from CustomWorkflowNode
+  useEffect(() => {
+    const handleOpenEditor = (event: CustomEvent) => {
+      const { stepId, stepData } = event.detail;
+      // Find the step from workflowPreview
+      const step = workflowPreview.find(s => s.id === stepId);
+      if (step) {
+        setEditingStep(step);
+        logger.debug('Opening step editor for', { stepId, step });
+      }
+    };
+    
+    window.addEventListener('openStepEditor', handleOpenEditor as EventListener);
+    return () => {
+      window.removeEventListener('openStepEditor', handleOpenEditor as EventListener);
+    };
+  }, [workflowPreview]);
+
+  // Handle edit button click - show editor panel instead of full screen
+  const handleEditClick = () => {
+    setIsEditorPanelCollapsed(false); // Show the editor panel
+    setHasRequestedEditor(true); // Track that user wants to edit
+    logger.debug('Editor panel opened - showing step library at 30% width');
+  };
+
   // Always show the React Flow workflow
   return (
-    <div className="h-full bg-gray-50 border-l border-gray-200">
-      <div className="p-4 border-b border-gray-200 bg-white">
-        <h3 className="text-lg font-semibold text-gray-900">Workflow Preview</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          {hasStoreWorkflow ? 
-            `${workflowPreview.length} steps configured` : 
-            'Answer questions to build your workflow'
-          }
-        </p>
+    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-l border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Play className="w-5 h-5 text-indigo-500" />
+              Workflow Preview
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {hasStoreWorkflow ? 
+                `${workflowPreview.length} automated steps configured` : 
+                'Answer questions to build your workflow'
+              }
+            </p>
+          </div>
+          {hasStoreWorkflow && (
+            <button
+              onClick={handleEditClick}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-sm"
+              title="Edit workflow manually"
+            >
+              <Edit3 className="w-4 h-4" />
+              Edit
+            </button>
+          )}
+        </div>
       </div>
-      <div className="h-[calc(100%-80px)]">
+      
+      {/* SVG Gradients for edges */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id="gradient-green" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10B981" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
+          <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#6366F1" />
+            <stop offset="100%" stopColor="#4F46E5" />
+          </linearGradient>
+        </defs>
+      </svg>
+      
+      <div className="flex-1 min-h-0">
         <ReactFlow
-          nodes={reactFlowNodes}
-          edges={reactFlowEdges}
+          nodes={flowNodes}
+          edges={flowEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
+          nodesDraggable={true}
+          nodesConnectable={false}
+          elementsSelectable={true}
           fitView
+          fitViewOptions={{
+            padding: 0.2,
+            minZoom: 0.5,
+            maxZoom: 1.0,
+          }}
+          minZoom={0.3}
+          maxZoom={1.5}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
           attributionPosition="bottom-left"
           proOptions={{ hideAttribution: true }}
-          className="bg-gray-50"
+          className="bg-transparent"
         >
-          <Background color="#94a3b8" gap={20} />
-          <Controls showInteractive={false} />
+          <WorkflowCanvas 
+            flowNodes={flowNodes}
+            flowEdges={flowEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            workflowLength={workflowPreview?.length || 0}
+          />
         </ReactFlow>
       </div>
+      
+      {/* Step Editor Modal */}
+      {editingStep && (
+        <StepEditor
+          step={editingStep}
+          onClose={() => setEditingStep(null)}
+        />
+      )}
     </div>
   );
 }
