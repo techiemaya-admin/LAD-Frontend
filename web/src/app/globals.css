@@ -47,6 +47,52 @@
   .table-row-hover {
     @apply transition-all duration-300 hover:bg-primary/5 hover:shadow-md hover:scale-[1.01];
   }
+
+  /* ⭐ Calendar Event Cards - Enterprise Grade Hover */
+  .event-call,
+  .event-ai,
+  .event-followup,
+  .event-meeting {
+    @apply transition-all duration-200 ease-out will-change-transform;
+  }
+
+  .event-call {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+  .event-call:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .event-ai {
+    @apply bg-purple-50 text-purple-700 border-purple-200;
+  }
+  .event-ai:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .event-followup {
+    @apply bg-green-50 text-green-700 border-green-200;
+  }
+  .event-followup:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .event-meeting {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+  .event-meeting:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .event-call,
+    .event-ai,
+    .event-followup,
+    .event-meeting {
+      @apply transition-none will-change-auto;
+    }
+  }
 }
 
 /* ------------------------------
