@@ -6,6 +6,8 @@ import { AppToasterProvider } from "@/components/ui/app-toaster";
 import { LoadingProvider } from "@/components/providers/loading-provider";
 import ContentGate from "@/components/clients/content-gate";
 import Providers from "./providers";
+// Import VAPI error suppression (temporarily disable VAPI errors)
+import "@/utils/suppressVAPIErrors";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
