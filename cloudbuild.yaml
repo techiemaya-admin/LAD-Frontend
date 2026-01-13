@@ -23,6 +23,7 @@ steps:
       '--build-arg', 'NEXT_PUBLIC_BACKEND_URL=$_API_URL',
       '--build-arg', 'NEXT_PUBLIC_API_BASE=$_API_URL',
       '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=$_API_URL',
+      '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=true',
       '-f', 'web/Dockerfile',
       '.'
     ]
