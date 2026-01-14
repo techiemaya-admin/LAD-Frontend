@@ -35,7 +35,25 @@ export default function RootLayout({
   return (
         <html lang="en" suppressHydrationWarning>
       <head>
-              <link
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Suppress Chrome extension message passing errors immediately
+              window.addEventListener('error', function(event) {
+                if (event.message && event.message.includes('A listener indicated an asynchronous response')) {
+                  event.preventDefault();
+                  return true;
+                }
+              });
+              window.addEventListener('unhandledrejection', function(event) {
+                if (event.reason && event.reason.toString && event.reason.toString().includes('A listener indicated an asynchronous response')) {
+                  event.preventDefault();
+                }
+              });
+            `,
+          }}
+        />
+        <link
           href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600&family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap"
           rel="stylesheet"
         />

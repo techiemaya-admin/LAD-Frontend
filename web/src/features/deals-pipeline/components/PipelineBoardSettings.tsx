@@ -191,10 +191,12 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   };
 
   const handleSettingChange = (key: keyof PipelineSettings, value: unknown): void => {
+    console.log('[PipelineBoardSettings] Setting change:', key, '=', value);
     setLocalSettings({ ...localSettings, [key]: value });
   };
 
   const handleSave = (): void => {
+    console.log('[PipelineBoardSettings] Saving settings:', localSettings);
     // Only now update Redux store
     dispatch(setPipelineSettings(localSettings));
     onSettingsChange(localSettings);

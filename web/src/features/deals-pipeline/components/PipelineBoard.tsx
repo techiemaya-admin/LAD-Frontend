@@ -225,6 +225,9 @@ const PipelineBoard: React.FC = () => {
   // Pipeline settings from global Redux state
   const pipelineSettings = useSelector(selectPipelineSettings);
   
+  // Debug log pipeline settings
+  console.log('[PipelineBoard] Current pipelineSettings:', pipelineSettings);
+  
   // Get filtered pipeline data from the new enhanced selector
   const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
   
@@ -265,6 +268,14 @@ const PipelineBoard: React.FC = () => {
   
   // Use the filtered data directly from selector instead of manual filtering
   const currentStages = pipelineBoardData.stages;
+  
+  // Memoize normalized stages to prevent creating new objects on every render
+  // This prevents child components from re-rendering unnecessarily
+  const normalizedStages = useMemo(
+    () => currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })),
+    [currentStages]
+  );
+  
   const currentLeadsByStage = useMemo<LeadsByStage>(() => {
     return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: any) => {
       acc[stage.key] = { stage: { key: stage.key, label: stage.label || stage.name || stage.key }, leads: stage.leads };
@@ -307,12 +318,13 @@ const PipelineBoard: React.FC = () => {
   };
 
   // Sensors for drag - optimized for both desktop and mobile
+  // Note: useSensors is a hook and must be called at top level (not inside useMemo)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Increased slightly for desktop precision
-        delay: isTouchDevice() ? 200 : 0, // Add delay for touch to prevent accidental drags during scroll
-        tolerance: isTouchDevice() ? 5 : 0 // More tolerance for touch
+        distance: 8, // Movement threshold before drag starts
+        delay: isTouchDevice() ? 200 : 0, // Delay for touch to prevent accidental drags during scroll
+        tolerance: isTouchDevice() ? 5 : 0 // Tolerance for touch movement
       }
     }),
     useSensor(TouchSensor, {
@@ -329,10 +341,17 @@ const PipelineBoard: React.FC = () => {
     const loadUserPreferences = async () => {
       try {
         const preferences = await getPipelinePreferences();
-        const newSettings = { ...preferences.uiSettings };
-        dispatch(setPipelineSettings(newSettings));
-      } catch {
-        // Ignore preference load errors
+        console.log('[PipelineBoard] Loaded preferences:', preferences);
+        // Merge uiSettings with viewMode and visibleColumns
+        const newSettings = { 
+          viewMode: preferences.viewMode || 'kanban',
+          visibleColumns: preferences.visibleColumns as any || {},
+          ...preferences.uiSettings 
+        };
+        console.log('[PipelineBoard] Applying settings:', newSettings);
+        dispatch(setPipelineSettings(newSettings as any));
+      } catch (error) {
+        console.error('[PipelineBoard] Failed to load preferences:', error);
       } finally {
         setPreferencesLoaded(true);
       }
@@ -470,7 +489,8 @@ const PipelineBoard: React.FC = () => {
     loadMasterData();
   }, [dispatch, loadMasterData]);
 
-  const handleDragStart = (event: DragStartEvent): void => {
+  // Memoize drag handlers to prevent child re-renders
+  const handleDragStart = useCallback((event: DragStartEvent): void => {
     const { active } = event;
     if (!active) return;
 
@@ -480,14 +500,16 @@ const PipelineBoard: React.FC = () => {
     if (card) {
       dispatch(setActiveCard(card.id));
     }
-  };
+  }, [currentLeadsByStage, dispatch]);
 
-  const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const { active, over } = event;
 
-    dispatch(setActiveCard(null));
-
-    if (!over || !active) return;
+    // Early exit checks BEFORE clearing drag state - prevents unnecessary state updates
+    if (!over || !active) {
+      dispatch(setActiveCard(null));
+      return;
+    }
 
     const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads || []);
     const activeLeadData = (active.data?.current as { lead?: Lead })?.lead;
@@ -517,26 +539,45 @@ const PipelineBoard: React.FC = () => {
       }
     }
 
-    if (!destinationStageId) return;
+    if (!destinationStageId) {
+      dispatch(setActiveCard(null));
+      return;
+    }
 
     const sourceStageId = activeLead?.stage;
-    if (String(sourceStageId) === String(destinationStageId)) return;
-
-    try {
-      if (USE_REDUX_ACTIONS) {
-        await dispatch(moveLeadAction(String(activeLeadId), String(destinationStageId)));
-      } else {
-        await updateLeadStage(String(activeLeadId), String(destinationStageId));
-        dispatch(loadPipelineDataAction());
-      }
-    } catch {
-      dispatch(showSnackbar({ message: 'Failed to move lead', severity: 'error' }));
+    if (String(sourceStageId) === String(destinationStageId)) {
+      dispatch(setActiveCard(null));
+      return;
     }
-  };
 
-  const handleDragCancel = (): void => {
+    // Clear active card state immediately for instant UI responsiveness
+    // This allows the next drag to start immediately without waiting for API
     dispatch(setActiveCard(null));
-  };
+
+    // CRITICAL: Fire-and-forget pattern for instant UI responsiveness
+    // The moveLeadAction already applies optimistic updates, so UI updates instantly
+    // Server sync happens in background without blocking the next drag operation
+    if (USE_REDUX_ACTIONS) {
+      // Don't await - dispatch returns immediately, making next drag responsive
+      Promise.resolve(dispatch(moveLeadAction(String(activeLeadId), String(destinationStageId))))
+        .catch(() => {
+          // Error handling is already done inside moveLeadAction
+          // Just show user-facing message without blocking UI
+          dispatch(showSnackbar({ message: 'Failed to move lead', severity: 'error' }));
+        });
+    } else {
+      // Fallback: also non-blocking
+      updateLeadStage(String(activeLeadId), String(destinationStageId))
+        .then(() => dispatch(loadPipelineDataAction()))
+        .catch(() => {
+          dispatch(showSnackbar({ message: 'Failed to move lead', severity: 'error' }));
+        });
+    }
+  }, [currentLeadsByStage, currentStages, dispatch]);
+
+  const handleDragCancel = useCallback((): void => {
+    dispatch(setActiveCard(null));
+  }, [dispatch]);
 
   const handleAddStage = async (): Promise<void> => {
     dispatch(setAddStageError(''));
@@ -1117,6 +1158,7 @@ const PipelineBoard: React.FC = () => {
   // Handle pipeline settings changes
   const handleSettingsChange = useCallback(async (newSettings: typeof pipelineSettings): Promise<void> => {
     try {
+      console.log('[PipelineBoard] Saving settings:', newSettings);
       dispatch(setPipelineSettings(newSettings));
       
       // Save the complete preferences
@@ -1143,6 +1185,8 @@ const PipelineBoard: React.FC = () => {
         sortConfig: sortConfig
       };
       
+      console.log('[PipelineBoard] Saving preferences to backend:', preferences);
+      
       await savePipelinePreferences({
         viewMode: preferences.viewMode,
         visibleColumns: preferences.visibleColumns as unknown as Record<string, boolean>,
@@ -1156,6 +1200,8 @@ const PipelineBoard: React.FC = () => {
         sortConfig: preferences.sortConfig,
         uiSettings: preferences.uiSettings
       });
+      
+      console.log('[PipelineBoard] Settings saved successfully');
       
       // Show success message
       dispatch(showSnackbar({
@@ -1237,6 +1283,7 @@ const PipelineBoard: React.FC = () => {
         onSearchChange={handleSearchChange}
         zoom={zoom}
         onZoomChange={handleZoomChange}
+        viewMode={pipelineSettings.viewMode}
         onAddStage={() => dispatch(setAddStageDialogOpen(true))}
         onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
         onOpenFilter={handleOpenFilter}
@@ -1280,7 +1327,7 @@ const PipelineBoard: React.FC = () => {
             }
             dispatch(setCreateLeadDialogOpen(false));
           }}
-          stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as Stage[] || []}
+          stages={normalizedStages as Stage[] || []}
           leads={USE_REDUX_PIPELINE ? Object.values(currentLeadsByStage).flatMap(stage => stage.leads) : []}
         />
       )}
@@ -1307,9 +1354,11 @@ const PipelineBoard: React.FC = () => {
             return (
               <PipelineListView
                 leads={normalizedLeads}
-                stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
+                stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 teamMembers={[]}
                 visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
+                showCardCount={pipelineSettings.showCardCount}
+                showTotalValue={pipelineSettings.showStageValue}
                 onStatusChange={memoizedHandlers.onStatusChange as ((leadId: string | number, status: string) => Promise<void>) | undefined}
                 onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
                 onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
@@ -1326,14 +1375,18 @@ const PipelineBoard: React.FC = () => {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
+
               <PipelineKanbanView
-                stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
+                stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 leadsByStage={currentLeadsByStage}
                 activeCard={activeCard}
                 zoom={zoom}
                 teamMembers={[]}
                 handlers={memoizedHandlers}
                 enableDragAndDrop={pipelineSettings.enableDragAndDrop}
+                compactView={pipelineSettings.compactView}
+                showCardCount={pipelineSettings.showCardCount}
+                showTotalValue={pipelineSettings.showStageValue}
               />
             </DndContext>
           );
@@ -1352,7 +1405,7 @@ const PipelineBoard: React.FC = () => {
           dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || null
         }}
         onFiltersChange={handleFiltersChange}
-        stages={currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })) as (Stage & { name?: string; label?: string; key?: string })[]}
+        stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
         onClearFilters={() => {
           const clearedFilters = {
             stages: [],
