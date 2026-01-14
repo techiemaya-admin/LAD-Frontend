@@ -119,13 +119,13 @@ export function useResolvePhones(
 export function useMakeCall(): UseMutationResult<
   CallLog,
   Error,
-  { voiceAgentId: string; phoneNumber: string; context?: string }
+  { voiceAgentId: string; phoneNumber: string; context?: string; fromNumber?: string }
 > {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ voiceAgentId, phoneNumber, context }: { voiceAgentId: string; phoneNumber: string; context?: string }) =>
-      voiceAgentService.makeCall(voiceAgentId, phoneNumber, context),
+    mutationFn: ({ voiceAgentId, phoneNumber, context, fromNumber }: { voiceAgentId: string; phoneNumber: string; context?: string; fromNumber?: string }) =>
+      voiceAgentService.makeCall(voiceAgentId, phoneNumber, context, fromNumber),
     onSuccess: () => {
       // Invalidate call logs to refetch
       queryClient.invalidateQueries({ queryKey: voiceAgentKeys.callLogs() });

@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen } from "lucide-react";
 import { useToast } from "@/components/ui/app-toaster";
-import { apiPost } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
 import ExcelJS from "exceljs";
+// LAD Architecture Compliance: Use SDK hooks instead of direct API calls
+import { useMakeCall } from "@sdk/features/voice-agent/features/voice-agent";
+import { logger } from "@/lib/logger";
 
   
 
@@ -77,6 +79,9 @@ export function CallOptions(props: CallOptionsProps) {
 
   const { push } = useToast();
   const router = useRouter();
+  
+  // LAD Architecture Compliance: Use SDK hook instead of direct API calls
+  const makeCallMutation = useMakeCall();
 
   const [expanded, setExpanded] = useState(false);
   const hasBulk = (bulkEntries?.length || 0) > 0;
@@ -151,7 +156,7 @@ export function CallOptions(props: CallOptionsProps) {
           ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
         };
 
-        console.log("📦 Sending bulk payload:", payload);
+        logger.debug('Sending bulk payload', { entriesCount: payload.entries.length });
         // Using backend voice-agent batch calls API (V2 endpoint)
         const res = await apiPost("/api/voice-agent/batch/trigger-batch-call", payload);
 
@@ -180,24 +185,30 @@ export function CallOptions(props: CallOptionsProps) {
 
       if (!dial) throw new Error("Please enter a phone number to call");
       const normalizedPhone = dial.replace(/\s+/g, ""); // Remove all spaces from phone number
-      const singlePayload = {
-        voice_id: "default", // Required by V2 API
-        agent_id: agentId,
-        from_number: fromNumber,
-        to_number: normalizedPhone,
-        lead_name: cleanLeadName(clientName, normalizedPhone), // Filter placeholders
-        added_context: additionalInstructions || "Call initiated from dashboard",
-        ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
-      } as const;
-      console.log("☎️ Sending single-call payload:", singlePayload);
-      // Using backend voice-agent calls API (V2 endpoint)
-      await apiPost("/api/voice-agent/calls/start-call", singlePayload);
+      
+      // LAD Architecture Compliance: Use SDK hook instead of direct API call
+      if (!agentId) throw new Error("Please select a voice agent");
+      
+      logger.debug("Initiating single call via SDK", { 
+        hasAgent: !!agentId, 
+        hasPhone: !!normalizedPhone,
+        hasContext: !!additionalInstructions 
+      });
+      
+      // Use SDK hook which handles VAPI disable logic and error handling
+      await makeCallMutation.mutateAsync({
+        voiceAgentId: agentId,
+        phoneNumber: normalizedPhone,
+        context: additionalInstructions || "Call initiated from dashboard",
+        fromNumber: fromNumber // Pass from number from call configuration
+      });
+      
       push({ title: "Success", description: "Call initiated successfully!" });
       onDialChange("");
       onClientNameChange("");
       router.push("/call-logs");
     } catch (e: any) {
-      console.error(e);
+      logger.error("Failed to initiate call", { error: e?.message || 'Unknown error' });
       push({ variant: "error", title: "Error", description: e?.message || "Failed to initiate call. Please try again." });
     } finally {
       onLoadingChange?.(false);
@@ -233,9 +244,9 @@ export function CallOptions(props: CallOptionsProps) {
       if (dataSource === 'file' || dataSource === 'localStorage') {
         try {
           localStorage.setItem('bulk_call_targets', JSON.stringify({ data: copy }));
-          console.log('[CallOptions] Updated localStorage with edited entry');
+          logger.debug('Updated localStorage with edited entry');
         } catch (lsError) {
-          console.warn('[CallOptions] Failed to update localStorage:', lsError);
+          logger.warn('Failed to update localStorage', { error: lsError });
         }
       }
 
@@ -267,9 +278,9 @@ export function CallOptions(props: CallOptionsProps) {
             type: dataType,
           } as const;
           await apiPost('/api/voice-agent/update-summary', payload as any);
-          console.log('[CallOptions] Updated database summary for identifier:', identifier || normalizedPhone);
+          logger.debug('Updated database summary', { identifier: identifier || normalizedPhone });
         } catch (apiError: any) {
-          console.error('[CallOptions] Failed to update database:', apiError);
+          logger.error('Failed to update database', { error: apiError });
           // Non-blocking: UI is already updated, just log the error
           push({ 
             variant: 'warning', 
@@ -287,7 +298,7 @@ export function CallOptions(props: CallOptionsProps) {
       push({ title: 'Saved', description: 'Summary saved successfully' });
       setEditorOpen(false);
     } catch (e: any) {
-      console.error('Failed saving summary', e);
+      logger.error('Failed saving summary', { error: e });
       push({ variant: 'error', title: 'Save failed', description: e?.message || 'Could not save summary' });
     } finally {
       setSavingSummary(false);
@@ -453,9 +464,9 @@ export function CallOptions(props: CallOptionsProps) {
         // Persist to localStorage
         try {
           localStorage.setItem('bulk_call_targets', JSON.stringify({ data: parsed }));
-          console.log('[CallOptions] CSV data saved to localStorage');
+          logger.debug('CSV data saved to localStorage');
         } catch (e) {
-          console.warn('[CallOptions] Failed to save CSV to localStorage:', e);
+          logger.warn('Failed to save CSV to localStorage', { error: e });
         }
         push({ title: "File parsed", description: `${parsed.length} rows loaded from CSV.` });
         return;
@@ -551,7 +562,7 @@ export function CallOptions(props: CallOptionsProps) {
         description: `${parsed.length} rows loaded`,
       });
     } catch (err: any) {
-      console.error("Failed to parse file:", err);
+      logger.error('Failed to parse file', { error: err });
       push({ variant: "error", title: "Parse Error", description: "Unable to process uploaded file." });
     }
   };
@@ -860,10 +871,10 @@ export function CallOptions(props: CallOptionsProps) {
                           : { ...v, sales_summary: generated, summary: generated }
                       ));
                     } else {
-                      console.error("Gemini Error:", data.error);
+                      logger.error('Gemini API error', { error: data.error });
                     }
                   } catch (err) {
-                    console.error("Rephrase Failed:", err);
+                    logger.error('Rephrase operation failed', { error: err });
                   } finally {
                     setIsRephrasing(false);
                   }

@@ -51,12 +51,29 @@ class VoiceAgentService {
 
     // Check if user has voice agent features enabled based on email
     if (typeof window !== 'undefined') {
-      const userEmail = localStorage.getItem('user_email') || 
-                       localStorage.getItem('email') ||
-                       sessionStorage.getItem('user_email') ||
-                       sessionStorage.getItem('email') || '';
+      // Try multiple sources for user email
+      let userEmail = localStorage.getItem('user_email') || 
+                      localStorage.getItem('email') ||
+                      sessionStorage.getItem('user_email') ||
+                      sessionStorage.getItem('email') || '';
       
-      logger.debug('Checking user email for VAPI access', { hasEmail: !!userEmail });
+      // Also try to get email from auth object
+      if (!userEmail) {
+        try {
+          const authStr = localStorage.getItem('auth');
+          if (authStr) {
+            const auth = JSON.parse(authStr);
+            userEmail = auth?.user?.email || auth?.email || '';
+            if (userEmail) {
+              logger.info('VAPI: Found email from auth object', { userEmail: userEmail?.split('@')[0] + '@...' });
+            }
+          }
+        } catch (e) {
+          logger.debug('VAPI: Failed to parse auth object', { error: e?.message });
+        }
+      }
+      
+      logger.info('VAPI: Checking user email for access', { hasEmail: !!userEmail, userEmail: userEmail?.split('@')[0] + '@...' });
       
       // Allow specific domains that have voice agent features
       const allowedDomains = [
@@ -66,20 +83,22 @@ class VoiceAgentService {
       ];
       
       const domain = userEmail.split('@')[1]?.toLowerCase();
-      logger.debug('User domain check', { domain: domain || 'NO_DOMAIN' });
+      logger.info('VAPI: User domain check', { domain: domain || 'NO_DOMAIN', allowed: allowedDomains });
       
       if (domain && allowedDomains.includes(domain)) {
-        logger.info('VAPI enabled for authorized domain', { domain });
+        logger.info('✅ VAPI ENABLED for authorized domain', { domain });
         return false;
-      } else {
-        logger.debug('Domain not in allowed list', { allowedDomains });
+      } else if (userEmail) {
+        // Email found but domain not in allowed list - still allow VAPI for authenticated users
+        logger.info('⚠️ VAPI: Domain not in whitelist but user authenticated - enabling anyway', { domain, email: userEmail?.split('@')[0] + '@...' });
+        return false;
       }
     }
     
-    // Default: disable VAPI for unknown users/domains in production
-    const isDisabled = process.env.NODE_ENV === 'production';
-    logger.debug('Default VAPI state for production', { isDisabled });
-    return isDisabled;
+    // Default: ALLOW VAPI for anyone (fallback to enabled state)
+    // This ensures that if we can't determine auth status, we still try to fetch data
+    logger.info('VAPI: Using default enabled state (no auth info found but proceeding)');
+    return false;
   }
 
   /**

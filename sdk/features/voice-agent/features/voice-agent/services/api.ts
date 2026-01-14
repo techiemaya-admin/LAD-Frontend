@@ -11,8 +11,9 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 class APIClient {
   private instance: AxiosInstance;
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '/api') {
+  constructor(baseURL: string = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app') {
     // LAD backend instance (proxies voice agent requests)
+    // Default to cloud backend URL if env vars not set
     this.instance = axios.create({
       baseURL,
       headers: {
