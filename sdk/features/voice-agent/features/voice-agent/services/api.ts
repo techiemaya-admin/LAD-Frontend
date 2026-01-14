@@ -24,8 +24,12 @@ class APIClient {
     // Request interceptor for auth token
     this.instance.interceptors.request.use(
       (config) => {
-        // Get token from localStorage or sessionStorage (using the correct key)
-        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        // Get token from localStorage or sessionStorage (check both 'token' and 'auth_token')
+        const token = 
+          (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null) ||
+          (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null) ||
+          (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('token') : null) ||
+          (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('auth_token') : null);
         
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
