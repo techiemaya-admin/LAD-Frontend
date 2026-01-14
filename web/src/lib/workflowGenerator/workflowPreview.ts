@@ -74,14 +74,24 @@ export function generateProgressiveWorkflowPreview(
     }
     
     const targetDesc = targetParts.length > 0 ? targetParts.join(' | ') : 'Lead generation configured';
+    
+    // Get leads per day from icpAnswers (only if explicitly set)
+    const leadsPerDay = icpAnswers.leads_per_day || icpAnswers.dailyLeadVolume;
 
-    steps.push({
+    const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
       title: 'Generate Leads',
       description: targetDesc,
       channel: undefined,
-    });
+    };
+    
+    // Only add leadLimit if it was explicitly provided
+    if (leadsPerDay) {
+      leadGenStep.leadLimit = leadsPerDay;
+    }
+
+    steps.push(leadGenStep);
   }
 
   // Platform steps: Check for platform selection (backend uses icp_platforms)
@@ -418,14 +428,24 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       hasIndustries ? `Industries: ${mappedAnswers.industries.join(', ')}` : '',
       hasLocation ? `Location: ${mappedAnswers.location}` : '',
     ].filter(Boolean).join(' | ');
+    
+    // Get leads per day from mappedAnswers (only if explicitly set)
+    const leadsPerDay = mappedAnswers.leads_per_day;
 
-    steps.push({
+    const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
       title: 'Generate Leads',
       description: targetDesc,
       channel: undefined,
-    });
+    };
+    
+    // Only add leadLimit if it was explicitly provided
+    if (leadsPerDay) {
+      leadGenStep.leadLimit = leadsPerDay;
+    }
+
+    steps.push(leadGenStep);
   }
 
   // Process platforms in the order they were selected

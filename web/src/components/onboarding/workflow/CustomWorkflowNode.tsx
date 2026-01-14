@@ -136,8 +136,17 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           </div>
         )}
         {stepType !== 'delay' && stepType !== 'condition' && stepType !== 'start' && stepType !== 'end' && (
-          <div className="text-xs text-gray-700 leading-relaxed line-clamp-2 font-medium">
-            {getPreviewText()}
+          <div>
+            <div className="text-xs text-gray-700 leading-relaxed line-clamp-2 font-medium">
+              {getPreviewText()}
+            </div>
+            {stepType === 'lead_generation' && data?.leadLimit && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="text-xs font-semibold text-indigo-600">
+                  Leads per day: {data.leadLimit}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

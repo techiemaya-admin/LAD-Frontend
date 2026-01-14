@@ -67,6 +67,7 @@ export interface WorkflowPreviewStep {
   script?: string;
   delayDays?: number;
   delayHours?: number;
+  leadLimit?: number; // Number of leads to generate per day
 }
 
 export interface AIMessage {
