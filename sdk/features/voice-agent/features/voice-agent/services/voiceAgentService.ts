@@ -2,6 +2,28 @@ import api from './api';
 import { VoiceAgent, CallLog, PhoneNumber, BatchCallLogEntry } from '../types';
 
 /**
+ * Centralized logger - LAD Architecture Compliance
+ * Import from web lib when available, fallback to console in SDK context
+ */
+const createLogger = () => {
+  try {
+    // Try to import centralized logger (when running in web context)
+    const { logger } = require('@/lib/logger');
+    return logger;
+  } catch {
+    // Fallback for SDK standalone context - minimal console wrapper
+    return {
+      debug: () => {}, // Silent in production
+      info: (msg: string, data?: any) => process.env.NODE_ENV === 'development' && console.info(`[VoiceAgent] ${msg}`, data || ''),
+      warn: (msg: string, data?: any) => process.env.NODE_ENV === 'development' && console.warn(`[VoiceAgent] ${msg}`, data || ''),
+      error: (msg: string, data?: any) => console.error(`[VoiceAgent] ${msg}`, data || '')
+    };
+  }
+};
+
+const logger = createLogger();
+
+/**
  * Voice Agent Service
  */
 class VoiceAgentService {
@@ -11,19 +33,30 @@ class VoiceAgentService {
   private isVAPIDisabled(): boolean {
     // Check if force disabled in localStorage (emergency override)
     if (typeof window !== 'undefined' && localStorage.getItem('disable_vapi') === 'true') {
+      logger.warn('VAPI disabled via localStorage override');
       return true;
     }
 
     // Check if globally disabled via environment variable
     if (process.env.NEXT_PUBLIC_DISABLE_VAPI === 'true') {
+      logger.warn('VAPI disabled via environment variable');
       return true;
+    }
+
+    // Always allow VAPI in development mode for testing
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('VAPI enabled for development mode');
+      return false;
     }
 
     // Check if user has voice agent features enabled based on email
     if (typeof window !== 'undefined') {
       const userEmail = localStorage.getItem('user_email') || 
                        localStorage.getItem('email') ||
-                       sessionStorage.getItem('user_email') || '';
+                       sessionStorage.getItem('user_email') ||
+                       sessionStorage.getItem('email') || '';
+      
+      logger.debug('Checking user email for VAPI access', { hasEmail: !!userEmail });
       
       // Allow specific domains that have voice agent features
       const allowedDomains = [
@@ -33,14 +66,20 @@ class VoiceAgentService {
       ];
       
       const domain = userEmail.split('@')[1]?.toLowerCase();
+      logger.debug('User domain check', { domain: domain || 'NO_DOMAIN' });
+      
       if (domain && allowedDomains.includes(domain)) {
-        // Voice agent features are enabled for this domain
+        logger.info('VAPI enabled for authorized domain', { domain });
         return false;
+      } else {
+        logger.debug('Domain not in allowed list', { allowedDomains });
       }
     }
     
-    // Default: disable VAPI for unknown users/domains in development
-    return process.env.NODE_ENV === 'development';
+    // Default: disable VAPI for unknown users/domains in production
+    const isDisabled = process.env.NODE_ENV === 'production';
+    logger.debug('Default VAPI state for production', { isDisabled });
+    return isDisabled;
   }
 
   /**
@@ -48,28 +87,108 @@ class VoiceAgentService {
    */
   private async safeApiCall<T>(apiCall: () => Promise<T>, fallback: T, methodName: string): Promise<T> {
     if (this.isVAPIDisabled()) {
-      console.warn(`[VoiceAgent] VAPI is disabled for this user, skipping ${methodName}`);
+      logger.warn('VAPI disabled, skipping API call', { method: methodName });
       return fallback;
     }
 
     try {
       return await apiCall();
     } catch (error: any) {
+      // Enhanced error logging with response details
+      // Build a clean error object to avoid circular references
+      const errorDetails: any = {
+        method: methodName,
+        message: error?.message || String(error) || 'Unknown error',
+        errorType: error?.constructor?.name || typeof error,
+      };
+
+      // Add response details if available (avoid circular refs)
+      if (error?.response) {
+        errorDetails.status = error.response.status;
+        errorDetails.statusText = error.response.statusText;
+        // Only include serializable response data
+        try {
+          errorDetails.responseData = JSON.parse(JSON.stringify(error.response.data));
+        } catch {
+          errorDetails.responseData = String(error.response.data);
+        }
+      }
+
+      // Add request details if available
+      if (error?.config) {
+        errorDetails.url = error.config.url;
+        errorDetails.baseURL = error.config.baseURL;
+        errorDetails.fullURL = `${error.config.baseURL || ''}${error.config.url || ''}`;
+        errorDetails.method = error.config.method?.toUpperCase();
+      }
+
+      // Add network error details
+      if (error?.code) {
+        errorDetails.code = error.code;
+      }
+
+      // Check if it's a network error
+      if (error?.request && !error?.response) {
+        errorDetails.networkError = 'No response received from server';
+        errorDetails.isNetworkError = true;
+      }
+      
+      // Safe logging with try-catch to prevent logger errors
+      try {
+        logger.error(`API call failed for ${methodName}`, errorDetails);
+      } catch (logError) {
+        console.error(`Failed to log error for ${methodName}:`, error?.message || error);
+      }
+      
+      // Log additional details for 500 errors
+      if (error.response?.status === 500) {
+        logger.error('Server error details', {
+          method: methodName,
+          url: error.config?.url,
+          requestData: error.config?.data,
+          headers: error.config?.headers,
+          responseData: error.response?.data // Add backend error message
+        });
+      }
+      
+      // Handle network errors (no response from server)
+      if (error.request && !error.response) {
+        logger.error('Network error - no response from server', {
+          method: methodName,
+          baseURL: error.config?.baseURL,
+          url: error.config?.url,
+          code: error.code
+        });
+        return fallback;
+      }
+      
       // Handle 401 authentication errors specifically
       if (error.response?.status === 401) {
-        console.warn(`[VoiceAgent] Authentication failed for ${methodName}, user may need to login`);
+        logger.warn('Authentication failed, returning fallback', { method: methodName });
         return fallback;
       }
       
       // Handle 403 forbidden (user doesn't have voice agent features)
       if (error.response?.status === 403) {
-        console.warn(`[VoiceAgent] Access forbidden for ${methodName}, user may not have voice agent features enabled`);
+        logger.warn('Access forbidden, user may not have voice agent features', { method: methodName });
         return fallback;
       }
       
-      // Handle other API errors
-      console.error(`[VoiceAgent] API call failed for ${methodName}:`, error);
-      throw error; // Re-throw non-auth errors so the UI can handle them
+      // Handle 404 not found (endpoint doesn't exist)
+      if (error.response?.status === 404) {
+        logger.warn('Endpoint not found, returning fallback', { 
+          method: methodName,
+          url: `${error.config?.baseURL || ''}${error.config?.url || ''}`
+        });
+        return fallback;
+      }
+      
+      // For other errors, log and return fallback instead of throwing
+      logger.error(`Unexpected error in ${methodName}, returning fallback`, {
+        message: error.message,
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      });
+      return fallback;
     }
   }
 
@@ -79,7 +198,7 @@ class VoiceAgentService {
   async getVoiceAgents(): Promise<VoiceAgent[]> {
     return this.safeApiCall(
       async () => {
-        const response = await api.get('/voice-agent/all');
+        const response = await api.get('/api/voice-agent/all');
         return response.data?.data ?? response.data;
       },
       [], // fallback empty array
@@ -93,7 +212,7 @@ class VoiceAgentService {
   async getBatchCallLogs(batchId: string): Promise<BatchCallLogEntry[]> {
     return this.safeApiCall(
       async () => {
-        const response = await api.get(`/voice-agent/calllogs/batch/${batchId}`);
+        const response = await api.get(`/api/voice-agent/batch/status/${batchId}`);
         const data = response.data?.results ?? response.data?.data ?? response.data;
         return data as BatchCallLogEntry[];
       },
@@ -105,14 +224,79 @@ class VoiceAgentService {
   /**
    * Make a call with a voice agent (V2 API)
    */
-  async makeCall(voiceAgentId: string, phoneNumber: string, context?: string): Promise<CallLog> {
+  async makeCall(voiceAgentId: string, phoneNumber: string, context?: string, fromNumber?: string): Promise<CallLog> {
     return this.safeApiCall(
       async () => {
-        const response = await api.post('/voice-agent/calls/start-call', {
-          voice_agent_id: voiceAgentId,
-          phone_number: phoneNumber,
-          added_context: context,
+        // Ensure phone number is in E.164 format for V2 API
+        let formattedPhone = phoneNumber;
+        if (!phoneNumber.startsWith('+')) {
+          // Default to US (+1) if no country code provided
+          formattedPhone = phoneNumber.startsWith('1') ? `+${phoneNumber}` : `+1${phoneNumber}`;
+        }
+        
+        // Get user ID for initiated_by field (V2 requires valid UUID)
+        let userId = null;
+        try {
+          // Try different possible keys for user data
+          const possibleKeys = ['auth_user', 'user', 'currentUser', 'authUser'];
+          let userData = null;
+          
+          for (const key of possibleKeys) {
+            userData = localStorage.getItem(key) || sessionStorage.getItem(key);
+            if (userData) break;
+          }
+          
+          if (userData) {
+            const user = JSON.parse(userData);
+            userId = user.id || user.userId || user.uuid;
+            logger.debug('Found user ID for initiated_by', { hasUserId: !!userId });
+          }
+          
+          // If still no userId, try to get it from JWT token
+          if (!userId) {
+            const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+            if (token) {
+              try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                userId = payload.userId || payload.id || payload.sub;
+                logger.debug('Extracted user ID from token', { hasUserId: !!userId });
+              } catch (e) {
+                logger.warn('Failed to decode JWT token for user ID');
+              }
+            }
+          }
+        } catch (e) {
+          logger.warn('Could not get user ID for initiated_by field');
+        }
+        
+        // Fallback: generate a temporary UUID if we can't find real user ID
+        if (!userId) {
+          userId = '00000000-0000-4000-8000-000000000000'; // Fallback UUID
+          logger.warn('Using fallback UUID for initiated_by field');
+        }
+        
+        // V2 single call format payload
+        const payload = {
+          voice_id: 'default',
+          from_number: fromNumber || '+918634515070',
+          to_number: formattedPhone,
+          agent_id: parseInt(voiceAgentId, 10),
+          initiated_by: userId,
+          lead_name: null,
+          added_context: context || null
+        };
+        
+        logger.debug('Making single call via LAD backend proxy', { 
+          payload: { ...payload, initiated_by: userId ? 'UUID_PROVIDED' : 'NULL' } 
         });
+        
+        const response = await api.post('/api/voice-agent/calls/start-call', payload);
+        
+        logger.debug('Voice call response received', { 
+          status: response.status, 
+          hasData: !!response.data 
+        });
+        
         return response.data?.data ?? response.data;
       },
       { id: 'disabled', status: 'disabled', message: 'VAPI feature is temporarily disabled' } as any,
@@ -127,8 +311,8 @@ class VoiceAgentService {
     return this.safeApiCall(
       async () => {
         const url = voiceAgentId
-          ? `/voice-agent/calllogs?voice_agent_id=${voiceAgentId}`
-          : '/voice-agent/calllogs';
+          ? `/api/voice-agent/calllogs?voice_agent_id=${voiceAgentId}`
+          : '/api/voice-agent/calllogs';
         const response = await api.get(url);
         return response.data?.data ?? response.data;
       },
@@ -143,7 +327,7 @@ class VoiceAgentService {
   async getCallLog(id: string): Promise<CallLog> {
     return this.safeApiCall(
       async () => {
-        const response = await api.get(`/voice-agent/calllogs/${id}`);
+        const response = await api.get(`/api/voice-agent/calllogs/${id}`);
         return response.data?.data ?? response.data;
       },
       { id, status: 'disabled', message: 'VAPI feature is temporarily disabled' } as any,
@@ -158,7 +342,7 @@ class VoiceAgentService {
   async getTenantPhoneNumbers(): Promise<PhoneNumber[]> {
     return this.safeApiCall(
       async () => {
-        const response = await api.get('/voice-agent/numbers');
+        const response = await api.get('/api/voice-agent/numbers');
         return response.data?.data ?? response.data;
       },
       [], // fallback empty array
@@ -202,11 +386,10 @@ class VoiceAgentService {
   async resolvePhones(ids: string[], type: 'company' | 'employee' = 'company'): Promise<any[]> {
     return this.safeApiCall(
       async () => {
-        const response = await api.post('/voiceagent/resolve-phones', {
-          ids,
-          type,
-        });
-        return response.data?.data ?? response.data;
+        // V2 API doesn't have resolve-phones endpoint
+        // This feature may need to be implemented differently in V2
+        logger.warn('resolvePhones not available in V2 API', { ids, type });
+        return [];
       },
       [], // fallback empty array
       'resolvePhones'

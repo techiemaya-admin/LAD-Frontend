@@ -5,12 +5,14 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
  * 
  * This is a standalone API client for the SDK layer.
  * It should work independently of the web layer.
+ * Routes through LAD backend which proxies to voice agent server.
  */
 
 class APIClient {
   private instance: AxiosInstance;
 
   constructor(baseURL: string = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '/api') {
+    // LAD backend instance (proxies voice agent requests)
     this.instance = axios.create({
       baseURL,
       headers: {
@@ -40,7 +42,6 @@ class APIClient {
       (error) => {
         if (error.response?.status === 401) {
           // Handle unauthorized - trigger auth flow
-          // Could dispatch logout event or redirect to login
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:unauthorized'));
           }
