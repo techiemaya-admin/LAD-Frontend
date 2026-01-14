@@ -37,17 +37,14 @@ class VoiceAgentService {
       return true;
     }
 
-    // Check if globally disabled via environment variable
-    if (process.env.NEXT_PUBLIC_DISABLE_VAPI === 'true') {
-      logger.warn('VAPI disabled via environment variable');
-      return true;
-    }
-
     // Always allow VAPI in development mode for testing
     if (process.env.NODE_ENV === 'development') {
       logger.debug('VAPI enabled for development mode');
       return false;
     }
+
+    // Note: Removed NEXT_PUBLIC_DISABLE_VAPI check to allow VAPI in production
+    // VAPI is now enabled by default for authenticated users
 
     // Check if user has voice agent features enabled based on email
     if (typeof window !== 'undefined') {
