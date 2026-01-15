@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger';
 interface ChatMessageBubbleProps {
   role: 'ai' | 'user';
   content: string;
-  timestamp?: Date;
+  timestamp?: Date | string;
   status?: 'need_input' | 'ready';
   missing?: Record<string, boolean> | string[];
   workflow?: any[];
@@ -41,7 +41,7 @@ export default function ChatMessageBubble({
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
-  
+
   // CRITICAL FIX: Detect template input request FIRST (before parsing options)
   // Template questions should take priority over action options
   const contentLower = content.toLowerCase();
@@ -62,7 +62,7 @@ export default function ChatMessageBubble({
     // CRITICAL: If message says "You selected X actions" followed by "Please provide template", it's a template question
     (contentLower.includes('you selected') && contentLower.includes('actions') && (contentLower.includes('please provide') || contentLower.includes('provide the') || contentLower.includes('template')))
   );
-  
+
   // Parse options from message content (only for last AI message and NOT a template request)
   // If it's a template request, don't parse options even if they exist in the message
   const parsedOptions = isAI && isLastMessage && !isTemplateRequest ? parseMessageOptions(content) : null;
@@ -90,8 +90,8 @@ export default function ChatMessageBubble({
       )}>
         <div className={cn(
           'rounded-2xl px-4 py-3 shadow-sm',
-          isAI 
-            ? 'bg-white border border-gray-200' 
+          isAI
+            ? 'bg-white border border-gray-200'
             : 'bg-blue-600 text-white'
         )}>
           <div className={cn(
@@ -107,7 +107,14 @@ export default function ChatMessageBubble({
           <div className="mt-3 w-full">
             {parsedOptions.stepType === 'delay' ? (
               <DelaySelector
-                onSubmit={(value) => onOptionSubmit!([value])}
+                onSubmit={(value) => {
+                  if (onOptionSubmit) {
+                    onOptionSubmit([value]);
+                  } else {
+                    console.error('[ChatMessageBubble] onOptionSubmit is undefined!');
+                  }
+                }}
+                options={parsedOptions.options}
               />
             ) : parsedOptions.stepType === 'condition' ? (
               <ConditionSelector
@@ -120,8 +127,8 @@ export default function ChatMessageBubble({
                 onSubmit={onOptionSubmit!}
                 variant={
                   parsedOptions.stepType === 'platform_selection' ? 'cards' :
-                  parsedOptions.stepType === 'platform_actions' ? 'checkboxes' :
-                  'default'
+                    parsedOptions.stepType === 'platform_actions' ? 'checkboxes' :
+                      'default'
                 }
                 platformIndex={parsedOptions.platformIndex}
                 totalPlatforms={parsedOptions.totalPlatforms}
@@ -173,7 +180,7 @@ export default function ChatMessageBubble({
             'mt-1.5 text-xs',
             isAI ? 'text-gray-400' : 'text-gray-500'
           )}>
-            {timestamp.toLocaleTimeString([], {
+            {(timestamp instanceof Date ? timestamp : new Date(timestamp)).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             })}

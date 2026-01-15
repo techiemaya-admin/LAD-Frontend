@@ -29,6 +29,7 @@ export function generateProgressiveWorkflowPreview(
   const hasRoles = (icpAnswers.icp_roles && String(icpAnswers.icp_roles).trim() !== '') || 
                    (icpAnswers.roles && (Array.isArray(icpAnswers.roles) ? icpAnswers.roles.length > 0 : icpAnswers.roles.trim() !== ''));
   const hasLocation = (icpAnswers.icp_location && String(icpAnswers.icp_location).trim() !== '') || 
+                     (icpAnswers.icp_locations && String(icpAnswers.icp_locations).trim() !== '') ||
                      (icpAnswers.location && (Array.isArray(icpAnswers.location) ? icpAnswers.location.length > 0 : icpAnswers.location.trim() !== ''));
   const hasTargeting = hasIndustries || hasRoles || hasLocation;
   
@@ -62,23 +63,35 @@ export function generateProgressiveWorkflowPreview(
       targetParts.push(`Industries: ${industries}`);
     }
     
-    // Add location (check both backend icp_location and frontend location)
+    // Add location (check both backend icp_location/icp_locations and frontend location)
     if (icpAnswers.icp_location) {
       targetParts.push(`Location: ${icpAnswers.icp_location}`);
+    } else if (icpAnswers.icp_locations) {
+      targetParts.push(`Location: ${icpAnswers.icp_locations}`);
     } else if (hasLocation) {
       const location = Array.isArray(icpAnswers.location) ? icpAnswers.location.join(', ') : icpAnswers.location;
       targetParts.push(`Location: ${location}`);
     }
     
     const targetDesc = targetParts.length > 0 ? targetParts.join(' | ') : 'Lead generation configured';
+    
+    // Get leads per day from icpAnswers (only if explicitly set)
+    const leadsPerDay = icpAnswers.leads_per_day || icpAnswers.dailyLeadVolume;
 
-    steps.push({
+    const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
       title: 'Generate Leads',
       description: targetDesc,
       channel: undefined,
-    });
+    };
+    
+    // Only add leadLimit if it was explicitly provided
+    if (leadsPerDay) {
+      leadGenStep.leadLimit = leadsPerDay;
+    }
+
+    steps.push(leadGenStep);
   }
 
   // Platform steps: Check for platform selection (backend uses icp_platforms)
@@ -95,26 +108,98 @@ export function generateProgressiveWorkflowPreview(
   
   logger.debug('Platforms found', { platforms, platformArray });
   
-  // LinkedIn steps (show after LinkedIn is selected)
-  if (platformArray.includes('linkedin')) {
-    logger.debug('Adding LinkedIn steps for platform', { platforms });
+  // Process platforms in the order they were selected
+  let platformIndex = 0;
+  for (const platform of platformArray) {
+    // Check for delay BETWEEN this platform and the previous one
+    if (platformIndex > 0) {
+      const prevPlatform = platformArray[platformIndex - 1];
+      // Check dynamic delay key format: delay_{prevPlatform}_{currentPlatform}
+      const delayKey = `delay_${prevPlatform}_${platform}`;
+      const delayValue = icpAnswers[delayKey] || 
+                         icpAnswers.delay_between_platforms || 
+                         icpAnswers.workflow_delays;
+      
+      if (delayValue && delayValue.toString().trim() !== '') {
+        // Parse delay value - detect if it's hours or days
+        const delayStr = delayValue.toString().toLowerCase();
+        const delayNum = parseInt(delayStr) || 1;
+        const isHours = delayStr.includes('hour');
+        const isDays = delayStr.includes('day');
+        
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'delay',
+          title: `Wait ${delayValue}`,
+          description: `Delay before ${platform.charAt(0).toUpperCase() + platform.slice(1)} outreach`,
+          delayDays: isDays ? delayNum : 0,
+          delayHours: isHours ? delayNum : 0,
+        });
+      }
+    }
     
-    // Always add visit step first when LinkedIn is selected
-    steps.push({
-      id: `step_${stepId++}`,
-      type: 'linkedin_visit',
-      title: 'Visit LinkedIn Profile',
-      description: 'View target profile',
-      channel: 'linkedin',
-    });
+    if (platform === 'linkedin') {
+      logger.debug('Adding LinkedIn steps for platform', { platforms });
+      
+      // Get LinkedIn actions - check multiple possible keys
+      const rawActions = icpAnswers.linkedin_actions || icpAnswers.linkedinActions || [];
+      // Handle both array and string formats
+      const linkedinActions = Array.isArray(rawActions) 
+        ? rawActions 
+        : (typeof rawActions === 'string' ? rawActions.split(',').map(s => s.trim()) : []);
+      logger.debug('LinkedIn actions from icpAnswers', { 
+        rawActions, 
+        rawActionsType: typeof rawActions,
+        isArray: Array.isArray(rawActions),
+        linkedinActions,
+        linkedinActionsLength: linkedinActions.length
+      });
+      
+      // Normalize actions for flexible matching
+      const hasVisit = linkedinActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('visit') || actionStr === 'visit_profile';
+      });
 
-    // Add connection step if actions are configured
-    const linkedinActions = icpAnswers.linkedin_actions || [];
-    if (Array.isArray(linkedinActions) && linkedinActions.length > 0) {
-      if (linkedinActions.some((action: string) => 
-        String(action).toLowerCase().includes('connection') || 
-        String(action).toLowerCase().includes('connect')
-      )) {
+      const hasFollow = linkedinActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('follow') && !actionStr.includes('message');
+      });
+
+      const hasConnect = linkedinActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
+      });
+
+      const hasMessage = linkedinActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('message');
+      });
+      
+      // Add visit step
+      if (hasVisit || linkedinActions.length > 0) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'linkedin_visit',
+          title: 'Visit LinkedIn Profile',
+          description: 'View target profile',
+          channel: 'linkedin',
+        });
+      }
+
+      // Add follow step
+      if (hasFollow) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'linkedin_follow',
+          title: 'Follow LinkedIn Profile',
+          description: 'Follow the profile',
+          channel: 'linkedin',
+        });
+      }
+
+      // Add connection step
+      if (hasConnect) {
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_connect',
@@ -124,50 +209,186 @@ export function generateProgressiveWorkflowPreview(
         });
       }
 
-      // Add message step only if template is provided
-      if (linkedinActions.some((action: string) => 
-        String(action).toLowerCase().includes('message')
-      ) && icpAnswers.linkedin_template) {
+      // Add message step
+      if (hasMessage) {
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_message',
           title: 'Send LinkedIn Message',
-          description: icpAnswers.linkedin_template,
+          description: icpAnswers.linkedin_template || 'Send personalized message',
           channel: 'linkedin',
         });
       }
+    } else if (platform === 'whatsapp') {
+      const rawWhatsappActions = icpAnswers.whatsapp_actions || icpAnswers.whatsappActions || [];
+      const whatsappActions = Array.isArray(rawWhatsappActions)
+        ? rawWhatsappActions
+        : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
+      
+      logger.debug('WhatsApp actions from icpAnswers', { 
+        rawWhatsappActions, 
+        rawActionsType: typeof rawWhatsappActions,
+        isArray: Array.isArray(rawWhatsappActions),
+        whatsappActions,
+        whatsappActionsLength: whatsappActions.length
+      });
+
+      // Check for broadcast action
+      const hasBroadcast = whatsappActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('broadcast');
+      });
+
+      if (hasBroadcast) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'whatsapp_broadcast',
+          title: 'Send WhatsApp Broadcast',
+          description: icpAnswers.whatsapp_template || 'Send broadcast message',
+          channel: 'whatsapp',
+        });
+      }
+
+      // Check for 1:1 message
+      const hasOneToOne = whatsappActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('1:1') || (actionStr.includes('message') && !actionStr.includes('broadcast'));
+      });
+
+      if (hasOneToOne) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'whatsapp_message',
+          title: 'Send WhatsApp 1:1 Message',
+          description: icpAnswers.whatsapp_template || 'Send direct message',
+          channel: 'whatsapp',
+        });
+      }
+
+      // Check for follow-up
+      const hasFollowUp = whatsappActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('follow');
+      });
+
+      if (hasFollowUp) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'whatsapp_followup',
+          title: 'WhatsApp Follow-up',
+          description: 'Send follow-up message',
+          channel: 'whatsapp',
+        });
+      }
+
+      // Check for template message
+      const hasTemplate = whatsappActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('template');
+      });
+
+      if (hasTemplate) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'whatsapp_template',
+          title: 'Send WhatsApp Template',
+          description: 'Send template message',
+          channel: 'whatsapp',
+        });
+      }
+
+      // Fallback: if no specific actions matched but whatsapp is selected
+      if (!hasBroadcast && !hasOneToOne && !hasFollowUp && !hasTemplate && whatsappActions.length > 0) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'whatsapp_message',
+          title: 'Send WhatsApp Message',
+          description: icpAnswers.whatsapp_template || 'Send WhatsApp message',
+          channel: 'whatsapp',
+        });
+      }
+    } else if (platform === 'email') {
+      const rawEmailActions = icpAnswers.email_actions || icpAnswers.emailActions || [];
+      const emailActions = Array.isArray(rawEmailActions)
+        ? rawEmailActions
+        : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
+
+      const hasSendEmail = emailActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('send') && actionStr.includes('email');
+      });
+
+      if (hasSendEmail || emailActions.length > 0) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'email_send',
+          title: 'Send Email',
+          description: 'Send email campaign',
+          channel: 'email',
+        });
+      }
+
+      const hasFollowUpEmail = emailActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('follow');
+      });
+
+      if (hasFollowUpEmail) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'email_followup',
+          title: 'Send Follow-up Email',
+          description: 'Follow up if no response',
+          channel: 'email',
+        });
+      }
+    } else if (platform === 'voice' || platform.includes('voice')) {
+      const rawVoiceActions = icpAnswers.voice_actions || icpAnswers.voiceActions || [];
+      const voiceActions = Array.isArray(rawVoiceActions)
+        ? rawVoiceActions
+        : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
+
+      logger.debug('Voice actions from icpAnswers', { 
+        rawVoiceActions, 
+        rawActionsType: typeof rawVoiceActions,
+        isArray: Array.isArray(rawVoiceActions),
+        voiceActions,
+        voiceActionsLength: voiceActions.length
+      });
+
+      const hasTriggerCall = voiceActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('trigger') || actionStr.includes('call');
+      });
+
+      if (hasTriggerCall || voiceActions.length > 0) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'voice_call',
+          title: 'Trigger Voice Call',
+          description: 'Initiate automated voice call',
+          channel: 'voice',
+        });
+      }
+
+      const hasCallScript = voiceActions.some((action: string) => {
+        const actionStr = String(action).toLowerCase();
+        return actionStr.includes('script');
+      });
+
+      if (hasCallScript) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'voice_script',
+          title: 'Use Call Script',
+          description: 'Follow predefined call script',
+          channel: 'voice',
+        });
+      }
     }
-  }
-
-  // Add other platform steps
-  if (platformArray.includes('whatsapp')) {
-    steps.push({
-      id: `step_${stepId++}`,
-      type: 'whatsapp_message',
-      title: 'Send WhatsApp Message',
-      description: 'Send WhatsApp message',
-      channel: 'whatsapp',
-    });
-  }
-
-  if (platformArray.includes('email')) {
-    steps.push({
-      id: `step_${stepId++}`,
-      type: 'email_send',
-      title: 'Send Email',
-      description: 'Send email campaign',
-      channel: 'email',
-    });
-  }
-
-  if (platformArray.includes('voice')) {
-    steps.push({
-      id: `step_${stepId++}`,
-      type: 'voice_call',
-      title: 'Voice Call',
-      description: 'Trigger voice call',
-      channel: 'voice',
-    });
+    
+    // Increment platform index for delay logic
+    platformIndex++;
   }
 
   logger.debug('Progressive workflow generated', { stepCount: steps.length, stepIndex: currentStepIndex });
@@ -186,11 +407,19 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
 
   // Extract platforms and actions
   const platforms = mappedAnswers.platforms || [];
+  // Convert single string to array if needed
+  let platformArray: string[] = [];
+  if (typeof platforms === 'string') {
+    platformArray = platforms.split(',').map(p => p.trim().toLowerCase());
+  } else if (Array.isArray(platforms)) {
+    platformArray = platforms.map(p => String(p).toLowerCase());
+  }
+  
   const hasIndustries = mappedAnswers.industries && mappedAnswers.industries.length > 0;
   const hasRoles = mappedAnswers.roles && mappedAnswers.roles.length > 0;
   const hasLocation = mappedAnswers.location;
 
-  logger.debug('Platforms and targeting criteria', { platforms, hasIndustries, hasRoles, hasLocation });
+  logger.debug('Platforms and targeting criteria', { platforms, platformArray, hasIndustries, hasRoles, hasLocation });
 
   // Step 1: Lead Generation (if targeting criteria provided)
   if (hasIndustries || hasRoles || hasLocation) {
@@ -199,24 +428,66 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       hasIndustries ? `Industries: ${mappedAnswers.industries.join(', ')}` : '',
       hasLocation ? `Location: ${mappedAnswers.location}` : '',
     ].filter(Boolean).join(' | ');
+    
+    // Get leads per day from mappedAnswers (only if explicitly set)
+    const leadsPerDay = mappedAnswers.leads_per_day;
 
-    steps.push({
+    const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
       title: 'Generate Leads',
       description: targetDesc,
       channel: undefined,
-    });
+    };
+    
+    // Only add leadLimit if it was explicitly provided
+    if (leadsPerDay) {
+      leadGenStep.leadLimit = leadsPerDay;
+    }
+
+    steps.push(leadGenStep);
   }
 
-  // LinkedIn steps
-  if (platforms.includes('linkedin')) {
+  // Process platforms in the order they were selected
+  for (const platform of platformArray) {
+    if (platform === 'linkedin') {
     // Handle both camelCase and snake_case
-    const linkedinActions = mappedAnswers.linkedinActions || mappedAnswers.linkedin_actions || [];
-    logger.debug('LinkedIn actions', { linkedinActions });
+    const rawActions = mappedAnswers.linkedinActions || mappedAnswers.linkedin_actions || [];
+    // Handle both array and string formats
+    const linkedinActions = Array.isArray(rawActions)
+      ? rawActions
+      : (typeof rawActions === 'string' ? rawActions.split(',').map(s => s.trim()) : []);
+    logger.debug('LinkedIn actions', { 
+      rawActions, 
+      rawActionsType: typeof rawActions,
+      isArray: Array.isArray(rawActions),
+      linkedinActions,
+      linkedinActionsLength: linkedinActions.length
+    });
+    
+    // Normalize actions for flexible matching
+    const hasVisit = linkedinActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('visit') || actionStr === 'visit_profile';
+    });
+
+    const hasFollow = linkedinActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('follow') && !actionStr.includes('message');
+    });
+
+    const hasConnect = linkedinActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
+    });
+
+    const hasMessage = linkedinActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('message');
+    });
     
     // Visit profile
-    if (linkedinActions.includes('visit_profile') || linkedinActions.length > 0) {
+    if (hasVisit || linkedinActions.length > 0) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_visit',
@@ -226,19 +497,8 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       });
     }
 
-    // Send connection request
-    if (linkedinActions.includes('send_connection')) {
-      steps.push({
-        id: `step_${stepId++}`,
-        type: 'linkedin_connect',
-        title: 'Send Connection Request',
-        description: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || 'Connect with personalized message',
-        channel: 'linkedin',
-      });
-    }
-
-    // Follow
-    if (linkedinActions.includes('follow')) {
+    // Follow profile
+    if (hasFollow) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_follow',
@@ -248,8 +508,19 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       });
     }
 
+    // Send connection request
+    if (hasConnect) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'linkedin_connect',
+        title: 'Send Connection Request',
+        description: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || 'Connect with personalized message',
+        channel: 'linkedin',
+      });
+    }
+
     // Send message (after connection accepted)
-    if (linkedinActions.includes('send_message_after_accepted')) {
+    if (hasMessage) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_message',
@@ -258,15 +529,27 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'linkedin',
       });
     }
-  }
-
-  // WhatsApp steps
-  if (platforms.includes('whatsapp')) {
-    // Handle both camelCase and snake_case
-    const whatsappActions = mappedAnswers.whatsappActions || mappedAnswers.whatsapp_actions || [];
-    logger.debug('WhatsApp actions', { whatsappActions });
+    } else if (platform === 'whatsapp') {
+    const rawWhatsappActions = mappedAnswers.whatsappActions || mappedAnswers.whatsapp_actions || [];
+    const whatsappActions = Array.isArray(rawWhatsappActions)
+      ? rawWhatsappActions
+      : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
     
-    if (whatsappActions.includes('send_broadcast')) {
+    logger.debug('WhatsApp actions', { 
+      rawWhatsappActions, 
+      rawActionsType: typeof rawWhatsappActions,
+      isArray: Array.isArray(rawWhatsappActions),
+      whatsappActions,
+      whatsappActionsLength: whatsappActions.length
+    });
+    
+    // Check for broadcast action
+    const hasBroadcast = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('broadcast');
+    });
+
+    if (hasBroadcast) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'whatsapp_broadcast',
@@ -276,7 +559,13 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       });
     }
 
-    if (whatsappActions.includes('send_1to1')) {
+    // Check for 1:1 message
+    const hasOneToOne = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('1:1') || (actionStr.includes('message') && !actionStr.includes('broadcast'));
+    });
+
+    if (hasOneToOne) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'whatsapp_message',
@@ -285,15 +574,62 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'whatsapp',
       });
     }
-  }
 
-  // Email steps
-  if (platforms.includes('email')) {
-    // Handle both camelCase and snake_case
-    const emailActions = mappedAnswers.emailActions || mappedAnswers.email_actions || [];
-    logger.debug('Email actions', { emailActions });
+    // Check for follow-up
+    const hasFollowUp = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('follow');
+    });
+
+    if (hasFollowUp) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'whatsapp_followup',
+        title: 'WhatsApp Follow-up',
+        description: 'Send follow-up message',
+        channel: 'whatsapp',
+      });
+    }
+
+    // Check for template message
+    const hasTemplate = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('template');
+    });
+
+    if (hasTemplate) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'whatsapp_template',
+        title: 'Send WhatsApp Template',
+        description: 'Send template message',
+        channel: 'whatsapp',
+      });
+    }
+
+    // Fallback: if no specific actions matched but whatsapp is selected
+    if (!hasBroadcast && !hasOneToOne && !hasFollowUp && !hasTemplate && whatsappActions.length > 0) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'whatsapp_message',
+        title: 'Send WhatsApp Message',
+        description: mappedAnswers.whatsappTemplate || mappedAnswers.whatsapp_template || 'Send WhatsApp message',
+        channel: 'whatsapp',
+      });
+    }
+    } else if (platform === 'email') {
+    const rawEmailActions = mappedAnswers.emailActions || mappedAnswers.email_actions || [];
+    const emailActions = Array.isArray(rawEmailActions)
+      ? rawEmailActions
+      : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
+    logger.debug('Email actions', { rawEmailActions, emailActions, isArray: Array.isArray(rawEmailActions) });
     
-    if (emailActions.includes('send_email')) {
+    const hasSendEmail = emailActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('send') && actionStr.includes('email');
+    });
+
+    if (hasSendEmail || emailActions.length > 0) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'email_send',
@@ -303,7 +639,12 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       });
     }
 
-    if (emailActions.includes('followup_email')) {
+    const hasFollowUpEmail = emailActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('follow');
+    });
+
+    if (hasFollowUpEmail) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'email_followup',
@@ -312,22 +653,42 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'email',
       });
     }
-  }
-
-  // Voice steps
-  if (platforms.includes('voice')) {
-    // Handle both camelCase and snake_case
-    const voiceActions = mappedAnswers.voiceActions || mappedAnswers.voice_actions || [];
-    logger.debug('Voice actions', { voiceActions });
+    } else if (platform === 'voice' || platform.includes('voice')) {
+    const rawVoiceActions = mappedAnswers.voiceActions || mappedAnswers.voice_actions || [];
+    const voiceActions = Array.isArray(rawVoiceActions)
+      ? rawVoiceActions
+      : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
+    logger.debug('Voice actions', { rawVoiceActions, voiceActions, isArray: Array.isArray(rawVoiceActions) });
     
-    if (voiceActions.includes('call')) {
+    const hasTriggerCall = voiceActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('trigger') || actionStr.includes('call');
+    });
+
+    if (hasTriggerCall || voiceActions.length > 0) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'voice_call',
-        title: 'Make Voice Call',
-        description: 'Call lead using AI voice agent',
+        title: 'Trigger Voice Call',
+        description: 'Initiate automated voice call',
         channel: 'voice',
       });
+    }
+
+    const hasCallScript = voiceActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('script');
+    });
+
+    if (hasCallScript) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'voice_script',
+        title: 'Use Call Script',
+        description: 'Follow predefined call script',
+        channel: 'voice',
+      });
+    }
     }
   }
 

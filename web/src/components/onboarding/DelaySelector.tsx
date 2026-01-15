@@ -7,31 +7,68 @@ import { cn } from '@/lib/utils';
 interface DelaySelectorProps {
   onSubmit: (selectedValue: string) => void;
   onSkip?: () => void;
+  options?: string[]; // Dynamic options from backend
 }
 
-export default function DelaySelector({ onSubmit, onSkip }: DelaySelectorProps) {
+export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelectorProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [customDays, setCustomDays] = useState<string>('');
 
-  const delayOptions = [
-    { value: 'No delay', label: 'No delay', description: 'Actions run immediately' },
-    { value: '1 day', label: '1 day', description: 'Wait 1 day between actions' },
-    { value: '2 days', label: '2 days', description: 'Wait 2 days between actions' },
-    { value: '3 days', label: '3 days', description: 'Wait 3 days between actions' },
-    { value: 'Custom', label: 'Custom', description: 'Specify your own delay' },
+  // Use backend options if provided, otherwise fallback to defaults
+  const defaultDelayOptions = [
+    { value: 'No delay (run immediately)', label: 'No delay', description: 'Actions run immediately' },
+    { value: '1 hour delay', label: '1 hour', description: 'Wait 1 hour between actions' },
+    { value: '2 hours delay', label: '2 hours', description: 'Wait 2 hours between actions' },
+    { value: '1 day delay', label: '1 day', description: 'Wait 1 day between actions' },
+    { value: '2 days delay', label: '2 days', description: 'Wait 2 days between actions' },
+    { value: 'Custom delay', label: 'Custom', description: 'Specify your own delay' },
   ];
+  
+  // Parse backend options to match our format
+  const delayOptions = options && options.length > 0
+    ? options.map(opt => {
+        // Extract label from options like "No delay (run immediately)"
+        const match = opt.match(/^([^(]+)(?:\s*\([^)]+\))?$/);
+        const label = match ? match[1].trim() : opt;
+        
+        // Determine description based on label
+        let description = '';
+        if (opt.toLowerCase().includes('no delay') || opt.toLowerCase().includes('immediately')) {
+          description = 'Actions run immediately';
+        } else if (opt.toLowerCase().includes('custom')) {
+          description = 'Specify your own delay';
+        } else {
+          const numberMatch = opt.match(/(\d+)\s*(hour|day)s?/i);
+          if (numberMatch) {
+            const num = numberMatch[1];
+            const unit = numberMatch[2].toLowerCase();
+            description = `Wait ${num} ${unit}${parseInt(num) > 1 ? 's' : ''} between actions`;
+          } else {
+            description = '';
+          }
+        }
+        
+        return {
+          value: opt, // Send full option text to backend
+          label,
+          description,
+        };
+      })
+    : defaultDelayOptions;
 
   const handleSelect = (value: string) => {
     setSelected(value);
-    if (value !== 'Custom') {
+    if (!value.toLowerCase().includes('custom')) {
       // Auto-submit for non-custom options
-      setTimeout(() => onSubmit(value), 100);
+      setTimeout(() => {
+        onSubmit(value);
+      }, 100);
     }
   };
 
   const handleCustomSubmit = () => {
     if (customDays.trim()) {
-      onSubmit(`${customDays} days`);
+      onSubmit(`${customDays} days delay`);
     }
   };
 

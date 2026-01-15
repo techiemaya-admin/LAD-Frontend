@@ -11,7 +11,6 @@ import {
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead } from '@/features/campaigns';
-import { apiPost } from '@/lib/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 import { safeStorage } from '@/utils/storage';
@@ -54,7 +53,6 @@ export default function CampaignLeadsPage() {
   // Reveal state for employee contacts
   const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
-  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string }>>({});
   
   // Type-safe state setters
   const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
@@ -103,7 +101,6 @@ export default function CampaignLeadsPage() {
           }
         } catch (err) {
           // Silently fail - summary might not exist yet
-          console.log(`[Campaign Leads] No summary for lead ${lead.id}`);
         }
         return null;
       });
@@ -127,48 +124,22 @@ export default function CampaignLeadsPage() {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
     
-    try {
-      const response = await apiPost<any>('/api/apollo-leads/reveal-phone', {
-        person_id: employee.id
-      });
-      
-      if (response.success && response.phone) {
-        // Store the revealed phone value
-        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: response.phone } }));
-        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
-        push({ title: 'Success', description: 'Phone number revealed' });
-      } else {
-        push({ title: 'Error', description: 'Failed to reveal phone number' });
-      }
-    } catch (error) {
-      push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal phone' });
-    } finally {
+    // Simulate API call - replace with actual API call
+    setTimeout(() => {
+      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: false } }));
-    }
+    }, 1000);
   };
 
   const handleRevealEmail = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
     
-    try {
-      const response = await apiPost<any>('/api/apollo-leads/reveal-email', {
-        person_id: employee.id
-      });
-      
-      if (response.success && response.email) {
-        // Store the revealed email value
-        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: response.email } }));
-        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-        push({ title: 'Success', description: 'Email address revealed' });
-      } else {
-        push({ title: 'Error', description: 'Failed to reveal email' });
-      }
-    } catch (error) {
-      push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal email' });
-    } finally {
+    // Simulate API call - replace with actual API call
+    setTimeout(() => {
+      setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
-    }
+    }, 1000);
   };
 
   const handleViewSummary = async (employee: ExtendedCampaignLead) => {
@@ -196,7 +167,6 @@ export default function CampaignLeadsPage() {
         }
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
-        console.log('[Profile Summary] No existing summary found, generating new one...');
       }
 
       // Generate new summary

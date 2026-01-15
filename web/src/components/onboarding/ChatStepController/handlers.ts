@@ -131,9 +131,13 @@ export async function processAnswer(
     // Handle platform completion tracking
     const completedPlatforms = getCompletedPlatforms(allCollectedAnswers);
     
+    // Handle delay platform tracking
+    const completedDelayPlatforms = getCompletedDelayPlatforms(allCollectedAnswers, intentKeyToUse);
+    
     const payloadCollectedAnswers = {
       ...allCollectedAnswers,
-      completed_platform_actions: completedPlatforms
+      completed_platform_actions: completedPlatforms,
+      completed_delay_platforms: completedDelayPlatforms
     };
 
     const response: ICPAnswerResponse = await processICPAnswer({
@@ -147,7 +151,8 @@ export async function processAnswer(
     logger.debug('Received processICPAnswer response', { 
       success: response.success, 
       nextStepIndex: response.nextStepIndex, 
-      hasQuestion: !!response.nextQuestion 
+      hasQuestion: !!response.nextQuestion,
+      correctedAnswer: response.correctedAnswer 
     });
 
     if (!response.success) {
@@ -162,6 +167,7 @@ export async function processAnswer(
       clarificationNeeded: response.clarificationNeeded,
       completed: response.completed,
       message: response.message,
+      correctedAnswer: response.correctedAnswer || null,
     };
   } catch (error: any) {
     logger.error('Error processing answer', error);
@@ -223,3 +229,24 @@ function getCompletedPlatforms(allCollectedAnswers: Record<string, any>): string
   return completedPlatforms;
 }
 
+/**
+ * Get completed delay platforms based on delay configuration
+ */
+function getCompletedDelayPlatforms(allCollectedAnswers: Record<string, any>, currentIntentKey: string): string[] {
+  let completedDelayPlatforms: string[] = Array.isArray(allCollectedAnswers.completed_delay_platforms)
+    ? [...allCollectedAnswers.completed_delay_platforms]
+    : [];
+
+  // Check if current answer is a platform-specific delay (e.g., linkedin_delay)
+  if (currentIntentKey && currentIntentKey.endsWith('_delay')) {
+    const platformName = currentIntentKey.replace('_delay', '');
+    
+    // Add this platform to completed delays if not already there
+    if (!completedDelayPlatforms.includes(platformName)) {
+      completedDelayPlatforms.push(platformName);
+      logger.debug('Added platform to completed delays', { platformName, completedDelayPlatforms });
+    }
+  }
+
+  return completedDelayPlatforms;
+}
