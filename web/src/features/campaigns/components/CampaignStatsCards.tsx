@@ -12,13 +12,6 @@ interface CampaignStatsCardsProps {
 }
 
 export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
-  // Debug logging
-  console.log('[CampaignStatsCards] Stats received:', {
-    total_campaigns: stats.total_campaigns,
-    active_campaigns: stats.active_campaigns,
-    total_leads: stats.total_leads,
-  });
-
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: { xs: 'wrap', md: 'nowrap' }, alignItems: 'stretch' }}>
       <Box sx={{ flex: '1 1 0', minWidth: 0, width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'auto' }, display: 'flex' }}>

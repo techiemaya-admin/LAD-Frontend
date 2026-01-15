@@ -32,7 +32,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   const filteredCampaigns = campaigns;
 
   return (
-    <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+    <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
       <CardContent sx={{ p: 0 }}>
         {loading ? (
           <Box sx={{ p: 3 }}>
@@ -46,18 +46,21 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             <Button
               variant="outlined"
               startIcon={<Add />}
-              onClick={() => router.push('/campaigns/new')}
+              onClick={() => router.push('/onboarding')}
+              fullWidth
+              sx={{ maxWidth: 280 }}
             >
               Create Your First Campaign
             </Button>
           </Box>
         ) : (
-          <Table>
+          <Box sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Campaign Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Leads</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Campaign Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Leads</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Sent</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Connected</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Replied</TableCell>
@@ -126,6 +129,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
               ))}
             </TableBody>
           </Table>
+          </Box>
         )}
       </CardContent>
     </Card>

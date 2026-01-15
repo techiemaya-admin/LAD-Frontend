@@ -18,7 +18,7 @@ import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 
-type FlowState = 
+type FlowState =
   | 'initial'
   | 'platform_selection'
   | 'platform_confirmation' // New: Wait for user to confirm platforms
@@ -70,6 +70,7 @@ export default function ChatPanel() {
     setWorkflowState,
     onboardingMode,
     setOnboardingMode,
+    isICPFlowStarted,
   } = useOnboardingStore();
 
   // Initialize workflow preview on mount to show just Start/End
@@ -92,9 +93,9 @@ export default function ChatPanel() {
     const handleWorkflowUpdate = () => {
       const currentAnswers = (window as any).__icpAnswers || {};
       const currentStepIndex = (window as any).__currentStepIndex || 0;
-      
+
       logger.debug('Workflow update triggered', { currentAnswers, currentStepIndex });
-      
+
       if (Object.keys(currentAnswers).length > 0) {
         import('@/lib/workflowGenerator').then(({ generateProgressiveWorkflowPreview }) => {
           const workflowSteps = generateProgressiveWorkflowPreview(currentAnswers, currentStepIndex);
@@ -108,7 +109,7 @@ export default function ChatPanel() {
 
     // Listen for custom workflow update events
     window.addEventListener('workflowUpdate', handleWorkflowUpdate);
-    
+
     return () => {
       window.removeEventListener('workflowUpdate', handleWorkflowUpdate);
     };
@@ -123,47 +124,47 @@ export default function ChatPanel() {
   const [utilityQuestionIndex, setUtilityQuestionIndex] = useState(0);
   const [showWorkflowLibrary, setShowWorkflowLibrary] = useState(false);
   const [isICPOnboardingActive, setIsICPOnboardingActive] = useState(false);
-  
+
   // Chat step controller for ICP onboarding
   const chatStepController = useChatStepController(
     async (answers) => {
       // On completion, create and start campaign automatically
       logger.debug('ICP onboarding completed', { answers });
-      
+
       // Import mapper dynamically to avoid circular dependencies
       const { mapICPAnswersToCampaign } = await import('@/lib/icpToCampaignMapper');
       const mappedAnswers = mapICPAnswersToCampaign(answers);
       logger.debug('Mapped ICP answers to campaign format', { mappedAnswers });
-      
+
       // Store mapped answers in onboarding store
       useOnboardingStore.setState({
         icpAnswers: mappedAnswers,
         icpOnboardingComplete: true,
       });
-      
+
       // Generate workflow preview for UI
       logger.debug('Generating workflow preview from completed answers');
       const { generateWorkflowPreview } = await import('@/lib/workflowGenerator');
       const workflowSteps = generateWorkflowPreview(mappedAnswers);
       logger.debug('Generated workflow steps', { workflowSteps });
       setWorkflowPreview(workflowSteps);
-      
+
       setIsICPOnboardingActive(false);
-      
+
       // Show creating campaign message
       addAIMessage({
         role: 'ai',
         content: "Perfect! Creating and starting your campaign now...",
         timestamp: new Date(),
       });
-      
+
       // Create and start campaign automatically
       try {
         // Import function to generate full campaign steps with configs
         const { generateCampaignSteps } = await import('@/lib/workflowGenerator');
         const campaignSteps = generateCampaignSteps(mappedAnswers);
         logger.debug('Generated campaign steps with configs', { campaignSteps });
-        
+
         // Prepare campaign data
         const campaignData = {
           name: mappedAnswers.campaign_name || 'My Campaign',
@@ -176,27 +177,27 @@ export default function ChatPanel() {
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
-        
+
         logger.debug('Creating campaign with data', { campaignData });
         const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
-        
+
         if (createResponse.success) {
           const campaignId = createResponse.data.id || createResponse.data.data?.id;
           logger.debug('Campaign created successfully', { campaignId });
-          
+
           // Start the campaign
           if (campaignId) {
             logger.debug('Starting campaign');
             await apiPost<{ success: boolean }>(`/api/campaigns/${campaignId}/start`, {});
             logger.debug('Campaign started successfully');
-            
+
             // Show success message
             addAIMessage({
               role: 'ai',
               content: "✅ Campaign created and started successfully! Redirecting to campaigns page...",
               timestamp: new Date(),
             });
-            
+
             // Redirect after short delay
             setTimeout(() => {
               router.push('/campaigns');
@@ -215,16 +216,16 @@ export default function ChatPanel() {
     (stepIndex, answer) => {
       // Update workflow preview as steps are answered
       logger.debug('Step answered', { stepIndex, answer });
-      
+
       // Special case: stepIndex = -1 means "generate workflow now"
       if (stepIndex === -1 && typeof answer === 'object') {
         logger.debug('Generating workflow from answers', { answer });
-        
+
         // Import mapper and generator dynamically
         import('@/lib/icpToCampaignMapper').then(({ mapICPAnswersToCampaign }) => {
           const mappedAnswers = mapICPAnswersToCampaign(answer);
           logger.debug('Mapped answers for workflow', { mappedAnswers });
-          
+
           // Generate workflow preview
           import('@/lib/workflowGenerator').then(({ generateWorkflowPreview }) => {
             const workflowSteps = generateWorkflowPreview(mappedAnswers);
@@ -239,7 +240,7 @@ export default function ChatPanel() {
       } else {
         // Progressive workflow update for individual answers
         logger.debug('Updating progressive workflow for step', { stepIndex, answer });
-        
+
         // Get current answers from chat controller and update workflow
         import('@/lib/workflowGenerator').then(({ generateProgressiveWorkflowPreview }) => {
           // Get current answers by merging existing answers with new answer from the controller
@@ -259,7 +260,7 @@ export default function ChatPanel() {
   const handleWorkflowSelect = async (workflow: { naturalLanguage: string }) => {
     logger.debug('Workflow selected', { naturalLanguage: workflow.naturalLanguage });
     setShowWorkflowLibrary(false);
-    
+
     // If on initial screen, transition to chat interface
     if (!hasSelectedOption) {
       setHasSelectedOption(true);
@@ -270,10 +271,10 @@ export default function ChatPanel() {
         setSelectedPath('automation');
       }
     }
-    
+
     // Send the natural language command as if user typed it
     const msg = workflow.naturalLanguage;
-    
+
     // Add user message
     addAIMessage({
       role: 'user',
@@ -304,7 +305,7 @@ export default function ChatPanel() {
       };
 
       logger.debug('Sending workflow command', { msg, context });
-      
+
       const response = await sendGeminiPrompt(
         msg,
         history,
@@ -313,7 +314,7 @@ export default function ChatPanel() {
         {},
         context
       );
-      
+
       logger.debug('Received response', {
         hasText: !!response.text,
         hasSearchResults: !!response.searchResults,
@@ -376,14 +377,18 @@ export default function ChatPanel() {
       selectedPath === 'leads' &&
       onboardingMode === 'CHAT' &&
       !isICPOnboardingActive &&
-      !chatStepController.isComplete
+      !isICPFlowStarted && // Check persisted flag to prevent restart on refresh
+      !chatStepController.isComplete &&
+      aiMessages.length === 0 // Only start if no messages exist
     ) {
       logger.debug('Auto-starting ICP onboarding flow on page load', {
         hasSelectedOption,
         selectedPath,
         onboardingMode,
         isICPOnboardingActive,
-        isComplete: chatStepController.isComplete
+        isICPFlowStarted,
+        isComplete: chatStepController.isComplete,
+        existingMessages: aiMessages.length
       });
       setIsICPOnboardingActive(true);
       // Use setTimeout to ensure state is set before starting flow
@@ -391,11 +396,11 @@ export default function ChatPanel() {
         chatStepController.startFlow();
       }, 100);
     }
-  }, [hasSelectedOption, selectedPath, onboardingMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSelectedOption, selectedPath, onboardingMode, aiMessages.length, isICPFlowStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startAIConversation = async (path: 'automation' | 'leads') => {
     setIsProcessingAI(true);
-    
+
     // Set state based on path
     if (path === 'leads') {
       setWorkflowState('STATE_2'); // Already have category, go to platform selection
@@ -411,7 +416,7 @@ export default function ChatPanel() {
       setIsProcessingAI(false);
       return;
     }
-    
+
     const firstQuestion = questionSequences[path]?.[0];
     if (firstQuestion) {
       addAIMessage({
@@ -430,7 +435,7 @@ export default function ChatPanel() {
     setIsAIChatActive(true);
     setCurrentScreen(1);
     setFlowState('initial');
-    
+
     // Map option to category and set state
     if (option === 'leads') {
       setSelectedCategory('leadops');
@@ -451,13 +456,13 @@ export default function ChatPanel() {
 
   const processPlatformSelection = async (platforms: string[]) => {
     // Handle "all" option
-    let newPlatforms = platforms.includes('all') 
+    let newPlatforms = platforms.includes('all')
       ? ['linkedin', 'instagram', 'whatsapp', 'email', 'voice']
       : platforms;
 
     // Filter out duplicates - only add platforms not already selected
     const uniqueNewPlatforms = newPlatforms.filter(p => !selectedPlatforms.includes(p));
-    
+
     if (uniqueNewPlatforms.length === 0 && newPlatforms.length > 0) {
       // All platforms already selected
       addAIMessage({
@@ -492,10 +497,10 @@ export default function ChatPanel() {
     });
 
     // STRICT WAITING RULE: Ask for confirmation before proceeding
-    const addedText = uniqueNewPlatforms.length > 0 
+    const addedText = uniqueNewPlatforms.length > 0
       ? `Great! I've added ${uniqueNewPlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}. `
       : '';
-    
+
     addAIMessage({
       role: 'ai',
       content: `${addedText}Your selected platforms: ${selected.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}.\n\n**Current State: STATE_2 (Choose Platforms)**\n\nWould you like to add another platform, or continue with workflow building? (say "continue", "done", "no more", or just "no")`,
@@ -523,7 +528,7 @@ export default function ChatPanel() {
 
     // Get all features for platform
     const allFeatures = PLATFORM_FEATURES[platform as keyof typeof PLATFORM_FEATURES] || [];
-    
+
     // RULE 2, RULE 3, RULE 6: Filter features based on category and platform restrictions
     const filteredFeatures = filterFeaturesByCategory(
       allFeatures,
@@ -624,12 +629,12 @@ export default function ChatPanel() {
     // Convert utility answers to node settings
     const schedule = currentUtilityAnswers.schedule || 'immediate';
     const delayType = currentUtilityAnswers.delay || 'none';
-    const delay: { days?: number; hours?: number } | undefined = delayType === 'hours' 
+    const delay: { days?: number; hours?: number } | undefined = delayType === 'hours'
       ? { hours: currentUtilityAnswers.delayHours || 0 }
       : delayType === 'days'
-      ? { days: currentUtilityAnswers.delayDays || 0 }
-      : undefined;
-    
+        ? { days: currentUtilityAnswers.delayDays || 0 }
+        : undefined;
+
     const condition = currentUtilityAnswers.condition === 'none' ? null : currentUtilityAnswers.condition;
     const variables = Array.isArray(currentUtilityAnswers.variables)
       ? currentUtilityAnswers.variables.filter((v: string) => v !== 'none')
@@ -708,7 +713,7 @@ export default function ChatPanel() {
             condition: null,
           });
         }
-        
+
         setFlowState('complete');
         addAIMessage({
           role: 'ai',
@@ -728,7 +733,7 @@ export default function ChatPanel() {
     updates.forEach((update) => {
       if (update.action === 'add' && update.node) {
         const node = update.node;
-        
+
         // Create workflow node
         const workflowNode = {
           id: node.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -784,7 +789,7 @@ export default function ChatPanel() {
         const nodeId = update.node.id;
         const currentNodes = useOnboardingStore.getState().workflowNodes;
         const nodeIndex = currentNodes.findIndex((n: any) => n.id === nodeId);
-        
+
         if (nodeIndex >= 0) {
           const updatedNode = {
             ...currentNodes[nodeIndex],
@@ -794,7 +799,7 @@ export default function ChatPanel() {
               ...update.node.config,
             },
           };
-          
+
           // Update in store (would need updateWorkflowNode action)
           // For now, we'll remove and re-add
           const newNodes = [...currentNodes];
@@ -814,7 +819,7 @@ export default function ChatPanel() {
   const handleAnswer = async (answer: string | string[], questionKey: string) => {
     setIsProcessingAI(true);
     const answerText = Array.isArray(answer) ? answer.join(', ') : answer;
-    
+
     addAIMessage({
       role: 'user',
       content: answerText,
@@ -827,13 +832,13 @@ export default function ChatPanel() {
       if (flowState === 'platform_confirmation' || workflowState === 'STATE_2') {
         const confirmationKeywords = ['continue', 'done', 'no more', 'that\'s all', 'finish', 'proceed', 'that\'s it', 'no'];
         const addMoreKeywords = ['add', 'another', 'more', 'yes'];
-        
+
         // Check if user is trying to select a platform (not confirming)
         const platformKeywords = ['linkedin', 'email', 'whatsapp', 'instagram', 'voice', 'voice agent', 'all'];
-        const isPlatformSelection = platformKeywords.some(keyword => 
+        const isPlatformSelection = platformKeywords.some(keyword =>
           answerText.toLowerCase().includes(keyword)
         );
-        
+
         // Check if it's a duplicate platform
         if (isPlatformSelection) {
           const selectedLower = answerText.toLowerCase();
@@ -866,7 +871,7 @@ export default function ChatPanel() {
               return;
             }
           }
-          
+
           if (platformToAdd) {
             // Check if already selected
             if (selectedPlatforms.includes(platformToAdd)) {
@@ -890,19 +895,19 @@ export default function ChatPanel() {
             }
           }
         }
-        
-        const isConfirmed = confirmationKeywords.some(keyword => 
+
+        const isConfirmed = confirmationKeywords.some(keyword =>
           answerText.toLowerCase().trim() === keyword || answerText.toLowerCase().includes(keyword)
         );
-        const wantsMore = addMoreKeywords.some(keyword => 
+        const wantsMore = addMoreKeywords.some(keyword =>
           answerText.toLowerCase().includes(keyword)
         );
-        
+
         if (isConfirmed) {
           setPlatformsConfirmed(true);
           setWorkflowState('STATE_3'); // Move to Collect Requirements
           setFlowState('platform_features');
-          
+
           // Now proceed with asking requirements (STATE 3)
           addAIMessage({
             role: 'ai',
@@ -940,14 +945,14 @@ export default function ChatPanel() {
           return;
         }
       }
-      
+
       // For free-form text answers, send to AI and process workflow updates
       if (typeof answer === 'string' && !questionKey.startsWith('features_') && questionKey !== 'platforms') {
         const history = aiMessages.map(msg => ({
           role: msg.role,
           content: msg.content,
         }));
-        
+
         const context = {
           selectedPath: selectedPath || null,
           selectedCategory: selectedCategory || null,
@@ -964,10 +969,10 @@ export default function ChatPanel() {
         if (workflowState === 'STATE_3') {
           // Requirements keywords that should NOT be misinterpreted as categories
           const requirementKeywords = ['daily', 'weekly', 'schedule', 'scrape', 'send', 'visit', 'filter', 'target', 'limit', 'per day', 'every'];
-          const isRequirement = requirementKeywords.some(keyword => 
+          const isRequirement = requirementKeywords.some(keyword =>
             answerText.toLowerCase().includes(keyword)
           );
-          
+
           if (isRequirement) {
             // This is a requirement, stay in STATE_3
             const historyWithTimestamp = aiMessages.map(msg => ({
@@ -975,7 +980,7 @@ export default function ChatPanel() {
               content: msg.content,
               timestamp: msg.timestamp,
             }));
-            
+
             const response = await sendGeminiPrompt(
               `User requirement: ${answerText}. This is a REQUIREMENT, NOT a category. Stay in STATE_3. Ask follow-up questions about requirements only.`,
               historyWithTimestamp,
@@ -1086,12 +1091,12 @@ export default function ChatPanel() {
     if (lastAIMessage && lastAIMessage.options && lastAIMessage.options.length > 0) {
       return lastAIMessage.options;
     }
-    
+
     // FALLBACK: Use flow state options
     if (flowState === 'platform_selection' && currentQuestionIndex === 0) {
       return questionSequences[selectedPath!]?.[0]?.options || [];
     }
-    
+
     // RULE 7: Platform confirmation - show continue/done options
     if (flowState === 'platform_confirmation') {
       return [
@@ -1099,22 +1104,22 @@ export default function ChatPanel() {
         { label: 'Add Another Platform', value: 'add_platform' },
       ];
     }
-    
+
     if (flowState === 'platform_features' && currentPlatform) {
       // RULE 1, RULE 2, RULE 6: Only show features if platforms confirmed AND filter by category
       if (!platformsConfirmed) {
         return [];
       }
-      
+
       const allFeatures = PLATFORM_FEATURES[currentPlatform as keyof typeof PLATFORM_FEATURES] || [];
-      
+
       // Filter features based on category (RULE 2, RULE 3, RULE 6)
       const filteredFeatures = filterFeaturesByCategory(
         allFeatures,
         selectedCategory as any,
         currentPlatform
       );
-      
+
       return filteredFeatures.map(f => ({
         label: `${f.label} - ${f.description}`,
         value: f.id,
@@ -1181,21 +1186,21 @@ export default function ChatPanel() {
               onShowWorkflowLibrary={() => setShowWorkflowLibrary(true)}
               onSend={async (msg) => {
                 logger.debug('User sent message from initial screen', { msg });
-                
+
                 // AUTO-REDIRECT: When user types and sends a message, automatically switch to chat interface
                 if (!hasSelectedOption) {
                   setHasSelectedOption(true);
                   setIsAIChatActive(true);
                   setCurrentScreen(1);
                   setOnboardingMode('CHAT'); // IMPORTANT: Set to CHAT mode to show chat interface, not form
-                  
+
                   // Add user message to chat (even if it's just "hello")
                   addAIMessage({
                     role: 'user',
                     content: msg,
                     timestamp: new Date(),
                   });
-                  
+
                   // Set default path if none selected
                   if (!selectedPath) {
                     setSelectedPath('leads'); // Default to leads for general chat
@@ -1213,7 +1218,7 @@ export default function ChatPanel() {
                     return;
                   }
                 }
-                
+
                 // PRIORITY: If in leads path with CHAT mode, use ICP flow (not general AI)
                 if (selectedPath === 'leads' && onboardingMode === 'CHAT') {
                   // Start ICP flow if not already active and not already started
@@ -1224,7 +1229,7 @@ export default function ChatPanel() {
                     }, 100);
                     return;
                   }
-                  
+
                   // Handle ICP onboarding flow
                   if (isICPOnboardingActive && !chatStepController.isComplete) {
                     // Check for back command
@@ -1232,19 +1237,19 @@ export default function ChatPanel() {
                       chatStepController.handleBack();
                       return;
                     }
-                    
+
                     // Handle answer
                     addAIMessage({
                       role: 'user',
                       content: msg,
                       timestamp: new Date(),
                     });
-                    
+
                     chatStepController.handleAnswer(msg);
                     return;
                   }
                 }
-                
+
                 // Add user message
                 addAIMessage({
                   role: 'user',
@@ -1275,7 +1280,7 @@ export default function ChatPanel() {
                   };
 
                   logger.debug('Sending to backend from initial screen', { msg, context });
-                  
+
                   const response = await sendGeminiPrompt(
                     msg,
                     history,
@@ -1284,7 +1289,7 @@ export default function ChatPanel() {
                     {},
                     context
                   );
-                  
+
                   logger.debug('Received response from initial screen', {
                     hasText: !!response.text,
                     hasSearchResults: !!response.searchResults,
@@ -1330,16 +1335,16 @@ export default function ChatPanel() {
                   setIsProcessingAI(false);
                 }
               }}
-          disabled={isProcessingAI}
-          placeholder={
-            isICPOnboardingActive && !chatStepController.isComplete
-              ? chatStepController.currentQuestion?.type === 'boolean'
-                ? 'Type "yes" or "no"...'
-                : chatStepController.currentQuestion?.type === 'select'
-                ? 'Type your answer or select from options...'
-                : 'Type your answer...'
-              : 'How can I help you today?'
-          }
+              disabled={isProcessingAI}
+              placeholder={
+                isICPOnboardingActive && !chatStepController.isComplete
+                  ? chatStepController.currentQuestion?.type === 'boolean'
+                    ? 'Type "yes" or "no"...'
+                    : chatStepController.currentQuestion?.type === 'select'
+                      ? 'Type your answer or select from options...'
+                      : 'Type your answer...'
+                  : 'How can I help you today?'
+              }
             />
           </div>
         </div>
@@ -1387,13 +1392,6 @@ export default function ChatPanel() {
       {hasSelectedOption && (
         <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-4">
-            <button
-              onClick={handleBackToOptions}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to options</span>
-            </button>
             {isICPOnboardingActive && chatStepController.currentStepIndex > 0 && (
               <button
                 onClick={() => {
@@ -1419,7 +1417,10 @@ export default function ChatPanel() {
               onClick={() => {
                 if (window.confirm('Are you sure you want to clear the chat? This will remove all messages.')) {
                   // Clear only chat messages, keep workflow state
-                  useOnboardingStore.setState({ aiMessages: [] });
+                  useOnboardingStore.setState({
+                    aiMessages: [],
+                    isICPFlowStarted: false // Reset the flow started flag
+                  });
                   setFlowState('initial');
                   setUserAnswers({});
                   setCurrentUtilityAnswers({});
@@ -1450,11 +1451,11 @@ export default function ChatPanel() {
                 workflow={message.workflow}
                 isLastMessage={index === aiMessages.length - 1}
                 onOptionSubmit={
-                  index === aiMessages.length - 1 && 
-                  selectedPath === 'leads' && 
-                  onboardingMode === 'CHAT' && 
-                  isICPOnboardingActive && 
-                  !chatStepController.isComplete
+                  index === aiMessages.length - 1 &&
+                    selectedPath === 'leads' &&
+                    onboardingMode === 'CHAT' &&
+                    isICPOnboardingActive &&
+                    !chatStepController.isComplete
                     ? chatStepController.handleOptionSubmit
                     : undefined
                 }
@@ -1521,10 +1522,10 @@ export default function ChatPanel() {
                     <button
                       key={option.value}
                       onClick={() => {
-                        handleAnswer(option.value, 
+                        handleAnswer(option.value,
                           flowState === 'platform_selection' ? 'platforms' :
-                          flowState === 'platform_features' ? `features_${currentPlatform}` :
-                          currentUtilityQuestion || 'unknown'
+                            flowState === 'platform_features' ? `features_${currentPlatform}` :
+                              currentUtilityQuestion || 'unknown'
                         );
                       }}
                       className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-blue-500 hover:bg-blue-50"
@@ -1568,7 +1569,7 @@ export default function ChatPanel() {
                       setPlatformFeatures(currentPlatform || '', newFeatures);
                       return;
                     }
-                    
+
                     // Handle other flow states
                     let questionKey = 'unknown';
                     if (flowState === 'platform_selection') {
@@ -1578,17 +1579,16 @@ export default function ChatPanel() {
                     }
                     handleAnswer(option.value, questionKey);
                   }}
-                  className={`w-full text-left px-6 py-3 bg-white border-2 rounded-xl transition-all shadow-sm hover:shadow-md ${
-                    flowState === 'platform_features' && 
+                  className={`w-full text-left px-6 py-3 bg-white border-2 rounded-xl transition-all shadow-sm hover:shadow-md ${flowState === 'platform_features' &&
                     (platformFeatures[currentPlatform || ''] || []).includes(option.value)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
-                  }`}
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                    }`}
                 >
                   {option.label}
                 </button>
               ))}
-              
+
               {flowState === 'platform_features' && (
                 <button
                   onClick={async () => {
@@ -1620,23 +1620,23 @@ export default function ChatPanel() {
               const lastMessage = aiMessages[aiMessages.length - 1];
               if (lastMessage.role === 'ai') {
                 const parsedOptions = parseMessageOptions(lastMessage.content);
-                const hasSelectableOptions = parsedOptions !== null && 
-                       selectedPath === 'leads' && 
-                       onboardingMode === 'CHAT' && 
-                       isICPOnboardingActive && 
-                       !chatStepController.isComplete;
-                
+                const hasSelectableOptions = parsedOptions !== null &&
+                  selectedPath === 'leads' &&
+                  onboardingMode === 'CHAT' &&
+                  isICPOnboardingActive &&
+                  !chatStepController.isComplete;
+
                 // Also check for template input request
-                const isTemplateRequest = selectedPath === 'leads' && 
-                       onboardingMode === 'CHAT' && 
-                       isICPOnboardingActive && 
-                       !chatStepController.isComplete &&
-                       (lastMessage.content.toLowerCase().includes('template') ||
-                        lastMessage.content.toLowerCase().includes('message template') ||
-                        lastMessage.content.toLowerCase().includes('script') ||
-                        lastMessage.content.toLowerCase().includes('paste your')) &&
-                       !parsedOptions; // Not a selectable options message
-                
+                const isTemplateRequest = selectedPath === 'leads' &&
+                  onboardingMode === 'CHAT' &&
+                  isICPOnboardingActive &&
+                  !chatStepController.isComplete &&
+                  (lastMessage.content.toLowerCase().includes('template') ||
+                    lastMessage.content.toLowerCase().includes('message template') ||
+                    lastMessage.content.toLowerCase().includes('script') ||
+                    lastMessage.content.toLowerCase().includes('paste your')) &&
+                  !parsedOptions; // Not a selectable options message
+
                 return hasSelectableOptions || isTemplateRequest;
               }
               return false;
@@ -1651,7 +1651,7 @@ export default function ChatPanel() {
               isComplete: chatStepController.isComplete,
               currentStepIndex: chatStepController.currentStepIndex
             });
-            
+
             // PRIORITY 1: If in leads path with CHAT mode, always use ICP flow (not general AI)
             if (selectedPath === 'leads' && onboardingMode === 'CHAT') {
               // Start ICP flow if not already active
@@ -1670,7 +1670,7 @@ export default function ChatPanel() {
                 }
                 return;
               }
-              
+
               // If ICP flow is active, handle answer
               if (isICPOnboardingActive && !chatStepController.isComplete) {
                 logger.debug('Handling answer in ICP flow');
@@ -1679,14 +1679,14 @@ export default function ChatPanel() {
                   chatStepController.handleBack();
                   return;
                 }
-                
+
                 // Handle answer
                 addAIMessage({
                   role: 'user',
                   content: msg,
                   timestamp: new Date(),
                 });
-                
+
                 await chatStepController.handleAnswer(msg);
                 return;
               } else {
@@ -1711,7 +1711,7 @@ export default function ChatPanel() {
                 }
               }
             }
-            
+
             // PRIORITY 2: Check if message is EXPLICITLY about lead generation/outreach (if not already in leads flow)
             // Only redirect for explicit requests, not general chat
             if (selectedPath !== 'leads') {
@@ -1725,12 +1725,12 @@ export default function ChatPanel() {
                 'find prospects',
                 'target customers'
               ];
-              
+
               const msgLower = msg.toLowerCase().trim();
-              const isExplicitLeadRequest = explicitLeadPhrases.some(phrase => 
+              const isExplicitLeadRequest = explicitLeadPhrases.some(phrase =>
                 msgLower.includes(phrase)
               );
-              
+
               if (isExplicitLeadRequest) {
                 // Switch to CHAT mode and redirect to Lead Generation & Outreach conversational flow
                 setOnboardingMode('CHAT');
@@ -1738,9 +1738,9 @@ export default function ChatPanel() {
                 return;
               }
             }
-            
+
             // PRIORITY 3: General AI chat (only if not in leads path)
-            
+
             // Add user message
             addAIMessage({
               role: 'user',
@@ -1771,7 +1771,7 @@ export default function ChatPanel() {
               };
 
               logger.debug('Sending to backend', { msg, context });
-              
+
               const response = await sendGeminiPrompt(
                 msg,
                 history,
@@ -1780,7 +1780,7 @@ export default function ChatPanel() {
                 {},
                 context
               );
-              
+
               logger.debug('Received response', {
                 hasText: !!response.text,
                 hasSearchResults: !!response.searchResults,

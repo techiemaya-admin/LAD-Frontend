@@ -56,6 +56,7 @@ export interface ICPAnswerResponse {
   confidence?: 'high' | 'medium' | 'low';
   extractedData?: Record<string, any>;
   updatedCollectedAnswers?: Record<string, any>;
+  correctedAnswer?: string | null;
   error?: string;
 }
 

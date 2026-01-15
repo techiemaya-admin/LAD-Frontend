@@ -20,11 +20,19 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
 
   // Extract platforms and actions
   const platforms = mappedAnswers.platforms || [];
+  // Convert single string to array if needed
+  let platformArray: string[] = [];
+  if (typeof platforms === 'string') {
+    platformArray = platforms.split(',').map(p => p.trim().toLowerCase());
+  } else if (Array.isArray(platforms)) {
+    platformArray = platforms.map(p => String(p).toLowerCase());
+  }
+  
   const hasIndustries = mappedAnswers.industries && mappedAnswers.industries.length > 0;
   const hasRoles = mappedAnswers.roles && mappedAnswers.roles.length > 0;
   const hasLocation = mappedAnswers.location;
 
-  logger.debug('Platforms and targeting criteria', { platforms, hasIndustries, hasRoles, hasLocation });
+  logger.debug('Platforms and targeting criteria', { platforms, platformArray, hasIndustries, hasRoles, hasLocation });
 
   // Step 1: Lead Generation (if targeting criteria provided)
   if (hasIndustries || hasRoles || hasLocation) {
@@ -47,9 +55,14 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
     });
   }
 
-  // LinkedIn steps
-  if (platforms.includes('linkedin')) {
-    const linkedinActions = mappedAnswers.linkedinActions || mappedAnswers.linkedin_actions || [];
+  // Process platforms in the order they were selected
+  for (const platform of platformArray) {
+    if (platform === 'linkedin') {
+    const rawActions = mappedAnswers.linkedinActions || mappedAnswers.linkedin_actions || [];
+    // Handle both array and string formats
+    const linkedinActions = Array.isArray(rawActions)
+      ? rawActions
+      : (typeof rawActions === 'string' ? rawActions.split(',').map(s => s.trim()) : []);
     const delayConfig = mappedAnswers.workflow_delays || mappedAnswers.delays;
     
     // Check if user actually wants delays (not "No delay" or empty)
@@ -65,7 +78,7 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
                     !String(delayConfig).toLowerCase().includes('no delay') &&
                     !String(delayConfig).toLowerCase().includes('skip');
     
-    logger.debug('LinkedIn actions', { linkedinActions });
+    logger.debug('LinkedIn actions', { rawActions, linkedinActions, isArray: Array.isArray(rawActions) });
     logger.debug('Delay config', { delayConfig, hasDelay });
 
     // Always add visit profile first when LinkedIn is selected
@@ -161,14 +174,20 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         },
       });
     }
-  }
+    } else if (platform === 'whatsapp') {
+    const rawWhatsappActions = mappedAnswers.whatsappActions || mappedAnswers.whatsapp_actions || [];
+    const whatsappActions = Array.isArray(rawWhatsappActions)
+      ? rawWhatsappActions
+      : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
+    logger.debug('WhatsApp actions', { rawWhatsappActions, whatsappActions, isArray: Array.isArray(rawWhatsappActions) });
 
-  // WhatsApp steps
-  if (platforms.includes('whatsapp')) {
-    const whatsappActions = mappedAnswers.whatsappActions || mappedAnswers.whatsapp_actions || [];
-    logger.debug('WhatsApp actions', { whatsappActions });
+    // Check for broadcast action
+    const hasBroadcast = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('broadcast');
+    });
 
-    if (whatsappActions.includes('send_broadcast')) {
+    if (hasBroadcast) {
       steps.push({
         type: 'whatsapp_broadcast',
         order: order++,
@@ -180,7 +199,13 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       });
     }
 
-    if (whatsappActions.includes('send_1to1')) {
+    // Check for 1:1 message action
+    const hasOneToOneMessage = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('1:1') || actionStr.includes('message');
+    });
+
+    if (hasOneToOneMessage) {
       steps.push({
         type: 'whatsapp_message',
         order: order++,
@@ -191,14 +216,55 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         },
       });
     }
-  }
 
-  // Email steps
-  if (platforms.includes('email')) {
-    const emailActions = mappedAnswers.emailActions || mappedAnswers.email_actions || [];
-    logger.debug('Email actions', { emailActions });
+    // Check for follow-up action
+    const hasFollowUp = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('follow');
+    });
 
-    if (emailActions.includes('send_email')) {
+    if (hasFollowUp) {
+      steps.push({
+        type: 'whatsapp_followup',
+        order: order++,
+        title: 'WhatsApp Follow-up',
+        description: 'Send follow-up message',
+        config: {
+          template: mappedAnswers.whatsappTemplate || mappedAnswers.whatsapp_template,
+        },
+      });
+    }
+
+    // Check for template message
+    const hasTemplate = whatsappActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('template');
+    });
+
+    if (hasTemplate) {
+      steps.push({
+        type: 'whatsapp_template',
+        order: order++,
+        title: 'Send WhatsApp Template',
+        description: 'Send template message',
+        config: {
+          template: mappedAnswers.whatsappTemplate || mappedAnswers.whatsapp_template,
+        },
+      });
+    }
+    } else if (platform === 'email') {
+    const rawEmailActions = mappedAnswers.emailActions || mappedAnswers.email_actions || [];
+    const emailActions = Array.isArray(rawEmailActions)
+      ? rawEmailActions
+      : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
+    logger.debug('Email actions', { rawEmailActions, emailActions, isArray: Array.isArray(rawEmailActions) });
+
+    const hasSendEmail = emailActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('send') && actionStr.includes('email');
+    });
+
+    if (hasSendEmail) {
       steps.push({
         type: 'email_send',
         order: order++,
@@ -208,7 +274,12 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       });
     }
 
-    if (emailActions.includes('followup_email')) {
+    const hasFollowUpEmail = emailActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('follow');
+    });
+
+    if (hasFollowUpEmail) {
       steps.push({
         type: 'email_followup',
         order: order++,
@@ -217,21 +288,42 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         config: {},
       });
     }
-  }
+    } else if (platform === 'voice' || platform.includes('voice')) {
+    const rawVoiceActions = mappedAnswers.voiceActions || mappedAnswers.voice_actions || [];
+    const voiceActions = Array.isArray(rawVoiceActions)
+      ? rawVoiceActions
+      : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
+    logger.debug('Voice actions', { rawVoiceActions, voiceActions, isArray: Array.isArray(rawVoiceActions) });
 
-  // Voice steps
-  if (platforms.includes('voice')) {
-    const voiceActions = mappedAnswers.voiceActions || mappedAnswers.voice_actions || [];
-    logger.debug('Voice actions', { voiceActions });
+    const hasTriggerCall = voiceActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('trigger') || actionStr.includes('call');
+    });
 
-    if (voiceActions.includes('call')) {
+    if (hasTriggerCall || voiceActions.length > 0) {
       steps.push({
         type: 'voice_call',
         order: order++,
-        title: 'Make Voice Call',
-        description: 'Call lead using AI voice agent',
+        title: 'Trigger Voice Call',
+        description: 'Initiate automated voice call',
         config: {},
       });
+    }
+
+    const hasCallScript = voiceActions.some((action: string) => {
+      const actionStr = String(action).toLowerCase();
+      return actionStr.includes('script');
+    });
+
+    if (hasCallScript) {
+      steps.push({
+        type: 'voice_script',
+        order: order++,
+        title: 'Use Call Script',
+        description: 'Follow predefined call script',
+        config: {},
+      });
+    }
     }
   }
 

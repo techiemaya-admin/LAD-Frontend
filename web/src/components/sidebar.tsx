@@ -139,19 +139,11 @@ export function Sidebar() {
     // TEMPORARY: If no capabilities are defined or empty array, show all items
     // TODO: Implement proper RBAC with capabilities from backend
     if (!user?.capabilities || user.capabilities.length === 0 || (user.capabilities.length === 1 && user.capabilities[0] === null)) {
-      console.log('[Sidebar] No capabilities defined, showing all items (temporary behavior)');
       return true; // Show all items when no capabilities are set
     }
     
     // Check if user has the required capability
     const hasCapability = user.capabilities.includes(item.requiredCapability);
-    console.log('[Sidebar] Checking capability:', { 
-      user: user?.name,
-      item: item.label, 
-      required: item.requiredCapability, 
-      userCapabilities: user.capabilities,
-      hasCapability 
-    });
     return hasCapability;
   }) : []; // Show empty nav during SSR to prevent hydration mismatch
 

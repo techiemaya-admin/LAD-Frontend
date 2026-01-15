@@ -4003,7 +4003,12 @@ export default function GuidedFlowPanel() {
 
   const renderStep7 = () => {
     const nodes = useOnboardingStore.getState().workflowNodes;
+    const workflowPreview = useOnboardingStore.getState().workflowPreview;
     const stepCount = nodes.filter(n => n.type !== 'start' && n.type !== 'end').length;
+    
+    // Get dailyLeadVolume from workflow steps (lead_generation step's leadLimit)
+    const leadGenStep = workflowPreview.find(step => step.type === 'lead_generation');
+    const currentDailyLeadVolume = leadGenStep?.leadLimit || dailyLeadVolume;
 
     return (
       <StepLayout
@@ -4088,7 +4093,7 @@ export default function GuidedFlowPanel() {
                   Duration: {campaignDuration} days
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
-                  Daily Leads: {dailyLeadVolume}
+                  Daily Leads: {currentDailyLeadVolume}
                 </Typography>
               </Box>
 

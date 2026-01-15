@@ -15,104 +15,110 @@ import {
 } from '@mui/icons-material';
 import { StepDefinition } from '@/types/campaign';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import PlatformReorder from './PlatformReorder';
 
 const STEP_DEFINITIONS: StepDefinition[] = [
+  // LinkedIn Actions (as per AI chat workflow)
   {
     type: 'linkedin_visit',
-    label: 'Profile Visit',
+    label: 'Visit LinkedIn Profile',
     icon: 'linkedin',
-    description: 'Visit the lead\'s LinkedIn profile',
+    description: 'View target profile',
     category: 'linkedin',
-    defaultData: { title: 'LinkedIn Profile Visit' },
+    defaultData: { title: 'Visit LinkedIn Profile' },
   },
   {
     type: 'linkedin_follow',
-    label: 'Follow',
+    label: 'Follow LinkedIn Profile',
     icon: 'linkedin',
-    description: 'Follow the lead on LinkedIn',
+    description: 'Follow the profile',
     category: 'linkedin',
-    defaultData: { title: 'LinkedIn Follow' },
+    defaultData: { title: 'Follow LinkedIn Profile' },
   },
   {
     type: 'linkedin_connect',
-    label: 'Connection Request',
+    label: 'Send Connection Request',
     icon: 'linkedin',
-    description: 'Send a connection request with message',
+    description: 'Connect with personalized message',
     category: 'linkedin',
-    defaultData: { title: 'LinkedIn Connection Request', message: 'Hi {{first_name}}, I\'d like to connect.' },
+    defaultData: { title: 'Send Connection Request', message: 'Hi {{first_name}}, I\'d like to connect.' },
   },
   {
     type: 'linkedin_message',
-    label: 'LinkedIn Message',
+    label: 'Send LinkedIn Message',
     icon: 'linkedin',
-    description: 'Send a message (only if connected)',
+    description: 'Send personalized message',
     category: 'linkedin',
-    defaultData: { title: 'LinkedIn Message', message: 'Hi {{first_name}}, I noticed...' },
+    defaultData: { title: 'Send LinkedIn Message', message: 'Hi {{first_name}}, I noticed...' },
+  },
+  // WhatsApp Actions (as per AI chat workflow)
+  {
+    type: 'whatsapp_broadcast',
+    label: 'Send WhatsApp Broadcast',
+    icon: 'whatsapp',
+    description: 'Send broadcast message',
+    category: 'whatsapp',
+    defaultData: { title: 'Send WhatsApp Broadcast' },
   },
   {
-    type: 'linkedin_scrape_profile',
-    label: 'Scrape Profile',
-    icon: 'linkedin',
-    description: 'Scrape LinkedIn profile data',
-    category: 'linkedin',
-    defaultData: { title: 'Scrape LinkedIn Profile' },
+    type: 'whatsapp_message',
+    label: 'Send WhatsApp 1:1 Message',
+    icon: 'whatsapp',
+    description: 'Send direct message',
+    category: 'whatsapp',
+    defaultData: { title: 'Send WhatsApp 1:1 Message' },
   },
   {
-    type: 'linkedin_company_search',
-    label: 'Company Search',
-    icon: 'linkedin',
-    description: 'Search for company on LinkedIn',
-    category: 'linkedin',
-    defaultData: { title: 'LinkedIn Company Search' },
+    type: 'whatsapp_followup',
+    label: 'WhatsApp Follow-up',
+    icon: 'whatsapp',
+    description: 'Send follow-up message',
+    category: 'whatsapp',
+    defaultData: { title: 'WhatsApp Follow-up' },
   },
+  {
+    type: 'whatsapp_template',
+    label: 'Send WhatsApp Template',
+    icon: 'whatsapp',
+    description: 'Send template message',
+    category: 'whatsapp',
+    defaultData: { title: 'Send WhatsApp Template' },
+  },
+  // Email Actions (as per AI chat workflow)
   {
     type: 'email_send',
     label: 'Send Email',
     icon: 'email',
-    description: 'Send an email to the lead',
+    description: 'Send email campaign',
     category: 'email',
     defaultData: { title: 'Send Email', subject: 'Re: {{company_name}}', body: 'Hi {{first_name}},...' },
   },
   {
     type: 'email_followup',
-    label: 'Email Follow-up',
+    label: 'Send Follow-up Email',
     icon: 'email',
-    description: 'Send a follow-up email',
+    description: 'Follow up if no response',
     category: 'email',
-    defaultData: { title: 'Email Follow-up', subject: 'Re: {{company_name}}', body: 'Hi {{first_name}},...' },
+    defaultData: { title: 'Send Follow-up Email', subject: 'Re: {{company_name}}', body: 'Hi {{first_name}},...' },
   },
+  // Voice Actions (as per AI chat workflow)
   {
-    type: 'whatsapp_send',
-    label: 'Send WhatsApp',
-    icon: 'whatsapp',
-    description: 'Send a WhatsApp message',
-    category: 'whatsapp',
-    defaultData: { title: 'Send WhatsApp', whatsappMessage: 'Hi {{first_name}},...' },
-  },
-  {
-    type: 'voice_agent_call',
-    label: 'Voice Agent Call',
+    type: 'voice_call',
+    label: 'Trigger Voice Call',
     icon: 'voice',
-    description: 'Make a call using voice agent',
+    description: 'Initiate automated voice call',
     category: 'voice',
-    defaultData: { title: 'Voice Agent Call' },
+    defaultData: { title: 'Trigger Voice Call' },
   },
   {
-    type: 'instagram_follow',
-    label: 'Follow',
-    icon: 'instagram',
-    description: 'Follow the lead on Instagram',
-    category: 'instagram',
-    defaultData: { title: 'Instagram Follow' },
+    type: 'voice_script',
+    label: 'Use Call Script',
+    icon: 'voice',
+    description: 'Follow predefined call script',
+    category: 'voice',
+    defaultData: { title: 'Use Call Script' },
   },
-  {
-    type: 'instagram_dm',
-    label: 'Send DM',
-    icon: 'instagram',
-    description: 'Send a direct message on Instagram',
-    category: 'instagram',
-    defaultData: { title: 'Instagram DM', instagramDmMessage: 'Hi {{first_name}},...' },
-  },
+  // Utility Actions
   {
     type: 'delay',
     label: 'Delay',
@@ -162,8 +168,21 @@ const getIcon = (iconName: string) => {
   }
 };
 
+// Simple toast notification helper
+const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-amber-500';
+  const toast = document.createElement('div');
+  toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg fixed bottom-4 right-4 z-50 max-w-sm`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+};
+
 export default function OnboardingStepLibrary() {
-  const { addWorkflowNode, addWorkflowStep, workflowNodes, addWorkflowEdge } = useOnboardingStore();
+  const { addWorkflowNode, addWorkflowStep, workflowNodes, workflowPreview, addWorkflowEdge } = useOnboardingStore();
 
   const handleDragStart = (e: React.DragEvent, stepType: string) => {
     e.dataTransfer.setData('application/reactflow', stepType);
@@ -171,6 +190,18 @@ export default function OnboardingStepLibrary() {
   };
 
   const handleClick = (step: StepDefinition) => {
+    // Get the current state to check for existing steps
+    const currentState = useOnboardingStore.getState();
+    const currentWorkflowPreview = currentState.workflowPreview || [];
+    
+    // Check if this exact step type already exists in the workflow
+    const existingStep = currentWorkflowPreview.find(s => s.type === step.type);
+    
+    if (existingStep) {
+      showToast(`"${step.label}" step is already added to the workflow`, 'warning');
+      return; // Stop execution - don't add duplicate steps
+    }
+    
     // Create workflow node using onboarding store
     const nodeId = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const position = { x: 200, y: 150 + workflowNodes.length * 120 };
@@ -185,7 +216,7 @@ export default function OnboardingStepLibrary() {
     };
 
     // Get current nodes before adding (to find the last node)
-    const currentNodes = useOnboardingStore.getState().workflowNodes;
+    const currentNodes = currentState.workflowNodes;
     const lastNode = currentNodes.length > 0 ? currentNodes[currentNodes.length - 1] : null;
 
     // Add to workflowNodes (preferred)
@@ -210,6 +241,9 @@ export default function OnboardingStepLibrary() {
         target: nodeId,
       });
     }
+    
+    // Show success toast
+    showToast(`"${step.label}" added to workflow`, 'success');
   };
 
   const linkedinSteps = STEP_DEFINITIONS.filter((s) => s.category === 'linkedin');
@@ -283,6 +317,17 @@ export default function OnboardingStepLibrary() {
     >
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1E293B' }}>
         Step Library
+      </Typography>
+
+      {/* Platform Reorder Section */}
+      <Box sx={{ mb: 3, mx: -2, mt: -1 }}>
+        <PlatformReorder />
+      </Box>
+
+      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      
+      <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#475569' }}>
+        Add Steps
       </Typography>
 
       {/* Lead Generation Steps */}

@@ -122,11 +122,18 @@ export default function CampaignsList() {
   );
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#F8F9FE', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#F8F9FE', height: '100%', overflow: 'auto' }}>
       {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ 
+        mb: 3, 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'center' },
+        gap: { xs: 2, sm: 0 }
+      }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 1, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             Campaigns
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B' }}>
@@ -136,16 +143,17 @@ export default function CampaignsList() {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() => router.push('/onboarding')}
           sx={{
             background: 'linear-gradient(135deg, #00eaff, #7c3aed)',
             color: '#ffffff',
             borderRadius: '12px',
             textTransform: 'none',
             fontWeight: 600,
-            px: 3,
+            px: { xs: 2, sm: 3 },
             py: 1.5,
             boxShadow: '0 4px 20px rgba(0, 234, 255, 0.3)',
+            width: { xs: '100%', sm: 'auto' },
             '&:hover': {
               background: 'linear-gradient(135deg, #7c3aed, #ff00e0)',
               boxShadow: '0 8px 30px rgba(124, 58, 237, 0.5)',

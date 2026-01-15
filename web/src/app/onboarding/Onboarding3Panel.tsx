@@ -7,10 +7,10 @@ import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
 import EditorPanel from '@/components/onboarding/EditorPanel';
 import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
 import ResizableDivider from '@/components/onboarding/ResizableDivider';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MessageCircle, GitBranch } from 'lucide-react';
 
 export default function Onboarding3Panel() {
-  const { hasSelectedOption, isEditMode, isEditorPanelCollapsed, setIsEditorPanelCollapsed, hasRequestedEditor } = useOnboardingStore();
+  const { hasSelectedOption, isEditMode, isEditorPanelCollapsed, setIsEditorPanelCollapsed, hasRequestedEditor, mobileView, setMobileView } = useOnboardingStore();
   
   // Panel widths as percentages
   const [chatWidth, setChatWidth] = useState(40); // Left panel (Chat)
@@ -95,9 +95,46 @@ export default function Onboarding3Panel() {
   // Initially show only chat with option cards
   if (!hasSelectedOption) {
     return (
-      <div className="w-full h-full bg-white overflow-hidden">
-        <ChatPanel />
-      </div>
+      <>
+        {/* Mobile Layout - Show chat with toggle to workflow */}
+        <div className="md:hidden w-full h-full flex flex-col bg-white overflow-hidden pt-14">
+          {/* Mobile Toggle Tabs */}
+          <div className="flex bg-white border-b border-gray-200 shrink-0">
+            <button
+              onClick={() => setMobileView('chat')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${
+                mobileView === 'chat'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat
+            </button>
+            <button
+              onClick={() => setMobileView('workflow')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${
+                mobileView === 'workflow'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              Workflow
+            </button>
+          </div>
+          
+          {/* Mobile Content */}
+          <div className="flex-1 overflow-hidden">
+            {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel />}
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden md:block w-full h-full bg-white overflow-hidden">
+          <ChatPanel />
+        </div>
+      </>
     );
   }
 
@@ -111,33 +148,70 @@ export default function Onboarding3Panel() {
   }
 
   // After selection, show 3-panel layout (full screen)
+  // On mobile: show toggle tabs to switch between chat and workflow
   return (
-    <div className="w-full h-full flex bg-gray-50 overflow-hidden">
-      {/* LEFT PANEL - Chat (Resizable) */}
-      <div 
-        className="border-r border-gray-200 bg-white overflow-hidden flex flex-col h-full"
-        style={{ width: `${chatWidth}%`, minWidth: '200px', maxWidth: '70%' }}
-      >
-        <ChatPanel />
+    <>
+      {/* Mobile Layout - Toggle between Chat and Workflow */}
+      <div className="md:hidden w-full h-full flex flex-col bg-gray-50 overflow-hidden pt-14">
+        {/* Mobile Toggle Tabs */}
+        <div className="flex bg-white border-b border-gray-200 shrink-0">
+          <button
+            onClick={() => setMobileView('chat')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${
+              mobileView === 'chat'
+                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Chat
+          </button>
+          <button
+            onClick={() => setMobileView('workflow')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${
+              mobileView === 'workflow'
+                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <GitBranch className="w-4 h-4" />
+            Workflow
+          </button>
+        </div>
+        
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-hidden">
+          {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel />}
+        </div>
       </div>
 
-      {/* RESIZABLE DIVIDER 1 - Between Chat and Workflow */}
-      <ResizableDivider
-        onResize={handleChatResize}
-        minWidth={15}
-        maxWidth={70}
-      />
+      {/* Desktop Layout - Side by side panels */}
+      <div className="hidden md:flex w-full h-full bg-gray-50 overflow-hidden">
+        {/* LEFT PANEL - Chat (Resizable) */}
+        <div 
+          className="border-r border-gray-200 bg-white overflow-hidden flex flex-col h-full"
+          style={{ width: `${chatWidth}%`, minWidth: '200px', maxWidth: '70%' }}
+        >
+          <ChatPanel />
+        </div>
 
-      {/* MIDDLE PANEL - Workflow Preview (Resizable) */}
-      <div 
-        className="border-r border-gray-200 bg-white overflow-hidden relative h-full"
-        style={{ 
-          width: `${workflowWidth}%`, 
-          minWidth: isEditorPanelCollapsed ? '200px' : '15%',
-          maxWidth: isEditorPanelCollapsed ? '85%' : '70%'
-        }}
-      >
-        <WorkflowPreviewPanel />
+        {/* RESIZABLE DIVIDER 1 - Between Chat and Workflow */}
+        <ResizableDivider
+          onResize={handleChatResize}
+          minWidth={15}
+          maxWidth={70}
+        />
+
+        {/* MIDDLE PANEL - Workflow Preview (Resizable) */}
+        <div 
+          className="border-r border-gray-200 bg-white overflow-hidden relative h-full"
+          style={{ 
+            width: `${workflowWidth}%`, 
+            minWidth: isEditorPanelCollapsed ? '200px' : '15%',
+            maxWidth: isEditorPanelCollapsed ? '85%' : '70%'
+          }}
+        >
+          <WorkflowPreviewPanel />
         
         {/* Show Editor Button - only appears when user has clicked Edit AND panel is collapsed */}
         {isEditorPanelCollapsed && hasRequestedEditor && (
@@ -170,7 +244,8 @@ export default function Onboarding3Panel() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

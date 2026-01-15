@@ -19,8 +19,8 @@ export default function CampaignFilters({
 }: CampaignFiltersProps) {
   return (
     <Card sx={{ mb: 3, borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
           <TextField
             placeholder="Search campaigns..."
             value={searchQuery}
@@ -32,9 +32,9 @@ export default function CampaignFilters({
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 250 }}
+            sx={{ flex: 1, minWidth: { xs: '100%', sm: 250 } }}
           />
-          <FormControl sx={{ minWidth: 150 }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 150 } }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={statusFilter}

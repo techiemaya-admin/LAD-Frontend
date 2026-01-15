@@ -76,10 +76,12 @@ export function getDependentActionsToRemove(
 
 /**
  * Check if an action requires another action to be selected
+ * Returns the actual option strings from the available options that are required
  */
-export function getRequiredActions(
+export function getRequiredActionsFromOptions(
   platform: string,
-  action: string
+  action: string,
+  allOptions: string[]
 ): string[] {
   const dependencies = ACTION_DEPENDENCIES.filter(dep => dep.platform === platform.toLowerCase());
   const requiredActions: string[] = [];
@@ -91,10 +93,15 @@ export function getRequiredActions(
       : dep.dependentAction.test(action);
     
     if (isDependentAction) {
-      // Find the required action in all options
-      // We'll need to match this against available options
-      if (typeof dep.requiredAction === 'string') {
-        requiredActions.push(dep.requiredAction);
+      // Find the required action option from allOptions
+      for (const option of allOptions) {
+        const isRequiredAction = typeof dep.requiredAction === 'string'
+          ? option.toLowerCase().includes(dep.requiredAction.toLowerCase())
+          : dep.requiredAction.test(option);
+        
+        if (isRequiredAction) {
+          requiredActions.push(option);
+        }
       }
     }
   }
