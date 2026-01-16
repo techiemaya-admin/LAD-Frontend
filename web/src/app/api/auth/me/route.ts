@@ -7,9 +7,23 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('Authorization');
     let token = authHeader?.replace('Bearer ', '');
     
+    // Try multiple cookie names
     if (!token) {
       token = req.cookies.get('access_token')?.value;
     }
+    if (!token) {
+      token = req.cookies.get('accessToken')?.value;
+    }
+    if (!token) {
+      token = req.cookies.get('auth_token')?.value;
+    }
+    if (!token) {
+      token = req.cookies.get('token')?.value;
+    }
+    
+    // Log available cookies for debugging
+    console.log('[Auth] Available cookies:', Array.from(req.cookies.getAll()).map(c => c.name));
+    console.log('[Auth] Token found:', !!token);
     
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

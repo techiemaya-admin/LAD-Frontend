@@ -24,10 +24,13 @@ import {
   TrendingUp,
   MinusCircle,
   Clock,
+  Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
+import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
+import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
 
 // shadcn + recharts
 import { Checkbox } from "@/components/ui/checkbox";
@@ -543,6 +546,7 @@ export function CallLogModal({
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<any | null>(null);
+  const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -675,6 +679,33 @@ export function CallLogModal({
   availableTabs.push("cost");
   const defaultTab = availableTabs[0] ?? "cost";
 
+  // Download handler
+  const handleDownloadRecording = async () => {
+    if (!signedRecordingUrl || !log) return;
+    setIsDownloadingRecording(true);
+    try {
+      const leadName = [log?.lead_first_name, log?.lead_last_name]
+        .filter(Boolean)
+        .join(' ') || '';
+      const filename = generateRecordingFilename(leadName, log?.started_at);
+      await downloadRecording(signedRecordingUrl, filename);
+    } catch (error) {
+      console.error("Failed to download recording:", error);
+    } finally {
+      setIsDownloadingRecording(false);
+    }
+  };
+
+  // Get lead category from API response or categorize
+  const leadCategory = (() => {
+    if (log?.lead_category) {
+      const normalized = normalizeLeadCategory(log.lead_category);
+      if (normalized) return normalized;
+    }
+    return categorizeLead(log || {});
+  })();
+  const tagConfig = getTagConfig(leadCategory);
+
   return (
     <>
       <div
@@ -686,13 +717,38 @@ export function CallLogModal({
       >
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <PhoneCall className="h-6 w-6 text-orange-500" />
-            <span>Call Details & Insights</span>
-          </h2>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
-            <X className="h-4 w-4" />
-          </Button>
+            <div className="flex flex-col space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
+              {leadCategory && (
+                <Badge className={cn(
+                  "w-fit text-xs font-semibold",
+                  tagConfig.bgColor,
+                  tagConfig.textColor
+                )}>
+                  {tagConfig.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasAudio && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadRecording}
+                disabled={isDownloadingRecording}
+                className="hover:bg-orange-100"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloadingRecording ? "Downloading..." : "Call Recording Download"}
+              </Button>
+            )}  
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Body */}

@@ -3,12 +3,13 @@
 export const dynamic = 'force-dynamic';
 
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { io } from "socket.io-client";
 import { apiGet, apiPost } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { logger } from "@/lib/logger";
+import type { SortConfig } from "@/utils/sortingUtils";
 
 import { CallLogsHeader } from "@/components/CallLogsHeader";
 import { CallLogsTable } from "@/components/CallLogsTable";
@@ -33,6 +34,10 @@ interface CallLogResponse {
   call_cost?: number;
   batch_status?: string;
   batch_id?: string;
+  lead_category?: string;
+  signed_recording_url?: string;
+  recording_url?: string;
+  call_recording_url?: string;
 }
 
 interface CallLogsResponse {
@@ -84,6 +89,10 @@ export default function CallLogsPage() {
       cost: number;
       batch_status?: string;
       batch_id?: string;
+      lead_category?: string;
+      signed_recording_url?: string;
+      recording_url?: string;
+      call_recording_url?: string;
     }>
   >([]);
 
@@ -91,6 +100,7 @@ export default function CallLogsPage() {
   const [openId, setOpenId] = useState<string | undefined>();
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   
 
@@ -288,6 +298,10 @@ const resolveDateRange = () => {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
+          lead_category: r.lead_category,
+          signed_recording_url: r.signed_recording_url,
+          recording_url: r.recording_url,
+          call_recording_url: r.call_recording_url,
         };
       });
 
@@ -384,15 +398,22 @@ const resolveDateRange = () => {
     [items]
   );
 
-  const totalPages = Math.ceil(filtered.length / perPage) || 1;
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  // Apply sorting to filtered results for consistent ordering across pages
+  const sortedFiltered = useMemo(() => {
+    if (!sortConfig) return filtered;
+    const { sortCallLogs } = require("@/utils/sortingUtils");
+    return sortCallLogs(filtered, sortConfig);
+  }, [filtered, sortConfig]);
+
+  const totalPages = Math.ceil(sortedFiltered.length / perPage) || 1;
+  const paginated = sortedFiltered.slice((page - 1) * perPage, page * perPage);
 
   // Group calls by batch (from paginated items)
   const batchGroups = useMemo(() => {
     const groups: Record<string, typeof paginated> = {};
     const noBatchCalls: typeof paginated = [];
 
-    paginated.forEach((call) => {
+    paginated.forEach((call: typeof paginated[0]) => {
       if (call.batch_id) {
         if (!groups[call.batch_id]) {
           groups[call.batch_id] = [];
@@ -597,7 +618,11 @@ const resolveDateRange = () => {
         batchGroups={batchGroups}
         expandedBatches={expandedBatches}
         onToggleBatch={toggleBatch}
-        totalFilteredCount={filtered.length}
+        totalFilteredCount={sortedFiltered.length}
+        onSortChange={(newSort) => {
+          setSortConfig(newSort);
+          setPage(1); // Reset to first page when sorting changes
+        }}
       />
 )}
 
