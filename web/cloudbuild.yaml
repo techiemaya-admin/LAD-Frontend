@@ -1,0 +1,106 @@
+steps:
+  # Create lowercase branch name for GCP labels
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "${BRANCH_NAME,,}" > /workspace/branch_lower.txt
+        cat /workspace/branch_lower.txt
+
+  # Debug step: Show the values that will be used for build arguments
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "=== Build Arguments Debug ==="
+        echo "BRANCH_NAME: ${BRANCH_NAME}"
+        echo "_API_URL: ${_API_URL}"
+        echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
+        echo "=== End Debug ==="
+
+  # Build the Docker image with buildkit for better caching
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
+      '--cache-from', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
+      '--build-arg', 'BUILDKIT_INLINE_CACHE=1',
+      '--build-arg', 'NEXT_PUBLIC_API_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
+      '--build-arg', 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
+      '--build-arg', 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
+      '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
+<<<<<<< HEAD
+      '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
+=======
+>>>>>>> e4a1f3c (pipeline fixed with merge conflicts)
+      '-f', 'web/Dockerfile',
+      '.'
+    ]
+
+  # Push the Docker images to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
+        gcloud run deploy $_SERVICE_NAME \
+          --image gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA \
+          --region $_REGION \
+          --platform managed \
+          --allow-unauthenticated \
+          --port 3000 \
+          --memory 2Gi \
+          --cpu 2 \
+          --min-instances 0 \
+          --max-instances 10 \
+          --concurrency 80 \
+          --timeout 300 \
+<<<<<<< HEAD
+          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL,NEXT_PUBLIC_DISABLE_VAPI=false \
+=======
+          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL \
+>>>>>>> e4a1f3c (pipeline fixed with merge conflicts)
+          --update-labels branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
+
+# Images to be pushed to Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:latest'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  substitutionOption: 'ALLOW_LOOSE'
+
+# Timeout for the entire build
+timeout: '1800s'
+
+# Substitutions
+substitutions:
+  _REGION: 'us-central1'
+  _SERVICE_NAME: 'lad-frontend'
+  _ENV: 'production'
+  _API_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'
+  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-741719885039.us-central1.run.app'
