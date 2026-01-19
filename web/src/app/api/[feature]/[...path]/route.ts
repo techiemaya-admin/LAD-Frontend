@@ -36,11 +36,13 @@ function isJson(contentType: string | null | undefined): boolean {
 
 async function handler(
   req: NextRequest,
-  { params }: { params: { feature: string; path: string[] } }
+  { params }: { params: Promise<{ feature: string; path: string[] }> }
 ) {
+  const resolvedParams = await params;
+  const { feature, path } = resolvedParams;
+  
   try {
     const backend = getBackendUrl();
-    const { feature, path } = params;
     
     // Build backend URL
     const pathSegments = path || [];
@@ -127,9 +129,9 @@ async function handler(
 
     return nextResponse;
   } catch (error: any) {
-    console.error(`[/api/${params.feature}] Error:`, error.message);
+    console.error(`[/api/${resolvedParams.feature}] Error:`, error.message);
     return NextResponse.json(
-      { error: `Failed to proxy to ${params.feature} feature` },
+      { error: `Failed to proxy to ${resolvedParams.feature} feature` },
       { status: 500 }
     );
   }
