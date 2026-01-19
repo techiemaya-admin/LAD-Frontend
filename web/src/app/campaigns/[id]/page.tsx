@@ -28,8 +28,8 @@ export default function CampaignDetailPage() {
 
   // Campaign loading is handled by useCampaign hook above
 
-  // Use SDK hook for campaign data
-  const { campaign, loading: campaignLoading, error: campaignError, refetch } = useCampaign(
+  // Use React Query hook for campaign data
+  const { data: campaign, isLoading: campaignLoading, error: campaignError, refetch } = useCampaign(
     campaignId && campaignId !== 'new' ? campaignId : null
   );
 
@@ -38,7 +38,7 @@ export default function CampaignDetailPage() {
       push({
         variant: 'error',
         title: 'Error',
-        description: campaignError || 'Failed to load campaign',
+        description: campaignError instanceof Error ? campaignError.message : 'Failed to load campaign',
       });
       router.push('/campaigns');
     }
@@ -78,14 +78,14 @@ export default function CampaignDetailPage() {
       
       if (campaignId === 'new') {
         // Create new campaign
-        const newCampaign = await createCampaign({
+        const response = await createCampaign({
           name: campaignData.name,
           status: startCampaign ? 'running' : 'draft',
           steps: campaignData.steps,
         });
         
         // Redirect to the newly created campaign
-        router.push(`/campaigns/${newCampaign.id}`);
+        router.push(`/campaigns/${response.data.id}`);
       } else {
         // Update existing campaign
         await updateCampaign(campaignId, {
@@ -174,7 +174,7 @@ export default function CampaignDetailPage() {
   const handlePreview = () => {
     const campaignData = serialize();
     push({
-      variant: 'info',
+      variant: 'success',
       title: 'Preview',
       description: 'Campaign preview generated',
     });

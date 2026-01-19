@@ -17,6 +17,7 @@ import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
+import { getCampaign } from '@/features/campaigns';
 
 type FlowState =
   | 'initial'
@@ -27,8 +28,14 @@ type FlowState =
   | 'complete'
   | 'requirements_collection'; // For FastMode requirements
 
-export default function ChatPanel() {
+interface ChatPanelProps {
+  campaignId?: string | null;
+}
+
+export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   const router = useRouter();
+  const [isLoadingCampaign, setIsLoadingCampaign] = useState(false);
+  const campaignLoadedRef = useRef(false); // Track if campaign has been loaded
   const {
     selectedPath,
     aiMessages,
@@ -73,12 +80,90 @@ export default function ChatPanel() {
     isICPFlowStarted,
   } = useOnboardingStore();
 
-  // Initialize workflow preview on mount to show just Start/End
+  // Initialize workflow preview on mount ONLY if there's no existing workflow
+  // This preserves workflow when navigating back
   useEffect(() => {
-    // Set initial empty workflow preview (will show just Start/End)
-    logger.debug('Initializing with empty workflow - will show Start/End');
-    setWorkflowPreview([]);
-  }, [setWorkflowPreview]);
+    // Skip initialization if campaignId is present (will be loaded separately)
+    if (campaignId) return;
+    
+    // Only set empty workflow if there's no persisted workflow
+    if (!workflowPreview || workflowPreview.length === 0) {
+      setWorkflowPreview([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount, don't re-run when workflowPreview changes
+
+  // Load existing campaign workflow when campaignId is provided
+  useEffect(() => {
+    if (!campaignId || campaignLoadedRef.current) return;
+
+    const loadCampaignWorkflow = async () => {
+      try {
+        campaignLoadedRef.current = true; // Mark as loaded
+        setIsLoadingCampaign(true);
+        setIsProcessingAI(true);
+
+        // Set state immediately to prevent normal flow from starting
+        setHasSelectedOption(true);
+        setSelectedPath('automation');
+        setIsAIChatActive(true);
+
+        const response = await getCampaign(campaignId);
+        const campaign = response.data;
+
+        // Convert campaign steps to workflow preview format
+        if (campaign.steps && campaign.steps.length > 0) {
+          const workflowSteps: WorkflowPreviewStep[] = campaign.steps.map((step, index) => ({
+            id: `step-${index + 1}`,
+            type: step.type as any,
+            title: step.title || `Step ${index + 1}`,
+            description: step.description,
+            channel: step.channel,
+            message: step.message,
+            subject: step.subject,
+            template: step.template,
+            script: step.script,
+            delayDays: step.delayDays,
+            delayHours: step.delayHours,
+            leadLimit: step.leadLimit,
+          }));
+
+          setWorkflowPreview(workflowSteps);
+
+          // Clear existing messages and add new campaign load message
+          useOnboardingStore.setState({ aiMessages: [] });
+          addAIMessage({
+            role: 'ai',
+            content: `I've loaded your campaign "${campaign.name}" with ${workflowSteps.length} steps. You can edit the workflow on the right, or ask me to make changes.`,
+            timestamp: new Date(),
+          });
+        } else {
+          // No steps in campaign, show empty workflow message
+          useOnboardingStore.setState({ aiMessages: [] });
+          addAIMessage({
+            role: 'ai',
+            content: `I've loaded your campaign "${campaign.name}". It doesn't have any workflow steps yet. Let me know what you'd like to add!`,
+            timestamp: new Date(),
+          });
+        }
+      } catch (error) {
+        logger.error('Error loading campaign workflow', error);
+        campaignLoadedRef.current = false; // Reset on error so retry is possible
+        useOnboardingStore.setState({ aiMessages: [] });
+        addAIMessage({
+          role: 'ai',
+          content: 'Sorry, I couldn\'t load the campaign workflow. Please try again.',
+          timestamp: new Date(),
+        });
+      } finally {
+        setIsProcessingAI(false);
+        setIsLoadingCampaign(false);
+      }
+    };
+
+    loadCampaignWorkflow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]); // Run when campaignId changes
 
   // Ensure onboardingMode is CHAT when leads path is selected
   useEffect(() => {
@@ -365,7 +450,7 @@ export default function ChatPanel() {
 
   // Start AI conversation when option is selected
   useEffect(() => {
-    if (selectedPath === 'automation' && aiMessages.length === 0 && flowState === 'initial') {
+    if (!campaignId && selectedPath === 'automation' && aiMessages.length === 0 && flowState === 'initial') {
       startAIConversation('automation');
     }
   }, [selectedPath]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -373,6 +458,7 @@ export default function ChatPanel() {
   // Auto-start ICP onboarding flow on page load if in CHAT mode with leads selected
   useEffect(() => {
     if (
+      !campaignId && // Don't start if editing existing campaign
       hasSelectedOption &&
       selectedPath === 'leads' &&
       onboardingMode === 'CHAT' &&
@@ -1415,11 +1501,16 @@ export default function ChatPanel() {
           {aiMessages.length > 0 && (
             <button
               onClick={() => {
-                if (window.confirm('Are you sure you want to clear the chat? This will remove all messages.')) {
-                  // Clear only chat messages, keep workflow state
+                if (window.confirm('Are you sure you want to clear the chat? This will remove all messages and workflow.')) {
+                  // Clear chat messages and workflow state
                   useOnboardingStore.setState({
                     aiMessages: [],
-                    isICPFlowStarted: false // Reset the flow started flag
+                    workflowPreview: [],
+                    isICPFlowStarted: false, // Reset the flow started flag
+                    workflowNodes: [],
+                    workflowEdges: [],
+                    icpAnswers: null,
+                    icpOnboardingComplete: false
                   });
                   setFlowState('initial');
                   setUserAnswers({});

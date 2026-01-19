@@ -54,6 +54,13 @@ export function useCampaignStats(): UseCampaignStatsReturn {
 
   useEffect(() => {
     fetchStats();
+    
+    // Auto-refresh every 30 seconds for live stats updates
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [fetchStats]);
 
   return {

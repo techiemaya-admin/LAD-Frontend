@@ -9,8 +9,20 @@ import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
 import ResizableDivider from '@/components/onboarding/ResizableDivider';
 import { ChevronRight, MessageCircle, GitBranch } from 'lucide-react';
 
-export default function Onboarding3Panel() {
-  const { hasSelectedOption, isEditMode, isEditorPanelCollapsed, setIsEditorPanelCollapsed, hasRequestedEditor, mobileView, setMobileView } = useOnboardingStore();
+interface Onboarding3PanelProps {
+  campaignId?: string | null;
+}
+
+export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) {
+  const { hasSelectedOption, isEditMode, isEditorPanelCollapsed, setIsEditorPanelCollapsed, hasRequestedEditor, mobileView, setMobileView, setHasSelectedOption, setSelectedPath } = useOnboardingStore();
+  
+  // When campaignId is present, skip option selection
+  useEffect(() => {
+    if (campaignId) {
+      setHasSelectedOption(true);
+      setSelectedPath('automation');
+    }
+  }, [campaignId, setHasSelectedOption, setSelectedPath]);
   
   // Panel widths as percentages
   const [chatWidth, setChatWidth] = useState(40); // Left panel (Chat)
@@ -181,7 +193,7 @@ export default function Onboarding3Panel() {
         
         {/* Mobile Content */}
         <div className="flex-1 overflow-hidden">
-          {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel />}
+          {mobileView === 'chat' ? <ChatPanel campaignId={campaignId} /> : <WorkflowPreviewPanel />}
         </div>
       </div>
 
@@ -192,7 +204,7 @@ export default function Onboarding3Panel() {
           className="border-r border-gray-200 bg-white overflow-hidden flex flex-col h-full"
           style={{ width: `${chatWidth}%`, minWidth: '200px', maxWidth: '70%' }}
         >
-          <ChatPanel />
+          <ChatPanel campaignId={campaignId} />
         </div>
 
         {/* RESIZABLE DIVIDER 1 - Between Chat and Workflow */}
