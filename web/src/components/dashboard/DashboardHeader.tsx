@@ -9,7 +9,9 @@ import {
   X, 
   Check,
   Layout,
-  ChevronDown
+  ChevronDown,
+  Brain,
+  TvMinimalPlay
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,7 +66,11 @@ export const DashboardHeader: React.FC = () => {
   return (
     <div className="flex items-center justify-between mb-6">
       <div>
-        <h1 className="text-2xl font-bold font-display tracking-tight">Dashboard</h1>
+        {/* <h1 className="text-2xl font-bold font-display tracking-tight">🧠 Smart Overview</h1> */}
+        <div className="flex items-center gap-2">
+  <TvMinimalPlay className="w-5 h-5 text-primary" />
+  <span className="font-semibold">Smart Overview</span>
+</div>
         <p className="text-sm text-muted-foreground mt-0.5">
           {currentLayout ? currentLayout.name : 'Default Layout'}
           {isEditMode && (

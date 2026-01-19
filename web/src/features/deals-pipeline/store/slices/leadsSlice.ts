@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Lead } from '@/components/leads/types';
+import { logger } from '@/lib/logger';
 
 interface LeadsFilters {
   searchQuery: string;
@@ -87,7 +88,7 @@ const leadsSlice = createSlice({
       state.cache.expiresAt = Date.now() + (2 * 60 * 1000); // 2 minutes cache
       state.error = null;
       
-      console.log('[LeadsSlice] Set leads:', state.leads.length, 'leads loaded');
+      logger.debug('[LeadsSlice] Set leads:', { count: state.leads.length });
     },
     
     addLead(state, action: PayloadAction<Lead>) {
@@ -107,8 +108,8 @@ const leadsSlice = createSlice({
         state.lastUpdated = Date.now();
         state.cache.isValid = false;
         
-        console.log('[LeadsSlice] Updated lead:', id, 'with data:', data);
-        console.log('[LeadsSlice] Lead stage change:', {
+        logger.debug('[LeadsSlice] Updated lead:', { id, data });
+        logger.debug('[LeadsSlice] Lead stage change:', {
           id,
           oldStage: oldLead.stage,
           newStage: state.leads[leadIndex].stage,
@@ -121,9 +122,9 @@ const leadsSlice = createSlice({
           const stage = lead.stage || 'unknown';
           stageDistribution[stage] = (stageDistribution[stage] || 0) + 1;
         });
-        console.log('[LeadsSlice] Current stage distribution after update:', stageDistribution);
+        logger.debug('[LeadsSlice] Current stage distribution after update:', { stageDistribution });
       } else {
-        console.warn('[LeadsSlice] Lead not found for update:', id);
+        logger.warn('[LeadsSlice] Lead not found for update:', { id });
       }
     },
     

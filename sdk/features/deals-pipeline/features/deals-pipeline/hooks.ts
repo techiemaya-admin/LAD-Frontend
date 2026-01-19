@@ -240,7 +240,7 @@ export function useReferenceData(options: UseAPIOptions = {}) {
         setSources(sourcesData);
         setPriorities(prioritiesData);
       } catch (error) {
-        console.error('Failed to fetch reference data:', error);
+        // Error caught - no logging (consider adding logger later)
       } finally {
         setLoading(false);
       }

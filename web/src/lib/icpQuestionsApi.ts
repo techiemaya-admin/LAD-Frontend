@@ -5,6 +5,8 @@
  * NO hardcoded ICP text in frontend.
  */
 
+import { logger } from './logger';
+
 export interface ICPQuestion {
   id: string;
   stepIndex: number;
@@ -84,7 +86,7 @@ export async function fetchICPQuestions(
     const data = await response.json();
     return data;
   } catch (error: any) {
-    console.error('[ICPQuestionsAPI] Error fetching questions:', error);
+    logger.error('[ICPQuestionsAPI] Error fetching questions:', error);
     throw error;
   }
 }
@@ -127,7 +129,7 @@ export async function fetchICPQuestionByStep(
     const data = await response.json();
     return data.question || null;
   } catch (error: any) {
-    console.error('[ICPQuestionsAPI] Error fetching question:', error);
+    logger.error('[ICPQuestionsAPI] Error fetching question:', error);
     throw error;
   }
 }
@@ -173,7 +175,7 @@ export async function processICPAnswer(
     const data = await response.json();
     return data;
   } catch (error: any) {
-    console.error('[ICPQuestionsAPI] Error processing answer:', error);
+    logger.error('[ICPQuestionsAPI] Error processing answer:', error);
     return {
       success: false,
       nextStepIndex: null,

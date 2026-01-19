@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
-import { VoiceAgentSettings } from '../../components/settings/VoiceAgentSettings';
+import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';

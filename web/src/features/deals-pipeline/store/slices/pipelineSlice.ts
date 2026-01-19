@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { logger } from '@/lib/logger';
 
 export interface Stage {
   key: string;
@@ -83,10 +84,10 @@ const pipelineSlice = createSlice({
     
     removeStage(state, action: PayloadAction<string>) {
       const stageKey = action.payload;
-      console.log('[pipelineSlice] Removing stage with key:', stageKey);
-      console.log('[pipelineSlice] Current stages before removal:', state.stages.map(s => s.key));
+      logger.debug('[pipelineSlice] Removing stage with key:', { stageKey });
+      logger.debug('[pipelineSlice] Current stages before removal:', { stages: state.stages.map(s => s.key) });
       state.stages = state.stages.filter(s => s.key !== stageKey);
-      console.log('[pipelineSlice] Stages after removal:', state.stages.map(s => s.key));
+      logger.debug('[pipelineSlice] Stages after removal:', { stages: state.stages.map(s => s.key) });
       state.lastUpdated = Date.now();
       state.cache.isValid = false;
     },

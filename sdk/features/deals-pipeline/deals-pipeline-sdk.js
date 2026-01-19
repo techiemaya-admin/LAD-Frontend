@@ -95,7 +95,7 @@ class DealsPipelineSDK {
       
       return await response.json();
     } catch (error) {
-      console.error(`API Error [${config.method} ${endpoint}]:`, error);
+      // Error thrown to caller - no console logging allowed
       throw error;
     }
   }

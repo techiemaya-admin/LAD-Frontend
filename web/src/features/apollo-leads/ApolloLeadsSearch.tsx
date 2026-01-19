@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useFeatureFlag, FeatureGate } from '../../featureFlags';
+import { logger } from '@/lib/logger';
 
 interface Company {
   id: string;
@@ -58,10 +59,10 @@ const ApolloLeadsSearch: React.FC = () => {
       if (data.success) {
         setCompanies(data.data);
       } else {
-        console.error('Search failed:', data.message);
+        logger.error('Search failed:', { message: data.message });
       }
     } catch (error) {
-      console.error('Search error:', error);
+      logger.error('Search error:', error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ const ApolloLeadsSearch: React.FC = () => {
 
   const handleCompanySelect = (company: Company) => {
     // Navigate to company details or trigger lead generation
-    console.log('Selected company:', company);
+    logger.debug('Selected company:', { company });
   };
 
   if (featureLoading) {

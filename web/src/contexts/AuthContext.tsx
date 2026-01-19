@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
-    logger.debug('[AuthContext] Loading token from localStorage...');
-    const storedToken = safeStorage.getItem('auth_token');
+    logger.debug('[AuthContext] Loading token from storage...');
+    const storedToken = safeStorage.getItem('auth_token') || safeStorage.getItem('token');
     
     if (storedToken) {
       logger.debug('[AuthContext] Stored token found');
@@ -84,8 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     } catch (error) {
-      console.error('Failed to fetch current user:', error);
+      logger.error('[AuthContext] Failed to fetch current user', { error: error instanceof Error ? error.message : String(error) });
       safeStorage.removeItem('auth_token');
+      safeStorage.removeItem('token');
       setToken(null);
       setUser(null);
     } finally {
@@ -116,8 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       const authToken = data.token;
 
-      // Store token
+      // Store token using existing pattern (both keys for compatibility)
       safeStorage.setItem('auth_token', authToken);
+      safeStorage.setItem('token', authToken);
       setToken(authToken);
 
       // Fetch user data
@@ -126,13 +128,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('[AuthContext] Login error', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   };
 
   const logout = () => {
     safeStorage.removeItem('auth_token');
+    safeStorage.removeItem('token');
     setToken(null);
     setUser(null);
     router.push('/login');
