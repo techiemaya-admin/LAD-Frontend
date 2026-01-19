@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
 import {
   LinkedIn as LinkedInIcon,
@@ -230,23 +230,23 @@ const getIcon = (iconName: string) => {
 export default function StepLibrary() {
   const addStep = useCampaignStore((state) => state.addStep);
 
-  const handleDragStart = (e: React.DragEvent, stepType: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent, stepType: string) => {
     e.dataTransfer.setData('application/reactflow', stepType);
     e.dataTransfer.effectAllowed = 'move';
-  };
+  }, []);
 
-  const handleClick = (step: StepDefinition) => {
+  const handleClick = useCallback((step: StepDefinition) => {
     // Add step at center of canvas (will be positioned by React Flow)
     addStep(step.type, { x: 400, y: 300 });
-  };
+  }, [addStep]);
 
-  const linkedinSteps = STEP_DEFINITIONS.filter((s) => s.category === 'linkedin');
-  const emailSteps = STEP_DEFINITIONS.filter((s) => s.category === 'email');
-  const whatsappSteps = STEP_DEFINITIONS.filter((s) => s.category === 'whatsapp');
-  const voiceSteps = STEP_DEFINITIONS.filter((s) => s.category === 'voice');
-  const instagramSteps = STEP_DEFINITIONS.filter((s) => s.category === 'instagram');
-  const leadsSteps = STEP_DEFINITIONS.filter((s) => s.category === 'leads');
-  const utilitySteps = STEP_DEFINITIONS.filter((s) => s.category === 'utility');
+  const linkedinSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'linkedin'), []);
+  const emailSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'email'), []);
+  const whatsappSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'whatsapp'), []);
+  const voiceSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'voice'), []);
+  const instagramSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'instagram'), []);
+  const leadsSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'leads'), []);
+  const utilitySteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'utility'), []);
 
   return (
     <Box

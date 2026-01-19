@@ -237,6 +237,14 @@ export default function CampaignDetailPage() {
               Preview
             </Button>
             <Button
+              variant="contained"
+              color="primary"
+              onClick={() => router.push(`/campaigns/${campaignId}/edit`)}
+              disabled={saving}
+            >
+              Edit Workflow
+            </Button>
+            <Button
               variant="outlined"
               startIcon={<Save />}
               onClick={() => handleSave(false)}

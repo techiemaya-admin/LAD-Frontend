@@ -114,7 +114,7 @@ export default function CampaignAnalyticsPage() {
 
       {/* Overview Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card 
             onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)}
             sx={{ 
@@ -147,7 +147,7 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -166,7 +166,7 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -185,7 +185,7 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -214,7 +214,7 @@ export default function CampaignAnalyticsPage() {
           </Typography>
           <Grid container spacing={2}>
             {analytics.metrics.leads_generated !== undefined && (
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
                     Leads Scraped/Generated
@@ -226,7 +226,7 @@ export default function CampaignAnalyticsPage() {
               </Grid>
             )}
             {analytics.metrics.connection_requests_sent !== undefined && (
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
                     Connection Requests Sent
@@ -245,7 +245,7 @@ export default function CampaignAnalyticsPage() {
               </Grid>
             )}
             {analytics.metrics.linkedin_messages_sent !== undefined && (
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
                     LinkedIn Messages Sent
@@ -264,7 +264,7 @@ export default function CampaignAnalyticsPage() {
               </Grid>
             )}
             {analytics.metrics.voice_calls_made !== undefined && (
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: '12px' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
                     Voice Calls Made
@@ -288,7 +288,7 @@ export default function CampaignAnalyticsPage() {
 
       {/* Metrics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
@@ -365,7 +365,7 @@ export default function CampaignAnalyticsPage() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
@@ -480,7 +480,7 @@ export default function CampaignAnalyticsPage() {
                     </Typography>
                   </Box>
                   <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={6} sm={3}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="caption" sx={{ color: '#64748B' }}>Sent</Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: '#3B82F6' }}>
@@ -488,7 +488,7 @@ export default function CampaignAnalyticsPage() {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="caption" sx={{ color: '#64748B' }}>Delivered</Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: '#10B981' }}>
@@ -496,7 +496,7 @@ export default function CampaignAnalyticsPage() {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="caption" sx={{ color: '#64748B' }}>Connected</Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: '#0077B5' }}>
@@ -504,7 +504,7 @@ export default function CampaignAnalyticsPage() {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="caption" sx={{ color: '#64748B' }}>Replied</Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: '#F59E0B' }}>

@@ -58,7 +58,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   setName: (name) => set({ name }),
 
   addStep: (type, position) => {
-    const id = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `step_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const defaultData = defaultStepData[type] || { title: type };
     
     const newNode: FlowNode = {
@@ -68,18 +68,33 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       data: { ...defaultData } as StepData,
     };
 
-    set((state) => ({
-      nodes: [...state.nodes, newNode],
-    }));
+    // Get current state before updating
+    const currentState = get();
+    const shouldAutoConnect = currentState.nodes.length > 0;
+    const previousNodeId = shouldAutoConnect ? currentState.nodes[currentState.nodes.length - 1]?.id : null;
 
-    // Auto-connect to previous node if exists
-    const { nodes } = get();
-    if (nodes.length > 1) {
-      const previousNode = nodes[nodes.length - 2];
-      if (previousNode && previousNode.type !== 'end') {
-        get().addEdge(previousNode.id, id);
+    // Single state update with everything
+    set((state) => {
+      const updatedNodes = [...state.nodes, newNode];
+      let updatedEdges = [...state.edges];
+
+      // Auto-connect to previous node if exists and not a special node
+      if (shouldAutoConnect && previousNodeId) {
+        const previousNode = updatedNodes.find(n => n.id === previousNodeId);
+        if (previousNode && previousNode.type !== 'end' && previousNode.type !== 'start') {
+          updatedEdges.push({
+            id: `edge_${previousNodeId}_${id}`,
+            source: previousNodeId,
+            target: id,
+          } as FlowEdge);
+        }
       }
-    }
+
+      return {
+        nodes: updatedNodes,
+        edges: updatedEdges,
+      };
+    });
   },
 
   updateStep: (nodeId, data) => {

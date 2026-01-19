@@ -76,6 +76,7 @@ export default function StepSettings() {
   // Try onboarding store first (for workflow builder)
   const onboardingStore = useOnboardingStore();
   const onboardingNodes = onboardingStore.workflowNodes;
+  const onboardingEdges = onboardingStore.workflowEdges || (onboardingStore.manualFlow?.edges) || [];
   const onboardingSelectedNodeId = onboardingStore.selectedNodeId;
   
   // Fallback to campaign store (for campaign editor)

@@ -35,8 +35,8 @@ export default function CampaignActionsMenu({
       open={Boolean(anchorEl)}
       onClose={onClose}
     >
-      <MenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}`); onClose(); }}>
-        <Edit sx={{ mr: 1 }} /> Edit
+      <MenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}/edit`); onClose(); }}>
+        <Edit sx={{ mr: 1 }} /> Edit Workflow
       </MenuItem>
       <MenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}/analytics`); onClose(); }}>
         <Visibility sx={{ mr: 1 }} /> View Analytics

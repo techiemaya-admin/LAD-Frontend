@@ -23,16 +23,34 @@ import CustomNode from './nodes/CustomNode';
 const NODE_TYPES: NodeTypes = {
   start: CustomNode,
   end: CustomNode,
+  // LinkedIn steps
   linkedin_visit: CustomNode,
   linkedin_follow: CustomNode,
   linkedin_connect: CustomNode,
   linkedin_message: CustomNode,
+  linkedin_scrape_profile: CustomNode,
+  linkedin_company_search: CustomNode,
+  linkedin_employee_list: CustomNode,
+  linkedin_autopost: CustomNode,
+  linkedin_comment_reply: CustomNode,
+  // Email steps
   email_send: CustomNode,
   email_followup: CustomNode,
+  // WhatsApp steps
   whatsapp_send: CustomNode,
+  // Voice steps
   voice_agent_call: CustomNode,
+  // Instagram steps
+  instagram_follow: CustomNode,
+  instagram_like: CustomNode,
+  instagram_dm: CustomNode,
+  instagram_autopost: CustomNode,
+  instagram_comment_reply: CustomNode,
+  instagram_story_view: CustomNode,
+  // Utility steps
   delay: CustomNode,
   condition: CustomNode,
+  lead_generation: CustomNode,
   custom: CustomNode, // Fallback
 };
 
@@ -83,7 +101,7 @@ export default function FlowCanvas() {
   const onConnect = useCallback(
     (params: Connection) => {
       if (params.source && params.target) {
-        setEdges((eds) => addEdge(params, eds));
+        setEdges((eds: Edge[]) => addEdge(params, eds));
         addStoreEdge(params.source, params.target);
       }
     },
@@ -117,7 +135,7 @@ export default function FlowCanvas() {
   );
 
   const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
+    (_: React.MouseEvent<Element>, node: Node) => {
       selectStep(node.id);
     },
     [selectStep]
