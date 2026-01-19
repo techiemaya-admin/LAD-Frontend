@@ -3,12 +3,12 @@
 import React from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, Button, Table, TableHead, TableRow, TableCell, TableBody,
-  IconButton, LinearProgress
+  IconButton, LinearProgress, Tooltip
 } from '@mui/material';
 import { Add, PlayArrow, Pause, Stop, CheckCircle, MoreVert } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import type { Campaign, CampaignStatus } from '@/features/campaigns';
-import { getStatusColor, getConnectedIcon, getRepliedIcon } from './campaignUtils';
+import { getStatusColor, renderChannelIcons, renderActionChips, getChannelsUsed, PLATFORM_CONFIG, renderPlatformMetrics } from './campaignUtils';
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -55,17 +55,19 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           </Box>
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 700 }}>
+          <Table sx={{ minWidth: 900 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#F8FAFC' }}>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Campaign Name</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Channels</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Actions</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap' }}>Leads</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Sent</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Connected</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Replied</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>Created</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1E293B' }} align="right">Actions</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1E293B' }} align="right"></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -96,23 +98,19 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                       sx={{ textTransform: 'capitalize' }}
                     />
                   </TableCell>
+                  <TableCell>
+                    {renderChannelIcons(campaign)}
+                  </TableCell>
+                  <TableCell>
+                    {renderActionChips(campaign)}
+                  </TableCell>
                   <TableCell>{campaign.leads_count}</TableCell>
                   <TableCell>{campaign.sent_count}</TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      {getConnectedIcon(campaign)}
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {campaign.connected_count}
-                      </Typography>
-                    </Box>
+                    {renderPlatformMetrics(campaign, 'connected')}
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      {getRepliedIcon(campaign)}
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {campaign.replied_count}
-                      </Typography>
-                    </Box>
+                    {renderPlatformMetrics(campaign, 'replied')}
                   </TableCell>
                   <TableCell>
                     {new Date(campaign.created_at).toLocaleDateString()}

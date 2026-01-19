@@ -53,6 +53,79 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
 
   useEffect(() => {
     fetchCampaigns();
+    
+    // Real-time SSE connection for live updates
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    const connectSSE = () => {
+      try {
+        eventSource = new EventSource('/api/campaigns/stream');
+
+        eventSource.onopen = () => {
+          console.log('[campaigns] SSE connected');
+          reconnectAttempts = 0; // Reset on successful connection
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'INITIAL_DATA') {
+              setCampaigns(data.campaigns);
+              setLoading(false);
+            } else if (data.type === 'STATS_UPDATE') {
+              // Update specific campaign stats
+              setCampaigns(prev => 
+                prev.map(c => 
+                  c.id === data.campaignId 
+                    ? { ...c, stats: data.stats }
+                    : c
+                )
+              );
+            } else if (data.type === 'CAMPAIGN_UPDATE') {
+              // Refresh to get latest data
+              fetchCampaigns();
+            }
+          } catch (err) {
+            console.error('[campaigns] Failed to parse SSE event:', err);
+          }
+        };
+
+        eventSource.onerror = (error) => {
+          console.error('[campaigns] SSE error:', error);
+          eventSource?.close();
+          
+          // Attempt to reconnect with exponential backoff
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            reconnectAttempts++;
+            console.log(`[campaigns] Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+            
+            reconnectTimeout = setTimeout(() => {
+              connectSSE();
+            }, delay);
+          } else {
+            console.warn('[campaigns] Max reconnect attempts reached, falling back to manual refresh');
+          }
+        };
+      } catch (err) {
+        console.error('[campaigns] Failed to create SSE connection:', err);
+      }
+    };
+
+    connectSSE();
+    
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
   }, [fetchCampaigns]);
 
   const create = useCallback(async (data: CreateCampaignRequest): Promise<Campaign> => {

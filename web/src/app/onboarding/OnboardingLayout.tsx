@@ -3,10 +3,14 @@
 import React from 'react';
 import Onboarding3Panel from './Onboarding3Panel';
 
-export default function OnboardingLayout() {
+interface OnboardingLayoutProps {
+  campaignId?: string | null;
+}
+
+export default function OnboardingLayout({ campaignId }: OnboardingLayoutProps) {
   return (
     <div className="w-full h-full">
-      <Onboarding3Panel />
+      <Onboarding3Panel campaignId={campaignId} />
     </div>
   );
 }
