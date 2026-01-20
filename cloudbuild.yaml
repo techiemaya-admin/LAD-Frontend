@@ -18,9 +18,8 @@ steps:
       - '--build-arg'
       - 'NEXT_PUBLIC_DISABLE_VAPI=false'
       - '-f'
-      - 'web/Dockerfile'
+      - 'frontend/Dockerfile'
       - '.'
-    dir: 'frontend'
 
   # Push image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
