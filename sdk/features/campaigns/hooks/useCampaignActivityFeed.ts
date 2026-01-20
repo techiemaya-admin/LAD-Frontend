@@ -1,3 +1,8 @@
+/**
+ * Real-time Campaign Activity Feed Hook
+ * Uses Server-Sent Events (SSE) for live updates - NO POLLING
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 
@@ -46,6 +51,8 @@ export function useCampaignActivityFeed(
   const [error, setError] = useState<Error | null>(null);
   
   const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
 
   const fetchActivities = useCallback(async () => {
     if (!campaignId) {
@@ -53,10 +60,10 @@ export function useCampaignActivityFeed(
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
       const params = new URLSearchParams();
       if (options.limit) params.append('limit', options.limit.toString());
       if (options.offset) params.append('offset', options.offset.toString());
@@ -64,8 +71,10 @@ export function useCampaignActivityFeed(
       if (options.actionType) params.append('actionType', options.actionType);
       if (options.status) params.append('status', options.status);
 
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       const response = await axios.get(
-        `/api/campaigns/${campaignId}/analytics?${params.toString()}`
+        `${baseUrl}/api/campaigns/${campaignId}/analytics?${params.toString()}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
 
       if (response.data?.success) {
@@ -77,8 +86,6 @@ export function useCampaignActivityFeed(
     } catch (err) {
       console.error('[useCampaignActivityFeed] Error:', err);
       setError(err instanceof Error ? err : new Error('Unknown error'));
-      setActivities([]);
-      setTotal(0);
     } finally {
       setIsLoading(false);
     }
@@ -93,13 +100,23 @@ export function useCampaignActivityFeed(
 
     // Connect to SSE for live updates
     const connectSSE = () => {
+      // Close existing
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+
       try {
-        const eventSource = new EventSource(`/api/campaigns/${campaignId}/events`);
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
+        const sseUrl = `${baseUrl}/api/campaigns/${campaignId}/events${token ? `?token=${token}` : ''}`;
+        
+        const eventSource = new EventSource(sseUrl, { withCredentials: true });
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {
           console.log('[ActivityFeed] SSE connected');
           setIsConnected(true);
+          reconnectAttemptsRef.current = 0;
         };
 
         eventSource.onmessage = (event) => {
@@ -107,7 +124,7 @@ export function useCampaignActivityFeed(
             const data = JSON.parse(event.data);
             
             // When stats update, refetch activities to show new ones
-            if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'STATS_UPDATE') {
+            if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'STATS_UPDATE' || data.type === 'INITIAL_STATS') {
               console.log('[ActivityFeed] New activity detected, refreshing...');
               fetchActivities();
             }
@@ -120,13 +137,14 @@ export function useCampaignActivityFeed(
           console.warn('[ActivityFeed] SSE disconnected');
           setIsConnected(false);
           eventSource.close();
+          eventSourceRef.current = null;
           
-          // Reconnect after 5 seconds
-          setTimeout(() => {
-            if (eventSourceRef.current === eventSource) {
-              connectSSE();
-            }
-          }, 5000);
+          // Exponential backoff reconnection (infinite retries)
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          reconnectAttemptsRef.current++;
+          
+          console.log(`[ActivityFeed] Reconnecting in ${delay}ms`);
+          reconnectTimeoutRef.current = setTimeout(connectSSE, delay);
         };
       } catch (err) {
         console.error('[ActivityFeed] Failed to connect SSE:', err);
@@ -139,6 +157,10 @@ export function useCampaignActivityFeed(
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
     };
   }, [campaignId, fetchActivities]);

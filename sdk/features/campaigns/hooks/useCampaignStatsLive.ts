@@ -1,10 +1,9 @@
 /**
  * Real-time Campaign Stats Hook
- * Uses Server-Sent Events (SSE) for live updates with polling fallback
+ * Uses Server-Sent Events (SSE) for live updates - NO POLLING
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiGet } from '../../../shared/apiClient';
 
 interface PlatformMetrics {
   linkedin: { sent: number; connected: number; replied: number };
@@ -28,7 +27,6 @@ export interface CampaignStats {
 interface UseCampaignStatsLiveOptions {
   campaignId: string;
   enabled?: boolean;
-  fallbackInterval?: number; // Polling interval if SSE fails (default: 30s)
 }
 
 interface UseCampaignStatsLiveResult {
@@ -36,13 +34,12 @@ interface UseCampaignStatsLiveResult {
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
-  refresh: () => Promise<void>;
+  reconnect: () => void;
 }
 
 export function useCampaignStatsLive({
   campaignId,
-  enabled = true,
-  fallbackInterval = 30000
+  enabled = true
 }: UseCampaignStatsLiveOptions): UseCampaignStatsLiveResult {
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,42 +48,29 @@ export function useCampaignStatsLive({
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-
-  // Fetch stats from REST endpoint
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await apiGet<{ success: boolean; data: CampaignStats }>(
-        `/campaigns/${campaignId}/stats`
-      );
-      
-      if (response.success && response.data) {
-        setStats(response.data);
-        setError(null);
-      }
-    } catch (err) {
-      console.error('[CampaignStatsLive] Failed to fetch stats:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch stats'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [campaignId]);
 
   // Connect to SSE endpoint
   const connectSSE = useCallback(() => {
     if (!enabled || !campaignId) return;
 
+    // Close existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
     try {
       // Get auth token from localStorage
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
       
-      // Construct SSE URL with auth token
-      const sseUrl = `${baseUrl}/campaigns/${campaignId}/events${token ? `?token=${token}` : ''}`;
+      // Construct SSE URL - backend uses query param for SSE auth
+      const sseUrl = `${baseUrl}/api/campaigns/${campaignId}/events${token ? `?token=${token}` : ''}`;
       
-      const eventSource = new EventSource(sseUrl);
+      console.log('[CampaignStatsLive] Connecting to SSE:', sseUrl.replace(/token=.*/, 'token=***'));
+      
+      const eventSource = new EventSource(sseUrl, { withCredentials: true });
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
@@ -94,12 +78,6 @@ export function useCampaignStatsLive({
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        
-        // Clear fallback polling if SSE connects
-        if (fallbackIntervalRef.current) {
-          clearInterval(fallbackIntervalRef.current);
-          fallbackIntervalRef.current = null;
-        }
       };
 
       eventSource.onmessage = (event) => {
@@ -107,6 +85,7 @@ export function useCampaignStatsLive({
           const data = JSON.parse(event.data);
           
           if (data.type === 'INITIAL_STATS' || data.type === 'CAMPAIGN_STATS_UPDATED') {
+            console.log('[CampaignStatsLive] Stats update received:', data.type);
             setStats(data.stats);
             setIsLoading(false);
           } else if (data.type === 'ERROR') {
@@ -118,57 +97,38 @@ export function useCampaignStatsLive({
         }
       };
 
-      eventSource.onerror = (err) => {
-        console.error('[CampaignStatsLive] SSE error:', err);
+      eventSource.onerror = () => {
+        console.warn('[CampaignStatsLive] SSE connection error');
         setIsConnected(false);
         
         eventSource.close();
         eventSourceRef.current = null;
 
-        // Exponential backoff reconnection
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-          reconnectAttemptsRef.current++;
-          
-          console.log(`[CampaignStatsLive] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
-          
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connectSSE();
-          }, delay);
-        } else {
-          // Fall back to polling after max reconnect attempts
-          console.warn('[CampaignStatsLive] Max reconnect attempts reached, falling back to polling');
-          startFallbackPolling();
-        }
+        // Exponential backoff reconnection (infinite retries for live data)
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        reconnectAttemptsRef.current++;
+        
+        console.log(`[CampaignStatsLive] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})`);
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectSSE();
+        }, delay);
       };
 
     } catch (err) {
       console.error('[CampaignStatsLive] Failed to connect SSE:', err);
       setError(err instanceof Error ? err : new Error('Failed to connect'));
-      startFallbackPolling();
+      setIsLoading(false);
     }
   }, [campaignId, enabled]);
 
-  // Start polling as fallback
-  const startFallbackPolling = useCallback(() => {
-    if (fallbackIntervalRef.current) return;
-
-    console.log('[CampaignStatsLive] Starting fallback polling');
-    
-    // Initial fetch
-    fetchStats();
-
-    // Set up interval
-    fallbackIntervalRef.current = setInterval(() => {
-      fetchStats();
-    }, fallbackInterval);
-  }, [fetchStats, fallbackInterval]);
-
-  // Manual refresh
-  const refresh = useCallback(async () => {
+  // Manual reconnect
+  const reconnect = useCallback(() => {
+    reconnectAttemptsRef.current = 0;
+    setError(null);
     setIsLoading(true);
-    await fetchStats();
-  }, [fetchStats]);
+    connectSSE();
+  }, [connectSSE]);
 
   // Connect on mount
   useEffect(() => {
@@ -177,7 +137,6 @@ export function useCampaignStatsLive({
       return;
     }
 
-    // Try SSE first
     connectSSE();
 
     // Cleanup
@@ -190,10 +149,6 @@ export function useCampaignStatsLive({
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
-      if (fallbackIntervalRef.current) {
-        clearInterval(fallbackIntervalRef.current);
-        fallbackIntervalRef.current = null;
-      }
     };
   }, [campaignId, enabled, connectSSE]);
 
@@ -202,6 +157,6 @@ export function useCampaignStatsLive({
     isLoading,
     isConnected,
     error,
-    refresh
+    reconnect
   };
 }
