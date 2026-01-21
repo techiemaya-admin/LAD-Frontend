@@ -42,25 +42,14 @@ export function ConversationsPage() {
   }, [selectConversation]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      {/* Top Header Bar */}
-      <header className="h-14 flex-shrink-0 flex items-center justify-between px-4 border-b border-border bg-card">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden h-9 w-9"
-            onClick={toggleSidebar}
-          >
-            {isSidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </Button>
-          <h1 className="text-lg font-semibold text-foreground">Conversations</h1>
-        </div>
+    <div className="h-full flex flex-col bg-background">
+      {/* Header with notification bell */}
+      <div className="flex items-center justify-end px-4 py-3 border-b border-border bg-white">
         <NotificationBell
           conversations={allConversations}
           onNotificationClick={handleNotificationClick}
         />
-      </header>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">

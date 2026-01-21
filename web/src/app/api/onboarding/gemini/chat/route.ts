@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
     
     // Forward request to ICP feature backend AI Assistant
     // The ICP backend runs on port 3001 and has /api/ai-icp-assistant/chat
-    console.log('[onboarding/gemini/chat] Forwarding to:', `${BACKEND_URL}/api/ai-icp-assistant/chat`);
+    console.log('[onboarding/gemini/chat] Forwarding to:', `${BACKEND_URL}/ai-icp-assistant/chat`);
     
-    const response = await fetch(`${BACKEND_URL}/api/ai-icp-assistant/chat`, {
+    const response = await fetch(`${BACKEND_URL}/ai-icp-assistant/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

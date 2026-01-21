@@ -16,7 +16,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { StepType } from '@/types/campaign';
-import { CheckCircle2, Edit, Trash2 } from 'lucide-react';
+import { CheckCircle2, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import TemplateInput from './TemplateInput';
@@ -171,8 +171,17 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-white">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Workflow Preview</h2>
-        <p className="text-sm text-gray-500">
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={() => router.push('/onboarding')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Back to AI Assistant"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h2 className="text-xl font-bold text-gray-900">Workflow Preview</h2>
+        </div>
+        <p className="text-sm text-gray-500 ml-12">
           Your automation workflow will appear here as we configure it
         </p>
       </div>

@@ -65,11 +65,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
   return (
     <div className="h-full flex flex-col bg-card border-r border-border">
-      {/* Header */}
+      {/* Search */}
       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-heading font-semibold mb-3">Conversations</h2>
-
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

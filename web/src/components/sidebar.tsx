@@ -104,6 +104,13 @@ export function Sidebar() {
       requiredCapability: 'view_campaigns'
     },
     {
+      href: "/conversations",
+      label: "Conversations",
+      icon: MessagesSquare,
+      details: "View and manage customer conversations.",
+      requiredCapability: 'view_conversations'
+    },
+    {
       href: "/make-call",
       label: "Make a Call",
       icon: Phone,
@@ -116,13 +123,6 @@ export function Sidebar() {
       icon: ChartNoAxesCombined,
       details: "Review past call history and recordings.",
       requiredCapability: 'view_call_logs'
-    },
-    {
-      href: "/conversations",
-      label: "Conversations",
-      icon: MessagesSquare,
-      details: "View and manage customer conversations.",
-      requiredCapability: 'view_conversations'
     },
     {
       href: "/pipeline",
