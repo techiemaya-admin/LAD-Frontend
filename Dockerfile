@@ -1,5 +1,5 @@
 # Multi-stage build for Next.js production deployment
-FROM node:20-alpine AS base
+FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -27,6 +27,19 @@ COPY sdk ./sdk
 
 # Build Next.js app
 WORKDIR /app/web
+
+# Accept build arguments for API URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_ICP_BACKEND_URL
+ARG NEXT_PUBLIC_SOCKET_URL
+ARG NEXT_PUBLIC_DISABLE_VAPI
+
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
+ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
+ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
+ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -46,11 +59,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy necessary files from standalone build
-# Standalone output is in .next/standalone and contains server.js at root
+# Copy standalone output (server.js at root)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
+
+# Copy static assets to .next/static
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+
+# Copy public directory
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 
 USER nextjs
 
@@ -60,5 +76,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application - server.js is at root of standalone output
+# Start the application
 CMD ["node", "server.js"]

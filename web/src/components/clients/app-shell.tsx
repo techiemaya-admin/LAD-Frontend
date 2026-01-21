@@ -8,7 +8,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const onAuthPage = pathname === "/login";
   const onOnboardingPage = pathname === "/onboarding";
-  const onCampaignsPage = pathname === "/campaigns";
+  const onCampaignsPage = pathname === "/campaigns" || pathname.startsWith("/campaigns/");
 
   if (onAuthPage) {
     return (

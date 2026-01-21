@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -16,7 +16,6 @@ import { useCampaignAnalytics } from '@/features/campaigns/hooks/useCampaignAnal
 import { useCampaignStatsLive } from '@sdk/features/campaigns/hooks/useCampaignStatsLive';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
-import { LiveActivityTable } from '@/features/campaigns/components/LiveActivityTable';
 
 const platformConfig = {
   linkedin: {
@@ -78,13 +77,10 @@ export default function CampaignAnalyticsPage() {
     );
   }
 
-  if (!analytics || !analytics.campaign) {
+  if (!analytics) {
     return (
       <Box sx={{ p: 3, bgcolor: '#0F172A', minHeight: '100vh' }}>
         <Typography color="white">No analytics data available</Typography>
-        <Button onClick={() => router.push('/campaigns')} sx={{ mt: 2 }} variant="contained">
-          Back to Campaigns
-        </Button>
       </Box>
     );
   }
@@ -96,38 +92,10 @@ export default function CampaignAnalyticsPage() {
   const hasVoice = stepTypes.some((t: string) => t?.includes('voice') || t?.includes('call'));
 
   const platformAnalytics = [
-    hasLinkedIn && { 
-      platform: 'linkedin', 
-      actions: liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0, 
-      replied: liveStats?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0, 
-      rate: liveStats?.platform_metrics?.linkedin?.sent ? ((liveStats.platform_metrics.linkedin.connected / liveStats.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0) 
-    },
-    hasEmail && { 
-      platform: 'email', 
-      actions: liveStats?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0, 
-      replied: liveStats?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0, 
-      rate: liveStats?.platform_metrics?.email?.sent ? ((liveStats.platform_metrics.email.replied / liveStats.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0) 
-    },
-    hasWhatsApp && { 
-      platform: 'whatsapp', 
-      actions: liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.whatsapp?.connected ?? 0, 
-      replied: liveStats?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0, 
-      rate: liveStats?.platform_metrics?.whatsapp?.sent ? ((liveStats.platform_metrics.whatsapp.replied / liveStats.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0) 
-    },
-    hasVoice && { 
-      platform: 'voice', 
-      actions: liveStats?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      sent: liveStats?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      connected: liveStats?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0, 
-      replied: liveStats?.platform_metrics?.voice?.replied ?? 0, 
-      rate: liveStats?.platform_metrics?.voice?.sent ? ((liveStats.platform_metrics.voice.connected / liveStats.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
-    },
+    hasLinkedIn && { platform: 'linkedin', actions: analytics?.metrics?.connection_requests_sent ?? 0, sent: analytics?.metrics?.linkedin_messages_sent ?? 0, connected: analytics?.metrics?.connection_requests_accepted ?? 0, replied: analytics?.metrics?.linkedin_messages_replied ?? 0, rate: analytics?.metrics?.connection_rate ?? 0 },
+    hasEmail && { platform: 'email', actions: analytics?.metrics?.emails_sent ?? 0, sent: analytics?.metrics?.emails_sent ?? 0, connected: analytics?.overview?.connected ?? 0, replied: analytics?.overview?.replied ?? 0, rate: analytics?.metrics?.open_rate ?? 0 },
+    hasWhatsApp && { platform: 'whatsapp', actions: analytics?.metrics?.whatsapp_messages_sent ?? 0, sent: analytics?.metrics?.whatsapp_messages_sent ?? 0, connected: 0, replied: analytics?.metrics?.whatsapp_messages_replied ?? 0, rate: analytics?.metrics?.reply_rate ?? 0 },
+    hasVoice && { platform: 'voice', actions: analytics?.metrics?.voice_calls_made ?? 0, sent: analytics?.metrics?.voice_calls_made ?? 0, connected: analytics?.metrics?.voice_calls_answered ?? 0, replied: 0, rate: ((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100 },
   ].filter(Boolean);
 
   // Chart data for AnalyticsCharts
@@ -158,7 +126,7 @@ export default function CampaignAnalyticsPage() {
 
   // Theme colors
   const theme = {
-    bg: isDarkMode ? '#1644ad' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
+    bg: isDarkMode ? '#0F172A' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
     cardBg: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
     cardBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
     textPrimary: isDarkMode ? 'white' : '#1E293B',
@@ -170,22 +138,22 @@ export default function CampaignAnalyticsPage() {
   };
 
   return (
-    <Box sx={{ p: 3, height: '100%', overflow: 'auto', transition: 'all 0.3s ease', background: isDarkMode ? '#0F172A' : '#F8F9FE' }}>
+    <Box sx={{ p: 3, background: theme.bg, height: '100%', overflow: 'auto', transition: 'all 0.3s ease' }}>
       {/* Hero Header */}
-      <Box sx={{ background: 'white', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #E2E8F0' }}>
-        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
-        <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
+      <Box sx={{ background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 10px 40px rgba(30, 41, 59, 0.4)' }}>
+        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)', borderRadius: '50%' }} />
+        <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <IconButton onClick={() => router.push('/campaigns')} sx={{ bgcolor: '#F0F4F8', color: '#1E293B', '&:hover': { bgcolor: '#E2E8F0' } }}><ArrowBack /></IconButton>
-              <Chip icon={<Rocket sx={{ color: '#6366F1 !important' }} />} label="Advanced Analytics" sx={{ bgcolor: '#F0F4F8', color: '#1E293B', fontWeight: 600 }} />
+              <IconButton onClick={() => router.push('/campaigns')} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}><ArrowBack /></IconButton>
+              <Chip icon={<Rocket sx={{ color: '#fff !important' }} />} label="Advanced Analytics" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
             </Box>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: '#1E293B', mb: 1 }}>{analytics.campaign.name}</Typography>
+            <Typography variant="h3" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>{analytics.campaign.name}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B', ml: 1 }} />} label={analytics.campaign.status} sx={{ bgcolor: '#F0F4F8', color: '#1E293B', textTransform: 'capitalize', fontWeight: 600 }} />
-              <Typography sx={{ color: '#64748B' }}>Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</Typography>
+              <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B', ml: 1 }} />} label={analytics.campaign.status} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', textTransform: 'capitalize', fontWeight: 600 }} />
+              <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -193,14 +161,15 @@ export default function CampaignAnalyticsPage() {
               icon={isConnected ? <Wifi /> : <WifiOff />} 
               label={isConnected ? 'Live' : 'Offline'} 
               sx={{ 
-                bgcolor: isConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                bgcolor: isConnected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', 
                 color: isConnected ? '#10B981' : '#EF4444', 
                 fontWeight: 600,
                 border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` 
               }} 
             />
-            <Button variant="contained" startIcon={<People />} onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 600, px: 3, boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)', '&:hover': { bgcolor: '#5558E3', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)' } }}>View Leads</Button>
-            <Button variant="outlined" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} sx={{ borderColor: '#6366F1', color: '#6366F1', fontWeight: 600, borderWidth: 2, '&:hover': { borderColor: '#5558E3', bgcolor: 'rgba(99, 102, 241, 0.08)', borderWidth: 2 } }}>Edit Campaign</Button>
+            <Button variant="contained" startIcon={isDarkMode ? <LightMode /> : <DarkMode />} onClick={() => setIsDarkMode(!isDarkMode)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, px: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}>{isDarkMode ? 'Light' : 'Dark'}</Button>
+            <Button variant="contained" startIcon={<People />} onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} sx={{ bgcolor: 'white', color: '#6366F1', fontWeight: 600, px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}>View Leads</Button>
+            <Button variant="outlined" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} sx={{ borderColor: 'white', color: 'white', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>Edit Campaign</Button>
           </Box>
         </Box>
       </Box>
@@ -220,21 +189,7 @@ export default function CampaignAnalyticsPage() {
             <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', width: 40, height: 40 }}><Send sx={{ color: '#10B981' }} /></Avatar></Box>
             <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Messages Sent</Typography>
             <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.sent_count ?? analytics.overview.sent}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-              {hasLinkedIn && (
-                <Chip icon={<LinkedInIcon sx={{ fontSize: 12, color: '#0A66C2 !important' }} />} label={liveStats?.platform_metrics?.linkedin?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasEmail && (
-                <Chip icon={<Email sx={{ fontSize: 12, color: '#F59E0B !important' }} />} label={liveStats?.platform_metrics?.email?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasWhatsApp && (
-                <Chip icon={<WhatsApp sx={{ fontSize: 12, color: '#25D366 !important' }} />} label={liveStats?.platform_metrics?.whatsapp?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(37, 211, 102, 0.1)', color: '#25D366', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasVoice && (
-                <Chip icon={<Phone sx={{ fontSize: 12, color: '#8B5CF6 !important' }} />} label={liveStats?.platform_metrics?.voice?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Bolt sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>Outreach</Typography></Box>}
-            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><Bolt sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>Outreach</Typography></Box>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -242,21 +197,7 @@ export default function CampaignAnalyticsPage() {
             <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', width: 40, height: 40 }}><LinkedInIcon sx={{ color: '#3B82F6' }} /></Avatar></Box>
             <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Connected</Typography>
             <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.connected_count ?? analytics.overview.connected}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-              {hasLinkedIn && (
-                <Chip icon={<LinkedInIcon sx={{ fontSize: 12, color: '#0A66C2 !important' }} />} label={liveStats?.platform_metrics?.linkedin?.connected ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasEmail && (
-                <Chip icon={<Email sx={{ fontSize: 12, color: '#F59E0B !important' }} />} label={liveStats?.platform_metrics?.email?.connected ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasWhatsApp && (
-                <Chip icon={<WhatsApp sx={{ fontSize: 12, color: '#25D366 !important' }} />} label={liveStats?.platform_metrics?.whatsapp?.connected ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(37, 211, 102, 0.1)', color: '#25D366', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasVoice && (
-                <Chip icon={<Phone sx={{ fontSize: 12, color: '#8B5CF6 !important' }} />} label={liveStats?.platform_metrics?.voice?.connected ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><CheckCircle sx={{ color: '#3B82F6', fontSize: 16 }} /><Typography sx={{ color: '#3B82F6', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>}
-            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><CheckCircle sx={{ color: '#3B82F6', fontSize: 16 }} /><Typography sx={{ color: '#3B82F6', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -264,21 +205,7 @@ export default function CampaignAnalyticsPage() {
             <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', width: 40, height: 40 }}><Reply sx={{ color: '#F59E0B' }} /></Avatar></Box>
             <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Replied</Typography>
             <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.replied_count ?? analytics.overview.replied}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-              {hasLinkedIn && (
-                <Chip icon={<LinkedInIcon sx={{ fontSize: 12, color: '#0A66C2 !important' }} />} label={liveStats?.platform_metrics?.linkedin?.replied ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasEmail && (
-                <Chip icon={<Email sx={{ fontSize: 12, color: '#F59E0B !important' }} />} label={liveStats?.platform_metrics?.email?.replied ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasWhatsApp && (
-                <Chip icon={<WhatsApp sx={{ fontSize: 12, color: '#25D366 !important' }} />} label={liveStats?.platform_metrics?.whatsapp?.replied ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(37, 211, 102, 0.1)', color: '#25D366', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {hasVoice && (
-                <Chip icon={<Phone sx={{ fontSize: 12, color: '#8B5CF6 !important' }} />} label={liveStats?.platform_metrics?.voice?.replied ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', '& .MuiChip-label': { px: 0.75 } }} />
-              )}
-              {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><EmojiEvents sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>}
-            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><EmojiEvents sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>
           </Card>
         </Grid>
       </Grid>
@@ -305,11 +232,6 @@ export default function CampaignAnalyticsPage() {
         }}>
           <AnalyticsCharts data={{ leadsOverTime, channelBreakdown, funnel }} />
         </Box>
-      </Box>
-
-      {/* Live Activity Feed */}
-      <Box sx={{ mb: 4 }}>
-        <LiveActivityTable campaignId={campaignId} maxHeight={500} pageSize={50} />
       </Box>
 
       {/* Channel Performance Cards */}
@@ -395,12 +317,12 @@ export default function CampaignAnalyticsPage() {
               </Box>
               <Stack spacing={2.5}>
                 {[
-                  { label: 'Sent', value: liveStats?.sent_count ?? analytics.overview.sent, icon: Send, color: '#6366F1' },
-                  { label: 'Delivered', value: liveStats?.delivered_count ?? analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
-                  { label: 'Opened', value: liveStats?.opened_count ?? analytics.overview.opened, icon: OpenInNew, color: '#8B5CF6' },
-                  { label: 'Clicked', value: liveStats?.clicked_count ?? analytics.overview.clicked, icon: TouchApp, color: '#EC4899' },
-                  { label: 'Connected', value: liveStats?.connected_count ?? analytics.overview.connected, icon: LinkedInIcon, color: '#0A66C2' },
-                  { label: 'Replied', value: liveStats?.replied_count ?? analytics.overview.replied, icon: Reply, color: '#F59E0B' },
+                  { label: 'Sent', value: analytics.overview.sent, icon: Send, color: '#6366F1' },
+                  { label: 'Delivered', value: analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
+                  { label: 'Opened', value: analytics.overview.opened, icon: OpenInNew, color: '#8B5CF6' },
+                  { label: 'Clicked', value: analytics.overview.clicked, icon: TouchApp, color: '#EC4899' },
+                  { label: 'Connected', value: analytics.overview.connected, icon: LinkedInIcon, color: '#0A66C2' },
+                  { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
                 ].map((metric) => (
                   <Box key={metric.label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -424,11 +346,11 @@ export default function CampaignAnalyticsPage() {
               </Box>
               <Stack spacing={3}>
                 {[
-                  { label: 'Delivery Rate', value: liveStats?.sent_count ? ((liveStats.delivered_count / liveStats.sent_count) * 100) : (analytics.metrics.delivery_rate ?? 0), color: '#10B981' },
-                  { label: 'Open Rate', value: liveStats?.delivered_count ? ((liveStats.opened_count / liveStats.delivered_count) * 100) : (analytics.metrics.open_rate ?? 0), color: '#8B5CF6' },
-                  { label: 'Click Rate', value: liveStats?.opened_count ? ((liveStats.clicked_count / liveStats.opened_count) * 100) : (analytics.metrics.click_rate ?? 0), color: '#EC4899' },
-                  { label: 'Connection Rate', value: liveStats?.sent_count ? ((liveStats.connected_count / liveStats.sent_count) * 100) : (analytics.metrics.connection_rate ?? 0), color: '#0A66C2' },
-                  { label: 'Reply Rate', value: liveStats?.connected_count ? ((liveStats.replied_count / liveStats.connected_count) * 100) : (analytics.metrics.reply_rate ?? 0), color: '#F59E0B' },
+                  { label: 'Delivery Rate', value: analytics.metrics.delivery_rate ?? 0, color: '#10B981' },
+                  { label: 'Open Rate', value: analytics.metrics.open_rate ?? 0, color: '#8B5CF6' },
+                  { label: 'Click Rate', value: analytics.metrics.click_rate ?? 0, color: '#EC4899' },
+                  { label: 'Connection Rate', value: analytics.metrics.connection_rate ?? 0, color: '#0A66C2' },
+                  { label: 'Reply Rate', value: analytics.metrics.reply_rate ?? 0, color: '#F59E0B' },
                 ].map((rate) => (
                   <Box key={rate.label}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

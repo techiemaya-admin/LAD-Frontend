@@ -121,5 +121,21 @@ class ApiClient {
 // Export singleton instance
 export const apiClient = new ApiClient();
 
+// Export convenience methods
+export const apiGet = <T = any>(path: string, options?: RequestOptions) => 
+  apiClient.get<T>(path, options);
+
+export const apiPost = <T = any>(path: string, body?: any, options?: RequestOptions) => 
+  apiClient.post<T>(path, body, options);
+
+export const apiPut = <T = any>(path: string, body?: any, options?: RequestOptions) => 
+  apiClient.put<T>(path, body, options);
+
+export const apiDelete = <T = any>(path: string, options?: RequestOptions) => 
+  apiClient.delete<T>(path, options);
+
+export const apiPatch = <T = any>(path: string, body?: any, options?: RequestOptions) => 
+  apiClient.patch<T>(path, body, options);
+
 // Export type for use in tests
 export type { ApiClient, ApiResponse, RequestOptions };
