@@ -35,53 +35,93 @@ class Logger {
 
   /**
    * Debug level - only logged in development
+   * In production, silently ignored per LAD compliance
    */
   debug(message: string, data?: any): void {
     if (!this.isDevelopment) return;
     
-    if (data) {
-      console.debug(this.formatMessage('debug', message), data);
-    } else {
-      console.debug(this.formatMessage('debug', message));
+    // Only log in development - silently ignored in production
+    if (typeof window !== 'undefined' && this.isDevelopment) {
+      try {
+        // Only use console if explicitly in development mode
+        if (data) {
+          console.debug(this.formatMessage('debug', message), data);
+        } else {
+          console.debug(this.formatMessage('debug', message));
+        }
+      } catch {
+        // Silent catch - prevent logging from breaking app
+      }
     }
   }
 
   /**
    * Info level - general information
+   * Silently ignored in production per LAD compliance
    */
   info(message: string, data?: any): void {
-    if (data) {
-      console.info(this.formatMessage('info', message), data);
-    } else {
-      console.info(this.formatMessage('info', message));
+    if (this.isDevelopment && typeof window !== 'undefined') {
+      try {
+        if (data) {
+          console.info(this.formatMessage('info', message), data);
+        } else {
+          console.info(this.formatMessage('info', message));
+        }
+      } catch {
+        // Silent catch - prevent logging from breaking app
+      }
     }
+    // In production, silently ignored
   }
 
   /**
    * Warn level - warnings and potential issues
+   * Silently ignored in production per LAD compliance
    */
   warn(message: string, data?: any): void {
-    if (data) {
-      console.warn(this.formatMessage('warn', message), data);
-    } else {
-      console.warn(this.formatMessage('warn', message));
+    if (this.isDevelopment && typeof window !== 'undefined') {
+      try {
+        if (data) {
+          console.warn(this.formatMessage('warn', message), data);
+        } else {
+          console.warn(this.formatMessage('warn', message));
+        }
+      } catch {
+        // Silent catch - prevent logging from breaking app
+      }
     }
+    // In production, silently ignored
   }
 
   /**
    * Error level - errors and exceptions
    * IMPORTANT: Never log sensitive data like tokens, passwords, card numbers
+   * In production, sent to external logging service (if configured)
+   * For now, silently ignored per LAD compliance
    */
   error(message: string, error?: Error | any): void {
+    // Extract safe error data
     const errorData = error instanceof Error 
-      ? { message: error.message, stack: this.isDevelopment ? error.stack : undefined }
-      : error;
+      ? { 
+          message: error.message, 
+          stack: this.isDevelopment ? error.stack : undefined,
+          name: error.name
+        }
+      : (typeof error === 'object' ? { ...error } : String(error));
     
-    if (errorData) {
-      console.error(this.formatMessage('error', message), errorData);
-    } else {
-      console.error(this.formatMessage('error', message));
+    if (this.isDevelopment && typeof window !== 'undefined') {
+      try {
+        if (errorData) {
+          console.error(this.formatMessage('error', message), errorData);
+        } else {
+          console.error(this.formatMessage('error', message));
+        }
+      } catch {
+        // Silent catch - prevent logging from breaking app
+      }
     }
+    // In production, could send to external service like Sentry, LogRocket, etc.
+    // For now: silently ignored per LAD compliance requirement
   }
 
   /**

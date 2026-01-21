@@ -24,10 +24,14 @@ import {
   TrendingUp,
   MinusCircle,
   Clock,
+  Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
+import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
+import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
 
 // shadcn + recharts
 import { Checkbox } from "@/components/ui/checkbox";
@@ -543,6 +547,7 @@ export function CallLogModal({
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<any | null>(null);
+  const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -557,8 +562,21 @@ export function CallLogModal({
 
       try {
         // Call log - Using voice-agent API (get by call_log_id)
+        logger.info('[CallLogModal] Fetching call log details', { id });
         const res = await apiGet<{ success: boolean; log?: any; data?: any }>(`/api/voice-agent/calllogs/${id}`);
         const l = res.data || res.log;
+        
+        logger.info('[CallLogModal] Call log response received', {
+          id,
+          hasData: !!l,
+          fields: l ? Object.keys(l) : [],
+          recordingUrls: {
+            signed_recording_url: l?.signed_recording_url?.slice(0, 50) + '...' || null,
+            recording_url: l?.recording_url?.slice(0, 50) + '...' || null,
+            call_recording_url: l?.call_recording_url?.slice(0, 50) + '...' || null,
+          }
+        });
+        
         setLog(l);
 
         // 2) Transcripts: accept string OR object, and several common keys
@@ -608,28 +626,50 @@ export function CallLogModal({
           const callId = l?.call_id ?? l?.callId ?? l?.voice_call_id ?? l?.id;
           let audioUrl: string | undefined;
 
+          logger.info('[CallLogModal] Recording URL resolution started', { callId });
+
           if (callId) {
             try {
               // Using voice-agent API for recording URL (VAPI integration disabled in backend)
+              logger.info('[CallLogModal] Fetching signed recording URL', { callId });
               const signedRes = await apiGet<{ success: boolean; signed_url?: string }>(
                 `/api/voice-agent/calls/${callId}/recording-signed-url`
               );
+              logger.info('[CallLogModal] Signed URL response', {
+                callId,
+                success: signedRes?.success,
+                hasSigned_url: !!signedRes?.signed_url,
+                signed_url: signedRes?.signed_url?.slice(0, 80) + '...' || null,
+              });
               if (signedRes?.success && signedRes?.signed_url) {
                 audioUrl = signedRes.signed_url;
+                logger.info('[CallLogModal] Using signed URL from endpoint', { callId });
               }
             } catch (apiError) {
-              console.warn("Failed to fetch signed recording URL, using fallback:", apiError);
+              logger.warn('[CallLogModal] Failed to fetch signed recording URL, using fallback', {
+                error: apiError instanceof Error ? apiError.message : String(apiError)
+              });
             }
           }
+          
           if (!audioUrl && l?.signed_recording_url) {
             audioUrl = l.signed_recording_url;
+            logger.info('[CallLogModal] Using signed_recording_url from response');
           }
           if (!audioUrl && l?.recording_url) {
             audioUrl = l.recording_url;
+            logger.info('[CallLogModal] Using recording_url from response');
           }
           if (!audioUrl && l?.call_recording_url) {
             audioUrl = l.call_recording_url;
+            logger.info('[CallLogModal] Using call_recording_url from response');
           }
+          
+          logger.info('[CallLogModal] Final recording URL selected', {
+            hasUrl: !!audioUrl,
+            urlPreview: audioUrl?.slice(0, 100) + '...' || null,
+          });
+          
           setSignedRecordingUrl(audioUrl);
         } catch (signErr) {
           // Fallback to direct URLs if signed URL fetch fails
@@ -646,10 +686,10 @@ export function CallLogModal({
           setMessages(null);
         }
       } catch (e) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Failed to load call log:", e);
-        }
+        logger.error('[CallLogModal] Failed to load call log', {
+          error: e instanceof Error ? e.message : String(e),
+          isDevelopment: process.env.NODE_ENV === 'development'
+        });
         setLog(null);
         setSegments([]);
         setAnalysis(null);
@@ -675,6 +715,35 @@ export function CallLogModal({
   availableTabs.push("cost");
   const defaultTab = availableTabs[0] ?? "cost";
 
+  // Download handler
+  const handleDownloadRecording = async () => {
+    if (!signedRecordingUrl || !log) return;
+    setIsDownloadingRecording(true);
+    try {
+      const leadName = [log?.lead_first_name, log?.lead_last_name]
+        .filter(Boolean)
+        .join(' ') || '';
+      const filename = generateRecordingFilename(leadName, log?.started_at);
+      await downloadRecording(signedRecordingUrl, filename);
+    } catch (error) {
+      logger.error('[CallLogModal] Failed to download recording', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsDownloadingRecording(false);
+    }
+  };
+
+  // Get lead category from API response or categorize
+  const leadCategory = (() => {
+    if (log?.lead_category) {
+      const normalized = normalizeLeadCategory(log.lead_category);
+      if (normalized) return normalized;
+    }
+    return categorizeLead(log || {});
+  })();
+  const tagConfig = getTagConfig(leadCategory);
+
   return (
     <>
       <div
@@ -686,13 +755,38 @@ export function CallLogModal({
       >
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <PhoneCall className="h-6 w-6 text-orange-500" />
-            <span>Call Details & Insights</span>
-          </h2>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
-            <X className="h-4 w-4" />
-          </Button>
+            <div className="flex flex-col space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
+              {leadCategory && (
+                <Badge className={cn(
+                  "w-fit text-xs font-semibold",
+                  tagConfig.bgColor,
+                  tagConfig.textColor
+                )}>
+                  {tagConfig.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasAudio && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadRecording}
+                disabled={isDownloadingRecording}
+                className="hover:bg-orange-100"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloadingRecording ? "Downloading..." : "Call Recording Download"}
+              </Button>
+            )}  
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Body */}

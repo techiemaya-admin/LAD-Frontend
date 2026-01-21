@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       logger.error('Error fetching user capabilities', error);
     }
 
-    console.log('[/api/auth/login] Login successful, setting cookie');
+    logger.debug('[/api/auth/login] Login successful, cookie being set');
     const res = NextResponse.json({ 
       user: {
         ...user,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
     
-    logger.debug('Cookie set with production-safe settings', { httpOnly: true, secure: isProduction, sameSite: 'lax', path: '/', maxAge: '7days', tokenLength: token.length });
+    logger.debug('[/api/auth/login] Cookie set with production-safe settings', { httpOnly: true, secure: isProduction, sameSite: 'lax', path: '/', maxAge: '7days', tokenLength: token.length });
     return res;
   } catch (e: any) {
     logger.error('Login endpoint error', e);

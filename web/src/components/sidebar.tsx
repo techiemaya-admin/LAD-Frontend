@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap, MessageCircle, MessageCircleMore, MessagesSquare } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout as logoutAction } from '@/store/slices/authSlice';
 import authService from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
+import { logger } from '@/lib/logger';
 import logo from "../assets/logo.png";
 import {
   DropdownMenu,
@@ -117,6 +118,13 @@ export function Sidebar() {
       requiredCapability: 'view_call_logs'
     },
     {
+      href: "/conversations",
+      label: "Conversations",
+      icon: MessagesSquare,
+      details: "View and manage customer conversations.",
+      requiredCapability: 'view_conversations'
+    },
+    {
       href: "/pipeline",
       label: isEducation ? "Students" : "Pipeline",
       icon: isEducation ? GraduationCap : CircleDollarSign,
@@ -144,6 +152,7 @@ export function Sidebar() {
     
     // Check if user has the required capability
     const hasCapability = user.capabilities.includes(item.requiredCapability);
+    logger.debug(`[Sidebar] Item: ${item.label}, Required: ${item.requiredCapability}, Has: ${hasCapability}, User Caps: ${user?.capabilities?.join(', ')}`);
     return hasCapability;
   }) : []; // Show empty nav during SSR to prevent hydration mismatch
 

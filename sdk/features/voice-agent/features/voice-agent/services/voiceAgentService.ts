@@ -11,12 +11,12 @@ const createLogger = () => {
     const { logger } = require('@/lib/logger');
     return logger;
   } catch {
-    // Fallback for SDK standalone context - minimal console wrapper
+    // Fallback for SDK standalone context - silent in production
     return {
-      debug: () => {}, // Silent in production
-      info: (msg: string, data?: any) => process.env.NODE_ENV === 'development' && console.info(`[VoiceAgent] ${msg}`, data || ''),
-      warn: (msg: string, data?: any) => process.env.NODE_ENV === 'development' && console.warn(`[VoiceAgent] ${msg}`, data || ''),
-      error: (msg: string, data?: any) => console.error(`[VoiceAgent] ${msg}`, data || '')
+      debug: () => {}, // Silent
+      info: () => {}, // Silent - no production logging
+      warn: () => {}, // Silent - no production logging
+      error: () => {} // Silent - no production logging
     };
   }
 };
@@ -153,7 +153,7 @@ class VoiceAgentService {
       try {
         logger.error(`API call failed for ${methodName}`, errorDetails);
       } catch (logError) {
-        console.error(`Failed to log error for ${methodName}:`, error?.message || error);
+        // Silent - no console logging allowed
       }
       
       // Log additional details for 500 errors

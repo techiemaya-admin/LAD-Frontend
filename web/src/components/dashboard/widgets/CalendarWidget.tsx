@@ -316,15 +316,15 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     className={cn(
                       'relative p-1 min-h-[60px] rounded-lg border cursor-pointer transition-colors',
                       !isCurrentMonth && 'opacity-40',
-                      isSelected && 'border-accent bg-accent/5',
+                      isSelected && 'border-primary bg-primary text-white',
                       isTodayDate && !isSelected && 'border-primary/50 bg-primary/5',
                       !isSelected && !isTodayDate && 'border-transparent hover:border-border hover:bg-secondary/50'
                     )}
                   >
                     <span className={cn(
                       'text-xs font-medium',
-                      isTodayDate && 'text-primary',
-                      isSelected && 'text-accent'
+                      isTodayDate && !isSelected && 'text-primary',
+                      isSelected && 'text-white'
                     )}>
                       {format(day, 'd')}
                     </span>
