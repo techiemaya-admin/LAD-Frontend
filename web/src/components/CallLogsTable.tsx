@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, FileDown } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { useRef, useEffect, useState } from "react";
 import {
@@ -13,6 +13,7 @@ import {
 import { categorizeLead, getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
 import { sortCallLogs, toggleSortDirection, type SortConfig } from "@/utils/sortingUtils";
 import { generateRecordingFilename, downloadRecording } from "@/utils/recordingDownload";
+import { exportToCSV, exportToJSON, exportToExcel, prepareExportData } from "@/utils/exportToExcel";
 
 interface CallLog {
   id: string;
@@ -124,11 +125,20 @@ export function CallLogsTable({
     [items]
   );
 
+  // Add computed tags to items for sorting
+  const itemsWithTags = useMemo(() => {
+    return items.map(item => ({
+      ...item,
+      tags: getLeadTag(item),
+      tag: getLeadTag(item),
+    }));
+  }, [items, getLeadTag]);
+
   // Memoized sorted items to avoid unnecessary re-renders
   const sortedItems = useMemo(() => {
-    if (!sortConfig) return items;
-    return sortCallLogs(items, sortConfig);
-  }, [items, sortConfig]);
+    if (!sortConfig) return itemsWithTags;
+    return sortCallLogs(itemsWithTags, sortConfig);
+  }, [itemsWithTags, sortConfig]);
 
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
@@ -177,6 +187,7 @@ export function CallLogsTable({
   }) => {
     const isActive = sortConfig?.field === field;
     const isAsc = isActive && sortConfig?.direction === "asc";
+    const tagFilter = (sortConfig as any)?.tagFilter;
     
     if (!sortable) {
       return <TableHead className="font-semibold text-foreground">{label}</TableHead>;
@@ -196,7 +207,16 @@ export function CallLogsTable({
       >
         <div className="flex items-center gap-2">
           {label}
-          {isActive ? (
+          {isActive && tagFilter ? (
+            // Show tag filter status
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white"
+              style={{
+                backgroundColor: tagFilter === 'hot' ? '#ef4444' : tagFilter === 'warm' ? '#f59e0b' : '#3b82f6'
+              }}
+            >
+              {tagFilter.toUpperCase()}
+            </span>
+          ) : isActive ? (
             isAsc ? (
               <ArrowUp className="w-4 h-4 text-primary" />
             ) : (
@@ -383,14 +403,64 @@ export function CallLogsTable({
                 </span>
               </div>
             </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExportBatch(batchId, calls);
+              }}
+              className="ml-4 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors flex items-center gap-2"
+              title="Export batch to CSV"
+            >
+              <FileDown className="w-4 h-4" />
+              <span className="text-xs font-medium">Export</span>
+            </button>
           </div>
         </TableCell>
       </TableRow>
     );
   };
 
+  // Sort calls within a batch
+  const getSortedBatchCalls = useCallback((calls: CallLog[]): CallLog[] => {
+    if (!sortConfig) return calls;
+    const itemsWithTags = calls.map(item => ({
+      ...item,
+      tags: getLeadTag(item),
+      tag: getLeadTag(item),
+    }));
+    return sortCallLogs(itemsWithTags, sortConfig);
+  }, [sortConfig, getLeadTag]);
+
+  // Export batch to Excel
+  const handleExportBatch = useCallback(async (batchId: string, batchCalls: CallLog[]) => {
+    const exportData = prepareExportData(batchCalls, getLeadTag);
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `batch-${batchId.slice(0, 8)}-${timestamp}.csv`;
+    exportToCSV(exportData, filename);
+  }, [getLeadTag]);
+
+  // Export all logs to Excel
+  const handleExportAll = useCallback(async () => {
+    const exportData = prepareExportData(items, getLeadTag);
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `call-logs-export-${timestamp}.csv`;
+    exportToCSV(exportData, filename);
+  }, [items, getLeadTag]);
+
   return (
     <div className="glass-card rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+      {/* Export Button */}
+      <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-end">
+        <button
+          onClick={handleExportAll}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/90 hover:bg-primary text-white font-medium transition-colors"
+          title="Export all call logs to CSV"
+        >
+          <FileDown className="w-4 h-4" />
+          Export All Logs
+        </button>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow className="border-b border-border/50 bg-muted/30">
@@ -407,15 +477,15 @@ export function CallLogsTable({
                 className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
               />
             </TableHead>
-            <TableHead className="font-semibold text-foreground">Call ID</TableHead>
-            <TableHead className="font-semibold text-foreground">Agent</TableHead>
-            <TableHead className="font-semibold text-foreground">Lead</TableHead>
-            <TableHead className="font-semibold text-foreground">Type</TableHead>
-            <TableHead className="font-semibold text-foreground">Status</TableHead>
+            <SortableHeader field="id" label="Call ID" sortable={true} />
+            <SortableHeader field="assistant" label="Agent" sortable={true} />
+            <SortableHeader field="lead_name" label="Lead" sortable={true} />
+            <SortableHeader field="type" label="Type" sortable={true} />
+            <SortableHeader field="status" label="Status" sortable={true} />
             <SortableHeader field="startedAt" label="Started" sortable={true} />
             <SortableHeader field="duration" label="Duration" sortable={true} />
-            <TableHead className="font-semibold text-foreground">Tags</TableHead>
-            <TableHead className="font-semibold text-foreground">Cost</TableHead>
+            <SortableHeader field="tags" label="Tags" sortable={true} />
+            <SortableHeader field="cost" label="Cost" sortable={true} />
             {/* <TableHead className="w-16">Actions</TableHead> */}
           </TableRow>
         </TableHeader>
@@ -423,13 +493,16 @@ export function CallLogsTable({
           {batchGroups ? (
             <>
               {/* Render batch groups */}
-              {Object.entries(batchGroups.groups).map(([batchId, calls]) => (
-                <React.Fragment key={`batch-group-${batchId}`}>
-                  {renderBatchHeader(batchId, calls)}
-                  {expandedBatches.has(batchId) &&
-                    calls.map((call, idx) => renderCallRow(call, idx, true))}
-                </React.Fragment>
-              ))}
+              {Object.entries(batchGroups.groups).map(([batchId, calls]) => {
+                const sortedBatchCalls = getSortedBatchCalls(calls);
+                return (
+                  <React.Fragment key={`batch-group-${batchId}`}>
+                    {renderBatchHeader(batchId, calls)}
+                    {expandedBatches.has(batchId) &&
+                      sortedBatchCalls.map((call, idx) => renderCallRow(call, idx, true))}
+                  </React.Fragment>
+                );
+              })}
               
               {/* Render non-batch calls */}
               {batchGroups.noBatchCalls.length > 0 && (
@@ -441,7 +514,7 @@ export function CallLogsTable({
                       </TableCell>
                     </TableRow>
                   )}
-                  {batchGroups.noBatchCalls.map((call, idx) => renderCallRow(call, idx, false))}
+                  {getSortedBatchCalls(batchGroups.noBatchCalls).map((call, idx) => renderCallRow(call, idx, false))}
                 </>
               )}
             </>

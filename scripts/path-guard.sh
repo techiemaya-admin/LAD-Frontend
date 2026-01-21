@@ -60,8 +60,12 @@ FORBIDDEN_PATTERNS=(
 
 ALLOWED_PATTERNS=(
   "^backend/features/"
+  "^sdk/features/"
+  "^sdk/shared/"
   "^frontend/sdk/features/"
   "^frontend/sdk/shared/"
+  "^web/package"
+  "^web/src/"
   "^docs/"
   "^lad-docs/"
   "^scripts/"

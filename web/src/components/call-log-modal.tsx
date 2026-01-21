@@ -562,8 +562,21 @@ export function CallLogModal({
 
       try {
         // Call log - Using voice-agent API (get by call_log_id)
+        logger.info('[CallLogModal] Fetching call log details', { id });
         const res = await apiGet<{ success: boolean; log?: any; data?: any }>(`/api/voice-agent/calllogs/${id}`);
         const l = res.data || res.log;
+        
+        logger.info('[CallLogModal] Call log response received', {
+          id,
+          hasData: !!l,
+          fields: l ? Object.keys(l) : [],
+          recordingUrls: {
+            signed_recording_url: l?.signed_recording_url?.slice(0, 50) + '...' || null,
+            recording_url: l?.recording_url?.slice(0, 50) + '...' || null,
+            call_recording_url: l?.call_recording_url?.slice(0, 50) + '...' || null,
+          }
+        });
+        
         setLog(l);
 
         // 2) Transcripts: accept string OR object, and several common keys
@@ -613,14 +626,24 @@ export function CallLogModal({
           const callId = l?.call_id ?? l?.callId ?? l?.voice_call_id ?? l?.id;
           let audioUrl: string | undefined;
 
+          logger.info('[CallLogModal] Recording URL resolution started', { callId });
+
           if (callId) {
             try {
               // Using voice-agent API for recording URL (VAPI integration disabled in backend)
+              logger.info('[CallLogModal] Fetching signed recording URL', { callId });
               const signedRes = await apiGet<{ success: boolean; signed_url?: string }>(
                 `/api/voice-agent/calls/${callId}/recording-signed-url`
               );
+              logger.info('[CallLogModal] Signed URL response', {
+                callId,
+                success: signedRes?.success,
+                hasSigned_url: !!signedRes?.signed_url,
+                signed_url: signedRes?.signed_url?.slice(0, 80) + '...' || null,
+              });
               if (signedRes?.success && signedRes?.signed_url) {
                 audioUrl = signedRes.signed_url;
+                logger.info('[CallLogModal] Using signed URL from endpoint', { callId });
               }
             } catch (apiError) {
               logger.warn('[CallLogModal] Failed to fetch signed recording URL, using fallback', {
@@ -628,15 +651,25 @@ export function CallLogModal({
               });
             }
           }
+          
           if (!audioUrl && l?.signed_recording_url) {
             audioUrl = l.signed_recording_url;
+            logger.info('[CallLogModal] Using signed_recording_url from response');
           }
           if (!audioUrl && l?.recording_url) {
             audioUrl = l.recording_url;
+            logger.info('[CallLogModal] Using recording_url from response');
           }
           if (!audioUrl && l?.call_recording_url) {
             audioUrl = l.call_recording_url;
+            logger.info('[CallLogModal] Using call_recording_url from response');
           }
+          
+          logger.info('[CallLogModal] Final recording URL selected', {
+            hasUrl: !!audioUrl,
+            urlPreview: audioUrl?.slice(0, 100) + '...' || null,
+          });
+          
           setSignedRecordingUrl(audioUrl);
         } catch (signErr) {
           // Fallback to direct URLs if signed URL fetch fails

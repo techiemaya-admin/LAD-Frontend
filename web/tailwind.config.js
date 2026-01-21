@@ -17,6 +17,9 @@ module.exports = {
     },
     extend: {
       colors: {
+        whatsapp: "hsl(var(--whatsapp))",
+        linkedin: "hsl(var(--linkedin))",
+        gmail: "hsl(var(--gmail))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
