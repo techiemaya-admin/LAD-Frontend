@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChannelIcon } from './ChannelIcon';
 import type { Conversation } from '@/types/conversation';
 import { formatDistanceToNow } from 'date-fns';
+import { logger } from '@/lib/logger';
 // import notificationSoundFile from '/sounds/notification_sound.wav';
 
 interface NotificationBellProps {
@@ -23,17 +24,17 @@ const playNotificationSound = () => {
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
-          console.log('✓ Notification sound played successfully');
+          logger.debug('✓ Notification sound played successfully');
           return true;
         })
         .catch((err) => {
-          console.error('✗ Audio play failed:', err);
+          logger.debug('✗ Audio play failed:', err);
           return false;
         });
     }
     return true;
   } catch (error) {
-    console.error('✗ Audio initialization failed:', error);
+    logger.debug('✗ Audio initialization failed:', error);
     return false;
   }
 };

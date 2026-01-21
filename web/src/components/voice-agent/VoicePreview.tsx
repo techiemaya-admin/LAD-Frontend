@@ -76,7 +76,6 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
             await audioRef.current.play();
             setIsPlaying(true);
           } catch (e) {
-            console.error("Audio play error:", e);
             // Fallback to Web Speech API
             useFallbackPreview();
           }
@@ -86,7 +85,7 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
         }
       }
     } catch (e) {
-      console.error("Preview error:", e);
+      // Error caught and handled silently
     }
   };
 

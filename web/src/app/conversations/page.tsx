@@ -1,4 +1,4 @@
-"'use client';"
+"use client";
 import { ConversationsPage } from '@/components/conversations/ConversationsPage';
 
 const Index = () => {

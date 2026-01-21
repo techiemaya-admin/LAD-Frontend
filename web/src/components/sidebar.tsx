@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout as logoutAction } from '@/store/slices/authSlice';
 import authService from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
+import { logger } from '@/lib/logger';
 import logo from "../assets/logo.png";
 import {
   DropdownMenu,
@@ -151,7 +152,7 @@ export function Sidebar() {
     
     // Check if user has the required capability
     const hasCapability = user.capabilities.includes(item.requiredCapability);
-    console.log(`[Sidebar] Item: ${item.label}, Required: ${item.requiredCapability}, Has: ${hasCapability}, User Caps: ${user?.capabilities?.join(', ')}`);
+    logger.debug(`[Sidebar] Item: ${item.label}, Required: ${item.requiredCapability}, Has: ${hasCapability}, User Caps: ${user?.capabilities?.join(', ')}`);
     return hasCapability;
   }) : []; // Show empty nav during SSR to prevent hydration mismatch
 

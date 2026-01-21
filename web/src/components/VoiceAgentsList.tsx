@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Briefcase, Plus, ChevronRight } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface Agent {
   id: string;
@@ -19,7 +20,7 @@ export function VoiceAgentsList() {
     const fetchAgents = async () => {
       try {
         setLoading(true);
-        console.log("🔍 Fetching agents from /api/voice-agent/user/available-agents");
+        logger.debug("🔍 Fetching agents from /api/voice-agent/user/available-agents");
 
         const response = await fetch("/api/voice-agent/user/available-agents", {
           method: "GET",
@@ -29,21 +30,21 @@ export function VoiceAgentsList() {
           credentials: "include",
         });
 
-        console.log("📡 Response status:", response.status, response.statusText);
+        logger.debug("📡 Response status:", response.status, response.statusText);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("❌ Response error:", errorText);
+          logger.debug("❌ Response error:", errorText);
           throw new Error(`Failed to fetch agents: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log("✅ Agents fetched successfully:", data);
+        logger.debug("✅ Agents fetched successfully:", data);
         setAgents(Array.isArray(data) ? data : []);
         setError(null);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Failed to fetch agents";
-        console.error("❌ Error fetching agents:", errorMsg, err);
+        logger.debug("❌ Error fetching agents:", errorMsg, err);
         setError(errorMsg);
         setAgents([]);
       } finally {
@@ -59,7 +60,7 @@ export function VoiceAgentsList() {
   };
 
   const handleCreateAgent = () => {
-    console.log("Creating new agent...");
+    logger.debug("Creating new agent...");
     // Navigate to create agent page
   };
 
@@ -104,7 +105,7 @@ export function VoiceAgentsList() {
               className={cn(
                 "flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer hover:bg-gray-50"
               )}
-              onClick={() => console.log("Selected agent:", agent.id)}
+              onClick={() => logger.debug("Selected agent:", agent.id)}
             >
               <div className="flex items-center gap-3 flex-1">
                 <Briefcase size={20} className="text-gray-600" />
