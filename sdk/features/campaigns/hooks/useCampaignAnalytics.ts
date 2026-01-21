@@ -49,13 +49,6 @@ export function useCampaignAnalytics(campaignId: string | null): UseCampaignAnal
 
   useEffect(() => {
     fetchAnalytics();
-    
-    // Auto-refresh every 15 seconds for live analytics updates
-    const interval = setInterval(() => {
-      fetchAnalytics();
-    }, 15000);
-    
-    return () => clearInterval(interval);
   }, [fetchAnalytics]);
 
   return {

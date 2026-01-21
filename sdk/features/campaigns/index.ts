@@ -43,7 +43,6 @@ export {
 export { useCampaigns } from './hooks/useCampaigns';
 export { useCampaign } from './hooks/useCampaign';
 export { useCampaignStats } from './hooks/useCampaignStats';
-export { useCampaignStatsLive } from './hooks/useCampaignStatsLive';
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 export { useCampaignLeads } from './hooks/useCampaignLeads';
 
