@@ -43,9 +43,9 @@ export function useChatStepController(
   useEffect(() => {
     return () => {
       hasStartedRef.current = false;
-      setIsICPFlowStarted(false); // Reset global flag on unmount
+      // Do NOT reset isICPFlowStarted here, so flow state is preserved across navigation
     };
-  }, [setIsICPFlowStarted]);
+  }, []);
 
   // Fetch questions from API on mount
   useEffect(() => {
