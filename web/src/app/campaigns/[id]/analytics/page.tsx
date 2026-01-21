@@ -78,10 +78,13 @@ export default function CampaignAnalyticsPage() {
     );
   }
 
-  if (!analytics) {
+  if (!analytics || !analytics.campaign) {
     return (
       <Box sx={{ p: 3, bgcolor: '#0F172A', minHeight: '100vh' }}>
         <Typography color="white">No analytics data available</Typography>
+        <Button onClick={() => router.push('/campaigns')} sx={{ mt: 2 }} variant="contained">
+          Back to Campaigns
+        </Button>
       </Box>
     );
   }
@@ -169,20 +172,20 @@ export default function CampaignAnalyticsPage() {
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto', transition: 'all 0.3s ease', background: isDarkMode ? '#0F172A' : '#F8F9FE' }}>
       {/* Hero Header */}
-      <Box sx={{ background: 'linear-gradient(135deg, #0b1957 0%, #0d1f6b 50%, #0f2580 100%)', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 10px 40px rgba(11, 25, 87, 0.4)' }}>
-        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)', borderRadius: '50%' }} />
-        <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
+      <Box sx={{ background: 'white', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #E2E8F0' }}>
+        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
+        <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <IconButton onClick={() => router.push('/campaigns')} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}><ArrowBack /></IconButton>
-              <Chip icon={<Rocket sx={{ color: '#fff !important' }} />} label="Advanced Analytics" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
+              <IconButton onClick={() => router.push('/campaigns')} sx={{ bgcolor: '#F0F4F8', color: '#1E293B', '&:hover': { bgcolor: '#E2E8F0' } }}><ArrowBack /></IconButton>
+              <Chip icon={<Rocket sx={{ color: '#6366F1 !important' }} />} label="Advanced Analytics" sx={{ bgcolor: '#F0F4F8', color: '#1E293B', fontWeight: 600 }} />
             </Box>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>{analytics.campaign.name}</Typography>
+            <Typography variant="h3" sx={{ fontWeight: 800, color: '#1E293B', mb: 1 }}>{analytics.campaign.name}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B', ml: 1 }} />} label={analytics.campaign.status} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', textTransform: 'capitalize', fontWeight: 600 }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</Typography>
+              <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B', ml: 1 }} />} label={analytics.campaign.status} sx={{ bgcolor: '#F0F4F8', color: '#1E293B', textTransform: 'capitalize', fontWeight: 600 }} />
+              <Typography sx={{ color: '#64748B' }}>Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -190,15 +193,14 @@ export default function CampaignAnalyticsPage() {
               icon={isConnected ? <Wifi /> : <WifiOff />} 
               label={isConnected ? 'Live' : 'Offline'} 
               sx={{ 
-                bgcolor: isConnected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', 
+                bgcolor: isConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
                 color: isConnected ? '#10B981' : '#EF4444', 
                 fontWeight: 600,
                 border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` 
               }} 
             />
-            <Button variant="contained" startIcon={isDarkMode ? <LightMode /> : <DarkMode />} onClick={() => setIsDarkMode(!isDarkMode)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, px: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}>{isDarkMode ? 'Light' : 'Dark'}</Button>
-            <Button variant="contained" startIcon={<People />} onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} sx={{ bgcolor: 'white', color: '#6366F1', fontWeight: 600, px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}>View Leads</Button>
-            <Button variant="outlined" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} sx={{ borderColor: 'white', color: 'white', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>Edit Campaign</Button>
+            <Button variant="contained" startIcon={<People />} onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 600, px: 3, boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)', '&:hover': { bgcolor: '#5558E3', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)' } }}>View Leads</Button>
+            <Button variant="outlined" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} sx={{ borderColor: '#6366F1', color: '#6366F1', fontWeight: 600, borderWidth: 2, '&:hover': { borderColor: '#5558E3', bgcolor: 'rgba(99, 102, 241, 0.08)', borderWidth: 2 } }}>Edit Campaign</Button>
           </Box>
         </Box>
       </Box>
