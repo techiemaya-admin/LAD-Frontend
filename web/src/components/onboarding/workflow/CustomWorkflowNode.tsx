@@ -5,33 +5,27 @@ import { StepType } from '@/types/campaign';
 import { getNodeClasses, getNodeIcon } from './workflowNodeUtils';
 import { Trash2, Edit3, Clock } from 'lucide-react';
 import { useOnboardingStore } from '@/store/onboardingStore';
-
 // Custom Node Component with Modern Trending Design
 export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
   const stepType: StepType = data?.type as StepType || 'linkedin_visit';
   const nodeClasses = getNodeClasses(stepType);
   const { removeWorkflowStep, setSelectedNodeId } = useOnboardingStore();
-  
   const getPreviewText = () => {
     if (data?.description) return data.description;
     if (data?.message) return data.message.substring(0, 50) + '...';
     if (data?.subject) return data.subject;
     return stepType;
   };
-  
   // Check if this step can be deleted (not start or end nodes)
   const canDelete = stepType !== 'start' && stepType !== 'end';
-  
   // Check if this step can be edited (not start or end nodes)
   const canEdit = stepType !== 'start' && stepType !== 'end';
-  
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (canDelete && id) {
       removeWorkflowStep(id);
     }
   };
-  
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (canEdit && id) {
@@ -41,7 +35,6 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
       }));
     }
   };
-  
   return (
     <div
       onClick={canEdit ? handleEdit : undefined}
@@ -62,7 +55,6 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
         position={Position.Top} 
         className={cn('w-3 h-3 border-4 border-white shadow-lg', nodeClasses.icon)}
       />
-      
       {/* Gradient Header with Icon */}
       <div
         className={cn(
@@ -72,18 +64,15 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
       >
         {/* Animated Glow Effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20 opacity-50" />
-        
         {/* Icon Circle with Modern Design */}
         <div className="relative flex-shrink-0 w-12 h-12 rounded-xl bg-white/25 backdrop-blur-md flex items-center justify-center text-white shadow-2xl border border-white/30">
           {getNodeIcon(stepType)}
           <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/40 to-transparent opacity-60" />
         </div>
-        
         {/* Title */}
         <span className="text-base font-bold text-white drop-shadow-lg truncate flex-1 relative z-10">
           {data?.title || stepType}
         </span>
-        
         {/* Edit Button - only show for editable steps */}
         {canEdit && (
           <button
@@ -94,7 +83,6 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
             <Edit3 className="w-4 h-4 group-hover:animate-pulse" />
           </button>
         )}
-        
         {/* Delete Button - only show for deletable steps */}
         {canDelete && (
           <button
@@ -106,7 +94,6 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           </button>
         )}
       </div>
-      
       {/* Content Body with Glass Effect */}
       <div className="px-4 py-3 bg-white/80 backdrop-blur-md">
         {stepType === 'condition' && (
@@ -150,7 +137,6 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           </div>
         )}
       </div>
-      
       {stepType === 'condition' ? (
         <>
           <Handle 
@@ -175,4 +161,4 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
       )}
     </div>
   );
-}
+}

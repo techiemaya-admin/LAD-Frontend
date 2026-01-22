@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import {
   Table,
@@ -24,13 +23,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@sdk/features/campaigns/hooks/useCampaignActivityFeed';
-
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;
   pageSize?: number;
 }
-
 export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   campaignId,
   maxHeight = 500,
@@ -38,7 +35,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 }) => {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
-  
   const { activities, isLoading, isConnected, error, refresh } = useCampaignActivityFeed(
     campaignId,
     {
@@ -47,7 +43,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       actionType: actionFilter !== 'all' ? actionFilter : undefined
     }
   );
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'success':
@@ -61,7 +56,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         return 'default';
     }
   };
-
   const getPlatformIcon = (platform: string) => {
     const icons: Record<string, string> = {
       linkedin: '🔗',
@@ -72,14 +66,12 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     };
     return icons[platform?.toLowerCase()] || '📊';
   };
-
   const formatActionType = (actionType: string) => {
     return actionType
       ?.split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ') || '';
   };
-
   if (error) {
     return (
       <Box p={3} textAlign="center">
@@ -87,7 +79,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       </Box>
     );
   }
-
   return (
     <Box>
       {/* Header with filters */}
@@ -110,7 +101,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
             }}
           />
         </Box>
-        
         <Box display="flex" gap={2} alignItems="center">
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Platform</InputLabel>
@@ -127,7 +117,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               <MenuItem value="sms">SMS</MenuItem>
             </Select>
           </FormControl>
-
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Action</InputLabel>
             <Select
@@ -143,7 +132,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               <MenuItem value="reply">Reply</MenuItem>
             </Select>
           </FormControl>
-
           <Tooltip title="Refresh">
             <IconButton onClick={refresh} disabled={isLoading}>
               <RefreshIcon />
@@ -151,7 +139,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </Tooltip>
         </Box>
       </Box>
-
       {/* Activity Table */}
       <TableContainer 
         component={Paper} 
@@ -213,7 +200,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                       {format(new Date(activity.created_at), 'MMM dd, HH:mm:ss')}
                     </Typography>
                   </TableCell>
-                  
                   <TableCell>
                     <Box>
                       <Typography variant="body2" fontWeight={500}>
@@ -226,13 +212,11 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                       )}
                     </Box>
                   </TableCell>
-                  
                   <TableCell>
                     <Typography variant="body2">
                       {formatActionType(activity.action_type)}
                     </Typography>
                   </TableCell>
-                  
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <span>{getPlatformIcon(activity.platform)}</span>
@@ -241,7 +225,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                       </Typography>
                     </Box>
                   </TableCell>
-                  
                   <TableCell>
                     <Chip
                       label={activity.status || 'Unknown'}
@@ -250,7 +233,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                       sx={{ fontWeight: 500 }}
                     />
                   </TableCell>
-                  
                   <TableCell>
                     <Tooltip title={activity.message_content || activity.error_message || ''}>
                       <Typography 
@@ -275,4 +257,4 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       </TableContainer>
     </Box>
   );
-};
+};

@@ -2,20 +2,15 @@ import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { User } from '../store/slices/usersSlice';
 import { logger } from '@/lib/logger';
-
 // Remove mockUserSettings, use API for user preferences
-
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return safeStorage.getItem('token') || safeStorage.getItem('auth_token');
 }
-
 const DEFAULT_FETCH_TIMEOUT_MS = 20000;
-
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     return await fetch(input, {
       ...init,
@@ -25,13 +20,11 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
     clearTimeout(timeoutId);
   }
 }
-
 export async function getUserSettings(): Promise<Record<string, unknown>> {
   const token = getAccessToken();
   if (!token) {
     throw new Error('Not authenticated');
   }
-
   const response = await fetchWithTimeout(getApiUrl('/api/users/settings'), {
     ...defaultFetchOptions(),
     headers: {
@@ -39,20 +32,16 @@ export async function getUserSettings(): Promise<Record<string, unknown>> {
       'Authorization': `Bearer ${token}`
     }
   });
-
   if (!response.ok) {
     throw new Error('Failed to get user settings');
   }
-
   return await response.json();
 }
-
 export async function updateUserSettings(settings: Record<string, unknown>): Promise<Record<string, unknown>> {
   const token = getAccessToken();
   if (!token) {
     throw new Error('Not authenticated');
   }
-  
   // Backend accepts both flat and nested formats, so send as-is
   const response = await fetchWithTimeout(getApiUrl('/api/users/settings'), {
     ...defaultFetchOptions(),
@@ -63,14 +52,11 @@ export async function updateUserSettings(settings: Record<string, unknown>): Pro
     },
     body: JSON.stringify(settings)
   });
-
   if (!response.ok) {
     throw new Error('Failed to update user settings');
   }
-
   return await response.json();
 }
-
 // Pipeline Preferences Helper Functions
 interface PipelinePreferences {
   viewMode: 'kanban' | 'list';
@@ -96,14 +82,12 @@ interface PipelinePreferences {
     enableDragAndDrop: boolean;
   };
 }
-
 export async function getPipelinePreferences(): Promise<PipelinePreferences> {
   try {
     const token = getAccessToken();
     if (!token) {
       throw new Error('Not authenticated');
     }
-
     const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
       ...defaultFetchOptions(),
       headers: {
@@ -111,28 +95,23 @@ export async function getPipelinePreferences(): Promise<PipelinePreferences> {
         'Authorization': `Bearer ${token}`
       }
     });
-
     if (!response.ok) {
       throw new Error('Failed to get pipeline settings');
     }
-
     const result = await response.json();
     const settings = result.settings || {};
-    
     // Return the settings directly since backend now returns the correct structure
     return settings;
   } catch (error) {
     return getPipelineDefaults();
   }
 }
-
 export async function savePipelinePreferences(preferences: PipelinePreferences): Promise<PipelinePreferences> {
   try {
     const token = getAccessToken();
     if (!token) {
       throw new Error('Not authenticated');
     }
-
     // Send preferences as structured object (not flattened)
     const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
       ...defaultFetchOptions(),
@@ -143,46 +122,37 @@ export async function savePipelinePreferences(preferences: PipelinePreferences):
       },
       body: JSON.stringify(preferences)
     });
-
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
       throw new Error(`Failed to save pipeline preferences: ${response.status} ${response.statusText} - ${errorText}`);
     }
-
     await response.json();
-    
     return preferences;
   } catch (error) {
     logger.error('Failed to save pipeline preferences:', error);
     throw error;
   }
 }
-
 // Helper: Extract pipeline preferences from user settings
 function extractPipelinePreferences(userSettings: Record<string, unknown>): Partial<PipelinePreferences> {
   const pipelinePrefs: Record<string, unknown> = {};
-  
   // Dynamically extract all pipeline.* keys from userSettings
   Object.keys(userSettings).forEach(key => {
     if (key.startsWith('pipeline.')) {
       // Remove 'pipeline.' prefix to get the nested path
       const path = key.substring(9); // Remove 'pipeline.' (9 characters)
       const value = userSettings[key];
-      
       // Set nested property dynamically
       setNestedProperty(pipelinePrefs, path, value);
     }
   });
-  
   logger.debug('UserService: Total pipeline preferences extracted:', { count: countNestedProperties(pipelinePrefs) });
   return pipelinePrefs as Partial<PipelinePreferences>;
 }
-
 // Helper: Set nested property dynamically (e.g., 'filters.statuses' -> pipelinePrefs.filters.statuses)
 function setNestedProperty(obj: Record<string, unknown>, path: string, value: unknown): void {
   const keys = path.split('.');
   let current: Record<string, unknown> = obj;
-  
   // Navigate to the parent object
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i];
@@ -191,10 +161,8 @@ function setNestedProperty(obj: Record<string, unknown>, path: string, value: un
     }
     current = current[key] as Record<string, unknown>;
   }
-  
   // Set the final value
   const finalKey = keys[keys.length - 1];
-  
   // Try to parse as JSON first, fall back to string value
   try {
     current[finalKey] = typeof value === 'string' ? JSON.parse(value) : value;
@@ -203,7 +171,6 @@ function setNestedProperty(obj: Record<string, unknown>, path: string, value: un
     current[finalKey] = value;
   }
 }
-
 // Helper: Count nested properties recursively
 function countNestedProperties(obj: Record<string, unknown>): number {
   let count = 0;
@@ -216,17 +183,14 @@ function countNestedProperties(obj: Record<string, unknown>): number {
   }
   return count;
 }
-
 // Helper: Flatten pipeline preferences for storage
 function flattenPipelinePreferences(preferences: PipelinePreferences): Record<string, string> {
   const flattened: Record<string, string> = {};
-  
   // Recursively flatten nested objects with 'pipeline.' prefix
   function flattenObject(obj: Record<string, unknown>, prefix = 'pipeline'): void {
     Object.keys(obj).forEach(key => {
       const fullKey = `${prefix}.${key}`;
       const value = obj[key];
-      
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         // Recursively flatten nested objects
         flattenObject(value as Record<string, unknown>, fullKey);
@@ -240,11 +204,9 @@ function flattenPipelinePreferences(preferences: PipelinePreferences): Record<st
       }
     });
   }
-  
   flattenObject(preferences as unknown as Record<string, unknown>);
   return flattened;
 }
-
 // Helper: Check if a string is already JSON
 function isJsonString(str: string): boolean {
   try {
@@ -254,18 +216,15 @@ function isJsonString(str: string): boolean {
     return false;
   }
 }
-
 // Helper: Set nested object values
 function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const keys = path.split('.');
   const lastKey = keys.pop();
   if (!lastKey) return;
-  
   const target = keys.reduce((current: Record<string, unknown>, key: string) => {
     if (!current[key]) current[key] = {};
     return current[key] as Record<string, unknown>;
   }, obj);
-  
   // Parse string values back to their proper types
   if (typeof value === 'string') {
     // Handle boolean strings
@@ -293,7 +252,6 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
     target[lastKey] = value;
   }
 }
-
 // Helper: Get default pipeline preferences
 function getPipelineDefaults(): PipelinePreferences {
   return {
@@ -337,11 +295,9 @@ function getPipelineDefaults(): PipelinePreferences {
     }
   };
 }
-
 // Helper: Merge with defaults
 function mergeWithPipelineDefaults(userPreferences: Partial<PipelinePreferences>): PipelinePreferences {
   const defaults = getPipelineDefaults();
-  
   return {
     ...defaults,
     ...userPreferences,
@@ -367,7 +323,6 @@ function mergeWithPipelineDefaults(userPreferences: Partial<PipelinePreferences>
     }
   };
 }
-
 export async function getAllUsers(): Promise<User[]> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -381,7 +336,6 @@ export async function getAllUsers(): Promise<User[]> {
   if (!response.ok) throw new Error('Failed to fetch users');
   return await response.json();
 }
-
 export async function createUser(user: Partial<User>): Promise<User | { user: User; id?: string }> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -404,7 +358,6 @@ export async function createUser(user: Partial<User>): Promise<User | { user: Us
   }
   return await response.json();
 }
-
 export async function updateUserRole(id: string, role: string, capabilities: string[]): Promise<User> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -420,7 +373,6 @@ export async function updateUserRole(id: string, role: string, capabilities: str
   if (!response.ok) throw new Error('Failed to update user role');
   return await response.json();
 }
-
 export async function updateUserCapabilities(id: string, capabilities: string[]): Promise<User> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -436,7 +388,6 @@ export async function updateUserCapabilities(id: string, capabilities: string[])
   if (!response.ok) throw new Error('Failed to update user capabilities');
   return await response.json();
 }
-
 export async function getRoleDefaults(): Promise<Array<{ role: { key: string; label: string }; capabilities: Array<{ key: string; label: string }> }>> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -450,7 +401,6 @@ export async function getRoleDefaults(): Promise<Array<{ role: { key: string; la
   if (!response.ok) throw new Error('Failed to fetch role defaults');
   return await response.json();
 }
-
 export async function deleteUser(id: string): Promise<void> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
@@ -465,19 +415,15 @@ export async function deleteUser(id: string): Promise<void> {
   if (!response.ok) throw new Error('Failed to delete user');
   await response.json();
 }
-
 // ========================
 // GROUP-PAIRS MANAGEMENT (User-Lead Relationships)
 // ========================
-
 // Upsert user-lead pairs in the group-pairs table
 export async function upsertUserLeadPairs(userId: string, leadIds: (string | number)[]): Promise<unknown> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  
   logger.debug(`[UserService] Upserting leads for user ID: ${userId}`, { leadIds });
   logger.debug(`[UserService] API URL: ${getApiUrl('/api/group-pairs/upsert')}`, { url: getApiUrl('/api/group-pairs/upsert') });
-  
   try {
     const response = await fetchWithTimeout(getApiUrl('/api/group-pairs/upsert'), {
       ...defaultFetchOptions(),
@@ -488,15 +434,12 @@ export async function upsertUserLeadPairs(userId: string, leadIds: (string | num
       },
       body: JSON.stringify({ userId, leadIds })
     });
-    
     logger.debug(`[UserService] Response status: ${response.status} ${response.statusText}`, { status: response.status });
-    
     if (!response.ok) {
       const errorText = await response.text();
       logger.error(`[UserService] Backend error response:`, { errorText });
       throw new Error(`Failed to upsert user-lead pairs: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
     logger.debug(`[UserService] Successfully upserted leads:`, { data });
     return data;
@@ -505,15 +448,12 @@ export async function upsertUserLeadPairs(userId: string, leadIds: (string | num
     throw error;
   }
 }
-
 // Get all leads assigned to a user from group-pairs table
 export async function getUserAssignedLeads(userId: string): Promise<{ leads?: unknown[] } | unknown[]> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  
   logger.debug(`[UserService] Fetching leads for user ID: ${userId}`, { userId });
   logger.debug(`[UserService] API URL: ${getApiUrl(`/api/group-pairs/user/${userId}/leads`)}`, { url: getApiUrl(`/api/group-pairs/user/${userId}/leads`) });
-  
   try {
     const response = await fetchWithTimeout(getApiUrl(`/api/group-pairs/user/${userId}/leads`), {
       ...defaultFetchOptions(),
@@ -522,24 +462,19 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
         'Authorization': `Bearer ${token}`
       }
     });
-    
     logger.debug(`[UserService] Response status: ${response.status} ${response.statusText}`, { status: response.status });
-    
     if (!response.ok) {
       // Handle 404 gracefully - endpoint may not be implemented yet
       if (response.status === 404) {
         logger.warn(`[UserService] Endpoint not found (404) - returning empty array. This is expected during development.`);
         return [];
       }
-      
       const errorText = await response.text();
       logger.error(`[UserService] Backend error response:`, { errorText });
       throw new Error(`Failed to fetch user assigned leads: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json() as { success?: boolean; data?: unknown[]; leads?: unknown[] } | unknown[];
     logger.debug(`[UserService] Successfully fetched leads:`, { data });
-    
     // Handle the new backend response format
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
       if ('success' in data && data.success && 'data' in data && data.data) {
@@ -550,7 +485,6 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
     } else if (Array.isArray(data)) {
       return data; // Fallback for old format
     }
-    
     logger.warn(`[UserService] Unexpected response format:`, { data });
     return [];
   } catch (error) {
@@ -558,12 +492,10 @@ export async function getUserAssignedLeads(userId: string): Promise<{ leads?: un
     throw error;
   }
 }
-
 // Get all users assigned to a lead from group-pairs table
 export async function getLeadAssignedUsers(leadId: string | number): Promise<User[]> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  
   const response = await fetchWithTimeout(getApiUrl(`/api/group-pairs/lead/${leadId}/users`), {
     ...defaultFetchOptions(),
     headers: {
@@ -571,16 +503,13 @@ export async function getLeadAssignedUsers(leadId: string | number): Promise<Use
       'Authorization': `Bearer ${token}`
     }
   });
-  
   if (!response.ok) throw new Error('Failed to fetch lead assigned users');
   return await response.json();
 }
-
 // Remove specific user-lead pairs
 export async function removeUserLeadPairs(userId: string, leadIds: (string | number)[]): Promise<unknown> {
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  
   const response = await fetchWithTimeout(getApiUrl('/api/group-pairs/remove'), {
     ...defaultFetchOptions(),
     method: 'DELETE',
@@ -590,35 +519,28 @@ export async function removeUserLeadPairs(userId: string, leadIds: (string | num
     },
     body: JSON.stringify({ userId, leadIds })
   });
-  
   if (!response.ok) throw new Error('Failed to remove user-lead pairs');
   return await response.json();
 }
-
 // Legacy functions for backward compatibility
 export async function assignConversationLeads(userId: string, leadIds: (string | number)[]): Promise<unknown> {
   return upsertUserLeadPairs(userId, leadIds);
 }
-
 export async function getUserConversationLeads(userId: string): Promise<{ leads: unknown[] }> {
   const result = await getUserAssignedLeads(userId);
   const leads = Array.isArray(result) ? result : (result as { leads?: unknown[] }).leads || [];
   return { leads };
 }
-
 // Auto-save with debouncing for pipeline preferences
 let debouncedSave: ReturnType<typeof setTimeout> | null = null;
-
 export function autoSavePipelinePreferences(preferences: PipelinePreferences, delay = 2000): void {
   if (debouncedSave) {
     clearTimeout(debouncedSave);
   }
-  
   debouncedSave = setTimeout(() => {
     savePipelinePreferences(preferences)
       .catch(error => {
         logger.error('Auto-save pipeline preferences failed:', error);
       });
   }, delay);
-}
-
+}

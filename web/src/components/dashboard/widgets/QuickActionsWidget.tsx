@@ -1,28 +1,23 @@
 "use client";
-
 import React from 'react';
 import { Phone, Upload, Users, Bot, ArrowRight } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { Button } from '@/components/ui/button';
-
 interface QuickAction {
   id: string;
   label: string;
   icon: React.ElementType;
   color: string;
 }
-
 const quickActions: QuickAction[] = [
   { id: 'call', label: 'New Call', icon: Phone, color: 'bg-blue-500' },
   { id: 'upload', label: 'Upload Leads', icon: Upload, color: 'bg-green-500' },
   { id: 'contacts', label: 'View Contacts', icon: Users, color: 'bg-purple-500' },
   { id: 'agents', label: 'Manage Agents', icon: Bot, color: 'bg-amber-500' },
 ];
-
 interface QuickActionsWidgetProps {
   id: string;
 }
-
 export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({ id }) => {
   return (
     <WidgetWrapper id={id} title="Quick Actions">
@@ -45,4 +40,4 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({ id }) =>
       </div>
     </WidgetWrapper>
   );
-};
+};

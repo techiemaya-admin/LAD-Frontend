@@ -8,17 +8,14 @@ import {
   updateConversation
 } from '../store/slices/conversationSlice';
 import { addNotification } from '../store/slices/notificationSlice';
-
 // Use backend URL directly
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 let socket: Socket | null = null;
-
 interface Conversation {
   id: string;
   [key: string]: unknown;
 }
-
 interface Message {
   id?: string | number;
   _id?: string | number;
@@ -38,7 +35,6 @@ interface Message {
   message_status?: string;
   [key: string]: unknown;
 }
-
 interface ConversationActivityPayload {
   conversationId: string;
   messages?: Message[];
@@ -48,15 +44,12 @@ interface ConversationActivityPayload {
   leadId?: string;
   lead?: { name?: string };
 }
-
 interface ConversationListener {
   (data: Conversation): void;
 }
-
 interface MessageListener {
   (msg: Message): void;
 }
-
 interface SendChannelMessageParams {
   channel: string;
   phone_number: string;
@@ -66,13 +59,11 @@ interface SendChannelMessageParams {
   human_agent_id?: string;
   role?: string;
 }
-
 interface CurrentUser {
   id?: string;
   name?: string;
   [key: string]: unknown;
 }
-
 interface SocketStatus {
   connected: boolean;
   id: string | null;
@@ -80,18 +71,15 @@ interface SocketStatus {
   url: string;
   timestamp: string;
 }
-
 interface AssignHandlerParams {
   handler: string;
   humanAgentId: string | null;
 }
-
 class ChatService {
   conversationListeners: Set<ConversationListener>;
   messageListeners: Map<string, Set<MessageListener>>;
   socket: Socket | null;
   currentConversationId: string | null;
-
   constructor() {
     this.conversationListeners = new Set();
     this.messageListeners = new Map();
@@ -99,7 +87,6 @@ class ChatService {
     this.currentConversationId = null;
     this.initSocket();
   }
-
   initSocket(): void {
     if (!socket) {
       socket = io(SOCKET_URL, { 
@@ -113,7 +100,6 @@ class ChatService {
         rememberUpgrade: false
       });
       this.socket = socket;
- 
       socket.on('connect', () => {
         logger.debug('Socket connected', { socketId: socket?.id });
         // Only join the currently active conversation room after (re)connect
@@ -127,20 +113,16 @@ class ChatService {
           logger.error('Error joining active room', e);
         }
       });
-      
       socket.on('disconnect', () => {
         logger.debug('Socket disconnected', { socketId: socket?.id });
       });
-      
       // Listen for new conversations (always a single conversation object)
       socket.on('conversation:new', (data: Conversation) => {
         this.notifyConversationListeners(data);
       });
-      
       // Listen for notification:new events for badge/unread updates
       socket.on('notification:new', ({ conversation_id, message }: { conversation_id: string; message: Message }) => {
         logger.debug('Received notification event', { conversation_id });
-        
         // Robust notification id fallback: prefer message.id, else message._id, else conversation_id+timestamp
         let notifId: string;
         if (message && message.id) {
@@ -150,13 +132,11 @@ class ChatService {
         } else {
           notifId = `${conversation_id}_${Date.now()}`;
         }
-        
         // Debug log
         const state = store.getState();
         logger.debug('Processing notification', { conversation_id, notifId });
         const notifications = (state.notification as { notifications?: Array<{ id: string | number }> })?.notifications || [];
         logger.debug('Current notification IDs', { count: notifications.length });
-        
         // Prevent duplicate notifications (by id)
         const existing = notifications.find(n => String(n.id) === notifId);
         if (!existing) {
@@ -172,12 +152,10 @@ class ChatService {
           logger.debug('Duplicate notification ignored', { notifId });
         }
       });
-      
       // Log errors (keep error logs)
       socket.on('error', (err: Error) => {
         logger.error('Socket error', err);
       });
-      
       // Test notification handler for development
       socket.on('test:notification', (data: { conversation_id?: string; message?: Message }) => {
         logger.debug('Received test notification', { hasConversationId: !!data?.conversation_id });
@@ -202,7 +180,6 @@ class ChatService {
       });
     }
   }
-
   // Join a single conversation room (corrected: pass only the conversationId)
   joinConversationRoom(conversationId: string): void {
     logger.debug('Joining room', { conversationId });
@@ -210,20 +187,16 @@ class ChatService {
       socket.emit('join', conversationId);
     }
   }
-
   // Removed joinConversationRooms: joining multiple rooms is no longer supported. Only join the active room
-
   notifyMessageListeners(conversationId: string, msg: Message): void {
     this.messageListeners.get(conversationId)?.forEach(callback => callback(msg));
   }
-
   subscribeToConversations(callback: ConversationListener): () => void {
     this.conversationListeners.add(callback);
     return () => {
       this.conversationListeners.delete(callback);
     };
   }
-
   // Leave a single conversation room
   leaveConversationRoom(conversationId: string): void {
     logger.debug('Leaving room', { conversationId });
@@ -231,11 +204,9 @@ class ChatService {
       socket.emit('leave', conversationId);
     }
   }
-
   notifyConversationListeners(data: Conversation): void {
     this.conversationListeners.forEach(callback => callback(data));
   }
-
   async getConversations(): Promise<Conversation[]> {
     try {
       // Use the old working endpoint until the new role-based endpoint is fixed
@@ -246,11 +217,9 @@ class ChatService {
           'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to fetch conversations');
       }
-
       const data = await response.json();
       logger.debug('Conversations fetched', { count: (data as Conversation[])?.length || 0 });
       return data as Conversation[];
@@ -259,7 +228,6 @@ class ChatService {
       throw error;
     }
   }
-
   async getConversation(id: string): Promise<Conversation> {
     try {
       const response = await fetch(getApiUrl(`/api/conversations/${id}`), {
@@ -269,18 +237,15 @@ class ChatService {
           'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to fetch conversation');
       }
-
       return await response.json();
     } catch (error) {
       logger.error('Error fetching conversation', error);
       throw error;
     }
   }
-
   async sendChannelMessage({ channel, phone_number, message_text, conversation_id, lead_id, human_agent_id, role }: SendChannelMessageParams): Promise<unknown> {
     const response = await fetch(`${API_BASE_URL}/api/chat/send-message`, {
       method: 'POST',
@@ -295,7 +260,6 @@ class ChatService {
     }
     return response.json();
   }
-
   async sendMessage(conversationId: string, message: string, currentUser: CurrentUser = { name: 'Agent' }, role = 'user'): Promise<Message> {
     try {
       // Always set message_status to 'sent' if sender is current user
@@ -321,11 +285,9 @@ class ChatService {
         },
         body: JSON.stringify(payload)
       });
-
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
-
       const newMessage = await response.json() as Message;
       this.notifyMessageListeners(conversationId, newMessage);
       // Emit message:new for local echo with required fields
@@ -345,7 +307,6 @@ class ChatService {
       throw error;
     }
   }
-
   async sendMessageWithAttachment(formData: FormData): Promise<unknown> {
     // formData should include: file, conversationId, sender, type, etc.
     const response = await fetch(getApiUrl('/api/messages/upload-attachment'), {
@@ -360,7 +321,6 @@ class ChatService {
     }
     return await response.json();
   }
-
   async markAsRead(conversationId: string): Promise<unknown> {
     try {
       const response = await fetch(getApiUrl(`/api/conversations/${conversationId}/read`), {
@@ -371,18 +331,15 @@ class ChatService {
           'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to mark conversation as read');
       }
-
       return await response.json();
     } catch (error) {
       logger.error('Error marking conversation as read', error);
       throw error;
     }
   }
-
   async searchConversations(query: string): Promise<Conversation[]> {
     try {
       const response = await fetch(getApiUrl(`/api/conversations?search=${encodeURIComponent(query)}`), {
@@ -392,18 +349,15 @@ class ChatService {
           'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to search conversations');
       }
-
       return await response.json();
     } catch (error) {
       logger.error('Error searching conversations', error);
       throw error;
     }
   }
-
   async getOlderMessages(conversationId: string, page = 1, limit = 20): Promise<Message[]> {
     if (!conversationId) return [];
     const params = new URLSearchParams({
@@ -418,7 +372,6 @@ class ChatService {
     }
     return await response.json();
   }
-
   // Get socket connection status
   getSocketStatus(): SocketStatus {
     const status: SocketStatus = {
@@ -428,11 +381,9 @@ class ChatService {
       url: SOCKET_URL,
       timestamp: new Date().toISOString()
     };
-    
     logger.debug('Socket status:', status);
     return status;
   }
-
   // Extract conversation activity handling logic to reuse
   handleConversationActivity(payload: ConversationActivityPayload): void {
     logger.debug('Handle conversation activity', { messageCount: payload.messages?.length });
@@ -449,22 +400,18 @@ class ChatService {
           messageType: msg.type,
           role: msg.role
         });
-        
         store.dispatch(addMessageToConversation({
           conversationId: payload.conversationId,
           message: msg,
           isActive: false
         }));
-        
         // Create notification logic for real backend data
         const state = store.getState();
         const currentUserId = (state.auth as { user?: { id?: string; user?: { id?: string } } })?.user?.id || 
                               (state.auth as { user?: { user?: { id?: string } } })?.user?.user?.id;
-        
         if (msg.human_agent_id && String(msg.human_agent_id) !== String(currentUserId)) {
           logger.debug('Creating notification for new message', { conversationId: payload.conversationId });
           const notifId = `${payload.conversationId}_${msg.id || msg._id || Date.now()}`;
-          
           const notifications = (state.notification as { notifications?: Array<{ id: string | number }> })?.notifications || [];
           const existing = notifications.find(n => String(n.id) === notifId);
           if (!existing) {
@@ -484,7 +431,6 @@ class ChatService {
         }
       });
     }
-    
     const updatePayload: {
       id: string;
       lastMessage?: Message;
@@ -500,16 +446,13 @@ class ChatService {
     }
     store.dispatch(updateConversation(updatePayload));
   }
-  
   async assignConversationHandler(conversationId: string, { handler, humanAgentId }: AssignHandlerParams): Promise<unknown> {
     try {
       const payload = { 
         handler, 
         humanAgentId: humanAgentId === null ? null : humanAgentId 
       };
-      
       logger.debug('Assigning conversation handler', { conversationId, handler, humanAgentId });
-      
       const response = await fetch(getApiUrl(`/api/conversations/${conversationId}/handler`), {
         ...defaultFetchOptions(),
         method: 'PATCH',
@@ -519,12 +462,10 @@ class ChatService {
         },
         body: JSON.stringify(payload)
       });
-
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to assign conversation handler: ${errorText}`);
       }
-
       const result = await response.json();
       logger.debug('Conversation handler assigned successfully', { conversationId });
       return result;
@@ -534,6 +475,5 @@ class ChatService {
     }
   }
 }
-
 const chatService = new ChatService();
-export default chatService;
+export default chatService;

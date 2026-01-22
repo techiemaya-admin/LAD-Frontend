@@ -17,19 +17,16 @@ import { markConversationAsReadUnified } from '@/store/slices/conversationSlice'
 import { showSnackbar } from '@/store/slices/bootstrapSlice';
 //test
 type RootState = any;
-
 interface HeaderProps {
   title?: string;
   subtitle?: string;
 }
-
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning!';
   if (hour < 18) return 'Good Afternoon!';
   return 'Good Evening!';
 };
-
 const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   const notifications = useSelector(selectNotifications, shallowEqual);
   const unreadCounts = useSelector(selectUnreadCounts, shallowEqual);
@@ -45,11 +42,9 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const notificationMenuRef = React.useRef<HTMLDivElement | null>(null);
   const user = useSelector((state: RootState) => state.auth.user);
-
   React.useEffect(() => {
     setIsHydrated(true);
   }, []);
-
   // Set greeting and user info on client side only
   React.useEffect(() => {
     if (!isHydrated) return;
@@ -61,7 +56,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
         : 'Team Manager'
     );
   }, [user, isHydrated]);
-
   const handleMenuToggle = () => {
     setMenuOpen((prev) => !prev);
   };
@@ -76,7 +70,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     }
     setMenuOpen(false);
   };
-
   React.useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -86,7 +79,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     if (menuOpen) document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [menuOpen]);
-
   // Close notification menu when clicking outside
   React.useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -97,7 +89,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     if (notificationMenuOpen) document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [notificationMenuOpen]);
-
   const handleNotificationClick = (notificationId: string | number, conversationId?: string | number) => {
     dispatch(markNotificationRead(notificationId));
     if (conversationId) {
@@ -105,9 +96,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
       setNotificationMenuOpen(false);
     }
   };
-
   const unreadNotifications = notifications.filter(n => !n.read);
-
   return (
     <div className="
   w-full h-[88px] 
@@ -115,7 +104,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   px-2 py-0 
   rounded-b-[24px] 
   box-border relative overflow-visible
-
   flex flex-col sm:flex-row sm:items-center 
   bg-gradient-to-r 
   from-blue-50 via-white to-purple-50 
@@ -123,7 +111,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   shadow-lg 
   border border-gray-200 dark:border-gray-700
 ">
-
       <div className="flex items-center gap-[33px]">
         {/* <div className="w-[300px] h-[110px] flex items-center justify-center">
           <img src="/logo.png" alt="TechieMaya" className="h-[110px] w-auto block" />
@@ -156,7 +143,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
               </span>
             )}
           </button>
-          
           {notificationMenuOpen && (
             <div className="absolute right-0 top-full mt-2 z-[9999] w-80 rounded-lg border border-slate-200 bg-white shadow-2xl max-h-96 overflow-auto">
               <div className="p-4 border-b border-slate-200">
@@ -215,7 +201,6 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
             </div>
           )}
         </div>
-
         <div ref={menuRef} className="relative">
           <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md shadow-sm min-w-[180px] ml-2 cursor-pointer" onClick={handleMenuToggle}>
             {isHydrated && user?.avatar ? (
@@ -245,6 +230,4 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     </div>
   );
 };
-
-export default Header;
-
+export default Header;

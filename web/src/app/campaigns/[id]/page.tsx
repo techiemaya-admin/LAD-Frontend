@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Box, Button, TextField, Stack, Paper, Typography, CircularProgress } from '@mui/material';
@@ -10,7 +9,6 @@ import { useToast } from '@/components/ui/app-toaster';
 import StepLibrary from '../../../features/campaigns/components/StepLibrary';
 import FlowCanvas from '../../../features/campaigns/components/FlowCanvas';
 import StepSettings from '../../../features/campaigns/components/StepSettings';
-
 export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,14 +23,11 @@ export default function CampaignDetailPage() {
     loadCampaign,
     serialize,
   } = useCampaignStore();
-
   // Campaign loading is handled by useCampaign hook above
-
   // Use React Query hook for campaign data
   const { data: campaign, isLoading: campaignLoading, error: campaignError, refetch } = useCampaign(
     campaignId && campaignId !== 'new' ? campaignId : null
   );
-
   useEffect(() => {
     if (campaignError) {
       push({
@@ -43,7 +38,6 @@ export default function CampaignDetailPage() {
       router.push('/campaigns');
     }
   }, [campaignError, push, router]);
-
   useEffect(() => {
     if (campaign) {
       // Load campaign into store - this will convert steps to nodes
@@ -60,22 +54,18 @@ export default function CampaignDetailPage() {
       setLoading(false);
     }
   }, [campaign, campaignId, campaignLoading, loadCampaign]);
-
   const handleSave = async (startCampaign = false) => {
     if (!name.trim()) {
       push({ variant: 'error', title: 'Error', description: 'Campaign name is required' });
       return;
     }
-
     if (nodes.filter((n) => n.type !== 'start' && n.type !== 'end').length === 0) {
       push({ variant: 'error', title: 'Error', description: 'Please add at least one step to your campaign' });
       return;
     }
-
     try {
       setSaving(true);
       const campaignData = serialize();
-      
       if (campaignId === 'new') {
         // Create new campaign
         const response = await createCampaign({
@@ -83,7 +73,6 @@ export default function CampaignDetailPage() {
           status: startCampaign ? 'running' : 'draft',
           steps: campaignData.steps,
         });
-        
         // Redirect to the newly created campaign
         router.push(`/campaigns/${response.data.id}`);
       } else {
@@ -94,7 +83,6 @@ export default function CampaignDetailPage() {
           steps: campaignData.steps,
         });
       }
-
       push({
         variant: 'success',
         title: 'Success',
@@ -111,14 +99,12 @@ export default function CampaignDetailPage() {
       setSaving(false);
     }
   };
-
   const handleStartCampaign = async () => {
     if (campaignId === 'new') {
       // For new campaigns, save and start in one action
       await handleSave(true);
       return;
     }
-    
     try {
       setSaving(true);
       // First save the campaign with current changes
@@ -128,13 +114,11 @@ export default function CampaignDetailPage() {
         status: 'running',
         steps: campaignData.steps,
       });
-      
       push({
         variant: 'success',
         title: 'Success',
         description: 'Campaign started successfully',
       });
-      
       // Redirect to campaigns list page
       router.push('/campaigns');
     } catch (error: any) {
@@ -148,7 +132,6 @@ export default function CampaignDetailPage() {
       setSaving(false);
     }
   };
-
   const handlePauseCampaign = async () => {
     try {
       setSaving(true);
@@ -170,7 +153,6 @@ export default function CampaignDetailPage() {
       setSaving(false);
     }
   };
-
   const handlePreview = () => {
     const campaignData = serialize();
     push({
@@ -179,7 +161,6 @@ export default function CampaignDetailPage() {
       description: 'Campaign preview generated',
     });
   };
-
   if (loading) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FE' }}>
@@ -190,7 +171,6 @@ export default function CampaignDetailPage() {
       </Box>
     );
   }
-
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
       {/* Header */}
@@ -227,7 +207,6 @@ export default function CampaignDetailPage() {
               }}
             />
           </Stack>
-
           <Stack direction="row" spacing={2}>
             <Button
               variant="outlined"
@@ -278,21 +257,17 @@ export default function CampaignDetailPage() {
           </Stack>
         </Stack>
       </Paper>
-
       {/* Main Content - 3 Column Layout */}
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left Sidebar - Step Library */}
         <StepLibrary />
-
         {/* Center - Flow Canvas */}
         <Box sx={{ flex: 1, position: 'relative' }}>
           <FlowCanvas />
         </Box>
-
         {/* Right Sidebar - Step Settings */}
         <StepSettings />
       </Box>
     </Box>
   );
-}
-
+}

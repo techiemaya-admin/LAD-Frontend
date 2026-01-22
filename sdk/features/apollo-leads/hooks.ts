@@ -9,7 +9,6 @@
  * import { useApolloLeads } from '@/features/apollo-leads';
  * ```
  */
-
 import { useState, useCallback } from 'react';
 import type {
   ApolloSearchParams,
@@ -20,7 +19,6 @@ import type {
   ApolloPerson
 } from './types';
 import * as apolloApi from './api';
-
 // Try to import feature flags helper (when integrated into LAD)
 let isFeatureEnabled: (feature: string) => boolean;
 try {
@@ -29,21 +27,17 @@ try {
   // Fallback for standalone feature repo
   isFeatureEnabled = () => true;
 }
-
 export const useApolloLeads = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const searchCompanies = useCallback(async (
     params: ApolloSearchParams
   ): Promise<ApolloSearchResponse> => {
     if (!isFeatureEnabled('apollo_leads')) {
       throw new Error('Apollo Leads feature is not enabled');
     }
-
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.searchCompanies(params);
     } catch (err) {
@@ -54,15 +48,12 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   const getCompanyDetails = useCallback(async (companyId: string): Promise<ApolloCompany> => {
     if (!isFeatureEnabled('apollo_leads')) {
       throw new Error('Apollo Leads feature is not enabled');
     }
-
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.getCompanyDetails(companyId);
     } catch (err) {
@@ -73,17 +64,14 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   const searchEmployees = useCallback(async (
     params: ApolloEmployeeSearchParams
   ): Promise<ApolloEmployeeSearchResponse> => {
     if (!isFeatureEnabled('apollo_leads')) {
       throw new Error('Apollo Leads feature is not enabled');
     }
-
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.searchEmployees(params);
     } catch (err) {
@@ -94,15 +82,12 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   const revealEmail = useCallback(async (personId: string): Promise<string> => {
     if (!isFeatureEnabled('apollo_leads')) {
       throw new Error('Apollo Leads feature is not enabled');
     }
-
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.revealEmail(personId);
     } catch (err) {
@@ -113,15 +98,12 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   const revealPhone = useCallback(async (personId: string): Promise<string> => {
     if (!isFeatureEnabled('apollo_leads')) {
       throw new Error('Apollo Leads feature is not enabled');
     }
-
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.revealPhone(personId);
     } catch (err) {
@@ -132,11 +114,9 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   const checkHealth = useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
       return await apolloApi.checkHealth();
     } catch (err) {
@@ -147,12 +127,10 @@ export const useApolloLeads = () => {
       setLoading(false);
     }
   }, []);
-
   return {
     // State
     loading,
     error,
-    
     // Methods
     searchCompanies,
     getCompanyDetails,
@@ -160,9 +138,7 @@ export const useApolloLeads = () => {
     revealEmail,
     revealPhone,
     checkHealth,
-    
     // Utilities
     clearError: () => setError(null)
   };
-};
-
+};

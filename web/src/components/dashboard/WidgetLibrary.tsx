@@ -9,16 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { WIDGET_CATALOG, WIDGET_CATEGORIES, WidgetType, WidgetCategory } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
-
 const getIcon = (iconName: string) => {
   const IconComponent = (Icons as any)[iconName];
   return IconComponent || Icons.Box;
 };
-
 export const WidgetLibrary: React.FC = () => {
   const { isWidgetLibraryOpen, setWidgetLibraryOpen, addWidget, layout } = useDashboardStore();
   const [selectedCategory, setSelectedCategory] = React.useState<WidgetCategory | 'all'>('all');
-
   // Get widgets currently on dashboard
   const activeWidgetTypes = new Set(
     layout.map((item) => {
@@ -26,16 +23,13 @@ export const WidgetLibrary: React.FC = () => {
       return match ? match[1] : null;
     }).filter(Boolean)
   );
-
   const filteredWidgets = Object.values(WIDGET_CATALOG).filter(
     (widget) => selectedCategory === 'all' || widget.category === selectedCategory
   );
-
   const handleAddWidget = (type: WidgetType) => {
     addWidget(type);
     // Don't close the drawer to allow adding multiple widgets
   };
-
   return (
     <Sheet open={isWidgetLibraryOpen} onOpenChange={setWidgetLibraryOpen}>
       <SheetContent className="w-[400px] sm:w-[540px] overflow-hidden flex flex-col">
@@ -45,7 +39,6 @@ export const WidgetLibrary: React.FC = () => {
             Add widgets to customize your dashboard
           </p>
         </SheetHeader>
-
         {/* Category Filter */}
         <div className="py-4 border-b border-border">
           <div className="flex flex-wrap gap-2">
@@ -74,7 +67,6 @@ export const WidgetLibrary: React.FC = () => {
             })}
           </div>
         </div>
-
         {/* Widget List */}
         <div className="flex-1 overflow-auto py-4 custom-scrollbar">
           <div className="grid gap-3">
@@ -83,7 +75,6 @@ export const WidgetLibrary: React.FC = () => {
                 const WidgetIcon = getIcon(widget.icon);
                 const isActive = activeWidgetTypes.has(widget.type);
                 const category = WIDGET_CATEGORIES.find((c) => c.id === widget.category);
-
                 return (
                   <motion.div
                     key={widget.id}
@@ -99,7 +90,6 @@ export const WidgetLibrary: React.FC = () => {
                     <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
                       <WidgetIcon className="h-5 w-5 text-primary" />
                     </div>
-                    
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium text-sm">{widget.title}</h4>
@@ -121,7 +111,6 @@ export const WidgetLibrary: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    
                     <Button
                       size="sm"
                       variant={isActive ? 'outline' : 'default'}
@@ -137,7 +126,6 @@ export const WidgetLibrary: React.FC = () => {
             </AnimatePresence>
           </div>
         </div>
-
         {/* Footer */}
         <div className="pt-4 border-t border-border">
           <p className="text-xs text-muted-foreground text-center">
@@ -147,4 +135,4 @@ export const WidgetLibrary: React.FC = () => {
       </SheetContent>
     </Sheet>
   );
-};
+};

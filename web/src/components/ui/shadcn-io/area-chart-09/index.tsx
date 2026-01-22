@@ -1,16 +1,12 @@
 "use client"
-
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-
 export const description = "An area chart with gradient fill"
-
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },
   { month: "February", desktop: 305, mobile: 200 },
@@ -19,7 +15,6 @@ const chartData = [
   { month: "May", desktop: 209, mobile: 130 },
   { month: "June", desktop: 214, mobile: 140 },
 ]
-
 const chartConfig = {
   desktop: {
     label: "Desktop",
@@ -30,7 +25,6 @@ const chartConfig = {
     color: "var(--chart-2)",
   },
 } satisfies ChartConfig
-
 export function ChartAreaGradient() {
   return (
     <ChartContainer config={chartConfig} className="h-[250px] w-full">

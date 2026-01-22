@@ -1,21 +1,16 @@
 'use client';
-
 import { motion } from 'framer-motion';
-
 interface LADLogo3DProps {
   size?: 'sm' | 'md' | 'lg';
   animated?: boolean;
 }
-
 const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
   const sizes = {
     sm: { container: 120, avatar: 50, text: 'text-sm', icon: 16 },
     md: { container: 200, avatar: 85, text: 'text-2xl', icon: 28 },
     lg: { container: 280, avatar: 120, text: 'text-4xl', icon: 40 },
   };
-
   const config = sizes[size];
-
   return (
     <div 
       className="relative flex flex-col items-center justify-center"
@@ -45,7 +40,6 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
           </svg>
         </div>
       </motion.div>
-
       <motion.div
         className="absolute"
         style={{ top: '10%', right: '15%' }}
@@ -70,7 +64,6 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
           </svg>
         </div>
       </motion.div>
-
       <motion.div
         className="absolute"
         style={{ top: '25%', right: '5%' }}
@@ -96,7 +89,6 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
           </svg>
         </div>
       </motion.div>
-
       {/* Main character container */}
       <motion.div
         className="relative z-10"
@@ -123,10 +115,8 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
               <circle cx="80" cy="60" r="3" fill="currentColor" className="text-purple-400"/>
             </svg>
           </div>
-
           {/* Face */}
           <div className="absolute inset-[20%] top-[25%] rounded-full bg-gradient-to-br from-orange-200 to-orange-300 shadow-inner" />
-          
           {/* Cyber glasses */}
           <motion.div 
             className="absolute inset-x-[15%] top-[35%] h-[20%] rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 shadow-lg"
@@ -160,12 +150,10 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
               </motion.div>
             </div>
           </motion.div>
-
           {/* Hoodie strings */}
           <div className="absolute bottom-[15%] left-[35%] w-1 h-[15%] bg-cyan-400 rounded-full" />
           <div className="absolute bottom-[15%] right-[35%] w-1 h-[15%] bg-cyan-400 rounded-full" />
         </div>
-
         {/* Golden "A" letter */}
         <motion.div
           className="absolute -right-8 top-[20%]"
@@ -191,7 +179,6 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
           </div>
         </motion.div>
       </motion.div>
-
       {/* LAD branding */}
       <motion.div
         className="relative mt-4"
@@ -208,7 +195,6 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
           Let Agent Deal
         </div>
       </motion.div>
-
       {/* Glow effect */}
       <motion.div
         className="absolute inset-0 rounded-full blur-3xl opacity-30"
@@ -228,5 +214,4 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
     </div>
   );
 };
-
-export default LADLogo3D;
+export default LADLogo3D;

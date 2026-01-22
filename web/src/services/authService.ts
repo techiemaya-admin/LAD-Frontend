@@ -1,11 +1,9 @@
 // Using UI proxy routes that set/read httpOnly cookies
 import { safeStorage } from '../utils/storage';
-
 export type Credentials = {
   email: string;
   password: string;
 };
-
 export type AuthUser = {
   id: string;
   name?: string;
@@ -14,13 +12,11 @@ export type AuthUser = {
   avatar?: string;
   [key: string]: unknown;
 };
-
 export type LoginResponse = {
   user?: AuthUser;
   token?: string; // optional for backward compat, but not used
   [key: string]: unknown;
 };
-
 // Helper to set cookie
 function setCookie(name: string, value: string, days: number = 7) {
   if (typeof window === 'undefined') return;
@@ -28,13 +24,11 @@ function setCookie(name: string, value: string, days: number = 7) {
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
 }
-
 // Helper to delete cookie
 function deleteCookie(name: string) {
   if (typeof window === 'undefined') return;
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 }
-
 const authService = {
   login: async (credentials: Credentials): Promise<LoginResponse> => {
     // Call backend directly so it can set cookies on its domain
@@ -45,12 +39,10 @@ const authService = {
       body: JSON.stringify(credentials),
       credentials: 'include', // Important: send and receive cookies
     });
-
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || 'Invalid credentials');
     }
-
     // Backend sets httpOnly cookie and returns token + user data
     const data: LoginResponse = await response.json();
     if (typeof window !== 'undefined' && data.token) {
@@ -59,7 +51,6 @@ const authService = {
     }
     return data;
   },
-
   logout: async (): Promise<unknown> => {
     // Call backend directly to clear cookie
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
@@ -76,7 +67,6 @@ const authService = {
     }
     return await response.json();
   },
-
   getCurrentUser: async (): Promise<AuthUser> => {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
     const token = safeStorage.getItem('auth_token');
@@ -98,6 +88,4 @@ const authService = {
     return (data.user || data) as AuthUser;
   },
 };
-
-export default authService;
-
+export default authService;

@@ -1,8 +1,6 @@
 'use client';
-
 import { motion } from 'framer-motion';
 import { Phone, Mail, MessageSquare, Share2 } from 'lucide-react';
-
 const FloatingCommunicationOrbs = () => {
   const orbs = [
     { 
@@ -34,7 +32,6 @@ const FloatingCommunicationOrbs = () => {
       path: 'M50,50 Q10,40 30,10 T60,0'
     },
   ];
-
   return (
     <div className="relative w-full h-[600px] overflow-hidden">
       {/* Central AI Core */}
@@ -65,7 +62,6 @@ const FloatingCommunicationOrbs = () => {
               ease: "easeInOut"
             }}
           />
-          
           {/* Middle ring */}
           <motion.div
             className="absolute inset-4 rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 opacity-30"
@@ -79,14 +75,12 @@ const FloatingCommunicationOrbs = () => {
               ease: "linear"
             }}
           />
-          
           {/* Core */}
           <div className="absolute inset-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-2xl">
             <span className="text-white font-bold text-2xl">LAD</span>
           </div>
         </div>
       </motion.div>
-
       {/* Floating Communication Orbs */}
       {orbs.map((orb, index) => {
         const Icon = orb.icon;
@@ -94,7 +88,6 @@ const FloatingCommunicationOrbs = () => {
         const radius = 200;
         const x = Math.cos(angle) * radius;
         const y = Math.sin(angle) * radius;
-
         return (
           <motion.div
             key={index}
@@ -131,12 +124,10 @@ const FloatingCommunicationOrbs = () => {
                   ease: "easeInOut"
                 }}
               />
-              
               {/* Orb */}
               <div className={`relative w-20 h-20 rounded-full bg-gradient-to-r ${orb.color} flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform duration-300`}>
                 <Icon className="w-10 h-10 text-white" />
               </div>
-              
               {/* Label */}
               <motion.div
                 className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/80 text-white px-3 py-1 rounded-full text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -149,7 +140,6 @@ const FloatingCommunicationOrbs = () => {
           </motion.div>
         );
       })}
-
       {/* Connection Lines */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.2 }}>
         {orbs.map((_, index) => {
@@ -157,7 +147,6 @@ const FloatingCommunicationOrbs = () => {
           const radius = 200;
           const x = 50 + Math.cos(angle) * (radius / 6);
           const y = 50 + Math.sin(angle) * (radius / 6);
-
           return (
             <motion.line
               key={index}
@@ -186,7 +175,6 @@ const FloatingCommunicationOrbs = () => {
           </linearGradient>
         </defs>
       </svg>
-
       {/* Floating particles */}
       {[...Array(20)].map((_, i) => (
         <motion.div
@@ -212,5 +200,4 @@ const FloatingCommunicationOrbs = () => {
     </div>
   );
 };
-
-export default FloatingCommunicationOrbs;
+export default FloatingCommunicationOrbs;

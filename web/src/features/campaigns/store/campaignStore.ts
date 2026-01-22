@@ -1,12 +1,10 @@
 import { create } from 'zustand';
 import { FlowNode, FlowEdge, StepType, StepData } from '@/types/campaign';
-
 interface CampaignState {
   name: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
   selectedNodeId: string | null;
-  
   // Actions
   setName: (name: string) => void;
   addStep: (type: StepType, position: { x: number; y: number }) => void;
@@ -21,7 +19,6 @@ interface CampaignState {
   loadCampaign: (campaign: any) => void;
   reset: () => void;
 }
-
 const defaultStepData: Record<StepType, Partial<StepData>> = {
   linkedin_visit: { title: 'LinkedIn Profile Visit' },
   linkedin_follow: { title: 'LinkedIn Follow' },
@@ -48,36 +45,29 @@ const defaultStepData: Record<StepType, Partial<StepData>> = {
   start: { title: 'Start' },
   end: { title: 'End' },
 };
-
 export const useCampaignStore = create<CampaignState>((set, get) => ({
   name: '',
   nodes: [],
   edges: [],
   selectedNodeId: null,
-
   setName: (name) => set({ name }),
-
   addStep: (type, position) => {
     const id = `step_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const defaultData = defaultStepData[type] || { title: type };
-    
     const newNode: FlowNode = {
       id,
       type,
       position,
       data: { ...defaultData } as StepData,
     };
-
     // Get current state before updating
     const currentState = get();
     const shouldAutoConnect = currentState.nodes.length > 0;
     const previousNodeId = shouldAutoConnect ? currentState.nodes[currentState.nodes.length - 1]?.id : null;
-
     // Single state update with everything
     set((state) => {
       const updatedNodes = [...state.nodes, newNode];
       let updatedEdges = [...state.edges];
-
       // Auto-connect to previous node if exists and not a special node
       if (shouldAutoConnect && previousNodeId) {
         const previousNode = updatedNodes.find(n => n.id === previousNodeId);
@@ -89,14 +79,12 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
           } as FlowEdge);
         }
       }
-
       return {
         nodes: updatedNodes,
         edges: updatedEdges,
       };
     });
   },
-
   updateStep: (nodeId, data) => {
     set((state) => ({
       nodes: state.nodes.map((node) =>
@@ -106,21 +94,17 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       ),
     }));
   },
-
   deleteStep: (nodeId) => {
     set((state) => {
       const nodeToDelete = state.nodes.find((n) => n.id === nodeId);
       if (!nodeToDelete) return state;
-
       // Delete connected edges
       const newEdges = state.edges.filter(
         (edge) => edge.source !== nodeId && edge.target !== nodeId
       );
-
       // Reconnect edges if needed
       const incomingEdges = state.edges.filter((e) => e.target === nodeId);
       const outgoingEdges = state.edges.filter((e) => e.source === nodeId);
-
       incomingEdges.forEach((inEdge) => {
         outgoingEdges.forEach((outEdge) => {
           if (inEdge.source !== outEdge.target) {
@@ -132,7 +116,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
           }
         });
       });
-
       return {
         nodes: state.nodes.filter((n) => n.id !== nodeId),
         edges: newEdges,
@@ -140,9 +123,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       };
     });
   },
-
   selectStep: (nodeId) => set({ selectedNodeId: nodeId }),
-
   updateNodePosition: (nodeId, position) => {
     set((state) => ({
       nodes: state.nodes.map((node) =>
@@ -150,43 +131,35 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       ),
     }));
   },
-
   addEdge: (source, target) => {
     const edgeId = `edge_${source}_${target}`;
     const exists = get().edges.some(
       (e) => e.source === source && e.target === target
     );
-
     if (!exists) {
       set((state) => ({
         edges: [...state.edges, { id: edgeId, source, target }],
       }));
     }
   },
-
   deleteEdge: (edgeId) => {
     set((state) => ({
       edges: state.edges.filter((e) => e.id !== edgeId),
     }));
   },
-
   reorderSteps: () => {
     // Auto-arrange nodes vertically
     const { nodes } = get();
     const startNode = nodes.find((n) => n.type === 'start');
     const sortedNodes = [startNode, ...nodes.filter((n) => n.type !== 'start' && n.type !== 'end'), nodes.find((n) => n.type === 'end')].filter(Boolean);
-
     const newNodes = sortedNodes.map((node, index) => ({
       ...node!,
       position: { x: 400, y: 100 + index * 150 },
     }));
-
     set({ nodes: newNodes });
   },
-
   serialize: () => {
     const { name, nodes, edges } = get();
-    
     // Convert to backend format
     const steps = nodes
       .filter((n) => n.type !== 'start' && n.type !== 'end')
@@ -235,16 +208,13 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
           leadGenerationLimit: node.data.leadGenerationLimit,
         },
       }));
-
     return {
       name,
       steps,
     };
   },
-
   loadCampaign: (campaign) => {
     const { steps = [] } = campaign;
-    
     // Create start node
     const startNode: FlowNode = {
       id: 'start',
@@ -252,7 +222,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       position: { x: 400, y: 50 },
       data: { title: 'Start' },
     };
-
     // Create step nodes
     const stepNodes: FlowNode[] = steps.map((step: any, index: number) => ({
       id: step.id || `step_${index}`,
@@ -299,7 +268,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
         type: step.type as StepType,
       } as StepData & { type: StepType },
     }));
-
     // Create end node
     const endNode: FlowNode = {
       id: 'end',
@@ -307,7 +275,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       position: { x: 400, y: 100 + steps.length * 150 },
       data: { title: 'End', type: 'end' } as StepData & { type: StepType },
     };
-
     // Create edges
     const allNodes = [startNode, ...stepNodes, endNode];
     const newEdges: FlowEdge[] = [];
@@ -318,7 +285,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
         target: allNodes[i + 1].id,
       });
     }
-
     set({
       name: campaign.name || '',
       nodes: allNodes,
@@ -326,7 +292,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       selectedNodeId: null,
     });
   },
-
   reset: () => {
     const startNode: FlowNode = {
       id: 'start',
@@ -334,14 +299,12 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       position: { x: 400, y: 50 },
       data: { title: 'Start', type: 'start' } as StepData & { type: StepType },
     };
-
     const endNode: FlowNode = {
       id: 'end',
       type: 'end',
       position: { x: 400, y: 200 },
       data: { title: 'End', type: 'end' } as StepData & { type: StepType },
     };
-
     set({
       name: '',
       nodes: [startNode, endNode],
@@ -349,4 +312,4 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       selectedNodeId: null,
     });
   },
-}));
+}));

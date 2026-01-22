@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import {
   Box,
@@ -23,7 +22,6 @@ import {
   CheckCircle,
   Language,
 } from '@mui/icons-material';
-
 interface LeadCardProps {
   lead: {
     id: string;
@@ -50,7 +48,6 @@ interface LeadCardProps {
   onViewDetails?: (lead: any) => void;
   onViewEmployees?: (lead: any) => void;
 }
-
 export default function LeadCard({
   lead,
   index = 0,
@@ -60,19 +57,15 @@ export default function LeadCard({
   onViewEmployees,
 }: LeadCardProps) {
   if (!lead) return null;
-
   const leadId = lead.id || index;
   const leadName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Lead';
-
   const leadPhoto = lead.photo_url || lead.profile_image;
-
   const locationParts = [
     lead.city,
     lead.state,
     lead.country,
   ].filter(Boolean);
   const locationLabel = locationParts.join(', ');
-
   const getStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'success';
@@ -82,7 +75,6 @@ export default function LeadCard({
       default: return 'default';
     }
   };
-
   const getInitials = (name: string) => {
     if (!name) return '?';
     const parts = name.trim().split(' ');
@@ -91,7 +83,6 @@ export default function LeadCard({
     }
     return name.substring(0, 2).toUpperCase();
   };
-
   return (
     <Card
       onClick={onSelect}
@@ -162,7 +153,6 @@ export default function LeadCard({
               >
                 {!leadPhoto && <Person />}
               </Avatar>
-
               {isSelected && (
                 <Box
                   sx={{
@@ -185,7 +175,6 @@ export default function LeadCard({
                 </Box>
               )}
             </Box>
-
             <Box
               sx={{
                 flex: 1,
@@ -250,7 +239,6 @@ export default function LeadCard({
             </Box>
           </Box>
         </Box>
-
         {/* Body */}
         <Box sx={{ p: 2.5, pt: 2 }}>
           <Box sx={{ mb: 0 }}>
@@ -266,7 +254,6 @@ export default function LeadCard({
                 />
               </Box>
             )}
-
             {/* Contact + location row */}
             <Box
               sx={{
@@ -292,7 +279,6 @@ export default function LeadCard({
                   </Typography>
                 </Box>
               )}
-
               {/* Email */}
               {lead.email && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -309,7 +295,6 @@ export default function LeadCard({
                   </Typography>
                 </Box>
               )}
-
               {/* Location */}
               {locationLabel && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -328,7 +313,6 @@ export default function LeadCard({
                 </Box>
               )}
             </Box>
-
             {/* Links row */}
             {(lead.website || lead.linkedin_url) && (
               <Box
@@ -382,7 +366,6 @@ export default function LeadCard({
           </Box>
         </Box>
       </CardContent>
-
       {/* Footer actions */}
       {onViewEmployees && lead.company && (
         <CardActions
@@ -430,5 +413,4 @@ export default function LeadCard({
       )}
     </Card>
   );
-}
-
+}

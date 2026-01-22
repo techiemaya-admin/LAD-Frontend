@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-
 export default function SkeletonPage() {
   return (
     <div className="min-h-screen p-6 md:p-10">
@@ -13,7 +12,6 @@ export default function SkeletonPage() {
           <div className="flex-1" />
           <Skeleton className="h-10 w-32 rounded-full" />
         </div>
-
         {/* Large primary card */}
         <div className="rounded-3xl p-6 bg-transparent">
           <div className="space-y-3 mb-6">
@@ -27,7 +25,6 @@ export default function SkeletonPage() {
             <Skeleton className="h-24 rounded-xl" />
           </div>
         </div>
-
         {/* List rows (example) */}
         <div className="space-y-6">
           {[...Array(3)].map((_, i) => (
@@ -44,4 +41,4 @@ export default function SkeletonPage() {
       </div>
     </div>
   );
-}
+}

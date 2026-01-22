@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import {
   CreditCard,
@@ -15,11 +14,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
 import { WidgetWrapper } from "../WidgetWrapper";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-
 interface CreditsWidgetProps {
   id: string;
   balance: number;
@@ -29,7 +26,6 @@ interface CreditsWidgetProps {
   onRefresh?: () => void;
   isLoading?: boolean;
 }
-
 export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
   id,
   balance,
@@ -42,7 +38,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
   const usedMinutes = totalMinutes - remainingMinutes;
   const usagePercentage =
     totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
-
   // 🔹 Demo chart data (replace with API data)
   const chartData = [
     { label: "Week 1", calls: 20 },
@@ -50,7 +45,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
     { label: "Week 3", calls: 70 },
     { label: "Week 4", calls: Math.round(usedMinutes) },
   ];
-
   return (
     <WidgetWrapper
       id={id}
@@ -87,7 +81,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
               </span>
             </p>
           </div>
-
           <div className="relative">
             <div className="absolute inset-0 blur-xl bg-blue-500/20 rounded-full" />
             <div className="relative p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
@@ -95,14 +88,12 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
             </div>
           </div>
         </div>
-
         {/* ================= Chart ================= */}
         <div className="rounded-xl bg-muted/40 p-3 h-32">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <TrendingUp className="h-3.5 w-3.5" />
             Usage trend
           </div>
-
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
@@ -113,10 +104,8 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-
               <XAxis dataKey="label" hide />
               <YAxis hide />
-
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
                 contentStyle={{
@@ -126,7 +115,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
                 }}
                 labelStyle={{ color: "#94a3b8" }}
               />
-
               <Area
                 type="monotone"
                 dataKey="calls"
@@ -142,7 +130,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
         {/* ================= Usage Progress ================= */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -153,7 +140,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
           </div>
           <Progress value={usagePercentage} className="h-2" />
         </div>
-
         {/* ================= Stats ================= */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
@@ -162,7 +148,6 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
               {Math.round(remainingMinutes)} min
             </p>
           </div>
-
           <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20">
             <p className="text-xs text-muted-foreground">This Month</p>
             <p className="text-xl font-semibold mt-1">
@@ -173,4 +158,4 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};

@@ -4,11 +4,9 @@
  * React hook for fetching campaign analytics.
  * Framework-independent (no Next.js imports).
  */
-
 import { useState, useCallback, useEffect } from 'react';
 import { getCampaignAnalytics } from '../api';
 import type { CampaignAnalytics } from '../types';
-
 export interface UseCampaignAnalyticsReturn {
   analytics: CampaignAnalytics | null;
   loading: boolean;
@@ -16,19 +14,16 @@ export interface UseCampaignAnalyticsReturn {
   refetch: () => Promise<void>;
   clearError: () => void;
 }
-
 export function useCampaignAnalytics(campaignId: string | null): UseCampaignAnalyticsReturn {
   const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchAnalytics = useCallback(async () => {
     if (!campaignId) {
       setAnalytics(null);
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
@@ -46,11 +41,9 @@ export function useCampaignAnalytics(campaignId: string | null): UseCampaignAnal
       setLoading(false);
     }
   }, [campaignId]);
-
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
-
   return {
     analytics,
     loading,
@@ -58,5 +51,4 @@ export function useCampaignAnalytics(campaignId: string | null): UseCampaignAnal
     refetch: fetchAnalytics,
     clearError: () => setError(null),
   };
-}
-
+}

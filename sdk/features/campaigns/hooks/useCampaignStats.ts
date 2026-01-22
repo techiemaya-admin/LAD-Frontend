@@ -4,11 +4,9 @@
  * React hook for fetching campaign statistics.
  * Framework-independent (no Next.js imports).
  */
-
 import { useState, useCallback, useEffect } from 'react';
 import { getCampaignStats } from '../api';
 import type { CampaignStats } from '../types';
-
 export interface UseCampaignStatsReturn {
   stats: CampaignStats | null;
   loading: boolean;
@@ -16,12 +14,10 @@ export interface UseCampaignStatsReturn {
   refetch: () => Promise<void>;
   clearError: () => void;
 }
-
 export function useCampaignStats(): UseCampaignStatsReturn {
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
@@ -51,11 +47,9 @@ export function useCampaignStats(): UseCampaignStatsReturn {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
-
   return {
     stats,
     loading,
@@ -63,5 +57,4 @@ export function useCampaignStats(): UseCampaignStatsReturn {
     refetch: fetchStats,
     clearError: () => setError(null),
   };
-}
-
+}

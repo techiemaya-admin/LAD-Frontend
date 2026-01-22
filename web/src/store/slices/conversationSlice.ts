@@ -2,12 +2,10 @@ import { createSlice, createSelector, createAsyncThunk, PayloadAction } from '@r
 import { markConversationAsRead } from './notificationSlice';
 import { AppDispatch, RootState } from '../store';
 import { logger } from '@/lib/logger';
-
 interface Message {
   id?: string | number;
   [key: string]: unknown;
 }
-
 interface Conversation {
   id: string | number;
   leadId?: string | number;
@@ -21,7 +19,6 @@ interface Conversation {
   humanAgentId?: string | number | null;
   [key: string]: unknown;
 }
-
 interface ConversationState {
   conversations: Conversation[];
   messages: Record<string | number, Message[]>;
@@ -33,7 +30,6 @@ interface ConversationState {
   error: string | null;
   activeConversationId: string | number | null;
 }
-
 interface AddMessagePayload {
   conversationId: string | number;
   message?: Message;
@@ -41,13 +37,11 @@ interface AddMessagePayload {
   isActive?: boolean;
   clear?: boolean;
 }
-
 interface SetPaginationPayload {
   conversationId: string | number;
   hasMore?: boolean;
   loading?: boolean;
 }
-
 // Memoized selector for a single conversation by ID
 export const makeSelectConversationById = () =>
   createSelector(
@@ -57,14 +51,12 @@ export const makeSelectConversationById = () =>
       return conversations.find(c => String(c.id) === String(conversationId)) || null;
     }
   );
-
 // Memoized selector for messages by conversation ID
 export const makeSelectMessagesByConversation = () =>
   createSelector(
     [(state: RootState) => (state.conversation as ConversationState).messages, (state: RootState, conversationId: string | number) => conversationId],
     (messages: Record<string | number, Message[]>, conversationId: string | number): Message[] => messages[conversationId] || []
   );
-
 // Initial state for conversations
 const initialState: ConversationState = {
   conversations: [], // [{...conversation, unread, lastMessage}]
@@ -74,7 +66,6 @@ const initialState: ConversationState = {
   error: null,
   activeConversationId: null, // Track which conversation is open in the UI
 };
-
 const conversationSlice = createSlice({
   name: 'conversation',
   initialState,
@@ -146,20 +137,17 @@ const conversationSlice = createSlice({
     addMessageToConversation: (state, action: PayloadAction<AddMessagePayload>) => {
       const { conversationId, message, isActive, clear } = action.payload;
       if (!conversationId) return;
-      
       // Handle clear flag
       if (clear) {
         state.messages[conversationId] = [];
         return;
       }
-      
       // Handle messages array
       if (action.payload.messages && Array.isArray(action.payload.messages)) {
         if (!state.messages[conversationId]) state.messages[conversationId] = [];
         state.messages[conversationId] = [...state.messages[conversationId], ...action.payload.messages];
         return;
       }
-      
       if (!message) return;
       // 1. Update messages array first
       if (!state.messages[conversationId]) state.messages[conversationId] = [];
@@ -187,7 +175,6 @@ const conversationSlice = createSlice({
       if (idx !== -1) {
         state.conversations[idx].unread = 0;
       }
-      
       // Also mark all notifications for this conversation as read
       // Note: This will be handled by the component that calls markConversationRead
       // by dispatching markConversationAsRead to the notification slice
@@ -222,7 +209,6 @@ const conversationSlice = createSlice({
     }
   }
 });
-
 // Export actions for use in components
 export const {
   setConversations,
@@ -236,28 +222,22 @@ export const {
   setActiveConversation,
   setPagination
 } = conversationSlice.actions;
-
 // Selector for active conversation id
 export const selectActiveConversationId = (state: RootState): string | number | null => 
   (state.conversation as ConversationState).activeConversationId;
-
 // Memoized selector for conversations
 // Use a direct selector for conversations (no memoization needed for identity)
 export const selectConversations = (state: RootState): Conversation[] => 
   (state.conversation as ConversationState).conversations;
-
 // selectNotifications removed: use notificationSlice instead
 export const selectMessagesByConversation = createSelector(
   [(state: RootState) => (state.conversation as ConversationState).messages, (state: RootState, conversationId: string | number) => conversationId],
   (messages: Record<string | number, Message[]>, conversationId: string | number): Message[] => messages[conversationId] || []
 );
-
 export const selectConversationLoading = (state: RootState): boolean => 
   (state.conversation as ConversationState).loading;
-
 export const selectConversationError = (state: RootState): string | null => 
   (state.conversation as ConversationState).error;
-
 // Selector for filtering conversations by user's assigned leads
 export const selectConversationsByUserLeads = createSelector(
   [selectConversations, (state: RootState, userLeads: Array<{ id: string | number }>) => userLeads],
@@ -274,7 +254,6 @@ export const selectConversationsByUserLeads = createSelector(
     }
   }
 );
-
 // Unified action to mark conversation as read in both slices
 export const markConversationAsReadUnified = createAsyncThunk(
   'conversation/markAsReadUnified',
@@ -283,7 +262,6 @@ export const markConversationAsReadUnified = createAsyncThunk(
     dispatch(markConversationRead(conversationId));
     // Update notification slice
     dispatch(markConversationAsRead(conversationId));
-    
     // Call backend API to mark conversation notifications as read
     try {
       // Note: notificationService is commented out in the original, so we'll skip it for now
@@ -293,10 +271,7 @@ export const markConversationAsReadUnified = createAsyncThunk(
       // Don't throw error - frontend state is already updated
       // The user experience is not affected by backend API failures
     }
-    
     return conversationId;
   }
 );
-
-export default conversationSlice.reducer;
-
+export default conversationSlice.reducer;

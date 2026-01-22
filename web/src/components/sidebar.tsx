@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap, MessageCircle, MessageCircleMore, MessagesSquare } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,7 +8,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout as logoutAction } from '@/store/slices/authSlice';
 import authService from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import { logger } from '@/lib/logger';
 import logo from "../assets/logo.png";
 import {
   DropdownMenu,
@@ -16,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 type RootState = {
   auth: {
     user: {
@@ -32,7 +30,6 @@ type RootState = {
     companyLogo: string;
   };
 };
-
 type NavItem = {
   href: string;
   label: string;
@@ -41,7 +38,6 @@ type NavItem = {
   requiredCapability?: string;
   requiredFeature?: string; // For feature-flag based access
 };
-
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -53,21 +49,17 @@ export function Sidebar() {
   const [displayName, setDisplayName] = useState('User');
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
-
   // Hydration check
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
   // Update display name when user data changes
   useEffect(() => {
     if (!isHydrated) return;
     setDisplayName(user?.name || 'User');
   }, [user, isHydrated]);
-
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -79,7 +71,6 @@ export function Sidebar() {
     }
     setIsMobileMenuOpen(false);
   };
-
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
     {
@@ -104,13 +95,6 @@ export function Sidebar() {
       requiredCapability: 'view_campaigns'
     },
     {
-      href: "/conversations",
-      label: "Conversations",
-      icon: MessagesSquare,
-      details: "View and manage customer conversations.",
-      requiredCapability: 'view_conversations'
-    },
-    {
       href: "/make-call",
       label: "Make a Call",
       icon: Phone,
@@ -132,30 +116,23 @@ export function Sidebar() {
       requiredCapability: 'view_pipeline'
     },
   ];
-
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated ? allNavItems.filter(item => {
     // If user is admin or owner, show all items
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
-    
     // Admin/owner sees all items
     if (isAdminOrOwner && !item.requiredCapability) return true;
-    
     // If the item doesn't require any specific capability, show it
     if (!item.requiredCapability) return true;
-    
     // TEMPORARY: If no capabilities are defined or empty array, show all items
     // TODO: Implement proper RBAC with capabilities from backend
     if (!user?.capabilities || user.capabilities.length === 0 || (user.capabilities.length === 1 && user.capabilities[0] === null)) {
       return true; // Show all items when no capabilities are set
     }
-    
     // Check if user has the required capability
     const hasCapability = user.capabilities.includes(item.requiredCapability);
-    logger.debug(`[Sidebar] Item: ${item.label}, Required: ${item.requiredCapability}, Has: ${hasCapability}, User Caps: ${user?.capabilities?.join(', ')}`);
     return hasCapability;
   }) : []; // Show empty nav during SSR to prevent hydration mismatch
-
   return (
     <>
       {/* Mobile Top Bar */}
@@ -180,7 +157,6 @@ export function Sidebar() {
         </div>
         <div className="w-10" />
       </div>
-
       {/* Mobile Drawer */}
       <div
         className={cn(
@@ -205,7 +181,6 @@ export function Sidebar() {
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
         </div>
-
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
           {nav.map((n) => {
             const Icon = n.icon;
@@ -227,7 +202,6 @@ export function Sidebar() {
             );
           })}
         </nav>
-
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2">
           <NavLink
@@ -255,7 +229,6 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div
@@ -263,7 +236,6 @@ export function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
@@ -294,13 +266,11 @@ export function Sidebar() {
           )}
         />
       </div>
-
       {/* Navigation */}
       <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
         {nav.map((n) => {
           const Icon = n.icon;
           const isActive = pathname === n.href;
-
           return (
             <div key={n.href} className="relative group">
               <NavLink
@@ -324,7 +294,6 @@ export function Sidebar() {
                       : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]"
                   )}
                 />
-
                 {/* Icon wrapper */}
                 <div
                   className={cn(
@@ -347,7 +316,6 @@ export function Sidebar() {
                     style={!isActive ? { color: '#1a1a1a !important' } : undefined}
                   />
                 </div>
-
                 {/* Label */}
                 {isExpanded && (
                   <span
@@ -360,10 +328,8 @@ export function Sidebar() {
                   >
                     {n.label}
                   </span>
-
                 )}
               </NavLink>
-
               {/* Tooltip for collapsed state */}
               {!isExpanded && (
                 <div
@@ -390,7 +356,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       {/* User Profile Dropdown Section */}
       <div className="border-t border-sidebar-border mt-auto">
         <DropdownMenu>
@@ -413,7 +378,6 @@ export function Sidebar() {
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-
               {/* User Info - shown when expanded */}
               {isExpanded && (
                 <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
@@ -452,7 +416,6 @@ export function Sidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
         {/* Version Number */}
         <div className="h-10 flex items-center justify-center border-t border-sidebar-border/50">
           {isExpanded && (
@@ -465,4 +428,4 @@ export function Sidebar() {
       </aside>
     </>
   );
-}
+}

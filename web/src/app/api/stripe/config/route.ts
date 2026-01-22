@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../../utils/backend';
 import { logger } from '@/lib/logger';
-
 export async function GET(req: NextRequest) {
   try {
     // Return a minimal config for now
@@ -17,4 +16,4 @@ export async function GET(req: NextRequest) {
       enabled: false 
     }, { status: 200 });
   }
-}
+}

@@ -1,18 +1,15 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Elements, CardElement, useElements, useStripe as useStripeHook } from '@stripe/react-stripe-js';
 import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
 import { useStripe } from '../contexts/StripeContext';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface PaymentFormProps {
   amount: number;
   description?: string;
   onSuccess?: (paymentIntent: any) => void;
   onError?: (error: string) => void;
 }
-
 const PaymentFormInner: React.FC<PaymentFormProps> = ({
   amount,
   description = 'Payment',
@@ -24,11 +21,9 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-
   useEffect(() => {
     createPaymentIntent();
   }, [amount]);
-
   const createPaymentIntent = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-payment-intent`, {
@@ -41,11 +36,9 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
           description,
         }),
       });
-
       if (!response.ok) {
         throw new Error('Failed to create payment intent');
       }
-
       const { clientSecret } = await response.json();
       setClientSecret(clientSecret);
     } catch (err) {
@@ -54,36 +47,28 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
       if (onError) onError(errorMessage);
     }
   };
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
     if (!stripe || !elements || !clientSecret) {
       return;
     }
-
     setProcessing(true);
     setError(null);
-
     const cardElement = elements.getElement(CardElement);
-
     if (!cardElement) {
       setError('Card information is required');
       setProcessing(false);
       return;
     }
-
     try {
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
         },
       });
-
       if (stripeError) {
         throw new Error(stripeError.message);
       }
-
       if (paymentIntent?.status === 'succeeded') {
         if (onSuccess) onSuccess(paymentIntent);
       }
@@ -95,14 +80,12 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
       setProcessing(false);
     }
   };
-
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
   };
-
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
       <div className="mb-6">
@@ -113,7 +96,6 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
           {description} - {formatAmount(amount)}
         </p>
       </div>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="border border-gray-300 rounded-lg p-3">
           <CardElement
@@ -133,14 +115,12 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
             }}
           />
         </div>
-
         {error && (
           <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
             <span className="text-red-700">{error}</span>
           </div>
         )}
-
         <button
           type="submit"
           disabled={!stripe || processing || !clientSecret}
@@ -154,7 +134,6 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
           {processing ? 'Processing...' : `Pay ${formatAmount(amount)}`}
         </button>
       </form>
-
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-500">
           Your payment is secured by Stripe
@@ -163,10 +142,8 @@ const PaymentFormInner: React.FC<PaymentFormProps> = ({
     </div>
   );
 };
-
 export const PaymentForm: React.FC<PaymentFormProps> = (props) => {
   const { stripe, loading, error } = useStripe();
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -175,7 +152,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = (props) => {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
@@ -187,7 +163,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = (props) => {
       </div>
     );
   }
-
   if (!stripe) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -196,7 +171,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = (props) => {
       </div>
     );
   }
-
   return (
     <Elements stripe={stripe}>
       <PaymentFormInner {...props} />

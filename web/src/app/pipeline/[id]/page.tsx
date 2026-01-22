@@ -1,5 +1,4 @@
 "use client";
-
 import React, { JSX } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -9,10 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, GraduationCap, BookOpen } from 'lucide-react';
-
 // Force dynamic rendering for this page due to Redux usage
 export const dynamic = 'force-dynamic';
-
 export default function PipelineDetailPage(): JSX.Element {
   const { id } = useParams();
   const router = useRouter();
@@ -20,10 +17,8 @@ export default function PipelineDetailPage(): JSX.Element {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [leadData, setLeadData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
   // Determine if this is education vertical
   const isEducation = hasFeature('education_vertical');
-  
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -33,7 +28,6 @@ export default function PipelineDetailPage(): JSX.Element {
     deal: isEducation ? 'Application' : 'Deal',
     value: isEducation ? 'Program Fee' : 'Value'
   };
-
   useEffect(() => {
     (async () => {    
       try {
@@ -46,7 +40,6 @@ export default function PipelineDetailPage(): JSX.Element {
       }
     })();
   }, [router, id]);
-
   useEffect(() => {
     // TODO: Implement actual lead/student data fetching
     // For now, using mock data structure
@@ -74,7 +67,6 @@ export default function PipelineDetailPage(): JSX.Element {
       }, 500);
     }
   }, [authed, id, isEducation]);
-
   if (authed === null) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -82,9 +74,7 @@ export default function PipelineDetailPage(): JSX.Element {
       </div>
     );
   }
-
   if (!authed) return <></>;
-
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -92,7 +82,6 @@ export default function PipelineDetailPage(): JSX.Element {
       </div>
     );
   }
-
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -122,7 +111,6 @@ export default function PipelineDetailPage(): JSX.Element {
           </div>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -161,7 +149,6 @@ export default function PipelineDetailPage(): JSX.Element {
               </div>
             </CardContent>
           </Card>
-
           {/* Education-specific Information */}
           {isEducation && (
             <Card>
@@ -190,7 +177,6 @@ export default function PipelineDetailPage(): JSX.Element {
             </Card>
           )}
         </div>
-
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Status Information */}
@@ -224,7 +210,6 @@ export default function PipelineDetailPage(): JSX.Element {
               </div>
             </CardContent>
           </Card>
-
           {/* Actions */}
           <Card>
             <CardHeader>

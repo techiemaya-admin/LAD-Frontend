@@ -4,19 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ArrowUp, ArrowDown, X } from 'lucide-react';
-
 interface PipelineSortConfig {
   field: string;
   direction: 'asc' | 'desc';
 }
-
 interface PipelineSortDialogProps {
   open: boolean;
   onClose: () => void;
   sortConfig: PipelineSortConfig;
   onSortConfigChange: (config: PipelineSortConfig) => void;
 }
-
 const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
   open,
   onClose,
@@ -26,11 +23,9 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
   const handleFieldChange = (field: string): void => {
     onSortConfigChange({ ...sortConfig, field });
   };
-
   const handleDirectionChange = (direction: 'asc' | 'desc'): void => {
     onSortConfigChange({ ...sortConfig, direction });
   };
-
   return (
     <Dialog open={open}>
       <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
@@ -64,7 +59,6 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <Label htmlFor="sort-direction" className="text-sm font-medium mb-2 block">Direction</Label>
             <Select
@@ -81,7 +75,6 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
             </Select>
           </div>
         </div>
-
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
           <Button 
@@ -95,6 +88,4 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
     </Dialog>
   );
 };
-
-export default PipelineSortDialog;
-
+export default PipelineSortDialog;

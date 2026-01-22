@@ -1,11 +1,9 @@
 'use client';
-
 import React from 'react';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { LinkedInIntegration } from './LinkedInIntegration';
-
 export const IntegrationsSettings: React.FC = () => {
   return (
     <div className="space-y-8">
@@ -15,19 +13,16 @@ export const IntegrationsSettings: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Google Integration */}
           <GoogleAuthIntegration />
-
           {/* Microsoft Integration */}
           <MicrosoftAuthIntegration />
         </div>
       </div>
-
       {/* Social Integrations */}
       <div>
         <h3 className="text-gray-900 text-lg font-semibold mb-4">Social Integrations</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* LinkedIn Integration */}
           <LinkedInIntegration />
-
           {/* Slack Integration Card */}
           <div className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 shadow-sm transition-colors">
             <div className="flex items-center space-x-3 mb-4">
@@ -55,7 +50,6 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* WhatsApp Integration */}
       <div>
         <h3 className="text-gray-900 text-lg font-semibold mb-4">Messaging</h3>
@@ -65,4 +59,4 @@ export const IntegrationsSettings: React.FC = () => {
       </div>
     </div>
   );
-};
+};

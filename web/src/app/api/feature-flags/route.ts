@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../utils/backend';
-
 export async function GET(req: NextRequest) {
   try {
     // For now, return enabled feature flags
@@ -34,11 +33,9 @@ export async function GET(req: NextRequest) {
         version: "1.0.0"
       }
     };
-
     return NextResponse.json(fallbackFlags);
   } catch (e: any) {
     console.error('[/api/feature-flags] Error:', e);
-    
     // Return minimal fallback flags on error
     return NextResponse.json({
       features: {
@@ -51,4 +48,4 @@ export async function GET(req: NextRequest) {
       }
     });
   }
-}
+}

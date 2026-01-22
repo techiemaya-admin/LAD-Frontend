@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import {
   Dialog,
@@ -14,7 +13,6 @@ import {
   Chip,
 } from '@mui/material';
 import { Close, Person } from '@mui/icons-material';
-
 interface ProfileSummaryDialogProps {
   open: boolean;
   onClose: () => void;
@@ -31,7 +29,6 @@ interface ProfileSummaryDialogProps {
   loading: boolean;
   error: string | null;
 }
-
 export default function ProfileSummaryDialog({
   open,
   onClose,
@@ -45,7 +42,6 @@ export default function ProfileSummaryDialog({
       `${employee.first_name || ''} ${employee.last_name || ''}`.trim() ||
       'Unknown'
     : '';
-
   return (
     <Dialog
       open={open}
@@ -112,7 +108,6 @@ export default function ProfileSummaryDialog({
           <Close />
         </Button>
       </DialogTitle>
-
       <DialogContent sx={{ pt: 3, pb: 2 }}>
         {loading ? (
           <Box
@@ -184,7 +179,6 @@ export default function ProfileSummaryDialog({
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
         <Button
           onClick={onClose}
@@ -204,5 +198,4 @@ export default function ProfileSummaryDialog({
       </DialogActions>
     </Dialog>
   );
-}
-
+}

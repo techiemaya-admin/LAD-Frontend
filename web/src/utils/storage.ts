@@ -2,12 +2,9 @@
  * Safe storage utilities that handle Safari's strict privacy mode
  * where localStorage/sessionStorage might be blocked
  */
-
 import { logger } from '@/lib/logger';
-
 class SafeStorage {
   private memoryStore: Map<string, string> = new Map();
-
   private isStorageAvailable(): boolean {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -21,7 +18,6 @@ class SafeStorage {
       return false;
     }
   }
-
   getItem(key: string): string | null {
     try {
       if (this.isStorageAvailable()) {
@@ -33,7 +29,6 @@ class SafeStorage {
       return this.memoryStore.get(key) || null;
     }
   }
-
   setItem(key: string, value: string): void {
     try {
       const storageAvailable = this.isStorageAvailable();
@@ -59,7 +54,6 @@ class SafeStorage {
       this.memoryStore.set(key, value);
     }
   }
-
   removeItem(key: string): void {
     try {
       if (this.isStorageAvailable()) {
@@ -71,7 +65,6 @@ class SafeStorage {
       this.memoryStore.delete(key);
     }
   }
-
   clear(): void {
     try {
       if (this.isStorageAvailable()) {
@@ -84,6 +77,5 @@ class SafeStorage {
     }
   }
 }
-
 // Export a singleton instance
-export const safeStorage = new SafeStorage();
+export const safeStorage = new SafeStorage();

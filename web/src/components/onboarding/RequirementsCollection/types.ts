@@ -1,21 +1,18 @@
 /**
  * Requirements Collection - Types and Constants
  */
-
 export interface RequirementField {
   field: string;
   label: string;
   type?: 'text' | 'url' | 'email' | 'phone' | 'textarea' | 'file';
   required?: boolean;
 }
-
 export interface RequirementsCollectionProps {
   requirements: Record<string, boolean> | string[];
   message?: string;
   onComplete: (data: Record<string, any>) => void;
   workflow?: any[];
 }
-
 // Map requirement field names to user-friendly labels and types
 export const FIELD_MAPPINGS: Record<string, { label: string; type: 'text' | 'url' | 'email' | 'phone' | 'textarea' | 'file' }> = {
   linkedin_url: { label: 'LinkedIn URL', type: 'url' },
@@ -38,5 +35,4 @@ export const FIELD_MAPPINGS: Record<string, { label: string; type: 'text' | 'url
   agent_template: { label: 'Voice Agent Template', type: 'text' },
   script: { label: 'Call Script', type: 'textarea' },
   company_name: { label: 'Company Name', type: 'text' },
-};
-
+};

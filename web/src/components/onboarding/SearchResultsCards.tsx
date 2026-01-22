@@ -1,12 +1,10 @@
 'use client';
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, MapPin, Phone, Globe, Linkedin, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-
 interface SearchResult {
   id?: string;
   companyName?: string;
@@ -26,29 +24,23 @@ interface SearchResult {
   headline?: string;
   [key: string]: any;
 }
-
 interface SearchResultsCardsProps {
   results: SearchResult[];
   onCompanyClick?: (company: SearchResult) => void;
 }
-
 export default function SearchResultsCards({ results, onCompanyClick }: SearchResultsCardsProps) {
   if (!results || results.length === 0) {
     return null;
   }
-
   const getCompanyName = (result: SearchResult) => {
     return result.companyName || result.name || result.username || 'Unknown Company';
   };
-
   const getCompanyLogo = (result: SearchResult) => {
     return result.logoUrl || result.logo || result.profileImage || result.companyLogo;
   };
-
   const getLinkedInUrl = (result: SearchResult) => {
     return result.linkedinProfile || result.linkedin_url;
   };
-
   return (
     <div className="mt-4">
       <div className="mb-4">
@@ -56,13 +48,11 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
           Found {results.length} {results.length === 1 ? 'Result' : 'Results'}
         </h3>
       </div>
-      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {results.map((result, index) => {
           const companyName = getCompanyName(result);
           const logo = getCompanyLogo(result);
           const linkedInUrl = getLinkedInUrl(result);
-          
           return (
             <Card
               key={result.id || index}
@@ -91,7 +81,6 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
                     </div>
                   </div>
                 </div>
-
                 {/* Company Details */}
                 <div className="p-4 space-y-3">
                   {/* Industry */}
@@ -102,7 +91,6 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
                       </Badge>
                     </div>
                   )}
-
                   {/* Location */}
                   {result.location && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -110,7 +98,6 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
                       <span className="truncate">{result.location}</span>
                     </div>
                   )}
-
                   {/* Phone */}
                   {result.phone && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -118,7 +105,6 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
                       <span className="truncate">{result.phone}</span>
                     </div>
                   )}
-
                   {/* Employee Count */}
                   {result.employeeCount && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -131,7 +117,6 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
                       </span>
                     </div>
                   )}
-
                   {/* Links */}
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                     {result.website && (
@@ -169,5 +154,4 @@ export default function SearchResultsCards({ results, onCompanyClick }: SearchRe
       </div>
     </div>
   );
-}
-
+}

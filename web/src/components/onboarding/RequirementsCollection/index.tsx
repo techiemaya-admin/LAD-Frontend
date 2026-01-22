@@ -1,12 +1,10 @@
 'use client';
-
 import React, { useState } from 'react';
 import { Upload, File, X, CheckCircle2, AlertCircle, Info, FileText, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { FIELD_MAPPINGS, RequirementField, RequirementsCollectionProps } from './types';
 import { parseDocument, generateExampleStructure, downloadExampleStructure as downloadExample } from './utils';
-
 export default function RequirementsCollection({
   requirements,
   message,
@@ -19,7 +17,6 @@ export default function RequirementsCollection({
   const [allRequirementsFile, setAllRequirementsFile] = useState<File | null>(null);
   const [showStructureInfo, setShowStructureInfo] = useState(false);
   const [parsingError, setParsingError] = useState<string | null>(null);
-
   // Convert requirements to array of field objects
   const requirementFields: RequirementField[] = Array.isArray(requirements)
     ? requirements.map((field) => ({
@@ -34,7 +31,6 @@ export default function RequirementsCollection({
         type: FIELD_MAPPINGS[field]?.type || 'text',
         required: requirements[field] === true,
       }));
-
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -46,7 +42,6 @@ export default function RequirementsCollection({
       });
     }
   };
-
   const handleFileUpload = (field: string, file: File | null) => {
     if (file) {
       setUploadedFiles((prev) => ({ ...prev, [field]: file }));
@@ -64,7 +59,6 @@ export default function RequirementsCollection({
       });
     }
   };
-
   // Handle upload of all requirements document
   const handleAllRequirementsUpload = async (file: File | null) => {
     if (!file) {
@@ -72,13 +66,10 @@ export default function RequirementsCollection({
       setParsingError(null);
       return;
     }
-
     setAllRequirementsFile(file);
     setParsingError(null);
-
     try {
       const parsedData = await parseDocument(file);
-      
       // Populate form data with parsed values
       const newFormData: Record<string, any> = {};
       requirementFields.forEach((req) => {
@@ -87,14 +78,11 @@ export default function RequirementsCollection({
                      parsedData[req.field.toLowerCase()] ||
                      parsedData[req.field.replace(/_/g, ' ')] ||
                      parsedData[FIELD_MAPPINGS[req.field]?.label.toLowerCase()];
-        
         if (value) {
           newFormData[req.field] = value;
         }
       });
-
       setFormData((prev) => ({ ...prev, ...newFormData }));
-      
       // Clear any errors
       setErrors({});
     } catch (error: any) {
@@ -102,47 +90,37 @@ export default function RequirementsCollection({
       logger.error('Error parsing document', error);
     }
   };
-
   const handleDownloadExample = () => {
     const example = generateExampleStructure(requirementFields);
     downloadExample(example);
   };
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
     requirementFields.forEach((req) => {
       if (req.required && !formData[req.field] && !uploadedFiles[req.field]) {
         newErrors[req.field] = `${req.label} is required`;
       }
     });
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = () => {
     if (!validateForm()) {
       return;
     }
-
     // Combine text inputs and uploaded files
     const completeData = {
       ...formData,
       files: uploadedFiles,
     };
-
     onComplete(completeData);
   };
-
   const isFieldComplete = (field: string): boolean => {
     return !!(formData[field] || uploadedFiles[field]);
   };
-
   const allFieldsComplete = requirementFields.every((req) => 
     !req.required || isFieldComplete(req.field)
   );
-
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6 bg-white rounded-lg border border-gray-200 shadow-sm">
       {/* Header Message */}
@@ -151,7 +129,6 @@ export default function RequirementsCollection({
           <p className="text-sm text-blue-900">{message}</p>
         </div>
       )}
-
       {/* Upload All Requirements Section */}
       <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between mb-3">
@@ -169,11 +146,9 @@ export default function RequirementsCollection({
             <Info className="w-4 h-4" />
           </button>
         </div>
-        
         <p className="text-xs text-gray-600 mb-3">
           Upload a single document (JSON, CSV, or structured text) containing all required information.
         </p>
-
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-md cursor-pointer hover:bg-blue-700 transition-colors shadow-sm">
             <Upload className="w-4 h-4" />
@@ -188,7 +163,6 @@ export default function RequirementsCollection({
               }}
             />
           </label>
-          
           <button
             onClick={handleDownloadExample}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
@@ -197,7 +171,6 @@ export default function RequirementsCollection({
             <span>Download Example</span>
           </button>
         </div>
-
         {allRequirementsFile && (
           <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
             <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -213,7 +186,6 @@ export default function RequirementsCollection({
             </button>
           </div>
         )}
-
         {parsingError && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
             <div className="flex items-start gap-2">
@@ -225,12 +197,10 @@ export default function RequirementsCollection({
             </div>
           </div>
         )}
-
         {/* Document Structure Info */}
         {showStructureInfo && (
           <div className="mt-4 p-4 bg-white border border-gray-300 rounded-md">
             <h5 className="text-sm font-semibold text-gray-900 mb-3">Document Structure Formats</h5>
-            
             <div className="space-y-4 text-xs">
               {/* JSON Format */}
               <div>
@@ -243,7 +213,6 @@ export default function RequirementsCollection({
 }`}
                 </pre>
               </div>
-
               {/* Structured Text Format */}
               <div>
                 <p className="font-semibold text-gray-700 mb-2">2. Structured Text Format:</p>
@@ -253,7 +222,6 @@ Connection Message: Hi {{first_name}}, I'd like to connect...
 DM Message: Hi {{first_name}}, I noticed...`}
                 </pre>
               </div>
-
               {/* CSV Format */}
               <div>
                 <p className="font-semibold text-gray-700 mb-2">3. CSV Format:</p>
@@ -262,7 +230,6 @@ DM Message: Hi {{first_name}}, I noticed...`}
 https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi {{first_name}}, I noticed..."`}
                 </pre>
               </div>
-
               <div className="pt-2 border-t border-gray-200">
                 <p className="text-gray-600">
                   <strong>Note:</strong> Field names are case-insensitive. For multi-line text (like messages), 
@@ -273,19 +240,16 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
           </div>
         )}
       </div>
-
       {/* Requirements List */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Required Information
         </h3>
-
         {requirementFields.map((req) => {
           const fieldValue = formData[req.field] || '';
           const hasFile = !!uploadedFiles[req.field];
           const isComplete = isFieldComplete(req.field);
           const hasError = !!errors[req.field];
-
           return (
             <div
               key={req.field}
@@ -312,7 +276,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
                   )}
                 </div>
               </div>
-
               {/* Input Field */}
               <div className="space-y-2">
                 {req.type === 'textarea' ? (
@@ -338,7 +301,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
                     )}
                   />
                 )}
-
                 {/* File Upload Option */}
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 transition-colors">
@@ -354,7 +316,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
                       }}
                     />
                   </label>
-
                   {hasFile && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
                       <File className="w-4 h-4 text-blue-600" />
@@ -371,7 +332,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
                     </div>
                   )}
                 </div>
-
                 {/* Error Message */}
                 {hasError && (
                   <p className="text-xs text-red-600 mt-1">{errors[req.field]}</p>
@@ -381,7 +341,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
           );
         })}
       </div>
-
       {/* Submit Button */}
       <div className="mt-6 flex justify-end">
         <button
@@ -397,7 +356,6 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
           Complete Workflow
         </button>
       </div>
-
       {/* Progress Indicator */}
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
@@ -421,4 +379,4 @@ https://linkedin.com/in/example,"Hi {{first_name}}, I'd like to connect...","Hi 
       </div>
     </div>
   );
-}
+}

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useMemo, useEffect } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ReactFlow, {
@@ -20,7 +19,6 @@ import { CheckCircle2, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import TemplateInput from './TemplateInput';
-
 // Register node types (defined outside component to prevent recreation on each render)
 const NODE_TYPES: NodeTypes = {
   start: CustomNode,
@@ -44,12 +42,10 @@ const NODE_TYPES: NodeTypes = {
   condition: CustomNode,
   custom: CustomNode,
 };
-
 // Accept currentIntentKey as a prop (from parent or global state)
 interface WorkflowPreviewProps {
   currentIntentKey?: string;
 }
-
 export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewProps = {}) {
   const router = useRouter();
   const { 
@@ -61,11 +57,9 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
     completeOnboarding,
     setIsEditMode,
   } = useOnboardingStore();
-
   // Convert workflowPreview steps to React Flow nodes
   const initialNodes = useMemo(() => {
     if (workflowPreview.length === 0) return [];
-
     // Add start node
     const nodes: Node[] = [
       {
@@ -75,7 +69,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
         data: { title: 'Start', type: 'start' },
       },
     ];
-
     // Add workflow steps as nodes
     workflowPreview.forEach((step, index) => {
       // Remove duplicate title/type from ...step
@@ -92,7 +85,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
         },
       });
     });
-
     // Add end node
     nodes.push({
       id: 'end',
@@ -100,14 +92,11 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
       position: { x: 100, y: 150 + workflowPreview.length * 120 },
       data: { title: 'End', type: 'end' },
     });
-
     return nodes;
   }, [workflowPreview]);
-
   // Create edges connecting nodes sequentially
   const initialEdges = useMemo(() => {
     if (initialNodes.length <= 1) return [];
-
     const edges: Edge[] = [];
     for (let i = 0; i < initialNodes.length - 1; i++) {
       edges.push({
@@ -118,26 +107,20 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
         style: { stroke: '#7c3aed', strokeWidth: 2 },
       });
     }
-
     return edges;
   }, [initialNodes]);
-
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
   // Update nodes when workflowPreview changes
   useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
-
   useEffect(() => {
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
-
   const connectedChannels = Object.entries(channels)
     .filter(([_, connected]) => connected)
     .map(([channel]) => channel);
-
   // Find the step that matches the backend's current template intentKey (e.g., 'linkedin_template', 'whatsapp_template')
   let currentTemplateStepIndex: number | null = null;
   if (currentIntentKey && currentIntentKey.endsWith('_template')) {
@@ -166,7 +149,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
     });
     if (currentTemplateStepIndex === -1) currentTemplateStepIndex = null;
   }
-
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
@@ -185,7 +167,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
           Your automation workflow will appear here as we configure it
         </p>
       </div>
-
       {/* Connected Channels */}
       {connectedChannels.length > 0 && (
         <div className="p-4 bg-white border-b border-gray-200">
@@ -205,7 +186,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
           </div>
         </div>
       )}
-
       {/* React Flow Canvas */}
       <div className="flex-1 relative" style={{ background: '#F8F9FE' }}>
         {workflowPreview.length === 0 ? (
@@ -279,7 +259,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
           </ReactFlow>
         )}
       </div>
-
       {/* Footer Actions */}
       {workflowPreview.length > 0 && (
         <div className="p-6 border-t border-gray-200 bg-white space-y-3">
@@ -341,7 +320,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
                     },
                   };
                 });
-
                 const flowEdges = [];
                 for (let i = 0; i < flowNodes.length - 1; i++) {
                   flowEdges.push({
@@ -350,7 +328,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
                     target: flowNodes[i + 1].id,
                   });
                 }
-
                 setManualFlow({
                   nodes: flowNodes,
                   edges: flowEdges,
@@ -377,7 +354,6 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
                     edges: [],
                   },
                 });
-                
                 completeOnboarding();
                 router.push('/campaigns');
               } catch (error) {
@@ -393,4 +369,4 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
       )}
     </div>
   );
-}
+}

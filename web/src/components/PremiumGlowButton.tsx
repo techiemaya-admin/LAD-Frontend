@@ -1,13 +1,10 @@
 'use client';
-
 import React from 'react';
 import { Button, ButtonProps, styled } from '@mui/material';
-
 interface PremiumGlowButtonProps extends ButtonProps {
   variant?: 'primary' | 'secondary' | 'gradient';
   glowColor?: string;
 }
-
 const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?: string }>(({ buttonVariant = 'gradient', glowColor = '#00eaff' }) => {
   const variants = {
     gradient: {
@@ -48,9 +45,7 @@ const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?:
       },
     },
   };
-  
   const variantStyles = variants[buttonVariant as keyof typeof variants] || variants.gradient;
-  
   return {
     ...variantStyles,
     borderRadius: '16px',
@@ -63,7 +58,6 @@ const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?:
     overflow: 'hidden',
     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     textShadow: '0 0 20px rgba(255, 255, 255, 0.5)',
-    
     '&::before': {
       content: '""',
       position: 'absolute',
@@ -74,20 +68,16 @@ const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?:
       background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
       transition: 'left 0.5s ease',
     },
-    
     '&:hover::before': {
       left: '100%',
     },
-    
     '&:hover': {
       transform: 'translateY(-3px)',
       ...variantStyles['&:hover'],
     },
-    
     '&:active': {
       transform: 'translateY(-1px)',
     },
-    
     '@keyframes gradient-shift': {
       '0%, 100%': {
         backgroundPosition: '0% 50%',
@@ -98,7 +88,6 @@ const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?:
     },
   };
 });
-
 export const PremiumGlowButton: React.FC<PremiumGlowButtonProps> = ({ 
   variant = 'gradient',
   glowColor,
@@ -110,5 +99,4 @@ export const PremiumGlowButton: React.FC<PremiumGlowButtonProps> = ({
       {children}
     </StyledPremiumButton>
   );
-};
-
+};

@@ -2,10 +2,8 @@ import { cn } from "@/lib/utils";
 interface StatusBadgeProps {
   status: string;
 }
-
 export function StatusBadge({ status }: StatusBadgeProps) {
   const value = status?.toLowerCase() || "";
-
   /* QUEUE */
   if (value.includes("queue") || value.includes("pending")) {
     return (
@@ -16,7 +14,6 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       </span>
     );
   }
-
   /* CALLING / RINGING */
   if (value.includes("calling") || value.includes("ringing") || value.includes("running")) {
     return (
@@ -26,7 +23,6 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       </span>
     );
   }
-
   /* ONGOING */
   if (value.includes("ongoing") || value.includes("active") || value.includes("in_progress")) {
     return (
@@ -36,7 +32,6 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       </span>
     );
   }
-
 /* ENDED */
 if (value.includes("ended") || value.includes("completed")) {
   return (
@@ -47,7 +42,6 @@ if (value.includes("ended") || value.includes("completed")) {
     </span>
   );
 }
-
 /* FAILED */
 if (
   value.includes("failed") ||
@@ -62,12 +56,10 @@ if (
     </span>
   );
 }
-
-
   /* FALLBACK */
   return (
     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
       {status || "Unknown"}
     </span>
   );
-}
+}

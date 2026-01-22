@@ -21,7 +21,6 @@
  * - No direct axios/fetch calls in web pages
  * - All operations are tenant-scoped automatically via getApiClient()
  */
-
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
@@ -41,7 +40,6 @@ export {
   getWalletBalance,
   getWalletBalanceLegacy,
 } from './api';
-
 // ============================================================================
 // HOOKS
 // ============================================================================
@@ -61,7 +59,6 @@ export {
   useWalletBalance,
   useWalletBalanceLegacy,
 } from './hooks';
-
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -86,4 +83,4 @@ export type {
   LegacyWalletBalance,
   LegacyTransaction,
   CreditPackage,
-} from './types';
+} from './types';

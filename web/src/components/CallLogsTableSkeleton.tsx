@@ -25,4 +25,4 @@ export function CallLogsTableSkeleton() {
       </table>
     </div>
   );
-}
+}

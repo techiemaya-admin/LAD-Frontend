@@ -1,1 +1,1 @@
-export * from "./features/voice-agent/features/voice-agent";
+export * from "./features/voice-agent/features/voice-agent";

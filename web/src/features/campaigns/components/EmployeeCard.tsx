@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import {
   Box,
@@ -23,7 +22,6 @@ import {
   ExpandLess,
 } from '@mui/icons-material';
 import { Button, Collapse } from '@mui/material';
-
 interface EmployeeCardProps {
   employee: {
     id?: string;
@@ -36,6 +34,7 @@ interface EmployeeCardProps {
     linkedin_url?: string;
     photo_url?: string;
     profile_image?: string;
+    is_inbound?: boolean; // Flag to identify inbound leads
     [key: string]: any;
   };
   employeeViewMode?: 'grid' | 'list';
@@ -45,8 +44,8 @@ interface EmployeeCardProps {
   handleRevealEmail?: (employee: any) => void;
   onViewSummary?: (employee: any) => void;
   profileSummary?: string | null;
+  hideUnlockFeatures?: boolean; // New prop to hide unlock buttons for inbound campaigns
 }
-
 export default function EmployeeCard({
   employee,
   employeeViewMode = 'grid',
@@ -56,21 +55,21 @@ export default function EmployeeCard({
   handleRevealEmail,
   onViewSummary,
   profileSummary,
+  hideUnlockFeatures = false, // Default to false
 }: EmployeeCardProps) {
   const [summaryExpanded, setSummaryExpanded] = React.useState(false);
-  
   if (!employee) return null;
-
   const idKey = employee.id || employee.name || '';
   const employeeName = employee.name || 
     `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 
     'Unknown';
-
   const phoneRevealed = revealedContacts[idKey]?.phone;
   const emailRevealed = revealedContacts[idKey]?.email;
   const phoneLoading = revealingContacts[idKey]?.phone;
   const emailLoading = revealingContacts[idKey]?.email;
-
+  // Determine if unlock features should be shown
+  // Hide if: hideUnlockFeatures is true OR employee is marked as inbound
+  const shouldHideUnlock = hideUnlockFeatures || employee.is_inbound === true;
   return (
     <Card
       sx={{
@@ -127,7 +126,6 @@ export default function EmployeeCard({
               </Avatar>
             </Box>
           )}
-
           {/* Name & Title - Center aligned for grid */}
           <Box
             sx={{
@@ -157,7 +155,6 @@ export default function EmployeeCard({
                 <Person sx={{ fontSize: 40 }} />
               </Avatar>
             )}
-
             <Typography
               variant="h6"
               sx={{
@@ -214,7 +211,6 @@ export default function EmployeeCard({
               </Typography>
             )}
           </Box>
-
           {/* Contact info - Below name/title for grid */}
           <Box
             sx={{
@@ -251,25 +247,25 @@ export default function EmployeeCard({
               <Typography
                 variant="caption"
                 sx={{
-                  color: phoneRevealed
+                  color: shouldHideUnlock || phoneRevealed
                     ? '#0b1957'
                     : 'oklch(0.556 0 0)',
                   fontSize: '0.8rem',
-                  letterSpacing: phoneRevealed
+                  letterSpacing: shouldHideUnlock || phoneRevealed
                     ? 'normal'
                     : '1px',
-                  filter: phoneRevealed ? 'none' : 'blur(4px)',
-                  userSelect: phoneRevealed ? 'text' : 'none',
+                  filter: shouldHideUnlock || phoneRevealed ? 'none' : 'blur(4px)',
+                  userSelect: shouldHideUnlock || phoneRevealed ? 'text' : 'none',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   flex: 1,
-                  fontWeight: phoneRevealed ? 600 : 400,
+                  fontWeight: shouldHideUnlock || phoneRevealed ? 600 : 400,
                 }}
               >
-                {phoneRevealed ? (employee.phone || '+971 50 123 4567') : '+971 50 123 4567'}
+                {shouldHideUnlock ? (employee.phone || 'Not provided') : (phoneRevealed ? (employee.phone || '+971 50 123 4567') : '+971 50 123 4567')}
               </Typography>
-              {handleRevealPhone && (
+              {!shouldHideUnlock && handleRevealPhone && (
                 <Tooltip
                   title={
                     phoneRevealed
@@ -321,7 +317,6 @@ export default function EmployeeCard({
                 </Tooltip>
               )}
             </Box>
-
             {/* Email */}
             <Box
               sx={{
@@ -347,25 +342,25 @@ export default function EmployeeCard({
               <Typography
                 variant="caption"
                 sx={{
-                  color: emailRevealed
+                  color: shouldHideUnlock || emailRevealed
                     ? '#0b1957'
                     : 'oklch(0.556 0 0)',
                   fontSize: '0.8rem',
-                  letterSpacing: emailRevealed
+                  letterSpacing: shouldHideUnlock || emailRevealed
                     ? 'normal'
                     : '1px',
-                  filter: emailRevealed ? 'none' : 'blur(4px)',
-                  userSelect: emailRevealed ? 'text' : 'none',
+                  filter: shouldHideUnlock || emailRevealed ? 'none' : 'blur(4px)',
+                  userSelect: shouldHideUnlock || emailRevealed ? 'text' : 'none',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   flex: 1,
-                  fontWeight: emailRevealed ? 600 : 400,
+                  fontWeight: shouldHideUnlock || emailRevealed ? 600 : 400,
                 }}
               >
-                {emailRevealed ? (employee.email || 'name@company.com') : 'name@company.com'}
+                {shouldHideUnlock ? (employee.email || 'Not provided') : (emailRevealed ? (employee.email || 'name@company.com') : 'name@company.com')}
               </Typography>
-              {handleRevealEmail && (
+              {!shouldHideUnlock && handleRevealEmail && (
                 <Tooltip
                   title={
                     emailRevealed
@@ -418,7 +413,6 @@ export default function EmployeeCard({
               )}
             </Box>
           </Box>
-
           {/* Profile Summary Section */}
           {profileSummary && (
             <Box sx={{ width: '100%', mt: 2 }}>
@@ -472,7 +466,6 @@ export default function EmployeeCard({
               </Collapse>
             </Box>
           )}
-          
           {/* View Summary Button (if no summary available yet) */}
           {!profileSummary && onViewSummary && (
             <Box sx={{ width: '100%', mt: 2 }}>
@@ -505,5 +498,4 @@ export default function EmployeeCard({
       </CardContent>
     </Card>
   );
-}
-
+}

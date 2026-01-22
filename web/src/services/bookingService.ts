@@ -1,13 +1,11 @@
 import { logger } from '../lib/logger';
 import api from './api';
-
 export interface BookingParams {
   leadId: string | number;
   userId: string | number;
   date: string;
   startTime: string;
   endTime: string;
-
   // New bookings API fields (optional for backward compatibility)
   tenantId?: string;
   studentId?: string;
@@ -17,7 +15,6 @@ export interface BookingParams {
   bookingSource?: string;
   timezone?: string;
 }
-
 export interface BookingResponse {
   id: string | number;
   leadId?: string | number;
@@ -31,19 +28,16 @@ export interface BookingResponse {
   end_time?: string; 
   created_at?: string;
 }
-
 export interface AvailabilityParams {
   userId: string | number;
   date: string;
   startTime?: string;  
   endTime?: string;     
 }
-
 export interface AvailabilityResponse {
   available: boolean;
   message?: string;
 }
-
 export interface BookingAvailabilityParams {
   userId: string | number;
   dayStart: string; // ISO string (backend expects Z)
@@ -51,28 +45,23 @@ export interface BookingAvailabilityParams {
   slotMinutes: number;
   timezone?: string;
 }
-
 export interface BookingAvailabilitySlot {
   start: string;
   end: string;
   [key: string]: any;
 }
-
 export interface BookingAvailabilityResult {
   availableSlots: BookingAvailabilitySlot[];
   bookings: BookingAvailabilitySlot[];
   raw?: any;
 }
-
 export interface AvailabilitySlotsResult {
   availableSlots: BookingAvailabilitySlot[];
   bookings: BookingAvailabilitySlot[];
   raw?: any;
 }
-
 const BOOKINGS_PATH = '/api/deals-pipeline/bookings';
 const LEGACY_BOOKINGS_PATH = '/api/deals-pipeline/booking';
-
 // Interface for fetching all booked/occupied slots for a user on a date
 // Note: Despite the field name 'available_slots' from backend, this actually contains BOOKED/OCCUPIED times
 // (times when the user is busy and cannot accept new bookings)
@@ -89,7 +78,6 @@ export interface UnavailableSlotsResponse {
   // API might return different structures
   [key: string]: any;
 }
-
 /**
  * Fetch booked slots for a lead
  */
@@ -99,21 +87,17 @@ export const fetchBookings = async (params: {
 }): Promise<BookingResponse[]> => {
   try {
     const queryParams: Record<string, string> = {};
-    
     if (params.leadId) {
       queryParams.leadId = String(params.leadId);
     }
-    
     if (params.date) {
       queryParams.date = params.date;
     }
-    
     // Be generous with query key names, backend variations exist.
     if (params.leadId) {
       queryParams.lead_id = String(params.leadId);
       queryParams.leadId = String(params.leadId);
     }
-
     let response;
     try {
       response = await api.get(BOOKINGS_PATH, { params: queryParams });
@@ -124,24 +108,20 @@ export const fetchBookings = async (params: {
         throw e;
       }
     }
-    
     const bookings = Array.isArray(response.data) 
       ? response.data 
       : Array.isArray(response.data?.data) 
         ? response.data.data 
         : [];
-    
     // Filter out cancelled bookings
     return bookings.filter((booking: any) => {
       const status = booking.status?.toLowerCase();
       return status !== 'cancelled' && status !== 'canceled';
     });
-    
   } catch (error: any) {
     if (error.response?.status === 404) {
       return [];
     }
-    
     throw new Error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -150,7 +130,6 @@ export const fetchBookings = async (params: {
     );
   }
 };
-
 /**
  * Check availability of a booking slot
  */
@@ -160,28 +139,23 @@ export const checkAvailability = async (params: AvailabilityParams): Promise<Ava
       counsellorId: params.userId,
       date: params.date,
     };
-    
     if (params.startTime) {
       requestParams.startTime = params.startTime;
     }
     if (params.endTime) {
       requestParams.endTime = params.endTime;
     }
-    
     const response = await api.get('/api/deals-pipeline/availability', {
       params: requestParams
     });
-    
     return {
       available: response.data?.available ?? true,
       message: response.data?.message,
     };
-    
   } catch (error: any) {
     if (error.response?.status === 404) {
       return { available: true, message: 'Availability check not available' };
     }
-    
     throw new Error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -190,7 +164,6 @@ export const checkAvailability = async (params: AvailabilityParams): Promise<Ava
     );
   }
 };
-
 /**
  * Fetch availability slots and existing bookings for a user for a day range.
  * GET /api/deals-pipeline/bookings/availability?userId=...&dayStart=...&dayEnd=...&slotMinutes=...
@@ -208,28 +181,23 @@ export const fetchBookingAvailability = async (
         timezone: params.timezone,
       },
     });
-
     const data = response.data;
-
     const availableSlots: BookingAvailabilitySlot[] =
       (Array.isArray(data?.availableSlots) && data.availableSlots) ||
       (Array.isArray(data?.available_slots) && data.available_slots) ||
       (Array.isArray(data?.slots) && data.slots) ||
       (Array.isArray(data) && data) ||
       [];
-
     const bookings: BookingAvailabilitySlot[] =
       (Array.isArray(data?.bookings) && data.bookings) ||
       (Array.isArray(data?.previousBookings) && data.previousBookings) ||
       (Array.isArray(data?.previous_bookings) && data.previous_bookings) ||
       [];
-
     return { availableSlots, bookings, raw: data };
   } catch (error: any) {
     if (error.response?.status === 404) {
       return { availableSlots: [], bookings: [], raw: null };
     }
-
     throw new Error(
       error.response?.data?.error ||
         error.response?.data?.message ||
@@ -238,7 +206,6 @@ export const fetchBookingAvailability = async (
     );
   }
 };
-
 /**
  * Fetch all booked/occupied slots for a user on a specific date
  * Despite the function name, this returns BOOKED/OCCUPIED slots (times when user is busy)
@@ -251,7 +218,6 @@ export const fetchUnavailableSlots = async (
 ): Promise<UnavailableSlotsResponse> => {
   try {
     const tzOffsetMinutes = -new Date().getTimezoneOffset();
-    
     const response = await api.get('/api/deals-pipeline/availability', {
       params: {
         counsellorId: userId,
@@ -259,14 +225,11 @@ export const fetchUnavailableSlots = async (
         tzOffset: tzOffsetMinutes,
       }
     });
-
     return typeof response.data === 'object' ? response.data : {};
-    
   } catch (error: any) {
     if (error.response?.status === 404) {
       return {};
     }
-    
     throw new Error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -275,7 +238,6 @@ export const fetchUnavailableSlots = async (
     );
   }
 };
-
 /**
  * Fetch available slots and existing bookings for a counsellor on a date.
  * Uses GET /api/deals-pipeline/availability (legacy/compat endpoint).
@@ -295,11 +257,9 @@ export const fetchAvailabilitySlots = async (params: {
     // Use business hours if provided, otherwise use full day
     const startTime = params.businessHoursStart || '00:00';
     const endTime = params.businessHoursEnd || '23:59';
-    
     // Convert single date to dayStart/dayEnd range for backend
     const dayStart = `${params.date}T${startTime}:00Z`;
     const dayEnd = `${params.date}T${endTime}:59Z`;
-    
     const response = await api.get(`${BOOKINGS_PATH}/availability`, {
       params: {
         userId: params.userId,
@@ -309,9 +269,7 @@ export const fetchAvailabilitySlots = async (params: {
         timezone: params.timezone,
       },
     });
-
     const data = response.data;
-
     const availableSlots: BookingAvailabilitySlot[] =
       (Array.isArray(data?.availableSlots) && data.availableSlots) ||
       (Array.isArray(data?.available_slots) && data.available_slots) ||
@@ -319,7 +277,6 @@ export const fetchAvailabilitySlots = async (params: {
       (Array.isArray(data?.timeSlots) && data.timeSlots) ||
       (Array.isArray(data) && data) ||
       [];
-
     const bookings: BookingAvailabilitySlot[] =
       (Array.isArray(data?.bookings) && data.bookings) ||
       (Array.isArray(data?.bookedSlots) && data.bookedSlots) ||
@@ -327,13 +284,11 @@ export const fetchAvailabilitySlots = async (params: {
       (Array.isArray(data?.previousBookings) && data.previousBookings) ||
       (Array.isArray(data?.previous_bookings) && data.previous_bookings) ||
       [];
-
     return { availableSlots, bookings, raw: data };
   } catch (error: any) {
     if (error.response?.status === 404) {
       return { availableSlots: [], bookings: [], raw: null };
     }
-
     throw new Error(
       error.response?.data?.error ||
         error.response?.data?.message ||
@@ -342,7 +297,6 @@ export const fetchAvailabilitySlots = async (params: {
     );
   }
 };
-
 /**
  * Book a slot for a lead with a user
  */
@@ -351,7 +305,6 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
     const booking_time = bookingData.startTime;
     const booking_date = bookingData.date;
     const scheduled_at = `${booking_date}T${booking_time}:00Z`;
-
     // New API expects snake_case keys (per provided payload).
     const payload: Record<string, any> = {
       tenant_id: bookingData.tenantId,
@@ -368,10 +321,8 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
       created_by: bookingData.createdBy,
       timezone: bookingData.timezone || 'UTC',
     };
-
     // Remove undefined keys to avoid backend validation issues.
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
-
     let response;
     try {
       response = await api.post(BOOKINGS_PATH, payload);
@@ -390,16 +341,13 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
         throw e;
       }
     }
-    
     return response.data?.data || response.data?.booking || response.data;
-    
   } catch (error: any) {
     logger.error('Failed to book slot', error);
     logger.error('Booking error details', { 
       status: error.response?.status,
       errorData: error.response?.data 
     });
-    
     const errorMessage = 
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -407,11 +355,9 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
       error.response?.data?.details ||
       error.message ||
       'Failed to book slot. Please try again.';
-    
     throw new Error(errorMessage);
   }
 };
-
 /**
  * Cancel a booking
  */
@@ -430,7 +376,6 @@ export const cancelBooking = async (bookingId: string | number): Promise<void> =
     if (error.response?.status === 404) {
       return;
     }
-    
     throw new Error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -439,7 +384,6 @@ export const cancelBooking = async (bookingId: string | number): Promise<void> =
     );
   }
 };
-
 /**
  * Fetch users list
  */
@@ -448,11 +392,9 @@ export interface User {
   name: string;
   email: string;
 }
-
 export const fetchUsers = async (): Promise<User[]> => {
   try {
     const response = await api.get('/api/deals-pipeline/counsellors');
-    
     const users = Array.isArray(response.data)
       ? response.data
       : Array.isArray(response.data?.counsellors)
@@ -460,18 +402,15 @@ export const fetchUsers = async (): Promise<User[]> => {
         : Array.isArray(response.data?.data)
           ? response.data.data
           : [];
-    
     return users.map((user: any) => ({
       id: user.id || user._id,
       name: user.name || user.full_name || '',
       email: user.email || ''
     }));
-    
   } catch (error: any) {
     if (error.response?.status === 404) {
       return [];
     }
-    
     throw new Error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -479,4 +418,4 @@ export const fetchUsers = async (): Promise<User[]> => {
       'Failed to fetch users'
     );
   }
-};
+};

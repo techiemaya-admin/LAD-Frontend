@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
 interface BootstrapState {
   loading: boolean;
   finished: boolean;
@@ -11,14 +10,12 @@ interface BootstrapState {
     timestamp: number;
   } | null;
 }
-
 const initialState: BootstrapState = {
   loading: false,
   finished: false,
   error: null,
   snackbar: null,
 };
-
 const bootstrapSlice = createSlice({
   name: 'bootstrap',
   initialState,
@@ -50,7 +47,6 @@ const bootstrapSlice = createSlice({
     },
   },
 });
-
 export const {
   setBootstrapLoading,
   setBootstrapFinished,
@@ -58,6 +54,4 @@ export const {
   showSnackbar,
   hideSnackbar,
 } = bootstrapSlice.actions;
-
-export default bootstrapSlice.reducer;
-
+export default bootstrapSlice.reducer;

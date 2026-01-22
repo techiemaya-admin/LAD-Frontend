@@ -8,25 +8,20 @@ import ContentGate from "@/components/clients/content-gate";
 import Providers from "./providers";
 // Import VAPI error suppression (temporarily disable VAPI errors)
 import "@/utils/suppressVAPIErrors";
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
   title: "LAD",
   description: "LAD - AI-Powered Sales Platform",
 };
-
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -58,7 +53,6 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-
       <body className={`antialiased`}>
         <Providers>
           <AppToasterProvider>
@@ -74,5 +68,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
-
+}

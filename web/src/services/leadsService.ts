@@ -2,44 +2,36 @@ import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { logger } from '../lib/logger';
 import { Lead } from '../features/deals-pipeline/types';
-
 // Cache for performance
 interface LeadsCache {
   leads: Lead[] | null;
   lastFetch: number | null;
   cacheDuration: number;
 }
-
 let cache: LeadsCache = {
   leads: null,
   lastFetch: null,
   cacheDuration: 5 * 60 * 1000 // 5 minutes
 };
-
 interface LeadFilters {
   [key: string]: string | number | null | undefined;
 }
-
 interface TagData {
   name: string;
   [key: string]: unknown;
 }
-
 interface NoteData {
   content: string;
   [key: string]: unknown;
 }
-
 interface CommentData {
   content: string;
   [key: string]: unknown;
 }
-
 interface AttachmentData {
   file: File;
   [key: string]: unknown;
 }
-
 const buildDealsPipelineLeadSubresourceUrl = (leadId: string | number, subPath: string) => {
   // Preferred (matches backend + Postman): /api/deals-pipeline/leads/:id/...
   const preferred = getApiUrl(`/api/deals-pipeline/leads/${leadId}/${subPath}`);
@@ -47,7 +39,6 @@ const buildDealsPipelineLeadSubresourceUrl = (leadId: string | number, subPath: 
   const legacy = getApiUrl(`/api/deals-pipeline/${leadId}/${subPath}`);
   return { preferred, legacy };
 };
-
 const fetchDealsPipelineLeadSubresource = async (
   leadId: string | number,
   subPath: string,
@@ -58,9 +49,7 @@ const fetchDealsPipelineLeadSubresource = async (
   if (response.status !== 404) return response;
   return fetch(legacy, init);
 };
-
 const getAuthToken = () => safeStorage.getItem('auth_token') || safeStorage.getItem('token') || '';
-
 const leadsService = {
   // Get all leads with optional filters
   async getAllLeads(filters: LeadFilters = {}): Promise<Lead[]> {
@@ -72,10 +61,8 @@ const leadsService = {
           params.append(key, String(value));
         }
       });
-      
       const queryString = params.toString();
       const url = queryString ? getApiUrl(`/api/deals-pipeline/leads?${queryString}`) : getApiUrl('/api/deals-pipeline/leads');
-      
       const response = await fetch(url, defaultFetchOptions());
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -91,7 +78,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get a single lead by ID
   async getLeadById(id: string | number): Promise<Lead> {
     try {
@@ -103,7 +89,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Create a new lead
   async createLead(leadData: Partial<Lead>): Promise<Lead> {
     try {
@@ -120,7 +105,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Update an existing lead
   async updateLead(id: string | number, leadData: Partial<Lead>): Promise<Lead> {
     try {
@@ -137,7 +121,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Delete a lead
   async deleteLead(id: string | number): Promise<void> {
     try {
@@ -153,7 +136,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Move lead to different stage
   async moveLeadToStage(leadId: string | number, stageKey: string): Promise<Lead> {
     try {
@@ -170,7 +152,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get leads by stage
   async getLeadsByStage(stageId: string | number): Promise<Lead[]> {
     try {
@@ -182,7 +163,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get lead tags
   async getLeadTags(leadId: string | number): Promise<unknown[]> {
     try {
@@ -194,7 +174,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add tag to lead
   async addTagToLead(leadId: string | number, tagData: TagData): Promise<unknown> {
     try {
@@ -210,7 +189,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get lead notes
   async getLeadNotes(leadId: string | number): Promise<unknown[]> {
     try {
@@ -222,7 +200,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add note to lead
   async addNoteToLead(leadId: string | number, noteData: NoteData): Promise<unknown> {
     try {
@@ -238,7 +215,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get lead comments
   async getLeadComments(leadId: string | number): Promise<unknown[]> {
     try {
@@ -250,7 +226,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add comment to lead
   async addCommentToLead(leadId: string | number, commentData: CommentData): Promise<unknown> {
     try {
@@ -266,7 +241,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get lead attachments
   async getLeadAttachments(leadId: string | number): Promise<unknown[]> {
     try {
@@ -278,13 +252,11 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add attachment to lead
   async addAttachmentToLead(leadId: string | number, attachmentData: AttachmentData): Promise<unknown> {
     try {
       const formData = new FormData();
       formData.append('file', attachmentData.file);
-
       const response = await fetchDealsPipelineLeadSubresource(leadId, 'attachments', {
         method: 'POST',
         headers: {
@@ -299,7 +271,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add lead note
   async addLeadNote(leadId: string | number, content: string): Promise<unknown> {
     try {
@@ -315,7 +286,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Delete note
   async deleteLeadNote(leadId: string | number, noteId: string | number): Promise<void> {
     try {
@@ -330,7 +300,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Update note
   async updateLeadNote(leadId: string | number, noteId: string | number, content: string): Promise<unknown> {
     try {
@@ -346,7 +315,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Add lead comment
   async addLeadComment(leadId: string | number, content: string): Promise<unknown> {
     try {
@@ -362,7 +330,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Delete comment
   async deleteLeadComment(leadId: string | number, commentId: string | number): Promise<void> {
     try {
@@ -377,7 +344,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Update comment
   async updateLeadComment(leadId: string | number, commentId: string | number, content: string): Promise<unknown> {
     try {
@@ -393,13 +359,11 @@ const leadsService = {
       throw error;
     }
   },
-
   // Upload attachment to lead
   async uploadLeadAttachment(leadId: string | number, file: File): Promise<unknown> {
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const { preferred, legacy } = buildDealsPipelineLeadSubresourceUrl(leadId, 'attachments');
       const init: RequestInit = {
         method: 'POST',
@@ -408,12 +372,10 @@ const leadsService = {
         },
         body: formData
       };
-
       let response = await fetch(preferred, init);
       if (response.status === 404) {
         response = await fetch(legacy, init);
       }
-      
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -421,7 +383,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Delete attachment
   async deleteLeadAttachment(leadId: string | number, attachmentId: string | number): Promise<void> {
     try {
@@ -430,7 +391,6 @@ const leadsService = {
         ...defaultFetchOptions(),
         method: 'DELETE'
       };
-
       let response = await fetch(preferred, init);
       if (response.status === 404) {
         response = await fetch(legacy, init);
@@ -442,7 +402,6 @@ const leadsService = {
       throw error;
     }
   },
-
   // Get leads with conversation data for assignment
   async getLeadsWithConversations(): Promise<Lead[]> {
     try {
@@ -469,7 +428,6 @@ const leadsService = {
       return this.getAllLeads();
     }
   },
-
   // Assign leads to a user (legacy function for backward compatibility)
   async assignLeadsToUser(userId: string, leadIds: (string | number)[]): Promise<unknown> {
     try {
@@ -485,18 +443,15 @@ const leadsService = {
       throw error;
     }
   },
-
   // Cache management
   clearCache(): void {
     cache.leads = null;
     cache.lastFetch = null;
   },
-
   // Check if cache is valid
   isCacheValid(): boolean {
     return cache.leads !== null && cache.lastFetch !== null && 
            (Date.now() - cache.lastFetch) < cache.cacheDuration;
   }
 };
-
-export default leadsService;
+export default leadsService;

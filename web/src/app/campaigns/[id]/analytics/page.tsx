@@ -1,5 +1,4 @@
 ﻿'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -17,7 +16,6 @@ import { useCampaignStatsLive } from '@sdk/features/campaigns/hooks/useCampaignS
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/features/campaigns/components/LiveActivityTable';
-
 const platformConfig = {
   linkedin: {
     name: 'LinkedIn',
@@ -44,29 +42,24 @@ const platformConfig = {
     gradient: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
   },
 };
-
 export default function CampaignAnalyticsPage() {
   const params = useParams();
   const router = useRouter();
   const campaignId = params.id as string;
   const { push } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
   const { analytics, loading, error } = useCampaignAnalytics(campaignId);
-  
   // Real-time stats
   const { stats: liveStats, isConnected, error: statsError } = useCampaignStatsLive({ 
     campaignId,
     enabled: true 
   });
-
   useEffect(() => {
     if (error) {
       push({ variant: 'error', title: 'Error', description: error || 'Failed to load analytics' });
       router.push('/campaigns');
     }
   }, [error, push, router]);
-
   if (loading) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -77,7 +70,6 @@ export default function CampaignAnalyticsPage() {
       </Box>
     );
   }
-
   if (!analytics || !analytics.campaign) {
     return (
       <Box sx={{ p: 3, bgcolor: '#0F172A', minHeight: '100vh' }}>
@@ -88,13 +80,23 @@ export default function CampaignAnalyticsPage() {
       </Box>
     );
   }
-
   const stepTypes = analytics?.step_analytics?.map((s: any) => s.type?.toLowerCase()) || [];
   const hasLinkedIn = stepTypes.some((t: string) => t?.includes('linkedin') || t?.includes('connection'));
   const hasEmail = stepTypes.some((t: string) => t?.includes('email'));
   const hasWhatsApp = stepTypes.some((t: string) => t?.includes('whatsapp'));
   const hasVoice = stepTypes.some((t: string) => t?.includes('voice') || t?.includes('call'));
-
+  // Dynamic label for sent metric based on primary outreach type
+  const sentLabel = hasLinkedIn ? 'Connections Sent' : hasEmail ? 'Emails Sent' : hasWhatsApp ? 'WhatsApp Sent' : hasVoice ? 'Calls Made' : 'Messages Sent';
+  // Calculate the primary sent count based on campaign type
+  const primarySentCount = hasLinkedIn 
+    ? (liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.platform_metrics?.linkedin?.sent ?? 0)
+    : hasEmail 
+    ? (liveStats?.platform_metrics?.email?.sent ?? analytics?.platform_metrics?.email?.sent ?? 0)
+    : hasWhatsApp
+    ? (liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.platform_metrics?.whatsapp?.sent ?? 0)
+    : hasVoice
+    ? (liveStats?.platform_metrics?.voice?.sent ?? analytics?.platform_metrics?.voice?.sent ?? 0)
+    : (liveStats?.sent_count ?? analytics.overview.sent);
   const platformAnalytics = [
     hasLinkedIn && { 
       platform: 'linkedin', 
@@ -129,7 +131,6 @@ export default function CampaignAnalyticsPage() {
       rate: liveStats?.platform_metrics?.voice?.sent ? ((liveStats.platform_metrics.voice.connected / liveStats.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
     },
   ].filter(Boolean);
-
   // Chart data for AnalyticsCharts
   const extendedAnalytics = analytics as any;
   const leadsOverTime = extendedAnalytics?.charts?.leads_over_time?.length
@@ -141,21 +142,31 @@ export default function CampaignAnalyticsPage() {
   const channelBreakdownRaw = extendedAnalytics?.charts?.channel_breakdown?.length
     ? extendedAnalytics.charts.channel_breakdown
     : [
-        { name: 'LinkedIn', value: analytics?.metrics?.connection_requests_sent ?? 0 },
-        { name: 'Email', value: analytics?.metrics?.emails_sent ?? 0 },
-        { name: 'Voice', value: analytics?.metrics?.voice_calls_made ?? 0 },
+        { name: 'LinkedIn', value: liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0 },
+        { name: 'Email', value: liveStats?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0 },
+        { name: 'Voice', value: liveStats?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0 },
       ];
   const channelBreakdownFiltered = channelBreakdownRaw.filter((c: any) => c.value > 0);
   // Ensure at least one item for the pie chart
   const channelBreakdown = channelBreakdownFiltered.length > 0 ? channelBreakdownFiltered : [{ name: 'No Data', value: 1 }];
+  // Dynamic funnel stage label based on campaign type
+  const funnelStageLabel = hasLinkedIn ? 'Connected' : hasEmail ? 'Delivered' : hasWhatsApp ? 'Delivered' : hasVoice ? 'Answered' : 'Messaged';
+  const funnelStageCount = hasLinkedIn 
+    ? (liveStats?.connected_count ?? analytics?.overview?.connected ?? 0)
+    : hasEmail
+    ? (liveStats?.delivered_count ?? analytics?.overview?.delivered ?? 0)
+    : hasWhatsApp
+    ? (liveStats?.delivered_count ?? analytics?.overview?.delivered ?? 0)
+    : hasVoice
+    ? (liveStats?.connected_count ?? analytics?.overview?.connected ?? 0)
+    : (liveStats?.sent_count ?? analytics?.metrics?.linkedin_messages_sent ?? 0);
   const funnel = extendedAnalytics?.charts?.funnel?.length
     ? extendedAnalytics.charts.funnel
     : [
-        { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
-        { stage: 'Messaged', count: analytics?.metrics?.linkedin_messages_sent ?? 0 },
-        { stage: 'Replied', count: analytics?.metrics?.linkedin_messages_replied ?? 0 },
+        { stage: 'Leads', count: liveStats?.leads_count ?? analytics?.overview?.total_leads ?? 0 },
+        { stage: funnelStageLabel, count: funnelStageCount },
+        { stage: 'Replied', count: liveStats?.replied_count ?? analytics?.overview?.replied ?? 0 },
       ];
-
   // Theme colors
   const theme = {
     bg: isDarkMode ? '#1644ad' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
@@ -168,14 +179,12 @@ export default function CampaignAnalyticsPage() {
     statBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
     progressBg: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
   };
-
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto', transition: 'all 0.3s ease', background: isDarkMode ? '#0F172A' : '#F8F9FE' }}>
       {/* Hero Header */}
       <Box sx={{ background: 'white', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #E2E8F0' }}>
         <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
         <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
-        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -204,7 +213,6 @@ export default function CampaignAnalyticsPage() {
           </Box>
         </Box>
       </Box>
-
       {/* Quick Stats Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -218,20 +226,20 @@ export default function CampaignAnalyticsPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 3, position: 'relative', overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
             <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', width: 40, height: 40 }}><Send sx={{ color: '#10B981' }} /></Avatar></Box>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Messages Sent</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.sent_count ?? analytics.overview.sent}</Typography>
+            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>{sentLabel}</Typography>
+            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{primarySentCount}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
               {hasLinkedIn && (
-                <Chip icon={<LinkedInIcon sx={{ fontSize: 12, color: '#0A66C2 !important' }} />} label={liveStats?.platform_metrics?.linkedin?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2', '& .MuiChip-label': { px: 0.75 } }} />
+                <Chip icon={<LinkedInIcon sx={{ fontSize: 12, color: '#0A66C2 !important' }} />} label={liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.platform_metrics?.linkedin?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2', '& .MuiChip-label': { px: 0.75 } }} />
               )}
               {hasEmail && (
-                <Chip icon={<Email sx={{ fontSize: 12, color: '#F59E0B !important' }} />} label={liveStats?.platform_metrics?.email?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', '& .MuiChip-label': { px: 0.75 } }} />
+                <Chip icon={<Email sx={{ fontSize: 12, color: '#F59E0B !important' }} />} label={liveStats?.platform_metrics?.email?.sent ?? analytics?.platform_metrics?.email?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', '& .MuiChip-label': { px: 0.75 } }} />
               )}
               {hasWhatsApp && (
-                <Chip icon={<WhatsApp sx={{ fontSize: 12, color: '#25D366 !important' }} />} label={liveStats?.platform_metrics?.whatsapp?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(37, 211, 102, 0.1)', color: '#25D366', '& .MuiChip-label': { px: 0.75 } }} />
+                <Chip icon={<WhatsApp sx={{ fontSize: 12, color: '#25D366 !important' }} />} label={liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.platform_metrics?.whatsapp?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(37, 211, 102, 0.1)', color: '#25D366', '& .MuiChip-label': { px: 0.75 } }} />
               )}
               {hasVoice && (
-                <Chip icon={<Phone sx={{ fontSize: 12, color: '#8B5CF6 !important' }} />} label={liveStats?.platform_metrics?.voice?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', '& .MuiChip-label': { px: 0.75 } }} />
+                <Chip icon={<Phone sx={{ fontSize: 12, color: '#8B5CF6 !important' }} />} label={liveStats?.platform_metrics?.voice?.sent ?? analytics?.platform_metrics?.voice?.sent ?? 0} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', '& .MuiChip-label': { px: 0.75 } }} />
               )}
               {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Bolt sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>Outreach</Typography></Box>}
             </Box>
@@ -282,7 +290,6 @@ export default function CampaignAnalyticsPage() {
           </Card>
         </Grid>
       </Grid>
-
       {/* Analytics Charts Section */}
       <Box sx={{ mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -306,12 +313,10 @@ export default function CampaignAnalyticsPage() {
           <AnalyticsCharts data={{ leadsOverTime, channelBreakdown, funnel }} />
         </Box>
       </Box>
-
       {/* Live Activity Feed */}
       <Box sx={{ mb: 4 }}>
         <LiveActivityTable campaignId={campaignId} maxHeight={500} pageSize={50} />
       </Box>
-
       {/* Channel Performance Cards */}
       {platformAnalytics.length > 0 && (
         <Box sx={{ mb: 4 }}>
@@ -323,7 +328,6 @@ export default function CampaignAnalyticsPage() {
             </Box>
             <Chip icon={<AutoGraph sx={{ fontSize: 16, color: '#10B981 !important' }} />} label="Live" size="small" sx={{ ml: 'auto', bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981', fontWeight: 600, animation: 'pulse 2s infinite', '@keyframes pulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.7 } } }} />
           </Box>
-          
           <Grid container spacing={3}>
             {platformAnalytics.map((item: any) => {
               const config = platformConfig[item.platform as keyof typeof platformConfig];
@@ -383,7 +387,6 @@ export default function CampaignAnalyticsPage() {
           </Grid>
         </Box>
       )}
-
       {/* Performance Metrics Section */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -414,7 +417,6 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, height: '100%', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
             <CardContent sx={{ p: 3 }}>
@@ -443,16 +445,15 @@ export default function CampaignAnalyticsPage() {
           </Card>
         </Grid>
       </Grid>
-
-      {/* No Steps Message */}
-      {(!analytics.step_analytics || analytics.step_analytics.length === 0) && platformAnalytics.length === 0 && (
+      {/* No Steps Message - Commented out for testing */}
+      {/* {(!analytics.step_analytics || analytics.step_analytics.length === 0) && platformAnalytics.length === 0 && (
         <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 6, textAlign: 'center', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
           <Avatar sx={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', width: 80, height: 80, mx: 'auto', mb: 3 }}><Campaign sx={{ fontSize: 40 }} /></Avatar>
           <Typography variant="h5" sx={{ color: theme.textPrimary, fontWeight: 700, mb: 1 }}>No Campaign Steps Yet</Typography>
           <Typography sx={{ color: theme.textSecondary, mb: 3 }}>Add steps to your campaign to start seeing analytics data here</Typography>
           <Button variant="contained" onClick={() => router.push(`/campaigns/${campaignId}`)} sx={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', fontWeight: 600 }}>Configure Campaign</Button>
         </Card>
-      )}
+      )} */}
     </Box>
   );
 }

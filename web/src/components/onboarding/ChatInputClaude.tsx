@@ -1,17 +1,14 @@
 'use client';
-
 import React, { useState, useEffect, KeyboardEvent, useRef } from 'react';
 import { Send, Paperclip, Settings, Clock, Library } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
-
 interface ChatInputClaudeProps {
   onSend: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
   onShowWorkflowLibrary?: () => void;
 }
-
 export default function ChatInputClaude({
   onSend,
   disabled = false,
@@ -21,12 +18,10 @@ export default function ChatInputClaude({
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
   // Debug: Log when component renders
   useEffect(() => {
     logger.debug('Component rendered', { disabled, placeholder, inputLength: input.length });
   }, [disabled, placeholder, input.length]);
-
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -34,16 +29,13 @@ export default function ChatInputClaude({
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
     if (disabled) {
       logger.warn('Submit blocked - input is disabled');
       return;
     }
-    
     const trimmedInput = input.trim();
     logger.debug('handleSubmit called', { trimmedInput, disabled, canSend: trimmedInput && !disabled });
     if (trimmedInput) {
@@ -56,19 +48,16 @@ export default function ChatInputClaude({
       logger.warn('Cannot send - input is empty');
     }
   };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Allow all keys to work normally when disabled
     if (disabled) {
       return;
     }
-    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
     }
   };
-
   return (
     <form 
       onSubmit={handleSubmit} 
@@ -114,7 +103,6 @@ export default function ChatInputClaude({
             <Paperclip className="w-4 h-4" />
           </button>
         </div>
-
         {/* Text Input */}
         <textarea
           ref={textareaRef}
@@ -148,7 +136,6 @@ export default function ChatInputClaude({
           }}
           tabIndex={disabled ? -1 : 0}
         />
-
         {/* Right Icons */}
         <div className="flex items-center gap-1 mb-1">
           <button
@@ -182,5 +169,4 @@ export default function ChatInputClaude({
       </div>
     </form>
   );
-}
-
+}

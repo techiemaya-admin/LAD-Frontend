@@ -1,11 +1,8 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
-
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, children, ...props }, ref) => {
     return (
@@ -23,6 +20,4 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   }
 );
 Select.displayName = 'Select';
-
-export { Select };
-
+export { Select };

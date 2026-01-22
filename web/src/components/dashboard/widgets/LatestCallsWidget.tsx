@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { cn } from '@/lib/utils';
-
 interface CallLog {
   id: string;
   leadName: string;
@@ -13,12 +12,10 @@ interface CallLog {
   duration: string;
   date: string;
 }
-
 interface LatestCallsWidgetProps {
   id: string;
   calls: CallLog[];
 }
-
 const statusStyles: Record<string, string> = {
   ended: 'bg-green-100 text-green-700 border-green-200',
   completed: 'bg-green-100 text-green-700 border-green-200',
@@ -27,7 +24,6 @@ const statusStyles: Record<string, string> = {
   in_queue: 'bg-amber-100 text-amber-700 border-amber-200',
   ringing: 'bg-blue-100 text-blue-700 border-blue-200',
 };
-
 export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
   id,
   calls,
@@ -35,12 +31,10 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
   const totalPages = Math.ceil(calls.length / ITEMS_PER_PAGE);
-
   const visibleCalls = calls.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-
   return (
     <WidgetWrapper id={id} title="Latest Calls">
       <div className="space-y-3">
@@ -83,7 +77,6 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
                 </div>
               </div>
             ))}
-
             {calls.length > ITEMS_PER_PAGE && (
               <div className="flex items-center justify-between pt-2">
                 <span className="text-xs text-muted-foreground">
@@ -117,4 +110,4 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};

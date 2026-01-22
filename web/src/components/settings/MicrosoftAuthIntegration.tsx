@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,15 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { apiPost } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { safeStorage } from '@/utils/storage';
-
 export const MicrosoftAuthIntegration: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-
   useEffect(() => {
     checkMicrosoftConnection();
-    
     // Check if we're returning from OAuth flow
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('microsoft') === 'connected') {
@@ -23,14 +19,12 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       handleOAuthCallback();
     }
   }, []);
-
   const checkMicrosoftConnection = async () => {
     try {
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject({ timeout: true }), 15000) // 15 seconds timeout
       );
-      
       // Check if user has Microsoft Calendar connected
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const mePromise = fetch('/api/auth/me', {
@@ -40,19 +34,14 @@ export const MicrosoftAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
       const meRes = await Promise.race([mePromise, timeoutPromise]) as Response;
-
       if (meRes.ok) {
         const meData = await meRes.json();
         const userId = meData?.user?.id || meData?.id;
-
         if (userId) {
           // Check calendar connection status from our database with timeout
           const statusPromise = apiPost<any>('/api/social-integration/calendar/microsoft/status', { user_id: userId });
-          
           const statusData = await Promise.race([statusPromise, timeoutPromise]);
-          
           if (statusData.connected && statusData.email) {
             setIsConnected(true);
             setUserEmail(statusData.email);
@@ -72,7 +61,6 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       setUserEmail(null);
     }
   };
-
   const handleOAuthCallback = async () => {
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
@@ -83,31 +71,25 @@ export const MicrosoftAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
       const meData = await meRes.json();
       const userId = meData?.user?.id || meData?.id;
-
       if (userId) {
         // Check if connection was successful
         const statusData = await apiPost<any>('/api/social-integration/calendar/microsoft/status', { user_id: userId });
-          
         if (statusData.connected && statusData.email) {
           // Connection is already recorded in database from callback
           setIsConnected(true);
           setUserEmail(statusData.email);
         }
       }
-
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
     } catch (error) {
       console.error('Error handling OAuth callback:', error);
     }
   };
-
   const connectMicrosoft = async () => {
     setIsLoading(true);
-    
     try {
       // Get the logged-in user's id
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
@@ -118,35 +100,27 @@ export const MicrosoftAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
       if (!meRes.ok) {
         throw new Error('Failed to fetch user data');
       }
-
       const meData = await meRes.json();
       const userId = meData?.user?.id || meData?.id;
-
       if (!userId) {
         alert('User ID not available');
         setIsLoading(false);
         return;
       }
-
       // Start Microsoft Calendar OAuth flow - use backend proxy to avoid CORS
       const result = await apiPost<any>('/api/social-integration/calendar/microsoft/start', { 
         user_id: userId, 
         frontend_id: 'settings' 
       });
-      
-      console.log('[Microsoft Integration] Start response:', result);
-      
       if (!result?.url) {
         console.error('[Microsoft Integration] No OAuth URL in response:', result);
         alert('Failed to get Microsoft authorization URL. Please try again.');
         setIsLoading(false);
         return;
       }
-      
       // Redirect to Microsoft OAuth URL
       window.location.href = result.url;
     } catch (error) {
@@ -156,10 +130,8 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const disconnectMicrosoft = async () => {
     setIsLoading(true);
-    
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const meRes = await fetch('/api/auth/me', {
@@ -169,23 +141,18 @@ export const MicrosoftAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
       if (!meRes.ok) {
         throw new Error('Failed to fetch user data');
       }
-
       const meData = await meRes.json();
       const userId = meData?.user?.id || meData?.id;
-
       if (!userId) {
         alert('User ID not available');
         setIsLoading(false);
         return;
       }
-
       // Disconnect Microsoft Calendar
       await apiPost('/api/social-integration/calendar/microsoft/disconnect', { user_id: userId });
-      
       setIsConnected(false);
       setUserEmail(null);
     } catch (error) {
@@ -195,7 +162,6 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   return (
     <Card>
       <CardHeader>
@@ -230,7 +196,6 @@ export const MicrosoftAuthIntegration: React.FC = () => {
             <AlertCircle className="h-5 w-5 text-gray-400" />
           )}
         </div>
-
         {isConnected ? (
           <Button
             variant="outline"
@@ -266,11 +231,10 @@ export const MicrosoftAuthIntegration: React.FC = () => {
             )}
           </Button>
         )}
-
         <p className="text-xs text-gray-500">
           <strong>Note:</strong> We only access the data you explicitly grant permission for. You can revoke access at any time.
         </p>
       </CardContent>
     </Card>
   );
-};
+};

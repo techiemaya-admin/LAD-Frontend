@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Box, Typography, IconButton } from '@mui/material';
@@ -17,7 +16,6 @@ import {
 } from '@mui/icons-material';
 import { useCampaignStore } from '../../store/campaignStore';
 import { StepType } from '@/types/campaign';
-
 const getNodeColor = (type: StepType) => {
   if (type === 'start') return { bg: '#10B981', border: '#059669' };
   if (type === 'end') return { bg: '#EF4444', border: '#DC2626' };
@@ -28,7 +26,6 @@ const getNodeColor = (type: StepType) => {
   if (type.includes('voice')) return { bg: '#8B5CF6', border: '#7C3AED' };
   return { bg: '#7c3aed', border: '#6D28D9' };
 };
-
 const getNodeIcon = (type: StepType) => {
   if (type === 'start') return <PlayArrow sx={{ fontSize: 18 }} />;
   if (type === 'end') return <Stop sx={{ fontSize: 18 }} />;
@@ -41,23 +38,18 @@ const getNodeIcon = (type: StepType) => {
   if (type === 'condition') return <CheckCircle sx={{ fontSize: 18 }} />;
   return null;
 };
-
 export default function CustomNode({ data, id, selected, type: nodeType }: NodeProps) {
   const { deleteStep, selectedNodeId } = useCampaignStore();
   // Get step type from React Flow node type or data
   const stepType: StepType = (nodeType as StepType) || (data?.type as StepType) || 'linkedin_visit';
   const colors = getNodeColor(stepType);
   const isSelected = selectedNodeId === id;
-  
-
-
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this step?')) {
       deleteStep(id);
     }
   };
-
   const getPreviewText = () => {
     if (data?.message) return data.message.substring(0, 40) + '...';
     if (data?.subject) return data.subject;
@@ -95,7 +87,6 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
     }
     return data?.title || stepType;
   };
-
   return (
     <Box
       sx={{
@@ -109,7 +100,6 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
       }}
     >
       <Handle type="target" position={Position.Top} style={{ background: colors.bg }} />
-
       <Box
         sx={{
           bgcolor: colors.bg,
@@ -154,7 +144,6 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
           </IconButton>
         )}
       </Box>
-
       <Box sx={{ p: stepType === 'delay' || stepType === 'condition' ? 2 : 1.5 }}>
         {stepType === 'condition' && (
           <Box>
@@ -278,7 +267,6 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
           </Typography>
         )}
       </Box>
-
       {/* For condition nodes, add two source handles for TRUE/FALSE branches */}
       {stepType === 'condition' ? (
         <>
@@ -300,5 +288,4 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
       )}
     </Box>
   );
-}
-
+}

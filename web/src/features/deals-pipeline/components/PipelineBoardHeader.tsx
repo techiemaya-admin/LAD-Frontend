@@ -1,13 +1,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, FileText, Settings } from 'lucide-react';
-
 interface PipelineBoardHeaderProps {
   onAddStage: () => void;
   onCreateCard: () => void;
   onSettingsClick: () => void;
 }
-
 const PipelineBoardHeader: React.FC<PipelineBoardHeaderProps> = ({ onAddStage, onCreateCard, onSettingsClick }) => (
   <div
     className="flex items-center justify-between px-4 md:px-8 py-4 bg-white/70 backdrop-blur-md rounded-b-3xl mb-4 w-[88%] overflow-hidden shadow-lg"
@@ -52,6 +50,4 @@ const PipelineBoardHeader: React.FC<PipelineBoardHeaderProps> = ({ onAddStage, o
     </div>
   </div>
 );
-
-export default PipelineBoardHeader;
-
+export default PipelineBoardHeader;

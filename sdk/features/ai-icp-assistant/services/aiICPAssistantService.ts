@@ -2,13 +2,11 @@
  * AI ICP Assistant Service
  * Framework-agnostic service for AI-powered ICP definition and search guidance
  */
-
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
 }
-
 export interface ICPData {
   industry?: string;
   company_size?: string;
@@ -17,7 +15,6 @@ export interface ICPData {
   technologies?: string[];
   [key: string]: any;
 }
-
 export interface ChatResponse {
   success: boolean;
   message: string;
@@ -27,20 +24,16 @@ export interface ChatResponse {
   conversationHistory: ChatMessage[];
   suggestions?: string[];
 }
-
 export interface AIICPAssistantAPI {
   chat(message: string, conversationHistory?: ChatMessage[], searchResults?: any[]): Promise<ChatResponse>;
   reset(): Promise<{ success: boolean; message: string }>;
   getHistory(): Promise<{ success: boolean; history: ChatMessage[] }>;
 }
-
 export class AIICPAssistantService implements AIICPAssistantAPI {
   private apiClient: any;
-
   constructor(apiClient: any) {
     this.apiClient = apiClient;
   }
-
   /**
    * Send message to AI ICP Assistant and get response
    */
@@ -61,7 +54,6 @@ export class AIICPAssistantService implements AIICPAssistantAPI {
       throw error;
     }
   }
-
   /**
    * Reset conversation history
    */
@@ -74,7 +66,6 @@ export class AIICPAssistantService implements AIICPAssistantAPI {
       throw error;
     }
   }
-
   /**
    * Get conversation history
    */
@@ -88,8 +79,7 @@ export class AIICPAssistantService implements AIICPAssistantAPI {
     }
   }
 }
-
 // Factory function for creating service instance
 export function createAIICPAssistantService(apiClient: any): AIICPAssistantService {
   return new AIICPAssistantService(apiClient);
-}
+}

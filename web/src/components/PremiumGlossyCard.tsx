@@ -1,14 +1,11 @@
 'use client';
-
 import React from 'react';
 import { Box, BoxProps, styled } from '@mui/material';
-
 interface PremiumGlossyCardProps extends BoxProps {
   children: React.ReactNode;
   selected?: boolean;
   glowIntensity?: 'low' | 'medium' | 'high';
 }
-
 const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: string }>(({ selected = false, glowIntensity = 'high' }) => ({
   position: 'relative',
   background: 'linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(20, 27, 45, 0.95) 50%, rgba(10, 14, 39, 0.95) 100%)',
@@ -28,7 +25,6 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
   transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   overflow: 'hidden',
   cursor: 'pointer',
-  
   // Animated gradient border
   '&::before': {
     content: '""',
@@ -46,7 +42,6 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
     zIndex: 0,
     transition: 'opacity 0.5s ease',
   },
-  
   // Ambient glow ring
   '&::after': {
     content: '""',
@@ -59,7 +54,6 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
     zIndex: -1,
     animation: 'glow-pulse 3s ease-in-out infinite',
   },
-  
   '&:hover': {
     transform: 'translateY(-8px) scale(1.02)',
     boxShadow: `
@@ -70,17 +64,14 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
       0 0 100px rgba(124, 58, 237, 0.3)
     `,
     borderColor: 'rgba(0, 234, 255, 0.8)',
-    
     '&::before': {
       opacity: 1,
     },
-    
     '&::after': {
       opacity: 1,
       filter: 'blur(30px)',
     },
   },
-  
   '@keyframes gradient-border-flow': {
     '0%': {
       backgroundPosition: '0% 50%',
@@ -92,7 +83,6 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
       backgroundPosition: '0% 50%',
     },
   },
-  
   '@keyframes glow-pulse': {
     '0%, 100%': {
       opacity: 0.4,
@@ -104,14 +94,12 @@ const PremiumCardContainer = styled(Box)<{ selected?: boolean; glowIntensity?: s
     },
   },
 }));
-
 const PremiumCardContent = styled(Box)({
   position: 'relative',
   zIndex: 2,
   width: '100%',
   height: '100%',
 });
-
 export const PremiumGlossyCard: React.FC<PremiumGlossyCardProps> = ({ 
   children, 
   selected = false, 
@@ -125,5 +113,4 @@ export const PremiumGlossyCard: React.FC<PremiumGlossyCardProps> = ({
       </PremiumCardContent>
     </PremiumCardContainer>
   );
-};
-
+};

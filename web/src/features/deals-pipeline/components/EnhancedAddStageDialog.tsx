@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { X } from 'lucide-react';
 import { Stage } from '../store/slices/pipelineSlice';
-
 interface EnhancedAddStageDialogProps {
   open: boolean;
   onClose: () => void;
@@ -22,7 +21,6 @@ interface EnhancedAddStageDialogProps {
   setPositionType: (type: 'before' | 'after') => void;
   getPositionPreview?: () => React.ReactNode;
 }
-
 const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({ 
   open, 
   onClose, 
@@ -39,16 +37,13 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
   getPositionPreview
 }) => {
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
-
   useEffect(() => {
     if (open) {
       setLocalErrors({});
     }
   }, [open]);
-
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
     if (!newStageName.trim()) {
       errors.name = 'Stage name is required';
     } else if (newStageName.trim().length < 2) {
@@ -56,40 +51,33 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
     } else if (stages.some(s => s.label?.toLowerCase() === newStageName.trim().toLowerCase())) {
       errors.name = 'Stage name already exists';
     }
-
     setLocalErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   const handleSubmit = () => {
     if (validateForm()) {
       onAdd();
     }
   };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewStageName(e.target.value);
     if (localErrors.name) {
       setLocalErrors({ ...localErrors, name: '' });
     }
   };
-
   const handlePositionChange = (value: string) => {
     setPositionStageId(value);
     if (localErrors.position) {
       setLocalErrors({ ...localErrors, position: '' });
     }
   };
-
   const handlePositionTypeChange = (value: string) => {
     setPositionType(value as 'before' | 'after');
   };
-
   const getPositionText = (stage: Stage, type: 'before' | 'after'): string => {
     const stageName = stage.label || '';
     return type === 'before' ? `Before "${stageName}"` : `After "${stageName}"`;
   };
-
   return (
     <Dialog open={open}>
       <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
@@ -105,7 +93,6 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
             <X className="h-4 w-4" />
           </button>
         </DialogTitle>
-
         <div className="flex flex-col gap-6">
             <div className="space-y-2">
               <Label htmlFor="stage-name">Stage Name *</Label>
@@ -123,13 +110,11 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                 </p>
               )}
             </div>
-
             {stages.length > 0 && (
               <>
                 <p className="text-sm text-gray-500 -mt-4 -mb-4">
                   Choose where to place the new stage in your pipeline. If no position is selected, the stage will be added at the end.
                 </p>
-                
                 <div className="space-y-2">
                   <Label htmlFor="stage-position">Stage Position</Label>
                   <Select
@@ -154,7 +139,6 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                 </div>
               </>
             )}
-
             {positionStageId && (
               <div className="space-y-2">
                 <Label htmlFor="placement-type">Placement</Label>
@@ -177,16 +161,13 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                 </Select>
               </div>
             )}
-
             {getPositionPreview && getPositionPreview()}
-
             {error && !localErrors.name && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 {error}
               </div>
             )}
           </div>
-
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
             <Button
@@ -209,6 +190,4 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
       </Dialog>
   );
 };
-
-export default EnhancedAddStageDialog;
-
+export default EnhancedAddStageDialog;

@@ -1,7 +1,6 @@
 /**
  * ICP Onboarding Questions Types
  */
-
 export interface ICPQuestion {
   id: string;
   stepIndex: number;
@@ -21,13 +20,11 @@ export interface ICPQuestion {
   isActive: boolean;
   displayOrder?: number;
 }
-
 export interface ICPQuestionsResponse {
   success: boolean;
   questions: ICPQuestion[];
   totalSteps: number;
 }
-
 export interface ICPAnswerRequest {
   sessionId?: string;
   currentStepIndex: number;
@@ -36,7 +33,6 @@ export interface ICPAnswerRequest {
   category?: string;
   collectedAnswers?: Record<string, any>;
 }
-
 export interface ICPAnswerResponse {
   success: boolean;
   nextStepIndex: number | null;
@@ -48,18 +44,18 @@ export interface ICPAnswerResponse {
   extractedData?: Record<string, any>;
   updatedCollectedAnswers?: Record<string, any>;
   error?: string;
+  correctedAnswer?: string;
+  totalSteps?: number;
+  options?: { label: string; value: string; disabled?: boolean }[];
 }
-
 /**
  * Maya AI Assistant Types (Legacy)
  */
-
 export interface MayaMessage {
   role: 'user' | 'ai';
   content: string;
   timestamp: Date;
 }
-
 export interface MayaResponse {
   text: string;
   options?: { label: string; value: string }[] | null;
@@ -75,7 +71,6 @@ export interface MayaResponse {
   schedule?: string;
   searchResults?: any[];
 }
-
 export interface OnboardingContext {
   selectedPath: 'automation' | 'leads' | null;
   selectedPlatforms: string[];
@@ -87,7 +82,6 @@ export interface OnboardingContext {
   workflowNodes: any[];
   currentState?: 'STATE_1' | 'STATE_2' | 'STATE_3' | 'STATE_4' | 'STATE_5';
 }
-
 export interface WorkflowNode {
   id: string;
   type: string;
@@ -100,5 +94,4 @@ export interface WorkflowNode {
     condition: string | null;
     variables: string[];
   };
-}
-
+}

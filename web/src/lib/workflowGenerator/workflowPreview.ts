@@ -3,10 +3,8 @@
  * 
  * Generates workflow preview steps for UI display
  */
-
 import { WorkflowPreviewStep } from '@/store/onboardingStore';
 import { logger } from '@/lib/logger';
-
 /**
  * Generate progressive workflow preview based on current ICP answers (during onboarding)
  * This updates the workflow preview as the user answers each question
@@ -16,12 +14,9 @@ export function generateProgressiveWorkflowPreview(
   currentStepIndex: number = 0
 ): WorkflowPreviewStep[] {
   logger.debug('Generating progressive workflow from ICP answers', { icpAnswers, stepIndex: currentStepIndex });
-  
   const steps: WorkflowPreviewStep[] = [];
   let stepId = 1;
-
   // Progressive logic: Show steps based on what's been answered
-  
   // Step 1: Lead Generation (show after ANY targeting info is provided)
   // Backend uses keys: icp_industries, icp_roles, icp_location, icp_platforms
   const hasIndustries = (icpAnswers.icp_industries && String(icpAnswers.icp_industries).trim() !== '') || 
@@ -32,7 +27,6 @@ export function generateProgressiveWorkflowPreview(
                      (icpAnswers.icp_locations && String(icpAnswers.icp_locations).trim() !== '') ||
                      (icpAnswers.location && (Array.isArray(icpAnswers.location) ? icpAnswers.location.length > 0 : icpAnswers.location.trim() !== ''));
   const hasTargeting = hasIndustries || hasRoles || hasLocation;
-  
   logger.debug('Targeting check', { 
     icpAnswers, 
     icp_industries: icpAnswers.icp_industries,
@@ -43,10 +37,8 @@ export function generateProgressiveWorkflowPreview(
     hasLocation, 
     hasTargeting 
   });
-  
   if (hasTargeting) {
     const targetParts = [];
-    
     // Add roles (check both backend icp_roles and frontend roles)
     if (icpAnswers.icp_roles) {
       targetParts.push(`Roles: ${icpAnswers.icp_roles}`);
@@ -54,7 +46,6 @@ export function generateProgressiveWorkflowPreview(
       const roles = Array.isArray(icpAnswers.roles) ? icpAnswers.roles.join(', ') : icpAnswers.roles;
       targetParts.push(`Roles: ${roles}`);
     }
-    
     // Add industries (check both backend icp_industries and frontend industries)
     if (icpAnswers.icp_industries) {
       targetParts.push(`Industries: ${icpAnswers.icp_industries}`);
@@ -62,7 +53,6 @@ export function generateProgressiveWorkflowPreview(
       const industries = Array.isArray(icpAnswers.industries) ? icpAnswers.industries.join(', ') : icpAnswers.industries;
       targetParts.push(`Industries: ${industries}`);
     }
-    
     // Add location (check both backend icp_location/icp_locations and frontend location)
     if (icpAnswers.icp_location) {
       targetParts.push(`Location: ${icpAnswers.icp_location}`);
@@ -72,12 +62,9 @@ export function generateProgressiveWorkflowPreview(
       const location = Array.isArray(icpAnswers.location) ? icpAnswers.location.join(', ') : icpAnswers.location;
       targetParts.push(`Location: ${location}`);
     }
-    
     const targetDesc = targetParts.length > 0 ? targetParts.join(' | ') : 'Lead generation configured';
-    
     // Get leads per day from icpAnswers (only if explicitly set)
     const leadsPerDay = icpAnswers.leads_per_day || icpAnswers.dailyLeadVolume;
-
     const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
@@ -85,18 +72,14 @@ export function generateProgressiveWorkflowPreview(
       description: targetDesc,
       channel: undefined,
     };
-    
     // Only add leadLimit if it was explicitly provided
     if (leadsPerDay) {
       leadGenStep.leadLimit = leadsPerDay;
     }
-
     steps.push(leadGenStep);
   }
-
   // Platform steps: Check for platform selection (backend uses icp_platforms)
   const platforms = icpAnswers.icp_platforms || icpAnswers.platforms || icpAnswers.selected_platforms || [];
-  
   // Convert single string to array if needed
   let platformArray: string[] = [];
   if (typeof platforms === 'string') {
@@ -105,9 +88,7 @@ export function generateProgressiveWorkflowPreview(
   } else if (Array.isArray(platforms)) {
     platformArray = platforms.map(p => String(p).toLowerCase());
   }
-  
   logger.debug('Platforms found', { platforms, platformArray });
-  
   // Process platforms in the order they were selected
   let platformIndex = 0;
   for (const platform of platformArray) {
@@ -119,14 +100,12 @@ export function generateProgressiveWorkflowPreview(
       const delayValue = icpAnswers[delayKey] || 
                          icpAnswers.delay_between_platforms || 
                          icpAnswers.workflow_delays;
-      
       if (delayValue && delayValue.toString().trim() !== '') {
         // Parse delay value - detect if it's hours or days
         const delayStr = delayValue.toString().toLowerCase();
         const delayNum = parseInt(delayStr) || 1;
         const isHours = delayStr.includes('hour');
         const isDays = delayStr.includes('day');
-        
         steps.push({
           id: `step_${stepId++}`,
           type: 'delay',
@@ -137,10 +116,8 @@ export function generateProgressiveWorkflowPreview(
         });
       }
     }
-    
     if (platform === 'linkedin') {
       logger.debug('Adding LinkedIn steps for platform', { platforms });
-      
       // Get LinkedIn actions - check multiple possible keys
       const rawActions = icpAnswers.linkedin_actions || icpAnswers.linkedinActions || [];
       // Handle both array and string formats
@@ -154,28 +131,23 @@ export function generateProgressiveWorkflowPreview(
         linkedinActions,
         linkedinActionsLength: linkedinActions.length
       });
-      
       // Normalize actions for flexible matching
       const hasVisit = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('visit') || actionStr === 'visit_profile';
       });
-
       const hasFollow = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('follow') && !actionStr.includes('message');
       });
-
       const hasConnect = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
       });
-
       const hasMessage = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('message');
       });
-      
       // Add visit step
       if (hasVisit || linkedinActions.length > 0) {
         steps.push({
@@ -186,7 +158,6 @@ export function generateProgressiveWorkflowPreview(
           channel: 'linkedin',
         });
       }
-
       // Add follow step
       if (hasFollow) {
         steps.push({
@@ -197,7 +168,6 @@ export function generateProgressiveWorkflowPreview(
           channel: 'linkedin',
         });
       }
-
       // Add connection step
       if (hasConnect) {
         steps.push({
@@ -208,7 +178,6 @@ export function generateProgressiveWorkflowPreview(
           channel: 'linkedin',
         });
       }
-
       // Add message step
       if (hasMessage) {
         steps.push({
@@ -224,7 +193,6 @@ export function generateProgressiveWorkflowPreview(
       const whatsappActions = Array.isArray(rawWhatsappActions)
         ? rawWhatsappActions
         : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
-      
       logger.debug('WhatsApp actions from icpAnswers', { 
         rawWhatsappActions, 
         rawActionsType: typeof rawWhatsappActions,
@@ -232,13 +200,11 @@ export function generateProgressiveWorkflowPreview(
         whatsappActions,
         whatsappActionsLength: whatsappActions.length
       });
-
       // Check for broadcast action
       const hasBroadcast = whatsappActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('broadcast');
       });
-
       if (hasBroadcast) {
         steps.push({
           id: `step_${stepId++}`,
@@ -248,13 +214,11 @@ export function generateProgressiveWorkflowPreview(
           channel: 'whatsapp',
         });
       }
-
       // Check for 1:1 message
       const hasOneToOne = whatsappActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('1:1') || (actionStr.includes('message') && !actionStr.includes('broadcast'));
       });
-
       if (hasOneToOne) {
         steps.push({
           id: `step_${stepId++}`,
@@ -264,13 +228,11 @@ export function generateProgressiveWorkflowPreview(
           channel: 'whatsapp',
         });
       }
-
       // Check for follow-up
       const hasFollowUp = whatsappActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('follow');
       });
-
       if (hasFollowUp) {
         steps.push({
           id: `step_${stepId++}`,
@@ -280,13 +242,11 @@ export function generateProgressiveWorkflowPreview(
           channel: 'whatsapp',
         });
       }
-
       // Check for template message
       const hasTemplate = whatsappActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('template');
       });
-
       if (hasTemplate) {
         steps.push({
           id: `step_${stepId++}`,
@@ -296,7 +256,6 @@ export function generateProgressiveWorkflowPreview(
           channel: 'whatsapp',
         });
       }
-
       // Fallback: if no specific actions matched but whatsapp is selected
       if (!hasBroadcast && !hasOneToOne && !hasFollowUp && !hasTemplate && whatsappActions.length > 0) {
         steps.push({
@@ -312,12 +271,10 @@ export function generateProgressiveWorkflowPreview(
       const emailActions = Array.isArray(rawEmailActions)
         ? rawEmailActions
         : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
-
       const hasSendEmail = emailActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('send') && actionStr.includes('email');
       });
-
       if (hasSendEmail || emailActions.length > 0) {
         steps.push({
           id: `step_${stepId++}`,
@@ -327,12 +284,10 @@ export function generateProgressiveWorkflowPreview(
           channel: 'email',
         });
       }
-
       const hasFollowUpEmail = emailActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('follow');
       });
-
       if (hasFollowUpEmail) {
         steps.push({
           id: `step_${stepId++}`,
@@ -347,7 +302,6 @@ export function generateProgressiveWorkflowPreview(
       const voiceActions = Array.isArray(rawVoiceActions)
         ? rawVoiceActions
         : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
-
       logger.debug('Voice actions from icpAnswers', { 
         rawVoiceActions, 
         rawActionsType: typeof rawVoiceActions,
@@ -355,12 +309,10 @@ export function generateProgressiveWorkflowPreview(
         voiceActions,
         voiceActionsLength: voiceActions.length
       });
-
       const hasTriggerCall = voiceActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('trigger') || actionStr.includes('call');
       });
-
       if (hasTriggerCall || voiceActions.length > 0) {
         steps.push({
           id: `step_${stepId++}`,
@@ -370,12 +322,10 @@ export function generateProgressiveWorkflowPreview(
           channel: 'voice',
         });
       }
-
       const hasCallScript = voiceActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('script');
       });
-
       if (hasCallScript) {
         steps.push({
           id: `step_${stepId++}`,
@@ -386,25 +336,20 @@ export function generateProgressiveWorkflowPreview(
         });
       }
     }
-    
     // Increment platform index for delay logic
     platformIndex++;
   }
-
   logger.debug('Progressive workflow generated', { stepCount: steps.length, stepIndex: currentStepIndex });
   return steps;
 }
-
 /**
  * Generate workflow preview steps from mapped ICP answers
  * This creates a visual representation of the campaign workflow for the WorkflowPreviewPanel
  */
 export function generateWorkflowPreview(mappedAnswers: Record<string, any>): WorkflowPreviewStep[] {
   logger.debug('Generating workflow preview from answers', { mappedAnswers });
-  
   const steps: WorkflowPreviewStep[] = [];
   let stepId = 1;
-
   // Extract platforms and actions
   const platforms = mappedAnswers.platforms || [];
   // Convert single string to array if needed
@@ -414,13 +359,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
   } else if (Array.isArray(platforms)) {
     platformArray = platforms.map(p => String(p).toLowerCase());
   }
-  
   const hasIndustries = mappedAnswers.industries && mappedAnswers.industries.length > 0;
   const hasRoles = mappedAnswers.roles && mappedAnswers.roles.length > 0;
   const hasLocation = mappedAnswers.location;
-
   logger.debug('Platforms and targeting criteria', { platforms, platformArray, hasIndustries, hasRoles, hasLocation });
-
   // Step 1: Lead Generation (if targeting criteria provided)
   if (hasIndustries || hasRoles || hasLocation) {
     const targetDesc = [
@@ -428,10 +370,8 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       hasIndustries ? `Industries: ${mappedAnswers.industries.join(', ')}` : '',
       hasLocation ? `Location: ${mappedAnswers.location}` : '',
     ].filter(Boolean).join(' | ');
-    
     // Get leads per day from mappedAnswers (only if explicitly set)
     const leadsPerDay = mappedAnswers.leads_per_day;
-
     const leadGenStep: WorkflowPreviewStep = {
       id: `step_${stepId++}`,
       type: 'lead_generation',
@@ -439,15 +379,12 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       description: targetDesc,
       channel: undefined,
     };
-    
     // Only add leadLimit if it was explicitly provided
     if (leadsPerDay) {
       leadGenStep.leadLimit = leadsPerDay;
     }
-
     steps.push(leadGenStep);
   }
-
   // Process platforms in the order they were selected
   for (const platform of platformArray) {
     if (platform === 'linkedin') {
@@ -464,28 +401,23 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       linkedinActions,
       linkedinActionsLength: linkedinActions.length
     });
-    
     // Normalize actions for flexible matching
     const hasVisit = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('visit') || actionStr === 'visit_profile';
     });
-
     const hasFollow = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow') && !actionStr.includes('message');
     });
-
     const hasConnect = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
     });
-
     const hasMessage = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('message');
     });
-    
     // Visit profile
     if (hasVisit || linkedinActions.length > 0) {
       steps.push({
@@ -496,7 +428,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'linkedin',
       });
     }
-
     // Follow profile
     if (hasFollow) {
       steps.push({
@@ -507,7 +438,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'linkedin',
       });
     }
-
     // Send connection request
     if (hasConnect) {
       steps.push({
@@ -518,7 +448,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'linkedin',
       });
     }
-
     // Send message (after connection accepted)
     if (hasMessage) {
       steps.push({
@@ -534,7 +463,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
     const whatsappActions = Array.isArray(rawWhatsappActions)
       ? rawWhatsappActions
       : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
-    
     logger.debug('WhatsApp actions', { 
       rawWhatsappActions, 
       rawActionsType: typeof rawWhatsappActions,
@@ -542,13 +470,11 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       whatsappActions,
       whatsappActionsLength: whatsappActions.length
     });
-    
     // Check for broadcast action
     const hasBroadcast = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('broadcast');
     });
-
     if (hasBroadcast) {
       steps.push({
         id: `step_${stepId++}`,
@@ -558,13 +484,11 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'whatsapp',
       });
     }
-
     // Check for 1:1 message
     const hasOneToOne = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('1:1') || (actionStr.includes('message') && !actionStr.includes('broadcast'));
     });
-
     if (hasOneToOne) {
       steps.push({
         id: `step_${stepId++}`,
@@ -574,13 +498,11 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'whatsapp',
       });
     }
-
     // Check for follow-up
     const hasFollowUp = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow');
     });
-
     if (hasFollowUp) {
       steps.push({
         id: `step_${stepId++}`,
@@ -590,13 +512,11 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'whatsapp',
       });
     }
-
     // Check for template message
     const hasTemplate = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('template');
     });
-
     if (hasTemplate) {
       steps.push({
         id: `step_${stepId++}`,
@@ -606,7 +526,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'whatsapp',
       });
     }
-
     // Fallback: if no specific actions matched but whatsapp is selected
     if (!hasBroadcast && !hasOneToOne && !hasFollowUp && !hasTemplate && whatsappActions.length > 0) {
       steps.push({
@@ -623,12 +542,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       ? rawEmailActions
       : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
     logger.debug('Email actions', { rawEmailActions, emailActions, isArray: Array.isArray(rawEmailActions) });
-    
     const hasSendEmail = emailActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('send') && actionStr.includes('email');
     });
-
     if (hasSendEmail || emailActions.length > 0) {
       steps.push({
         id: `step_${stepId++}`,
@@ -638,12 +555,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'email',
       });
     }
-
     const hasFollowUpEmail = emailActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow');
     });
-
     if (hasFollowUpEmail) {
       steps.push({
         id: `step_${stepId++}`,
@@ -659,12 +574,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       ? rawVoiceActions
       : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
     logger.debug('Voice actions', { rawVoiceActions, voiceActions, isArray: Array.isArray(rawVoiceActions) });
-    
     const hasTriggerCall = voiceActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('trigger') || actionStr.includes('call');
     });
-
     if (hasTriggerCall || voiceActions.length > 0) {
       steps.push({
         id: `step_${stepId++}`,
@@ -674,12 +587,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'voice',
       });
     }
-
     const hasCallScript = voiceActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('script');
     });
-
     if (hasCallScript) {
       steps.push({
         id: `step_${stepId++}`,
@@ -691,7 +602,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
     }
     }
   }
-
   // Add delay if specified
   if (mappedAnswers.delays && mappedAnswers.delays !== 'No delay') {
     steps.push({
@@ -702,7 +612,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       channel: undefined,
     });
   }
-
   // Add conditions if specified
   if (mappedAnswers.conditions && mappedAnswers.conditions !== 'No conditions') {
     steps.push({
@@ -713,9 +622,6 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       channel: undefined,
     });
   }
-
   logger.debug('Generated workflow steps', { stepCount: steps.length });
   return steps;
-}
-
-
+}

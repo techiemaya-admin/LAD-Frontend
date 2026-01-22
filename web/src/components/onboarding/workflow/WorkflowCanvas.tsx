@@ -1,6 +1,5 @@
 import React from 'react';
 import { Background, Controls, BackgroundVariant, Node, Edge, useReactFlow } from 'reactflow';
-
 // Inner component that uses useReactFlow hook
 export function WorkflowCanvas({ 
   flowNodes, 
@@ -18,7 +17,6 @@ export function WorkflowCanvas({
   workflowLength: number 
 }) {
   const { fitView } = useReactFlow();
-  
   // Auto-fit view when workflow changes
   React.useEffect(() => {
     if (workflowLength > 0) {
@@ -34,7 +32,6 @@ export function WorkflowCanvas({
       return () => clearTimeout(timer);
     }
   }, [workflowLength, fitView]);
-  
   return (
     <>
       <Background 
@@ -47,4 +44,4 @@ export function WorkflowCanvas({
       <Controls showInteractive={false} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg" />
     </>
   );
-}
+}

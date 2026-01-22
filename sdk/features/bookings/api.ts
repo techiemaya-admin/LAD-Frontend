@@ -4,17 +4,13 @@
  * Core API functions for bookings and availability using centralized apiClient.
  * All HTTP calls are handled through apiClient (no direct fetch/axios).
  */
-
 import { apiClient } from '../../shared/apiClient';
 import { logger } from '@/lib/logger';
-
 const BOOKINGS_PATH = '/api/deals-pipeline/bookings';
 const LEGACY_BOOKINGS_PATH = '/api/deals-pipeline/booking';
-
 // ============================================================================
 // TYPES
 // ============================================================================
-
 export interface BookingParams {
   leadId?: string | number;
   userId?: string | number;
@@ -29,7 +25,6 @@ export interface BookingParams {
   bookingSource?: string;
   timezone?: string;
 }
-
 export interface BookingResponse {
   id: string | number;
   leadId?: string | number;
@@ -43,31 +38,26 @@ export interface BookingResponse {
   end_time?: string;
   created_at?: string;
 }
-
 export interface AvailabilityParams {
   userId: string | number;
   date: string;
   startTime?: string;
   endTime?: string;
 }
-
 export interface AvailabilityResponse {
   available: boolean;
   message?: string;
 }
-
 export interface BookingAvailabilitySlot {
   start: string;
   end: string;
   [key: string]: any;
 }
-
 export interface BookingAvailabilityResult {
   availableSlots: BookingAvailabilitySlot[];
   bookings: BookingAvailabilitySlot[];
   raw?: any;
 }
-
 export interface UnavailableSlotsResponse {
   available_slots?: Array<{
     startTime: string;
@@ -80,18 +70,15 @@ export interface UnavailableSlotsResponse {
   }>;
   [key: string]: any;
 }
-
 // ============================================================================
 // BOOKINGS
 // ============================================================================
-
 /**
  * Fetch bookings for a lead or user
  */
 export async function fetchBookings(params: BookingParams): Promise<BookingResponse[]> {
   try {
     const queryParams: Record<string, string> = {};
-    
     if (params.leadId) {
       queryParams.leadId = String(params.leadId);
       queryParams.lead_id = String(params.leadId);
@@ -103,7 +90,6 @@ export async function fetchBookings(params: BookingParams): Promise<BookingRespo
       queryParams.userId = String(params.userId);
       queryParams.user_id = String(params.userId);
     }
-
     let response;
     try {
       response = await apiClient.get(BOOKINGS_PATH, { params: queryParams });
@@ -114,13 +100,11 @@ export async function fetchBookings(params: BookingParams): Promise<BookingRespo
         throw error;
       }
     }
-
     const bookings = Array.isArray(response.data)
       ? response.data
       : Array.isArray(response.data?.data)
         ? response.data.data
         : [];
-
     return bookings.filter((booking: any) => {
       const status = booking.status?.toLowerCase();
       return status !== 'cancelled' && status !== 'canceled';
@@ -130,7 +114,6 @@ export async function fetchBookings(params: BookingParams): Promise<BookingRespo
     throw error;
   }
 }
-
 /**
  * Create a new booking
  */
@@ -150,7 +133,6 @@ export async function createBooking(bookingData: BookingParams): Promise<Booking
       ...(bookingData.bookingType && { bookingType: bookingData.bookingType }),
       ...(bookingData.bookingSource && { bookingSource: bookingData.bookingSource }),
     };
-
     let response;
     try {
       response = await apiClient.post(BOOKINGS_PATH, payload);
@@ -161,14 +143,12 @@ export async function createBooking(bookingData: BookingParams): Promise<Booking
         throw error;
       }
     }
-
     return response.data;
   } catch (error) {
     logger.error('createBooking failed', { bookingData }, error);
     throw error;
   }
 }
-
 /**
  * Delete/cancel a booking
  */
@@ -188,11 +168,9 @@ export async function deleteBooking(bookingId: string | number): Promise<void> {
     throw error;
   }
 }
-
 // ============================================================================
 // AVAILABILITY
 // ============================================================================
-
 /**
  * Check availability for a user on a specific date
  */
@@ -212,7 +190,6 @@ export async function checkAvailability(params: AvailabilityParams): Promise<Ava
     throw error;
   }
 }
-
 /**
  * Get available slots for a user within a date range
  */
@@ -239,7 +216,6 @@ export async function getAvailableSlots(params: {
     throw error;
   }
 }
-
 /**
  * Get unavailable/booked slots for a user on a specific date
  */
@@ -260,11 +236,9 @@ export async function getUnavailableSlots(params: {
     throw error;
   }
 }
-
 // ============================================================================
 // COUNSELLORS
 // ============================================================================
-
 /**
  * Fetch list of available counsellors
  */
@@ -277,4 +251,4 @@ export async function fetchCounsellors(): Promise<unknown[]> {
     logger.error('fetchCounsellors failed', error);
     throw error;
   }
-}
+}

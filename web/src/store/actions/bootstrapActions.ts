@@ -10,10 +10,8 @@ import { AppDispatch, RootState } from '../store';
 import { safeStorage } from '../../utils/storage';
 import * as chatService from '../../services/chatService';
 import * as pipelineService from '../../services/pipelineService';
-
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
-
 export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
   const state = getState();
   // Guard: If already finished or loading, do not bootstrap again
@@ -31,7 +29,6 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       dispatch(setConversations(conversationsData));
       dispatch(setConversationLoading(false));
     }
-
     // 2. Load notifications (if API exists) - only if backend has notifications
     try {
       const backendNotifications = await chatService.getConversationNotifications('');
@@ -45,13 +42,11 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       const err = error as Error;
       logger.debug('[Bootstrap] Error fetching notifications from backend, keeping localStorage notifications', { error: err.message });
     }
-
     // 3. Load pipeline data into Redux state
     try {
       logger.debug('[Bootstrap] Loading pipeline data...');
       dispatch(setStagesLoading(true));
       dispatch(setLeadsLoading(true));
-      
       // Load stages and leads in parallel for better performance
       const [stages, leads] = await Promise.all([
         pipelineService.fetchStages().catch(err => { 
@@ -67,18 +62,15 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
           return []; 
         })
       ]);
-
       // Store data in respective slices
       dispatch(setStages(stages));
       dispatch(setLeads(leads));
       dispatch(setStagesLoading(false));
       dispatch(setLeadsLoading(false));
-
       logger.debug('[Bootstrap] Pipeline data loaded', { 
         stages: stages.length, 
         leads: leads.length 
       });
-
       // Load master data and store in Redux
       try {
         const [statuses, sources, priorities] = await Promise.all([
@@ -95,12 +87,10 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
             return []; 
           })
         ]);
-        
         // Dispatch master data to Redux store
         dispatch(setStatuses(statuses));
         dispatch(setSources(sources));
         dispatch(setPriorities(priorities));
-        
         logger.debug('[Bootstrap] Master data loaded and stored in Redux', { 
           statuses: statuses.length, 
           sources: sources.length, 
@@ -109,20 +99,17 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       } catch (err) {
         logger.warn('[Bootstrap] Failed to load master data', err);
       }
-      
     } catch (err) {
       logger.error('[Bootstrap] Failed to load pipeline data', err);
       dispatch(setStagesLoading(false));
       dispatch(setLeadsLoading(false));
       // Don't fail bootstrap if pipeline data fails
     }
-
     // 4. Load user settings (if needed)
     // You may want to fetch user settings from API here
     // Example:
     // const userSettings = await fetchUserSettings();
     // dispatch(setUserSettings(userSettings));
-
     dispatch(setBootstrapFinished(true));
     dispatch(setBootstrapLoading(false));
   } catch (err) {
@@ -130,5 +117,4 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
     dispatch(setBootstrapError(error.message || 'Failed to bootstrap app'));
     dispatch(setBootstrapLoading(false));
   }
-};
-
+};

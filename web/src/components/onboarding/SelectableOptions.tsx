@@ -1,10 +1,8 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDependentActionsToRemove, getRequiredActionsFromOptions } from '@/lib/actionDependencies';
-
 interface SelectableOptionsProps {
   options: string[];
   multiSelect?: boolean;
@@ -15,7 +13,6 @@ interface SelectableOptionsProps {
   preSelectedOptions?: string[]; // Pre-selected options (for platform actions)
   platformName?: string; // Platform name for dependency checking (e.g., 'linkedin', 'whatsapp')
 }
-
 export default function SelectableOptions({
   options,
   multiSelect = false,
@@ -30,27 +27,22 @@ export default function SelectableOptions({
   const [selected, setSelected] = useState<Set<string>>(
     new Set(preSelectedOptions.length > 0 ? preSelectedOptions : [])
   );
-
   // Update workflow in real-time when selections change (for platform actions)
   useEffect(() => {
     const platform = detectPlatform();
     if (platform && variant === 'checkboxes') {
       // This is a platform actions question - update workflow immediately
       const selectedArray = Array.from(selected);
-      
       // Get current ICP answers from global state
       const currentAnswers = (window as any).__icpAnswers || {};
-      
       // Update the platform actions in the answers
       const actionKey = `${platform}_actions`;
       const updatedAnswers = {
         ...currentAnswers,
         [actionKey]: selectedArray,
       };
-      
       // Store updated answers globally
       (window as any).__icpAnswers = updatedAnswers;
-      
       // Trigger workflow update event
       const updateEvent = new CustomEvent('workflowUpdate', { 
         detail: { answers: updatedAnswers, stepIndex: (window as any).__currentStepIndex || 0 } 
@@ -58,20 +50,17 @@ export default function SelectableOptions({
       window.dispatchEvent(updateEvent);
     }
   }, [selected, variant]);
-
   // Detect platform from props or options (for platform actions)
   const detectPlatform = (): string | null => {
     // Use platformName prop if provided
     if (platformName) {
       return platformName.toLowerCase();
     }
-    
     // Fallback: Check if any option contains platform-specific keywords
     const linkedinKeywords = ['connection request', 'linkedin'];
     const whatsappKeywords = ['whatsapp', 'broadcast'];
     const emailKeywords = ['email'];
     const voiceKeywords = ['call', 'voice'];
-    
     for (const option of options) {
       const lower = option.toLowerCase();
       if (linkedinKeywords.some(k => lower.includes(k))) return 'linkedin';
@@ -81,16 +70,13 @@ export default function SelectableOptions({
     }
     return null;
   };
-
   const toggleOption = (option: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
       const wasSelected = next.has(option);
-      
       if (wasSelected) {
         // Unchecking an option
         next.delete(option);
-        
         // CRITICAL: If this is a required action, automatically remove dependent actions
         const platform = detectPlatform();
         if (platform && variant === 'checkboxes') {
@@ -104,7 +90,6 @@ export default function SelectableOptions({
         // Checking an option
         if (multiSelect) {
           next.add(option);
-          
           // AUTO-CHECK REQUIRED ACTIONS: If this action requires other actions, auto-check them
           const platform = detectPlatform();
           if (platform && variant === 'checkboxes') {
@@ -124,16 +109,13 @@ export default function SelectableOptions({
       return next;
     });
   };
-
   const handleSubmit = () => {
     if (selected.size > 0) {
       onSubmit(Array.from(selected));
     }
   };
-
   // Platform progress indicator
   const showProgress = platformIndex !== undefined && totalPlatforms !== undefined;
-
   // Render based on variant
   const renderOptions = () => {
     if (variant === 'cards') {
@@ -238,7 +220,6 @@ export default function SelectableOptions({
       );
     }
   };
-
   return (
     <div className="mt-4 space-y-3">
       {/* Progress Indicator for Platform Actions */}
@@ -247,10 +228,8 @@ export default function SelectableOptions({
           Platform {platformIndex} of {totalPlatforms}
         </div>
       )}
-
       {/* Options */}
       {renderOptions()}
-
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2">
         <button
@@ -269,5 +248,4 @@ export default function SelectableOptions({
       </div>
     </div>
   );
-}
-
+}

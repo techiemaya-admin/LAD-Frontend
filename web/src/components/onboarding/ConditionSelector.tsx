@@ -1,17 +1,13 @@
 'use client';
-
 import React, { useState } from 'react';
 import { Check, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface ConditionSelectorProps {
   onSubmit: (selectedValue: string) => void;
   onSkip?: () => void;
 }
-
 export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelectorProps) {
   const [selected, setSelected] = useState<string | null>(null);
-
   const conditionOptions = [
     { value: 'No conditions', label: 'No conditions', description: 'Run all actions' },
     { value: 'If connected', label: 'If connected', description: 'LinkedIn connection accepted' },
@@ -20,13 +16,11 @@ export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelecto
     { value: 'If clicked', label: 'If clicked', description: 'Email link was clicked' },
     { value: 'Custom conditions', label: 'Custom conditions', description: 'Define your own condition' },
   ];
-
   const handleSelect = (value: string) => {
     setSelected(value);
     // Auto-submit for all options
     setTimeout(() => onSubmit(value), 100);
   };
-
   const handleSkip = () => {
     if (onSkip) {
       onSkip();
@@ -34,7 +28,6 @@ export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelecto
       onSubmit('Skip');
     }
   };
-
   return (
     <div className="mt-4 space-y-4">
       {/* Condition Options */}
@@ -73,7 +66,6 @@ export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelecto
           );
         })}
       </div>
-
       {/* Skip Button */}
       <div className="flex justify-end pt-2">
         <button
@@ -86,5 +78,4 @@ export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelecto
       </div>
     </div>
   );
-}
-
+}

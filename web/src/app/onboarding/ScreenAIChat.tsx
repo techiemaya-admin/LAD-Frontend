@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
@@ -8,7 +7,6 @@ import WorkflowPreview from '@/components/onboarding/WorkflowPreview';
 import { Loader2, Bot, ArrowLeft } from 'lucide-react';
 import { sendGeminiPrompt, routeMessageBasedOnState } from '@/services/geminiFlashService';
 import { questionSequences } from '@/lib/onboardingQuestions';
-
 export default function ScreenAIChat() {
   const {
     selectedPath,
@@ -28,30 +26,24 @@ export default function ScreenAIChat() {
     setSelectedPath,
     setCurrentScreen,
   } = useOnboardingStore();
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
-
   // Scroll to bottom when messages update
   useEffect(() => {
     if (aiMessages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [aiMessages]);
-
   // Start AI conversation when component mounts
   useEffect(() => {
     if (selectedPath && aiMessages.length === 0) {
       startAIConversation(selectedPath);
     }
   }, [selectedPath]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const startAIConversation = async (path: 'automation' | 'leads') => {
     setIsProcessingAI(true);
-    
     // Get first question from sequence
     const firstQuestion = questionSequences[path][0];
-    
     // Add AI greeting message
     addAIMessage({
       role: 'ai',
@@ -59,20 +51,15 @@ export default function ScreenAIChat() {
       timestamp: new Date(),
       options: firstQuestion.options,
     });
-
     setIsProcessingAI(false);
   };
-
   const askNextQuestion = async () => {
     if (!selectedPath) return;
-
     const questions = questionSequences[selectedPath];
     let nextIndex = currentQuestionIndex + 1;
-
     // Skip questions that don't meet conditions
     while (nextIndex < questions.length) {
       const nextQuestion = questions[nextIndex];
-      
       if (nextQuestion.condition) {
         const shouldAsk = nextQuestion.condition(userAnswers);
         if (!shouldAsk) {
@@ -82,12 +69,9 @@ export default function ScreenAIChat() {
       }
       break;
     }
-
     if (nextIndex < questions.length) {
       setIsProcessingAI(true);
-      
       const nextQuestion = questions[nextIndex];
-
       setTimeout(() => {
         addAIMessage({
           role: 'ai',
@@ -101,7 +85,6 @@ export default function ScreenAIChat() {
     } else {
       // All questions answered
       setIsProcessingAI(true);
-      
       setTimeout(() => {
         addAIMessage({
           role: 'ai',
@@ -112,7 +95,6 @@ export default function ScreenAIChat() {
       }, 500);
     }
   };
-
   const handleAnswer = async (answer: string | string[], questionKey: string) => {
     // Add user message
     const answerText = Array.isArray(answer) ? answer.join(', ') : answer;
@@ -121,18 +103,14 @@ export default function ScreenAIChat() {
       content: answerText,
       timestamp: new Date(),
     });
-
     // Save answer
     const newAnswers = { ...userAnswers, [questionKey]: answer };
     setUserAnswers(newAnswers);
-
     // Update workflow based on answer
     updateWorkflowFromAnswer(questionKey, answer, selectedPath!);
-
     // Move to next question
     await askNextQuestion();
   };
-
   const updateWorkflowFromAnswer = (
     questionKey: string,
     answer: string | string[],
@@ -144,12 +122,10 @@ export default function ScreenAIChat() {
       handleLeadAnswer(questionKey, answer);
     }
   };
-
   const handleAutomationAnswer = (questionKey: string, answer: string | string[]) => {
     if (questionKey === 'platforms') {
       const platforms = Array.isArray(answer) ? answer : [answer];
       updateAutomationConfig({ platforms });
-      
       // Add workflow steps for selected platforms
       platforms.forEach((platform) => {
         if (platform.toLowerCase().includes('linkedin')) {
@@ -196,11 +172,9 @@ export default function ScreenAIChat() {
         }
       });
     }
-
     if (questionKey === 'automationTypes') {
       const types = Array.isArray(answer) ? answer : [answer];
       updateAutomationConfig({ automationTypes: types });
-      
       // Add specific automation steps
       types.forEach((type) => {
         if (type.toLowerCase().includes('autopost')) {
@@ -233,11 +207,9 @@ export default function ScreenAIChat() {
         }
       });
     }
-
     if (questionKey === 'frequency') {
       updateAutomationConfig({ frequency: answer as string });
     }
-
     if (questionKey === 'conditionalActions') {
       updateAutomationConfig({ conditionalActions: answer === 'yes' || answer === true });
       if (answer === 'yes' || answer === true) {
@@ -250,17 +222,14 @@ export default function ScreenAIChat() {
       }
     }
   };
-
   const handleLeadAnswer = (questionKey: string, answer: string | string[]) => {
     if (questionKey === 'leadType') {
       const isInbound = answer === 'inbound' || (answer as string).toLowerCase().includes('inbound');
       updateLeadConfig({ leadType: isInbound ? 'inbound' : 'outbound' });
     }
-
     if (questionKey === 'outreachChannels') {
       const channels = Array.isArray(answer) ? answer : [answer];
       updateLeadConfig({ outreachChannels: channels });
-      
       // Build outreach workflow
       const steps = [];
       if (channels.some((c) => c.toLowerCase().includes('linkedin'))) {
@@ -302,22 +271,17 @@ export default function ScreenAIChat() {
         setChannelConnection('whatsapp', true);
         addAIMessage({ role: 'ai', content: 'Please add a WhatsApp message template in the right panel (or skip).', timestamp: new Date() });
       }
-      
       setWorkflowPreview(steps);
     }
   };
-
   const handleSend = async (message: string) => {
     if (!message.trim() || isProcessingAI) return;
-
     const currentQuestion = questionSequences[selectedPath!]?.[currentQuestionIndex];
     if (currentQuestion) {
       await handleAnswer(message, currentQuestion.key);
     }
   };
-
   const currentQuestion = selectedPath ? questionSequences[selectedPath]?.[currentQuestionIndex] : null;
-
   const handleBack = () => {
     setHasSelectedOption(false);
     setSelectedPath(null);
@@ -325,7 +289,6 @@ export default function ScreenAIChat() {
     // Clear AI messages to reset the flow
     useOnboardingStore.setState({ aiMessages: [], currentQuestionIndex: 0 });
   };
-
   return (
     <div className="flex w-full h-full bg-white">
       {/* LEFT PANEL - CHAT (60%) */}
@@ -340,7 +303,6 @@ export default function ScreenAIChat() {
             <span className="text-sm font-medium">Back to options</span>
           </button>
         </div>
-
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto">
           <div className="py-8">
@@ -352,7 +314,6 @@ export default function ScreenAIChat() {
                 timestamp={message.timestamp}
               />
             ))}
-
             {isProcessingAI && (
               <div className="flex gap-4 w-full max-w-3xl mx-auto px-4 py-6 bg-white">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -364,7 +325,6 @@ export default function ScreenAIChat() {
                 </div>
               </div>
             )}
-
             {/* Option Buttons for current question */}
             {currentQuestion?.options && !isProcessingAI && (
               <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-2">
@@ -379,11 +339,9 @@ export default function ScreenAIChat() {
                 ))}
               </div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
         </div>
-
         {/* Bottom Input */}
         <div className="border-t border-gray-200 bg-white py-4 px-4">
           <ChatInputClaude
@@ -397,12 +355,10 @@ export default function ScreenAIChat() {
           />
         </div>
       </div>
-
       {/* RIGHT PANEL - WORKFLOW PREVIEW (40%) */}
       <div className="w-[40%] bg-gray-50">
         <WorkflowPreview />
       </div>
     </div>
   );
-}
-
+}

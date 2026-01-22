@@ -1,12 +1,10 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import ChatMessageBubble from '@/components/onboarding/ChatMessageBubble';
 import WorkflowPreview from '@/components/onboarding/WorkflowPreview';
 import { Loader2, Bot } from 'lucide-react';
-
 export default function SplitScreenOnboarding() {
   const {
     chatHistory,
@@ -22,7 +20,6 @@ export default function SplitScreenOnboarding() {
     setChannelConnection,
     completeOnboarding,
   } = useOnboardingStore();
-
   const [isProcessing, setIsProcessing] = useState(false);
   const [userName, setUserName] = useState('there');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,7 +27,6 @@ export default function SplitScreenOnboarding() {
   const [automationQuestionIndex, setAutomationQuestionIndex] = useState(0);
   const [outboundQuestionIndex, setOutboundQuestionIndex] = useState(0);
   const [outboundAnswers, setOutboundAnswers] = useState<Record<string, any>>({});
-
   // Get user name on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -46,14 +42,12 @@ export default function SplitScreenOnboarding() {
       }
     }
   }, []);
-
   // Scroll when messages exist
   useEffect(() => {
     if (chatHistory.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatHistory]);
-
   // Start onboarding flow
   useEffect(() => {
     if (!hasStarted && chatHistory.length === 0) {
@@ -64,11 +58,9 @@ export default function SplitScreenOnboarding() {
       }, 500);
     }
   }, []);
-
   const handleOptionSelect = (option: 'automation' | 'leads') => {
     setMainOption(option);
     addChatMessage('user', option === 'automation' ? 'Automation Suite' : 'Lead Generation & Outreach');
-    
     setIsProcessing(true);
     setTimeout(() => {
       if (option === 'automation') {
@@ -79,7 +71,6 @@ export default function SplitScreenOnboarding() {
       setIsProcessing(false);
     }, 500);
   };
-
   const automationQuestions = [
     { key: 'linkedin_autopost', text: 'Do you want LinkedIn autoposting?', step: { type: 'linkedin_autopost', title: 'LinkedIn Auto Post', channel: 'linkedin', icon: 'linkedin' } },
     { key: 'instagram_autopost', text: 'Do you want Instagram autoposting?', step: { type: 'instagram_autopost', title: 'Instagram Auto Post', channel: 'instagram', icon: 'instagram' } },
@@ -88,7 +79,6 @@ export default function SplitScreenOnboarding() {
     { key: 'whatsapp', text: 'Do you want WhatsApp automation?', step: { type: 'whatsapp_send', title: 'WhatsApp Message', channel: 'whatsapp', icon: 'whatsapp' } },
     { key: 'voice_agent', text: 'Do you want Voice Agent automation?', step: { type: 'voice_agent_call', title: 'Voice Agent Call', channel: 'voice', icon: 'phone' } },
   ];
-
   const askAutomationQuestions = () => {
     if (automationQuestionIndex < automationQuestions.length) {
       const q = automationQuestions[automationQuestionIndex];
@@ -100,23 +90,19 @@ export default function SplitScreenOnboarding() {
       setCurrentQuestion(null);
     }
   };
-
   const askLeadGenerationQuestions = () => {
     addChatMessage('ai', 'Great! Do you have leads already, or would you like us to generate them for you?');
     setCurrentQuestion('lead-type');
   };
-
   const handleAnswer = (answer: string | boolean, questionKey?: string) => {
     if (questionKey === 'main-option') {
       // Already handled by handleOptionSelect
       return;
     }
-
     if (questionKey === 'lead-type') {
       const isInbound = answer === 'inbound' || answer === 'I have leads' || answer === 'I already have leads';
       setLeadType(isInbound ? 'inbound' : 'outbound');
       addChatMessage('user', isInbound ? 'I have leads' : 'Generate leads for me');
-      
       if (isInbound) {
         setTimeout(() => {
           addChatMessage('ai', 'Perfect! Please upload your Excel or CSV file with your leads.');
@@ -129,11 +115,9 @@ export default function SplitScreenOnboarding() {
       }
       return;
     }
-
     // Handle automation questions
     if (mainOption === 'automation' && questionKey) {
       const isYes = answer === true || answer === 'yes' || answer === 'Yes' || answer === 'y';
-      
       if (isYes) {
         // Add step to workflow preview
         const question = automationQuestions.find(q => q.key === questionKey);
@@ -145,7 +129,6 @@ export default function SplitScreenOnboarding() {
             channel: question.step.channel as any,
             icon: question.step.icon,
           });
-          
           // Update channel connection
           if (question.step.channel === 'linkedin') setChannelConnection('linkedin', true);
           if (question.step.channel === 'instagram') setChannelConnection('instagram', true);
@@ -153,11 +136,9 @@ export default function SplitScreenOnboarding() {
           if (question.step.channel === 'voice') setChannelConnection('voiceAgent', true);
         }
       }
-
       // Ask next question
       const nextIndex = automationQuestionIndex + 1;
       setAutomationQuestionIndex(nextIndex);
-      
       setTimeout(() => {
         if (nextIndex < automationQuestions.length) {
           const nextQ = automationQuestions[nextIndex];
@@ -170,7 +151,6 @@ export default function SplitScreenOnboarding() {
       }, 500);
     }
   };
-
   const outboundQuestions = [
     { key: 'industry', text: 'What industry are you targeting? (e.g., SaaS, Healthcare, Finance)' },
     { key: 'jobTitles', text: 'What job titles are you looking for? (e.g., CEO, Marketing Director)' },
@@ -178,7 +158,6 @@ export default function SplitScreenOnboarding() {
     { key: 'companySize', text: 'What company size? (e.g., 10-100 employees)' },
     { key: 'volume', text: 'How many leads do you need? (e.g., 100, 500, 1000)' },
   ];
-
   const askOutboundQuestions = () => {
     if (outboundQuestionIndex < outboundQuestions.length) {
       const q = outboundQuestions[outboundQuestionIndex];
@@ -191,16 +170,13 @@ export default function SplitScreenOnboarding() {
       setCurrentQuestion(null);
     }
   };
-
   const handleOutboundAnswer = (answer: string) => {
     const currentQ = outboundQuestions[outboundQuestionIndex];
     if (currentQ) {
       setOutboundAnswers({ ...outboundAnswers, [currentQ.key]: answer });
       addChatMessage('user', answer);
-      
       const nextIndex = outboundQuestionIndex + 1;
       setOutboundQuestionIndex(nextIndex);
-      
       setTimeout(() => {
         if (nextIndex < outboundQuestions.length) {
           const nextQ = outboundQuestions[nextIndex];
@@ -214,7 +190,6 @@ export default function SplitScreenOnboarding() {
       }, 500);
     }
   };
-
   const buildOutreachWorkflow = () => {
     const steps = [
       { type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', icon: 'linkedin' },
@@ -226,23 +201,18 @@ export default function SplitScreenOnboarding() {
       { type: 'delay', title: 'Wait 1 Day', channel: undefined, icon: 'delay' },
       { type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', icon: 'whatsapp' },
     ];
-
     setWorkflowPreview(steps.map((step, index) => ({
       id: `step_${index}`,
       ...step,
     })));
-
     // Connect channels
     setChannelConnection('linkedin', true);
     setChannelConnection('email', true);
     setChannelConnection('whatsapp', true);
   };
-
   const handleSend = async (message: string) => {
     if (!message.trim() || isProcessing) return;
-
     const { currentQuestion: currentQ } = useOnboardingStore.getState();
-    
     if (currentQ === 'main-option') {
       if (message.toLowerCase().includes('automation')) {
         handleOptionSelect('automation');
@@ -260,7 +230,6 @@ export default function SplitScreenOnboarding() {
       handleOutboundAnswer(message);
     }
   };
-
   return (
     <div className="flex w-full h-full bg-white">
       {/* LEFT PANEL - CHAT (60%) */}
@@ -285,7 +254,6 @@ export default function SplitScreenOnboarding() {
                   timestamp={message.timestamp}
                 />
               ))}
-
               {isProcessing && (
                 <div className="flex gap-4 w-full max-w-3xl mx-auto px-4 py-6 bg-white">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -297,7 +265,6 @@ export default function SplitScreenOnboarding() {
                   </div>
                 </div>
               )}
-
               {/* Option Buttons */}
               {useOnboardingStore.getState().currentQuestion === 'main-option' && (
                 <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-3">
@@ -317,7 +284,6 @@ export default function SplitScreenOnboarding() {
                   </button>
                 </div>
               )}
-
               {/* Yes/No Buttons for automation questions */}
               {mainOption === 'automation' && 
                useOnboardingStore.getState().currentQuestion && 
@@ -337,7 +303,6 @@ export default function SplitScreenOnboarding() {
                   </button>
                 </div>
               )}
-
               {/* Lead Type Buttons */}
               {useOnboardingStore.getState().currentQuestion === 'lead-type' && (
                 <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-3">
@@ -357,12 +322,10 @@ export default function SplitScreenOnboarding() {
                   </button>
                 </div>
               )}
-
               <div ref={messagesEndRef} />
             </div>
           )}
         </div>
-
         {/* Bottom Input */}
         <div className="border-t border-gray-200 bg-white py-4 px-4">
           <ChatInputClaude
@@ -372,12 +335,10 @@ export default function SplitScreenOnboarding() {
           />
         </div>
       </div>
-
       {/* RIGHT PANEL - WORKFLOW PREVIEW (40%) */}
       <div className="w-[40%] bg-gray-50">
         <WorkflowPreview />
       </div>
     </div>
   );
-}
-
+}

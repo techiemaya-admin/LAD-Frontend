@@ -9,7 +9,6 @@ import StepLayout from './StepLayout';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-
 // WhatsApp actions with recommended
 const WHATSAPP_ACTIONS = [
   { value: 'send_broadcast', label: 'Send broadcast', recommended: true },
@@ -17,13 +16,11 @@ const WHATSAPP_ACTIONS = [
   { value: 'followup_message', label: 'Follow-up message', recommended: false },
   { value: 'template_message', label: 'Template message', recommended: true },
 ];
-
 // Email actions with recommended
 const EMAIL_ACTIONS = [
   { value: 'send_email', label: 'Send email', recommended: true },
   { value: 'followup_email', label: 'Follow-up email', recommended: true },
 ];
-
 // Voice actions with recommended
 const VOICE_ACTIONS = [
   { value: 'call', label: 'Call', recommended: true },
@@ -91,8 +88,6 @@ function RenderActions({ actions, answersKey, answers, setAnswers, validationErr
     </Stack>
   );
 }
-
-
 type GuidedStep = 
   | 'icp_questions'
   | 'target_definition'
@@ -101,39 +96,31 @@ type GuidedStep =
   | 'voice_agent'
   | 'campaign_settings'
   | 'confirmation';
-
 interface GuidedAnswers {
   // Step 1: ICP Questions - Section 1: Past Success
   bestCustomers?: string[]; // Top 2-3 best customers
   mostProfitable?: string; // Which brought most profit
   easiestToWorkWith?: string; // Which was easiest to work with
-  
   // Step 1: ICP Questions - Section 2: Define Company
   companySize?: string; // What size was the company (10-50, 50-200, 200+)
   valueAlignment?: string; // Did they value service or need convincing (valued/convinced)
-  
   // Step 1: ICP Questions - Section 3: Decision Maker
   problemFeeler?: string; // Who felt the problem
   decisionMakers?: string[]; // Decision maker titles/roles
   customTitle?: string; // Custom decision maker title
-  
   // Step 1: ICP Questions - Section 4: Buying Trigger
   buyingTrigger?: string; // What situation made them buy (expansion/costs/compliance/manual)
   wouldClone?: boolean; // Would you clone this customer
   companyName?: string; // What's your company name
-  
   // Step 2: Target Definition (moved from Step 1)
   industries?: string[];
   customIndustry?: string;
   location?: string; // Single location field instead of separate country/state/city
   roles?: string[];
   customRole?: string;
-  
   // Step 3: Platform Selection
   platforms?: string[];
-  
   // Step 3: Platform Logic (LinkedIn, WhatsApp, Email, etc.)
-  
   // Step 4: Conditions & Delays
   linkedinActions?: string[];
   enableConnectionMessage?: boolean;
@@ -142,29 +129,24 @@ interface GuidedAnswers {
   whatsappMessage?: string;
   emailSubject?: string;
   emailMessage?: string;
-  
   // Step 5: Voice Agent
   voiceEnabled?: boolean;
   voiceTiming?: 'immediate' | 'after_linkedin' | null;
   voiceAgentId?: string;
   voiceAgentName?: string;
   voiceContext?: string;
-  
   // Delay and Condition Configuration (used when delay/condition steps are created)
   delayDays?: number;
   delayHours?: number;
   delayMinutes?: number;
   conditionType?: string; // 'connected', 'replied', 'opened', etc.
-  
   // Step 6: Campaign Settings
   campaignDuration?: number; // days
   dailyLeadVolume?: number;
   workingDays?: string[]; // ['monday', 'tuesday', ...]
   smartThrottling?: boolean;
-  
   // Step 7: Confirmation (summary)
 }
-
 // Industry chips with icons - Show only 4 initially
 const INDUSTRY_CHIPS = [
   { label: 'Technology', icon: Zap, color: '#6366F1' },
@@ -172,7 +154,6 @@ const INDUSTRY_CHIPS = [
   { label: 'Healthcare', icon: Briefcase, color: '#EC4899' },
   { label: 'Finance', icon: Briefcase, color: '#10B981' },
 ];
-
 // Additional industries for "+More" option
 const ADDITIONAL_INDUSTRIES = [
   'Education', 'Retail', 'Manufacturing', 'Real Estate', 'Construction',
@@ -180,19 +161,16 @@ const ADDITIONAL_INDUSTRIES = [
   'Energy', 'Media', 'Hospitality', 'Telecommunications', 'Automotive',
   'Pharmaceuticals', 'Insurance'
 ];
-
 const ROLE_CHIPS = [
   'Founder', 'CEO', 'CTO', 'CMO', 'Head of Sales', 'HR Manager', 
   'VP of Marketing', 'VP of Engineering', 'Director of Operations'
 ];
-
 // Company sizes for ICP questions
 const COMPANY_SIZES = [
   { label: '10–50', value: '10-50' },
   { label: '50–200', value: '50-200' },
   { label: '200+', value: '200+' }
 ];
-
 // Decision maker titles for ICP questions
 const DECISION_MAKER_TITLES = [
   { label: 'Founder', value: 'founder' },
@@ -200,7 +178,6 @@ const DECISION_MAKER_TITLES = [
   { label: 'VP / Director', value: 'vp-director' },
   { label: 'Manager', value: 'manager' }
 ];
-
 // B2B buying triggers for ICP questions
 const B2B_TRIGGERS = [
   { label: 'Expansion / growth', value: 'expansion' },
@@ -208,7 +185,6 @@ const B2B_TRIGGERS = [
   { label: 'Compliance / deadline', value: 'compliance' },
   { label: 'Manual work / slow process', value: 'manual' }
 ];
-
 const PLATFORM_OPTIONS = [
   { value: 'linkedin', label: 'LinkedIn', disabled: false },
   { value: 'voice', label: 'Voice Call', disabled: false },
@@ -216,7 +192,6 @@ const PLATFORM_OPTIONS = [
   { value: 'email', label: 'Mail', disabled: false },
   { value: 'instagram', label: 'Instagram', comingSoon: true, disabled: false },
 ];
-
 // Add recommended property for actions
 const LINKEDIN_ACTIONS = [
   { value: 'visit_profile', label: 'Visit profile', recommended: true },
@@ -224,7 +199,6 @@ const LINKEDIN_ACTIONS = [
   { value: 'send_connection', label: 'Send connection request', recommended: true },
   { value: 'send_message', label: 'Send message (after accepted)', recommended: true },
 ];
-
 export default function GuidedFlowPanel() {
   const {
     workflowNodes,
@@ -237,12 +211,10 @@ export default function GuidedFlowPanel() {
     setHasSelectedOption,
     onboardingMode,
   } = useOnboardingStore();
-
   // Do not render form-based ICP questions when in CHAT mode
   if (onboardingMode === 'CHAT') {
     return null;
   }
-
   const [currentStep, setCurrentStep] = useState<GuidedStep>('icp_questions');
   const [answers, setAnswers] = useState<GuidedAnswers>({});
   const [bestCustomersRawText, setBestCustomersRawText] = useState<string>('');
@@ -253,11 +225,11 @@ export default function GuidedFlowPanel() {
   const [customTitleSearchTerm, setCustomTitleSearchTerm] = useState<string>('');
   const [showMoreIndustries, setShowMoreIndustries] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
-  
+  const [isClassifyingIndustry, setIsClassifyingIndustry] = useState(false);
+  const [industryClassification, setIndustryClassification] = useState<any>(null);
   // ICP Questions state (fetched from API)
   const [icpQuestions, setIcpQuestions] = useState<ICPQuestion[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
-  
   // Campaign settings defaults
   const [campaignName, setCampaignName] = useState<string>('');
   const [campaignDuration, setCampaignDuration] = useState<number>(14);
@@ -275,23 +247,19 @@ export default function GuidedFlowPanel() {
   const [autoPauseOnWarning, setAutoPauseOnWarning] = useState<boolean>(true);
   const [timeWindowStart, setTimeWindowStart] = useState<string>('09:00');
   const [timeWindowEnd, setTimeWindowEnd] = useState<string>('18:00');
-  
   // Voice Agent configuration defaults
   const [voiceAgentId, setVoiceAgentId] = useState<string>('24');
   const [voiceAgentName, setVoiceAgentName] = useState<string>('VAPI Agent');
   const [voiceContext, setVoiceContext] = useState<string>('');
-  
   // LinkedIn message configuration defaults
   const [enableConnectionMessage, setEnableConnectionMessage] = useState<boolean>(true);
   const [linkedinConnectionMessage, setLinkedinConnectionMessage] = useState<string>('Hi {{first_name}}, I\'d like to connect with you.');
   const [linkedinMessage, setLinkedinMessage] = useState<string>('Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...');
-  
   // Delay and Condition configuration defaults
   const [delayDays, setDelayDays] = useState<number>(1);
   const [delayHours, setDelayHours] = useState<number>(0);
   const [delayMinutes, setDelayMinutes] = useState<number>(0);
   const [conditionType, setConditionType] = useState<string>('connected');
-
   // Step configuration
   const stepConfig = {
     icp_questions: { number: 1, title: 'ICP Questions' },
@@ -302,11 +270,9 @@ export default function GuidedFlowPanel() {
     campaign_settings: { number: 6, title: 'Campaign Settings' },
     confirmation: { number: 7, title: 'Confirmation' },
   };
-
   const totalSteps = 7;
   const currentStepNumber = (stepConfig as Record<GuidedStep, { number: number; title: string }>)[currentStep].number;
   const currentStepTitle = (stepConfig as Record<GuidedStep, { number: number; title: string }>)[currentStep].title;
-
   // Fetch ICP questions from API on mount
   useEffect(() => {
     const loadQuestions = async () => {
@@ -322,28 +288,23 @@ export default function GuidedFlowPanel() {
         setIsLoadingQuestions(false);
       }
     };
-
     loadQuestions();
   }, []);
-
   // Clear workflow preview on component mount (page refresh)
   useEffect(() => {
     logger.debug('Component mounted - clearing workflow preview');
     setWorkflowPreview([]);
     useOnboardingStore.setState({ workflowNodes: [], workflowEdges: [] });
   }, []); // Empty dependency array = runs once on mount
-
   // Helper function to get question by intent key
   const getQuestionByIntent = (intentKey: string): ICPQuestion | null => {
     return icpQuestions.find(q => q.intentKey === intentKey) || null;
   };
-
   // Location suggestions for autocomplete
   const locationSuggestions = [
     'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'India',
     'California', 'New York', 'Texas', 'London', 'San Francisco', 'New York City', 'Los Angeles', 'Chicago',
   ];
-
   const buildLeadQuery = (): string => {
     const parts: string[] = [];
     if (answers.roles && answers.roles.length > 0) {
@@ -354,14 +315,11 @@ export default function GuidedFlowPanel() {
     }
     return parts.join(' AND ') || 'Target leads';
   };
-
   const buildLeadFilters = (): Record<string, any> => {
     // Check if we have mapped ICP answers from chat onboarding
     const icpAnswers = useOnboardingStore.getState().icpAnswers;
     const sourceAnswers = icpAnswers || answers;
-    
     const filters: Record<string, any> = {};
-    
     // Map to Apollo API parameter names: person_titles, organization_industries, organization_locations
     if (sourceAnswers.roles && sourceAnswers.roles.length > 0) {
       filters.person_titles = sourceAnswers.roles; // Apollo expects 'person_titles'
@@ -382,7 +340,6 @@ export default function GuidedFlowPanel() {
     }
     return filters;
   };
-
   const getChannelForStep = (stepType: string): 'linkedin' | 'email' | 'whatsapp' | 'voice' | 'instagram' | undefined => {
     if (stepType.startsWith('linkedin_')) return 'linkedin';
     if (stepType.startsWith('email_')) return 'email';
@@ -391,14 +348,11 @@ export default function GuidedFlowPanel() {
     if (stepType.startsWith('instagram_')) return 'instagram';
     return undefined;
   };
-
   const buildLinkedInSteps = (startNodeId: string, nodes: any[], edges: any[]): { lastNodeId: string } => {
     let currentNodeId = startNodeId;
-
     if (!answers.linkedinActions || answers.linkedinActions.length === 0) {
       return { lastNodeId: currentNodeId };
     }
-
     // Visit profile
     if (answers.linkedinActions.includes('visit_profile')) {
       const nodeId = `linkedin_visit_${Date.now()}`;
@@ -415,7 +369,6 @@ export default function GuidedFlowPanel() {
       });
       currentNodeId = nodeId;
     }
-
     // Follow profile
     if (answers.linkedinActions.includes('follow_profile')) {
       const nodeId = `linkedin_follow_${Date.now()}`;
@@ -432,7 +385,6 @@ export default function GuidedFlowPanel() {
       });
       currentNodeId = nodeId;
     }
-
     // Send connection
     if (answers.linkedinActions.includes('send_connection')) {
       // Use user-configured connection message (from Step 4) - only if enabled
@@ -440,7 +392,6 @@ export default function GuidedFlowPanel() {
       const userConnectionMessage = userEnableConnectionMessage 
         ? (answers.linkedinConnectionMessage || linkedinConnectionMessage || 'Hi {{first_name}}, I\'d like to connect with you.')
         : '';
-      
       const nodeId = `linkedin_connect_${Date.now()}`;
       nodes.push({
         id: nodeId,
@@ -457,14 +408,12 @@ export default function GuidedFlowPanel() {
         target: nodeId,
       });
       currentNodeId = nodeId;
-
       // Add delay before message if message is selected
       if (answers.linkedinActions.includes('send_message')) {
         // Use user-configured delay values (from Step 4)
         const userDelayDays = answers.delayDays !== undefined ? answers.delayDays : delayDays;
         const userDelayHours = answers.delayHours !== undefined ? answers.delayHours : delayHours;
         const userDelayMinutes = answers.delayMinutes !== undefined ? answers.delayMinutes : delayMinutes;
-        
         const delayNodeId = `delay_linkedin_${Date.now()}`;
         nodes.push({
           id: delayNodeId,
@@ -482,7 +431,6 @@ export default function GuidedFlowPanel() {
           source: currentNodeId,
           target: delayNodeId,
         });
-
         // Add condition: use user-configured condition type (from Step 4)
         const userConditionType = answers.conditionType || conditionType;
         const conditionNodeId = `condition_linkedin_${Date.now()}`;
@@ -508,10 +456,8 @@ export default function GuidedFlowPanel() {
           source: delayNodeId,
           target: conditionNodeId,
         });
-
         // Use user-configured LinkedIn message (from Step 4)
         const userLinkedinMessage = answers.linkedinMessage || linkedinMessage || 'Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...';
-        
         const messageNodeId = `linkedin_message_${Date.now()}`;
         nodes.push({
           id: messageNodeId,
@@ -522,7 +468,6 @@ export default function GuidedFlowPanel() {
             message: userLinkedinMessage,
           },
         });
-        
         // TRUE branch: condition met -> proceed to message
         edges.push({
           id: `edge-${conditionNodeId}-${messageNodeId}-true`,
@@ -534,7 +479,6 @@ export default function GuidedFlowPanel() {
           labelStyle: { fill: '#10B981', fontWeight: 600, fontSize: '12px' },
           labelBgStyle: { fill: '#D1FAE5', fillOpacity: 0.8 },
         });
-        
         // FALSE branch: condition not met -> skip to end
         edges.push({
           id: `edge-${conditionNodeId}-end-false`,
@@ -546,37 +490,30 @@ export default function GuidedFlowPanel() {
           labelStyle: { fill: '#EF4444', fontWeight: 600, fontSize: '12px' },
           labelBgStyle: { fill: '#FEE2E2', fillOpacity: 0.8 },
         });
-        
         currentNodeId = messageNodeId;
       }
     } else if (answers.linkedinActions.includes('send_message')) {
       // Message without connection - not allowed, but handle gracefully
       // In real implementation, this should be prevented in UI
     }
-
     return { lastNodeId: currentNodeId };
   };
-
   const generateWorkflowFromAnswers = useCallback(() => {
     const nodes: any[] = [];
     const edges: any[] = [];
     let lastNodeId = 'start';
-
     // Check if we have mapped ICP answers from chat onboarding
     const icpAnswers = useOnboardingStore.getState().icpAnswers;
     const sourceAnswers = icpAnswers || answers;
-
     // Add lead generation step if we have target criteria
     // Check if industries array has items, location string is not empty, roles array has items, or customIndustry exists
     const hasIndustries = sourceAnswers.industries && Array.isArray(sourceAnswers.industries) && sourceAnswers.industries.length > 0;
     const hasLocation = sourceAnswers.location && String(sourceAnswers.location).trim().length > 0;
     const hasRoles = sourceAnswers.roles && Array.isArray(sourceAnswers.roles) && sourceAnswers.roles.length > 0;
     const hasCustomIndustry = sourceAnswers.customIndustry && String(sourceAnswers.customIndustry).trim().length > 0;
-    
     if (hasIndustries || hasLocation || hasRoles || hasCustomIndustry) {
       // Use dailyLeadVolume from state (set in Step 6: Campaign Settings) or from answers, or default to 25
       const leadsPerDay = dailyLeadVolume || sourceAnswers.leads_per_day || answers.dailyLeadVolume || 25;
-      
       nodes.push({
         id: 'lead_gen_1',
         type: 'lead_generation',
@@ -595,7 +532,6 @@ export default function GuidedFlowPanel() {
       });
       lastNodeId = 'lead_gen_1';
     }
-
     // Add LinkedIn steps if LinkedIn is selected (check both source answers and form answers)
     const platforms = sourceAnswers.platforms || answers.platforms || [];
     if (platforms.includes('linkedin') || platforms.some((p: string) => String(p).toLowerCase().includes('linkedin'))) {
@@ -604,7 +540,6 @@ export default function GuidedFlowPanel() {
         lastNodeId = linkedinSteps.lastNodeId;
       }
     }
-
     // Add Email step if email is selected
     if (platforms.includes('email') || platforms.some((p: string) => String(p).toLowerCase().includes('email'))) {
       const emailNodeId = `email_${Date.now()}`;
@@ -618,14 +553,12 @@ export default function GuidedFlowPanel() {
           body: 'Hi {{name}}, I noticed...',
         },
       });
-      
       // Add delay before email if LinkedIn connection exists
       // Use user-configured delay values (from Step 4)
       if (answers.linkedinActions?.includes('send_connection')) {
         const userDelayDays = answers.delayDays !== undefined ? answers.delayDays : delayDays;
         const userDelayHours = answers.delayHours !== undefined ? answers.delayHours : delayHours;
         const userDelayMinutes = answers.delayMinutes !== undefined ? answers.delayMinutes : delayMinutes;
-        
         const delayNodeId = `delay_${Date.now()}`;
         nodes.push({
           id: delayNodeId,
@@ -658,22 +591,18 @@ export default function GuidedFlowPanel() {
         lastNodeId = emailNodeId;
       }
     }
-
     // Add Voice Agent step if voice is selected (voiceEnabled defaults to true if voice platform is selected)
     if (answers.platforms?.includes('voice')) {
       // If voiceEnabled is not explicitly set but voice platform is selected, default to enabled
       const shouldEnableVoice = answers.voiceEnabled !== false;
-      
       if (shouldEnableVoice) {
         // Use user-configured voice agent values (from Step 5)
         const userVoiceAgentId = answers.voiceAgentId || voiceAgentId || '24';
         const userVoiceAgentName = answers.voiceAgentName || voiceAgentName || 'VAPI Agent';
         const userVoiceContext = answers.voiceContext || voiceContext || '';
-        
         if (!userVoiceContext || userVoiceContext.trim() === '') {
           logger.warn('Voice agent context is missing, using default');
         }
-        
         const voiceNodeId = `voice_${Date.now()}`;
         nodes.push({
           id: voiceNodeId,
@@ -686,7 +615,6 @@ export default function GuidedFlowPanel() {
             voiceContext: userVoiceContext || 'General follow-up call', // Fallback if empty
           },
         });
-
         // Add delay or condition based on voice timing
         // Use user-configured condition type (from Step 4)
         if (answers.voiceTiming === 'after_linkedin' && answers.linkedinActions?.includes('send_connection')) {
@@ -714,7 +642,6 @@ export default function GuidedFlowPanel() {
             source: lastNodeId,
             target: conditionNodeId,
           });
-          
           // TRUE branch: condition met -> proceed to voice call
           edges.push({
             id: `edge-${conditionNodeId}-${voiceNodeId}-true`,
@@ -726,7 +653,6 @@ export default function GuidedFlowPanel() {
             labelStyle: { fill: '#10B981', fontWeight: 600, fontSize: '12px' },
             labelBgStyle: { fill: '#D1FAE5', fillOpacity: 0.8 },
           });
-          
           // FALSE branch: condition not met -> skip to end
           edges.push({
             id: `edge-${conditionNodeId}-end-false`,
@@ -748,7 +674,6 @@ export default function GuidedFlowPanel() {
         lastNodeId = voiceNodeId;
       }
     }
-
     // Add end node
     nodes.push({
       id: 'end',
@@ -761,7 +686,6 @@ export default function GuidedFlowPanel() {
       source: lastNodeId,
       target: 'end',
     });
-
     // Update workflow preview
     const previewSteps = nodes
       .filter(n => n.type !== 'start' && n.type !== 'end')
@@ -772,29 +696,23 @@ export default function GuidedFlowPanel() {
         description: n.data.description || '',
         channel: getChannelForStep(n.type),
       }));
-
     logger.debug('Generated preview steps', { previewSteps });
     logger.debug('Calling setWorkflowPreview', { stepCount: previewSteps.length });
     setWorkflowPreview(previewSteps);
-    
     // Verify it was set
     setTimeout(() => {
       const currentPreview = useOnboardingStore.getState().workflowPreview;
       logger.debug('Workflow preview in store after set', { currentPreview });
     }, 100);
-
     // Update workflow nodes in store for WorkflowPreviewPanel
     // Clear existing nodes first
     useOnboardingStore.setState({ workflowNodes: [], workflowEdges: [] });
-    
     // Add new nodes (excluding start/end as they're handled by preview)
     const nodesToAdd = nodes.filter(n => n.type !== 'start' && n.type !== 'end');
-    
     // Add all nodes
     nodesToAdd.forEach(node => {
       addWorkflowNode(node);
     });
-
     // Add edges
     edges.forEach(edge => {
       addWorkflowEdge({
@@ -809,7 +727,6 @@ export default function GuidedFlowPanel() {
       });
     });
   }, [answers, dailyLeadVolume, setWorkflowPreview, addWorkflowNode, addWorkflowEdge, buildLeadQuery, buildLeadFilters, buildLinkedInSteps, getChannelForStep]);
-
   // Only generate workflow when reaching confirmation step
   useEffect(() => {
     if (currentStep === 'confirmation') {
@@ -826,13 +743,11 @@ export default function GuidedFlowPanel() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]); // Only depend on currentStep to prevent infinite loops - generateWorkflowFromAnswers uses answers from closure
-
   const handleStepComplete = () => {
     // Validate current step before proceeding
     if (!validateStep(currentStep)) {
       return; // Don't proceed if validation fails
     }
-    
     const steps: GuidedStep[] = [
       'icp_questions',
       'target_definition',
@@ -848,7 +763,6 @@ export default function GuidedFlowPanel() {
       setValidationErrors({}); // Clear errors when moving to next step
     }
   };
-
   const handleBack = () => {
     const steps: GuidedStep[] = [
       'icp_questions',
@@ -867,11 +781,9 @@ export default function GuidedFlowPanel() {
       setHasSelectedOption(false);
     }
   };
-
   // Validation function for each step
   const validateStep = (step: GuidedStep): boolean => {
     const errors: Record<string, boolean> = {};
-    
     if (step === 'icp_questions') {
       // Validate ICP questions - all fields are required
       if (!answers.bestCustomers || answers.bestCustomers.length < 2) errors.bestCustomers = true;
@@ -917,11 +829,9 @@ export default function GuidedFlowPanel() {
         if (!answers.voiceContext || answers.voiceContext.trim().length === 0) errors.voiceContext = true;
       }
     }
-    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   // New Step 1: ICP Questions
   const renderStep1 = () => {
     return (
@@ -981,7 +891,6 @@ export default function GuidedFlowPanel() {
                 {getQuestionByIntent('ideal_customer')?.helperText}
               </Typography>
             )}
-            
             <TextField
               fullWidth
               multiline
@@ -1008,7 +917,6 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Most Profitable Question */}
           <Box
             sx={{
@@ -1056,7 +964,6 @@ export default function GuidedFlowPanel() {
             >
               Example: The client with repeat projects, not one-off work
             </Typography>
-            
             <TextField
               fullWidth
               placeholder="Enter the most profitable customer"
@@ -1072,7 +979,6 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Easiest to Work With Question */}
           <Box
             sx={{
@@ -1106,7 +1012,6 @@ export default function GuidedFlowPanel() {
             >
               Example: Clear decision-maker, paid on time, respected your process
             </Typography>
-            
             <TextField
               fullWidth
               placeholder="Enter the easiest customer to work with"
@@ -1127,9 +1032,7 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Section 2: Define Company */}
-          
           {/* Question 5: Company Size */}
           <Box
             sx={{
@@ -1163,7 +1066,6 @@ export default function GuidedFlowPanel() {
             >
               Example: 10–50 employees, 50–200 employees
             </Typography>
-            
             <Stack direction="row" spacing={2}>
               {COMPANY_SIZES.map((size) => (
                 <Button
@@ -1191,7 +1093,6 @@ export default function GuidedFlowPanel() {
               ))}
             </Stack>
           </Box>
-
           {/* Question 6: Value Alignment */}
           <Box
             sx={{
@@ -1225,7 +1126,6 @@ export default function GuidedFlowPanel() {
             >
               Example: They understood the value vs they only compared prices
             </Typography>
-            
             <Stack spacing={2}>
               <Button
                 variant={answers.valueAlignment === 'valued' ? 'contained' : 'outlined'}
@@ -1275,9 +1175,7 @@ export default function GuidedFlowPanel() {
               </Button>
             </Stack>
           </Box>
-
           {/* Section 3: Decision Maker */}
-          
           {/* Question 8: Problem Feeler */}
           <Box
             sx={{
@@ -1311,7 +1209,6 @@ export default function GuidedFlowPanel() {
             >
               Example: Operations team struggling with delays
             </Typography>
-            
             <TextField
               fullWidth
               placeholder="Enter who felt the problem"
@@ -1331,7 +1228,6 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Question 9: Role/Title */}
           <Box
             sx={{
@@ -1365,7 +1261,6 @@ export default function GuidedFlowPanel() {
             >
               Example: Operations Manager, Founder, Finance Head
             </Typography>
-            
             <Stack spacing={2} sx={{ mb: 2 }}>
               {DECISION_MAKER_TITLES.map((title) => {
                 const isSelected = answers.decisionMakers?.includes(title.value) || false;
@@ -1399,7 +1294,6 @@ export default function GuidedFlowPanel() {
                 );
               })}
             </Stack>
-            
             <TextField
               fullWidth
               size="small"
@@ -1427,9 +1321,7 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Section 4: Buying Trigger */}
-          
           {/* Question 10: Buying Trigger */}
           <Box
             sx={{
@@ -1463,7 +1355,6 @@ export default function GuidedFlowPanel() {
             >
               Example: Expansion, compliance issue, cost overruns
             </Typography>
-            
             <Stack spacing={2}>
               {B2B_TRIGGERS.map((trigger) => {
                 const isSelected = answers.buyingTrigger === trigger.value;
@@ -1497,7 +1388,6 @@ export default function GuidedFlowPanel() {
               })}
             </Stack>
           </Box>
-
           {/* Question: Would Clone */}
           <Box
             sx={{
@@ -1531,7 +1421,6 @@ export default function GuidedFlowPanel() {
             >
               If yes — this is your ICP
             </Typography>
-            
             <Stack direction="row" spacing={2}>
               <Button
                 variant={answers.wouldClone === true ? 'contained' : 'outlined'}
@@ -1577,7 +1466,6 @@ export default function GuidedFlowPanel() {
               </Button>
             </Stack>
           </Box>
-
           {/* Question 11: Company Name */}
           <Box
             sx={{
@@ -1599,7 +1487,6 @@ export default function GuidedFlowPanel() {
             >
               11. What's your company name?
             </Typography>
-            
             <TextField
               fullWidth
               placeholder="Enter your company name"
@@ -1619,7 +1506,6 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Action Buttons */}
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button
@@ -1651,11 +1537,9 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   // Step 2: Target Definition (moved from Step 1)
   const renderStep2 = () => {
     const selectedIndustries = answers.industries || [];
-
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -1711,12 +1595,10 @@ export default function GuidedFlowPanel() {
             >
               Select one or more industries to target
             </Typography>
-            
             <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1.5} sx={{ mb: 3 }}>
               {INDUSTRY_CHIPS.map(({ label, icon: Icon, color }) => {
                 const isSelected = selectedIndustries.includes(label);
                 const IconComponent = Icon;
-                
                 return (
                   <Chip
                     key={label}
@@ -1781,7 +1663,6 @@ export default function GuidedFlowPanel() {
                 }}
               />
             </Stack>
-            
             {/* More Industries Dialog */}
             <Dialog
               open={showMoreIndustries}
@@ -1840,51 +1721,129 @@ export default function GuidedFlowPanel() {
                 </Button>
               </DialogActions>
             </Dialog>
-            
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Or type a custom industry..."
-              value={customIndustryInput}
-              onChange={(e) => {
-                // Only update the input value, don't add to industries array yet
-                setCustomIndustryInput(e.target.value);
-              }}
-              onBlur={(e) => {
-                // Only add to industries array when field loses focus (user finished typing)
-                const customIndustry = e.target.value.trim();
-                const currentIndustries = answers.industries || [];
-                
-                if (customIndustry) {
-                  // Remove the old customIndustry value from array if it exists
-                  const filtered = currentIndustries.filter(i => i !== answers.customIndustry);
-                  
-                  // Add the new custom industry if it's not already in the array
-                  if (!filtered.includes(customIndustry)) {
-                    setAnswers({ 
-                      ...answers, 
-                      customIndustry: customIndustry,
-                      industries: [...filtered, customIndustry]
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Or type a custom industry (e.g., 'SaaS', 'fitness centers')..."
+                value={customIndustryInput}
+                onChange={(e) => {
+                  setCustomIndustryInput(e.target.value);
+                  setIndustryClassification(null); // Clear previous classification
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#FFFFFF',
+                    borderRadius: '8px',
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                disabled={!customIndustryInput.trim() || isClassifyingIndustry}
+                onClick={async () => {
+                  const input = customIndustryInput.trim();
+                  if (!input) return;
+                  setIsClassifyingIndustry(true);
+                  setIndustryClassification(null);
+                  try {
+                    const response = await apiPost('/api/ai-icp-assistant/classify-industry', {
+                      industry_input: input
                     });
-                  } else {
-                    // Just update customIndustry if it's already in the array
-                    setAnswers({ ...answers, customIndustry: customIndustry });
+                    if (response.success) {
+                      setIndustryClassification(response);
+                      // Auto-add the classified industry if confidence is high
+                      if (response.confidence === 'high' || response.confidence === 'medium') {
+                        const currentIndustries = answers.industries || [];
+                        const apolloIndustry = response.apollo_industry;
+                        if (!currentIndustries.includes(apolloIndustry)) {
+                          setAnswers({ 
+                            ...answers, 
+                            industries: [...currentIndustries, apolloIndustry]
+                          });
+                        }
+                        // Clear input after successful classification
+                        setCustomIndustryInput('');
+                      }
+                    }
+                  } catch (error: any) {
+                    logger.error('Error classifying industry', error);
+                    setIndustryClassification({
+                      success: false,
+                      error: error.message || 'Failed to classify industry'
+                    });
+                  } finally {
+                    setIsClassifyingIndustry(false);
                   }
-                } else {
-                  // If cleared, remove the old customIndustry from array
-                  const filtered = currentIndustries.filter(i => i !== answers.customIndustry);
-                  setAnswers({ ...answers, customIndustry: '', industries: filtered });
-                }
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
-            />
+                }}
+                sx={{
+                  minWidth: '120px',
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {isClassifyingIndustry ? (
+                  <>
+                    <CircularProgress size={16} sx={{ mr: 1 }} color="inherit" />
+                    Analyzing...
+                  </>
+                ) : (
+                  '🤖 Find Industry'
+                )}
+              </Button>
+            </Box>
+            {/* Industry Classification Result */}
+            {industryClassification && industryClassification.success && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: '#F0F9FF', borderRadius: '8px', border: '1px solid #3B82F6' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 1 }}>
+                  ✅ Matched Apollo Industry: <strong>{industryClassification.apollo_industry}</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748B', mb: 1 }}>
+                  Confidence: {industryClassification.confidence} • {industryClassification.reasoning}
+                </Typography>
+                {industryClassification.confidence === 'low' && industryClassification.clarifying_question && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    {industryClassification.clarifying_question}
+                  </Alert>
+                )}
+                {industryClassification.alternative_industries && industryClassification.alternative_industries.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748B', mb: 1 }}>
+                      Alternative Industries:
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                      {industryClassification.alternative_industries.map((alt: string, idx: number) => (
+                        <Chip
+                          key={idx}
+                          label={alt}
+                          size="small"
+                          onClick={() => {
+                            const currentIndustries = answers.industries || [];
+                            if (!currentIndustries.includes(alt)) {
+                              setAnswers({ 
+                                ...answers, 
+                                industries: [...currentIndustries, alt]
+                              });
+                            }
+                          }}
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: '#E0F2FE' }
+                          }}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Box>
+            )}
+            {industryClassification && !industryClassification.success && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {industryClassification.error}
+              </Alert>
+            )}
           </Box>
-
           {/* Roles/Decision Maker Card */}
           <Box
             sx={{
@@ -1917,7 +1876,6 @@ export default function GuidedFlowPanel() {
             >
               Select one or more roles to target
             </Typography>
-            
             <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
               {ROLE_CHIPS.map((role) => {
                 const isSelected = answers.roles?.includes(role) || false;
@@ -1950,7 +1908,6 @@ export default function GuidedFlowPanel() {
                 );
               })}
             </Stack>
-            
             <TextField
               fullWidth
               size="small"
@@ -1960,11 +1917,9 @@ export default function GuidedFlowPanel() {
                 setCustomRoleInput(e.target.value);
                 const customRole = e.target.value.trim();
                 const currentRoles = answers.roles || [];
-                
                 if (customRole) {
                   // Remove the old customRole value from array if it exists
                   const filtered = currentRoles.filter(r => r !== answers.customRole);
-                  
                   // Add the new custom role if it's not already in the array
                   if (!filtered.includes(customRole)) {
                     setAnswers({ 
@@ -1990,7 +1945,6 @@ export default function GuidedFlowPanel() {
               }}
             />
           </Box>
-
           {/* Location Card */}
           <Box
             sx={{
@@ -2023,7 +1977,6 @@ export default function GuidedFlowPanel() {
             >
               Enter country, state, city, or any location
             </Typography>
-            
             <Autocomplete
               multiple
               freeSolo
@@ -2093,7 +2046,6 @@ export default function GuidedFlowPanel() {
               )}
             />
           </Box>
-
           {/* Action Buttons */}
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button
@@ -2125,10 +2077,8 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   const renderStep3Platform = () => {
     const selectedPlatforms = answers.platforms || [];
-    
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -2182,7 +2132,6 @@ export default function GuidedFlowPanel() {
                         if (validationErrors.platforms && updated.length > 0) {
                           setValidationErrors({ ...validationErrors, platforms: false });
                         }
-                        
                         // Update channel connections
                         if (platform.value === 'linkedin') {
                           setChannelConnection('linkedin', e.target.checked);
@@ -2222,7 +2171,6 @@ export default function GuidedFlowPanel() {
               ))}
             </Stack>
           </Box>
-
           {/* LinkedIn Logic Section */}
           {selectedPlatforms.includes('linkedin') && (
             <>
@@ -2249,7 +2197,6 @@ export default function GuidedFlowPanel() {
                   <RenderActions actions={VOICE_ACTIONS} answersKey="voiceActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
                 </Stack>
               </Box>
-
               {/* LinkedIn Connection Message */}
               {answers.linkedinActions?.includes('send_connection') && (
                 <Box
@@ -2286,7 +2233,6 @@ export default function GuidedFlowPanel() {
                       sx={{ m: 0 }}
                     />
                   </Box>
-                  
                   {enableConnectionMessage && (
                     <TextField
                       fullWidth
@@ -2301,7 +2247,6 @@ export default function GuidedFlowPanel() {
                   )}
                 </Box>
               )}
-
               {/* LinkedIn Message Content */}
               {answers.linkedinActions?.includes('send_message') && (
                 <Box
@@ -2337,7 +2282,6 @@ export default function GuidedFlowPanel() {
               )}
             </>
           )}
-
           {/* WhatsApp Logic Section */}
           {selectedPlatforms.includes('whatsapp') && (
             <Box
@@ -2371,7 +2315,6 @@ export default function GuidedFlowPanel() {
               />
             </Box>
           )}
-
           {/* Email Logic Section */}
           {selectedPlatforms.includes('email') && (
             <>
@@ -2435,7 +2378,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </>
           )}
-
           {/* Voice Logic Section */}
           {selectedPlatforms.includes('voice') && (
             <>
@@ -2454,7 +2396,6 @@ export default function GuidedFlowPanel() {
                   sx={{ mb: 3 }}
                 />
               </Box>
-              
               {answers.voiceEnabled !== false && (
                 <>
                   {/* Voice Agent Selection */}
@@ -2474,7 +2415,6 @@ export default function GuidedFlowPanel() {
                     <Typography variant="caption" sx={{ mb: 3, color: '#64748B', display: 'block', fontSize: '13px' }}>
                       Select the voice agent to use for calls
                     </Typography>
-                    
                     <FormControl fullWidth required sx={{ mb: 3 }}>
                       <InputLabel>Voice Agent *</InputLabel>
                       <Select
@@ -2506,7 +2446,6 @@ export default function GuidedFlowPanel() {
                         Each agent has its own pre-configured template and settings
                       </Typography>
                     </FormControl>
-
                     <TextField
                       fullWidth
                       multiline
@@ -2527,7 +2466,6 @@ export default function GuidedFlowPanel() {
                       helperText="Required: This context will be provided to the voice agent to personalize the conversation"
                     />
                   </Box>
-
                   {/* Call Timing */}
                   <Box
                     sx={{
@@ -2545,7 +2483,6 @@ export default function GuidedFlowPanel() {
                     <Typography variant="caption" sx={{ mb: 3, color: '#64748B', display: 'block', fontSize: '13px' }}>
                       When should the voice calls be made?
                     </Typography>
-                    
                     <FormControl fullWidth>
                       <InputLabel>When should calls be made?</InputLabel>
                       <Select
@@ -2557,7 +2494,6 @@ export default function GuidedFlowPanel() {
                         <MenuItem value="after_linkedin">Call after LinkedIn connection accepted</MenuItem>
                       </Select>
                     </FormControl>
-                    
                     {answers.voiceTiming === 'after_linkedin' && (
                       <Box sx={{ mt: 2, p: 1.5, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
                         <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px' }}>
@@ -2571,7 +2507,6 @@ export default function GuidedFlowPanel() {
               )}
             </>
           )}
-
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button
               endIcon={<ArrowRight size={16} />}
@@ -2586,7 +2521,6 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   // Auto-skip Voice step if voice not selected
   useEffect(() => {
     if (currentStep === 'voice_agent' && !answers.platforms?.includes('voice')) {
@@ -2594,37 +2528,31 @@ export default function GuidedFlowPanel() {
       return () => clearTimeout(timer);
     }
   }, [currentStep, answers.platforms]);
-
   const renderStep4ConditionsAndDelays = () => {
     const selectedPlatforms = answers.platforms || [];
     const hasLinkedIn = selectedPlatforms.includes('linkedin');
     const hasEmail = selectedPlatforms.includes('email');
     const hasWhatsApp = selectedPlatforms.includes('whatsapp');
     const hasVoice = selectedPlatforms.includes('voice');
-    
     // Condition options based on selected platforms
     const conditionOptions: Array<{ value: string; label: string; description: string }> = [];
-    
     if (hasLinkedIn) {
       conditionOptions.push(
         { value: 'connected', label: 'LinkedIn Connection Accepted', description: 'Wait until the connection request is accepted' },
         { value: 'linkedin_replied', label: 'LinkedIn Message Replied', description: 'Wait until they reply to your LinkedIn message' }
       );
     }
-    
     if (hasEmail) {
       conditionOptions.push(
         { value: 'email_opened', label: 'Email Opened', description: 'Wait until they open your email' },
         { value: 'email_replied', label: 'Email Replied', description: 'Wait until they reply to your email' }
       );
     }
-    
     if (hasWhatsApp) {
       conditionOptions.push(
         { value: 'whatsapp_replied', label: 'WhatsApp Message Replied', description: 'Wait until they reply to your WhatsApp message' }
       );
     }
-
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -2650,7 +2578,6 @@ export default function GuidedFlowPanel() {
           <Typography variant="body1" sx={{ mb: 3, color: '#64748B', fontSize: '14px' }}>
             Configure when and how your campaign actions should execute. Set delays between steps and conditions that must be met before proceeding.
           </Typography>
-
           {/* Delay Configuration */}
           <Box 
             sx={{ 
@@ -2670,7 +2597,6 @@ export default function GuidedFlowPanel() {
             <Typography variant="body2" sx={{ mb: 3, color: '#64748B', fontSize: '13px' }}>
               How long should the system wait before executing the next action? This helps make your outreach feel more natural.
             </Typography>
-            
             <Stack spacing={3} direction="row" sx={{ alignItems: 'flex-start' }}>
               <FormControl sx={{ flex: 1 }}>
                 <InputLabel>Days</InputLabel>
@@ -2690,7 +2616,6 @@ export default function GuidedFlowPanel() {
                   ))}
                 </Select>
               </FormControl>
-              
               <FormControl sx={{ flex: 1 }}>
                 <InputLabel>Hours</InputLabel>
                 <Select
@@ -2709,7 +2634,6 @@ export default function GuidedFlowPanel() {
                   ))}
                 </Select>
               </FormControl>
-              
               <FormControl sx={{ flex: 1 }}>
                 <InputLabel>Minutes</InputLabel>
                 <Select
@@ -2729,7 +2653,6 @@ export default function GuidedFlowPanel() {
                 </Select>
               </FormControl>
             </Stack>
-            
             <Box sx={{ mt: 2, p: 2, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
               <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <AlertTriangle size={14} />
@@ -2737,7 +2660,6 @@ export default function GuidedFlowPanel() {
               </Typography>
             </Box>
           </Box>
-
           {/* Condition Configuration */}
           {conditionOptions.length > 0 && (
             <Box 
@@ -2758,7 +2680,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="body2" sx={{ mb: 3, color: '#64748B', fontSize: '13px' }}>
                 Choose what must happen before proceeding to the next action. The system will wait until this condition is met.
               </Typography>
-              
               <Stack spacing={2}>
                 {conditionOptions.map((option) => (
                   <Card
@@ -2804,7 +2725,6 @@ export default function GuidedFlowPanel() {
                   </Card>
                 ))}
               </Stack>
-              
               <Box sx={{ mt: 2, p: 2, bgcolor: '#F0FDF4', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
                 <Typography variant="caption" sx={{ color: '#166534', fontSize: '12px', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <CheckCircle2 size={14} />
@@ -2813,7 +2733,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </Box>
           )}
-
           {/* Platform-specific information */}
           {selectedPlatforms.length > 0 && (
             <Box 
@@ -2853,7 +2772,6 @@ export default function GuidedFlowPanel() {
               </Stack>
             </Box>
           )}
-
           <Button
             variant="contained"
             fullWidth
@@ -2874,12 +2792,10 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   const renderStep5 = () => {
     if (!answers.platforms?.includes('voice')) {
       return null;
     }
-
     // Agent name mapping
     const agentNames: Record<string, string> = {
       '24': 'VAPI Agent',
@@ -2887,7 +2803,6 @@ export default function GuidedFlowPanel() {
       '2': 'Agent 2',
       '3': 'Agent 3',
     };
-
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -2924,7 +2839,6 @@ export default function GuidedFlowPanel() {
             label="Enable AI voice calls"
             sx={{ mb: 3 }}
           />
-          
           {answers.voiceEnabled !== false && (
             <>
               {/* Voice Agent Selection - REQUIRED */}
@@ -2963,7 +2877,6 @@ export default function GuidedFlowPanel() {
                 >
                   Select the voice agent to use for calls
                 </Typography>
-                
                 <FormControl fullWidth required sx={{ mb: 3 }}>
                   <InputLabel>Voice Agent *</InputLabel>
                   <Select
@@ -2984,7 +2897,6 @@ export default function GuidedFlowPanel() {
                     Each agent has its own pre-configured template and settings
                   </Typography>
                 </FormControl>
-
                 <TextField
                   fullWidth
                   multiline
@@ -2998,14 +2910,12 @@ export default function GuidedFlowPanel() {
                   sx={{ mb: 2 }}
                   error={!voiceContext || voiceContext.trim() === ''}
                 />
-                
                 {(!voiceContext || voiceContext.trim() === '') && (
                   <Typography variant="caption" color="error.main" sx={{ fontSize: '12px', mb: 2, display: 'block' }}>
                     ⚠️ Call context is required. The voice agent needs this information to conduct the conversation.
                   </Typography>
                 )}
               </Box>
-
               {/* Timing Configuration */}
               <Box
                 sx={{
@@ -3042,7 +2952,6 @@ export default function GuidedFlowPanel() {
                 >
                   When should the voice calls be made?
                 </Typography>
-                
                 <FormControl fullWidth>
                   <InputLabel>When should calls be made?</InputLabel>
                   <Select
@@ -3054,7 +2963,6 @@ export default function GuidedFlowPanel() {
                     <MenuItem value="after_linkedin">Call after LinkedIn connection accepted</MenuItem>
                   </Select>
                 </FormControl>
-                
                 {answers.voiceTiming === 'after_linkedin' && (
                   <Box sx={{ mt: 2, p: 1.5, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
                     <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px' }}>
@@ -3067,7 +2975,6 @@ export default function GuidedFlowPanel() {
             </>
           )}
         </Box>
-
         <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
           <Button
             endIcon={<ArrowRight size={16} />}
@@ -3082,7 +2989,6 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   // Update delay, condition, and LinkedIn messages in answers when they change (Step 4)
   useEffect(() => {
     if (currentStep === 'voice_agent' || currentStep === 'campaign_settings' || currentStep === 'confirmation') {
@@ -3098,7 +3004,6 @@ export default function GuidedFlowPanel() {
       });
     }
   }, [delayDays, delayHours, delayMinutes, conditionType, enableConnectionMessage, linkedinConnectionMessage, linkedinMessage, currentStep]);
-
   // Update voice agent configuration in answers when they change (Step 5)
   useEffect(() => {
     if (currentStep === 'voice_agent' || currentStep === 'campaign_settings' || currentStep === 'confirmation') {
@@ -3110,7 +3015,6 @@ export default function GuidedFlowPanel() {
       });
     }
   }, [voiceAgentId, voiceAgentName, voiceContext, currentStep]);
-
   // Update campaign settings in answers when they change
   useEffect(() => {
     if (currentStep === 'campaign_settings' || currentStep === 'confirmation') {
@@ -3127,7 +3031,6 @@ export default function GuidedFlowPanel() {
       });
     }
   }, [campaignDuration, dailyLeadVolume, workingDays, smartThrottling, currentStep]);
-
   const renderStep6 = () => {
     // Define working days options first
     const workingDaysOptions = [
@@ -3139,12 +3042,10 @@ export default function GuidedFlowPanel() {
       { value: 'saturday', label: 'Sat' },
       { value: 'sunday', label: 'Sun' },
     ];
-
     // Calculate campaign summary
     const workingDaysCount = workingDays.length;
     const totalLeads = campaignDuration * dailyLeadVolume * (workingDaysCount / 7);
     const riskLevel = dailyLeadVolume <= 10 ? 'Low' : dailyLeadVolume <= 25 ? 'Medium' : 'High';
-    
     // Format schedule text
     const getScheduleText = () => {
       if (workingDays.length === 7) return 'All days';
@@ -3157,7 +3058,6 @@ export default function GuidedFlowPanel() {
       });
       return dayLabels.join(', ');
     };
-
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -3207,7 +3107,6 @@ export default function GuidedFlowPanel() {
               />
             </CardContent>
           </Card>
-
           {/* Campaign Duration Card */}
           <Card
             sx={{
@@ -3227,7 +3126,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
                 How long should this campaign run?
               </Typography>
-              
               <Box
                 sx={{
                   mb: 2,
@@ -3314,7 +3212,6 @@ export default function GuidedFlowPanel() {
                   </Box>
                 </Stack>
               </Box>
-              
               {(customDuration !== '' || ![7, 14, 30].includes(campaignDuration)) && (
                 <TextField
                   fullWidth
@@ -3338,7 +3235,6 @@ export default function GuidedFlowPanel() {
                   }}
                 />
               )}
-              
               <Box sx={{ mt: 2, p: 1.5, bgcolor: '#F0F9FF', borderRadius: '6px', border: '1px solid #BAE6FD' }}>
                 <Typography variant="caption" sx={{ color: '#0369A1', fontSize: '12px' }}>
                   💡 Most successful campaigns run for at least 14 days.
@@ -3346,7 +3242,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </CardContent>
           </Card>
-
           {/* Daily Lead Volume Card */}
           <Card
             sx={{
@@ -3366,7 +3261,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
                 How many new leads do you want to target per day?
               </Typography>
-              
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
                 {[
                   { value: 10, label: '10 / day', subtitle: 'Safe', color: '#10B981' },
@@ -3399,7 +3293,6 @@ export default function GuidedFlowPanel() {
                   </Box>
                 ))}
               </Stack>
-              
               <Box sx={{ px: 1 }}>
                 <Slider
                   value={dailyLeadVolume}
@@ -3439,7 +3332,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </CardContent>
           </Card>
-
           {/* Campaign Schedule Card */}
           <Card
             sx={{
@@ -3453,7 +3345,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
                 On which days should the campaign run?
               </Typography>
-              
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
                 <Box
                   onClick={() => {
@@ -3533,7 +3424,6 @@ export default function GuidedFlowPanel() {
                   </Typography>
                 </Box>
               </Stack>
-              
               {(workingDays.length !== 5 || !workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))) && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="caption" sx={{ color: '#64748B', mb: 1.5, display: 'block' }}>
@@ -3576,7 +3466,6 @@ export default function GuidedFlowPanel() {
               )}
             </CardContent>
           </Card>
-
           {/* Smart Safety Controls Card */}
           <Card
             sx={{
@@ -3633,7 +3522,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </CardContent>
           </Card>
-
           {/* Advanced Options Card */}
           <Card
             sx={{
@@ -3668,7 +3556,6 @@ export default function GuidedFlowPanel() {
                   }}
                 />
               </Button>
-              
               {showAdvanced && (
                 <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #E2E8F0' }}>
                   <Stack spacing={3}>
@@ -3691,7 +3578,6 @@ export default function GuidedFlowPanel() {
                         }}
                       />
                     </Box>
-                    
                     {/* Randomized Delays */}
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
@@ -3715,7 +3601,6 @@ export default function GuidedFlowPanel() {
                         }}
                       />
                     </Box>
-                    
                     {/* Auto-pause on Warning */}
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
@@ -3739,7 +3624,6 @@ export default function GuidedFlowPanel() {
                         }}
                       />
                     </Box>
-                    
                     {/* Time Window */}
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 500, color: '#1E293B', mb: 1 }}>
@@ -3781,7 +3665,6 @@ export default function GuidedFlowPanel() {
               )}
             </CardContent>
           </Card>
-
           {/* Campaign Summary Card */}
           <Card
             sx={{
@@ -3796,7 +3679,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B', mb: 2 }}>
                 Your campaign will:
               </Typography>
-              
               <Stack spacing={1.5} sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ color: '#1E293B' }}>
                   • Run for <strong>{campaignDuration} days</strong>
@@ -3827,13 +3709,11 @@ export default function GuidedFlowPanel() {
                   />
                 </Box>
               </Stack>
-              
               <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px', fontStyle: 'italic' }}>
                 You can change these settings anytime.
               </Typography>
             </CardContent>
           </Card>
-
           {/* Action Buttons */}
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button
@@ -3865,16 +3745,13 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   // Convert workflow nodes to campaign steps format for API
   const convertWorkflowNodesToSteps = useCallback(() => {
     const nodes = useOnboardingStore.getState().workflowNodes;
     const edges = useOnboardingStore.getState().workflowEdges;
-    
     // Create a map of node id to order based on edges (topological sort)
     const nodeOrder: Record<string, number> = {};
     const visited = new Set<string>();
-    
     // Find start node (should be the one with no incoming edges, or first node)
     let currentOrder = 0;
     const findStartNode = () => {
@@ -3883,38 +3760,32 @@ export default function GuidedFlowPanel() {
       // Start node is one that appears as source but not as target
       return nodes.find(n => sourceNodes.has(n.id) && !targetNodes.has(n.id)) || nodes[0];
     };
-    
     const startNode = findStartNode();
     if (startNode) {
       const traverse = (nodeId: string) => {
         if (visited.has(nodeId)) return;
         visited.add(nodeId);
         nodeOrder[nodeId] = currentOrder++;
-        
         // Find all nodes this node connects to
         const outgoingEdges = edges.filter(e => e.source === nodeId);
         outgoingEdges.forEach(edge => {
           traverse(edge.target);
         });
       };
-      
       traverse(startNode.id);
     }
-    
     // Convert nodes to steps
     const steps = nodes
       .filter(node => node.type !== 'start' && node.type !== 'end')
       .map(node => {
         const nodeData = node.data || {};
         const stepConfig: Record<string, any> = {};
-        
         // Extract all config from node.data except title and description
         Object.keys(nodeData).forEach(key => {
           if (key !== 'title' && key !== 'description') {
             stepConfig[key] = nodeData[key];
           }
         });
-        
         return {
           type: node.type,
           order: nodeOrder[node.id] ?? 0,
@@ -3924,23 +3795,18 @@ export default function GuidedFlowPanel() {
         };
       })
       .sort((a, b) => a.order - b.order);
-    
     return steps;
   }, []);
-
   // Create campaign API call
   const handleCreateCampaign = useCallback(async () => {
     if (!campaignName || campaignName.trim() === '') {
       setCreateError('Campaign name is required');
       return;
     }
-
     setIsCreatingCampaign(true);
     setCreateError(null);
-
     try {
       const steps = convertWorkflowNodesToSteps();
-      
       // Validate that lead generation step exists
       const hasLeadGenStep = steps.some(step => step.type === 'lead_generation');
       if (!hasLeadGenStep) {
@@ -3948,14 +3814,12 @@ export default function GuidedFlowPanel() {
         setIsCreatingCampaign(false);
         return;
       }
-      
       // Prepare campaign config
       const campaignConfig = {
         leads_per_day: dailyLeadVolume,
         lead_gen_offset: 0,
         last_lead_gen_date: null,
       };
-
       const campaignData = {
         name: campaignName.trim(),
         status: 'draft',
@@ -3963,14 +3827,11 @@ export default function GuidedFlowPanel() {
         config: campaignConfig,
         leads_per_day: dailyLeadVolume, // Also include for backwards compatibility
       };
-
       logger.debug('Creating campaign with data', { campaignData });
       const response = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
-      
       if (response.success) {
         logger.debug('Campaign created successfully', { data: response.data });
         const campaignId = response.data.id || response.data.data?.id;
-        
         // Always start the campaign immediately
         if (campaignId) {
           try {
@@ -3986,7 +3847,6 @@ export default function GuidedFlowPanel() {
             return;
           }
         }
-        
         // Navigate to campaigns page
         logger.debug('Redirecting to campaigns page');
         router.push('/campaigns');
@@ -4000,16 +3860,13 @@ export default function GuidedFlowPanel() {
       setIsCreatingCampaign(false);
     }
   }, [campaignName, dailyLeadVolume, startImmediately, convertWorkflowNodesToSteps, router]);
-
   const renderStep7 = () => {
     const nodes = useOnboardingStore.getState().workflowNodes;
     const workflowPreview = useOnboardingStore.getState().workflowPreview;
     const stepCount = nodes.filter(n => n.type !== 'start' && n.type !== 'end').length;
-    
     // Get dailyLeadVolume from workflow steps (lead_generation step's leadLimit)
     const leadGenStep = workflowPreview.find(step => step.type === 'lead_generation');
     const currentDailyLeadVolume = leadGenStep?.leadLimit || dailyLeadVolume;
-
     return (
       <StepLayout
         currentStep={currentStepNumber}
@@ -4045,7 +3902,6 @@ export default function GuidedFlowPanel() {
               <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 600, color: '#1E293B', fontSize: '18px' }}>
                 🎯 Your Campaign Setup
               </Typography>
-              
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
                   Campaign Name:
@@ -4054,7 +3910,6 @@ export default function GuidedFlowPanel() {
                   {campaignName || <span style={{ fontStyle: 'italic', color: '#94A3B8' }}>Not set</span>}
                 </Typography>
               </Box>
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
                   Target Audience:
@@ -4075,7 +3930,6 @@ export default function GuidedFlowPanel() {
                   </Typography>
                 )}
               </Box>
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
                   Platforms:
@@ -4084,7 +3938,6 @@ export default function GuidedFlowPanel() {
                   {answers.platforms?.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ') || 'None'}
                 </Typography>
               </Box>
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
                   Campaign Settings:
@@ -4096,7 +3949,6 @@ export default function GuidedFlowPanel() {
                   Daily Leads: {currentDailyLeadVolume}
                 </Typography>
               </Box>
-
               <Box>
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
                   Workflow Steps:
@@ -4110,7 +3962,6 @@ export default function GuidedFlowPanel() {
               </Box>
             </CardContent>
           </Card>
-
           {/* Campaign Creation Info */}
           <Card
             sx={{
@@ -4147,14 +3998,12 @@ export default function GuidedFlowPanel() {
               </Box>
             </CardContent>
           </Card>
-
           {/* Error Alert */}
           {createError && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={() => setCreateError(null)}>
               {createError}
             </Alert>
           )}
-
           {/* Action Buttons */}
           <Stack direction="row" spacing={2} justifyContent="flex-end">
             <Button
@@ -4198,7 +4047,6 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
-
   return (
     <Box
       sx={{
@@ -4228,5 +4076,4 @@ export default function GuidedFlowPanel() {
       </Box>
     </Box>
   );
-}
-
+}

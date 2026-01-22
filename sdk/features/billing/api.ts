@@ -3,9 +3,7 @@
  * All API calls for billing operations
  * This is the only place that makes direct HTTP calls for billing
  */
-
 import { getApiClient } from '../../shared/apiClient';
-
 export interface CreditsBalance {
   walletId: string;
   tenantId: string;
@@ -16,10 +14,8 @@ export interface CreditsBalance {
   status: string;
   lowBalanceThreshold?: number;
 }
-
 // Backward compatibility alias
 export type WalletBalance = CreditsBalance;
-
 export interface UsageEvent {
   id: string;
   tenantId: string;
@@ -30,7 +26,6 @@ export interface UsageEvent {
   createdAt: string;
   chargedAt?: string;
 }
-
 export interface LedgerTransaction {
   id: string;
   tenantId: string;
@@ -41,7 +36,6 @@ export interface LedgerTransaction {
   description?: string;
   createdAt: string;
 }
-
 export interface PricingItem {
   category: string;
   provider: string;
@@ -50,7 +44,6 @@ export interface PricingItem {
   unitPrice: number;
   description?: string;
 }
-
 export interface QuoteItem {
   category: string;
   provider: string;
@@ -58,7 +51,6 @@ export interface QuoteItem {
   unit: string;
   quantity: number;
 }
-
 export interface QuoteResponse {
   totalCost: number;
   currency: string;
@@ -67,7 +59,6 @@ export interface QuoteResponse {
     cost: number;
   }>;
 }
-
 export interface ChargeRequest {
   featureKey: string;
   externalReferenceId?: string;
@@ -75,21 +66,18 @@ export interface ChargeRequest {
   items: QuoteItem[];
   metadata?: Record<string, any>;
 }
-
 export interface UsageAggregation {
   featureKey: string;
   status: string;
   eventCount: number;
   totalCost: number;
 }
-
 export interface UsageSummary {
   totalEvents: number;
   totalCost: number;
   byFeature: Record<string, { events: number; cost: number }>;
   byStatus: Record<string, { events: number; cost: number }>;
 }
-
 /**
  * Get current credits balance
  */
@@ -98,10 +86,8 @@ export async function getCreditsBalance(): Promise<CreditsBalance> {
   const response = await api.get('/api/billing/wallet');
   return response.data.wallet;
 }
-
 // Backward compatibility alias
 export const getWalletBalance = getCreditsBalance;
-
 /**
  * Get pricing for a specific component
  */
@@ -115,7 +101,6 @@ export async function getPricing(params: {
   const response = await api.get('/api/billing/pricing', { params });
   return response.data.price;
 }
-
 /**
  * Get cost quote before charging
  */
@@ -124,7 +109,6 @@ export async function getQuote(items: QuoteItem[]): Promise<QuoteResponse> {
   const response = await api.post('/api/billing/quote', { items });
   return response.data.quote;
 }
-
 /**
  * Charge usage (creates usage event and debits wallet)
  */
@@ -136,7 +120,6 @@ export async function chargeUsage(request: ChargeRequest): Promise<{
   const response = await api.post('/api/billing/charge', request);
   return response.data;
 }
-
 /**
  * Top up credits (admin only)
  */
@@ -149,7 +132,6 @@ export async function topUpCredits(params: {
   const response = await api.post('/api/billing/topup', params);
   return response.data.transaction;
 }
-
 /**
  * List usage events with filters
  */
@@ -168,7 +150,6 @@ export async function listUsage(params?: {
   const response = await api.get('/api/billing/usage', { params });
   return response.data.usage;
 }
-
 /**
  * Get usage aggregation summary
  */
@@ -181,7 +162,6 @@ export async function getUsageAggregation(params?: {
   const response = await api.get('/api/billing/usage/aggregation', { params });
   return response.data.aggregation;
 }
-
 /**
  * List ledger transactions
  */
@@ -195,7 +175,6 @@ export async function listTransactions(params?: {
   const response = await api.get('/api/billing/transactions', { params });
   return response.data.transactions;
 }
-
 /**
  * LEGACY COMPATIBILITY
  * Get credits balance in legacy format for existing UI components
@@ -217,10 +196,8 @@ export async function getCreditsBalanceLegacy(): Promise<{
   const response = await api.get('/api/wallet/balance');
   return response.data;
 }
-
 // Backward compatibility alias
 export const getWalletBalanceLegacy = getCreditsBalanceLegacy;
-
 /**
  * LEGACY COMPATIBILITY
  * Get credit packages
@@ -229,4 +206,4 @@ export async function getCreditPackages(): Promise<any[]> {
   const api = await getApiClient();
   const response = await api.get('/api/wallet/packages');
   return response.data.packages;
-}
+}

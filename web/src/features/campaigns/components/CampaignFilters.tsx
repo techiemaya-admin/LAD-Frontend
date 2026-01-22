@@ -1,16 +1,13 @@
 'use client';
-
 import React from 'react';
 import { Box, Card, CardContent, TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Search } from '@mui/icons-material';
-
 interface CampaignFiltersProps {
   searchQuery: string;
   statusFilter: string;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
 }
-
 export default function CampaignFilters({
   searchQuery,
   statusFilter,
@@ -53,5 +50,4 @@ export default function CampaignFilters({
       </CardContent>
     </Card>
   );
-}
-
+}

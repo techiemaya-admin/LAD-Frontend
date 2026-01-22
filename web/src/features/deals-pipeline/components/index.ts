@@ -12,6 +12,4 @@ export { default as CreateCardDialog } from './CreateCardDialog';
 export { default as AddStageDialog } from './AddStageDialog';
 export { default as EnhancedAddStageDialog } from './EnhancedAddStageDialog';
 export { default as EditLeadDialog } from './EditLeadDialog';
-export { default as PipelineBoardHeader } from './PipelineBoardHeader';
-
-
+export { default as PipelineBoardHeader } from './PipelineBoardHeader';

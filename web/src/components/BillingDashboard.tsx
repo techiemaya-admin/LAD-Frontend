@@ -1,12 +1,10 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, Calendar, Download, ExternalLink } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { CreditUsageAnalytics } from './CreditUsageAnalytics';
 import Link from 'next/link';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface CreditBalance {
   credits: number;
   lastRecharge: {
@@ -17,20 +15,16 @@ interface CreditBalance {
   monthlyUsage: number;
   totalSpent: number;
 }
-
 interface BillingDashboardProps {
   customerId?: string;
 }
-
 export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }) => {
   const [balance, setBalance] = useState<CreditBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     fetchCreditBalance();
   }, []);
-
   const fetchCreditBalance = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
@@ -38,20 +32,16 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to fetch credit balance');
       }
-
       const data = await response.json();
-      
       setBalance({
         credits: data.credits || 0,
         lastRecharge: data.lastRecharge || null,
         monthlyUsage: data.monthlyUsage || 0,
         totalSpent: data.totalSpent || 0
       });
-      
       setLoading(false);
     } catch (err) {
       console.error('Error fetching credit balance:', err);
@@ -65,14 +55,12 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
       setLoading(false);
     }
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -80,13 +68,11 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
       day: 'numeric',
     });
   };
-
   if (loading) {
     return (
       <LoadingSpinner size="md" message="Loading billing information..." />
     );
   }
-
   if (error) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -98,7 +84,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
       </div>
     );
   }
-
   if (!balance) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -117,7 +102,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
       {/* Credit Balance Summary */}
@@ -131,7 +115,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
             <p className="text-4xl font-bold">{balance.credits.toLocaleString()}</p>
             <p className="text-sm opacity-80 mt-1">credits available</p>
           </div>
-
           <div>
             <div className="flex items-center mb-2">
               <TrendingUp className="h-5 w-5 mr-2 opacity-80" />
@@ -140,7 +123,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
             <p className="text-4xl font-bold">{balance.monthlyUsage.toLocaleString()}</p>
             <p className="text-sm opacity-80 mt-1">credits this month</p>
           </div>
-
           <div>
             <div className="flex items-center mb-2">
               <Calendar className="h-5 w-5 mr-2 opacity-80" />
@@ -150,7 +132,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
             <p className="text-sm opacity-80 mt-1">all-time investment</p>
           </div>
         </div>
-
         {balance.lastRecharge && (
           <div className="mt-6 pt-6 border-t border-blue-400">
             <p className="text-sm opacity-80">
@@ -161,7 +142,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
           </div>
         )}
       </div>
-
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
@@ -174,7 +154,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
           </div>
           <p className="text-sm text-gray-600">Purchase credit packages starting at $29</p>
         </Link>
-
         <Link
           href="/pricing"
           className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-transparent hover:border-blue-600"
@@ -185,7 +164,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
           </div>
           <p className="text-sm text-gray-600">See credit costs for all features</p>
         </Link>
-
         <button
           className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-transparent hover:border-blue-600 text-left"
           onClick={() => window.print()}
@@ -197,10 +175,8 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
           <p className="text-sm text-gray-600">Export your usage and billing history</p>
         </button>
       </div>
-
       {/* Credit Usage Analytics */}
       <CreditUsageAnalytics timeRange="30d" />
-
       {/* Credit Package Recommendations */}
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4">Credit Package Recommendations</h3>
@@ -233,7 +209,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
               </div>
             </div>
           )}
-
           {balance.monthlyUsage > 3000 && (
             <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
               <div className="flex items-start">
@@ -260,7 +235,6 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
               </div>
             </div>
           )}
-
           {balance.credits > 5000 && balance.monthlyUsage < 1000 && (
             <div className="bg-green-50 border-l-4 border-green-400 p-4">
               <div className="flex items-start">

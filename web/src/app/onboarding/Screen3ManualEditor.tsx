@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Box, Paper, Button, Typography, Stack } from '@mui/material';
 import { Save, X, Visibility, ArrowBack, Undo, Redo } from '@mui/icons-material';
@@ -24,7 +23,6 @@ import StepLibrary from '../../features/campaigns/components/StepLibrary';
 import StepSettings from '../../features/campaigns/components/StepSettings';
 import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
-
 // Register node types (defined outside component to prevent recreation on each render)
 const NODE_TYPES: NodeTypes = {
   start: CustomNode,
@@ -52,7 +50,6 @@ const NODE_TYPES: NodeTypes = {
   delay: CustomNode,
   condition: CustomNode,
 };
-
 export default function Screen3ManualEditor() {
   const {
     manualFlow,
@@ -75,7 +72,6 @@ export default function Screen3ManualEditor() {
   const isUpdatingFromStore = useRef(false);
   const prevNodesRef = useRef<string>('');
   const prevEdgesRef = useRef<string>('');
-
   // Initialize manualFlow from workflowPreview if it doesn't exist
   useEffect(() => {
     if (!manualFlow && workflowPreview && workflowPreview.length > 0 && !isInitializing.current) {
@@ -89,7 +85,6 @@ export default function Screen3ManualEditor() {
           ...step,
         },
       }));
-
       const flowEdges = [];
       for (let i = 0; i < flowNodes.length - 1; i++) {
         flowEdges.push({
@@ -98,14 +93,12 @@ export default function Screen3ManualEditor() {
           target: flowNodes[i + 1].id,
         });
       }
-
       setManualFlow({
         nodes: flowNodes,
         edges: flowEdges,
       });
     }
   }, [manualFlow, workflowPreview, setManualFlow]);
-
   // Convert workflow steps to React Flow nodes
   const convertToNodes = (workflow: any): Node[] => {
     if (!workflow) {
@@ -117,7 +110,6 @@ export default function Screen3ManualEditor() {
           position: { x: 400, y: 50 },
           data: { title: 'Start', type: 'start' },
         };
-
         const stepNodes: Node[] = workflowPreview.map((step, index) => ({
           id: step.id,
           type: step.type as StepType,
@@ -127,21 +119,17 @@ export default function Screen3ManualEditor() {
             ...step,
           },
         }));
-
         const endNode: Node = {
           id: 'end',
           type: 'end',
           position: { x: 400, y: 150 + stepNodes.length * 150 },
           data: { title: 'End', type: 'end' },
         };
-
         return [startNode, ...stepNodes, endNode];
       }
       return [];
     }
-
     if (!workflow.nodes && !workflow.steps) return [];
-
     // Handle new format with nodes array
     if (workflow.nodes) {
       const startNode: Node = {
@@ -150,7 +138,6 @@ export default function Screen3ManualEditor() {
         position: { x: 400, y: 50 },
         data: { title: 'Start', type: 'start' },
       };
-
       const stepNodes: Node[] = workflow.nodes.map((node: any) => ({
         id: node.id,
         type: node.type as StepType,
@@ -161,17 +148,14 @@ export default function Screen3ManualEditor() {
           ...node,
         },
       }));
-
       const endNode: Node = {
         id: 'end',
         type: 'end',
         position: { x: 400, y: 150 + stepNodes.length * 150 },
         data: { title: 'End', type: 'end' },
       };
-
       return [startNode, ...stepNodes, endNode];
     }
-
     // Handle old format with steps array
     const startNode: Node = {
       id: 'start',
@@ -179,7 +163,6 @@ export default function Screen3ManualEditor() {
       position: { x: 400, y: 50 },
       data: { title: 'Start', type: 'start' },
     };
-
     const stepNodes: Node[] = workflow.steps.map((step: any, index: number) => ({
       id: step.id,
       type: step.type as StepType,
@@ -190,17 +173,14 @@ export default function Screen3ManualEditor() {
         type: step.type,
       },
     }));
-
     const endNode: Node = {
       id: 'end',
       type: 'end',
       position: { x: 400, y: 150 + stepNodes.length * 150 },
       data: { title: 'End', type: 'end' },
     };
-
     return [startNode, ...stepNodes, endNode];
   };
-
   // Convert workflow edges to React Flow edges
   const convertToEdges = (workflow: any): Edge[] => {
     if (!workflow) {
@@ -214,7 +194,6 @@ export default function Screen3ManualEditor() {
           type: 'smoothstep',
           animated: true,
         });
-        
         for (let i = 0; i < workflowPreview.length - 1; i++) {
           edges.push({
             id: `edge-${workflowPreview[i].id}-${workflowPreview[i + 1].id}`,
@@ -224,7 +203,6 @@ export default function Screen3ManualEditor() {
             animated: true,
           });
         }
-        
         edges.push({
           id: `edge-last-end`,
           source: workflowPreview[workflowPreview.length - 1].id,
@@ -232,14 +210,11 @@ export default function Screen3ManualEditor() {
           type: 'smoothstep',
           animated: true,
         });
-        
         return edges;
       }
       return [];
     }
-
     if (!workflow.edges) return [];
-
     return workflow.edges.map((edge: FlowEdge) => ({
       id: edge.id,
       source: edge.source,
@@ -248,29 +223,24 @@ export default function Screen3ManualEditor() {
       animated: true,
     }));
   };
-
   const [nodes, setNodes, onNodesChange] = useNodesState(
     convertToNodes(manualFlow || null)
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     convertToEdges(manualFlow || null)
   );
-
   // Sync with store when manualFlow changes (only if not updating from nodes/edges)
   useEffect(() => {
     if (manualFlow && !isUpdatingFromStore.current) {
       isUpdatingFromStore.current = true;
       const newNodes = convertToNodes(manualFlow);
       const newEdges = convertToEdges(manualFlow);
-      
       // Check if nodes/edges actually changed
       const nodesKey = JSON.stringify(newNodes.map(n => ({ id: n.id, type: n.type, position: n.position })));
       const edgesKey = JSON.stringify(newEdges.map(e => ({ id: e.id, source: e.source, target: e.target })));
-      
       if (nodesKey !== prevNodesRef.current || edgesKey !== prevEdgesRef.current) {
         prevNodesRef.current = nodesKey;
         prevEdgesRef.current = edgesKey;
-        
         if (newNodes.length > 0) {
           setNodes(newNodes);
         }
@@ -278,18 +248,15 @@ export default function Screen3ManualEditor() {
           setEdges(newEdges);
         }
       }
-      
       // Reset flag after a short delay
       setTimeout(() => {
         isUpdatingFromStore.current = false;
       }, 100);
     }
   }, [manualFlow, setNodes, setEdges]);
-
   // Update store when nodes/edges change (only if not updating from store)
   useEffect(() => {
     if (isUpdatingFromStore.current) return; // Skip if we're updating from store
-    
     const updatedNodes = nodes
       .filter((n) => n.id !== 'start' && n.id !== 'end')
       .map((node) => ({
@@ -298,40 +265,33 @@ export default function Screen3ManualEditor() {
         position: node.position,
         data: node.data,
       }));
-
     const updatedEdges = edges.map((edge) => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
     }));
-
     // Create keys to check if data actually changed
     const nodesKey = JSON.stringify(updatedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })));
     const edgesKey = JSON.stringify(updatedEdges.map(e => ({ id: e.id, source: e.source, target: e.target })));
-    
     // Only update if data actually changed
     if ((nodesKey !== prevNodesRef.current || edgesKey !== prevEdgesRef.current) && (updatedNodes.length > 0 || updatedEdges.length > 0)) {
       prevNodesRef.current = nodesKey;
       prevEdgesRef.current = edgesKey;
-      
       // Push current state to history before updating
       if (manualFlow && !isUpdatingFromStore.current) {
         pushToHistory(manualFlow);
       }
-      
       isUpdatingFromStore.current = true;
       setManualFlow({
         nodes: updatedNodes,
         edges: updatedEdges,
       });
-      
       // Reset flag after a short delay
       setTimeout(() => {
         isUpdatingFromStore.current = false;
       }, 100);
     }
   }, [nodes, edges, setManualFlow, manualFlow, pushToHistory]);
-
   const onConnect = useCallback(
     (params: Connection) => {
       if (params.source && params.target) {
@@ -339,9 +299,7 @@ export default function Screen3ManualEditor() {
         if (manualFlow) {
           pushToHistory(manualFlow);
         }
-        
         setEdges((eds) => addEdge(params, eds));
-        
         // Update store
         // Edge will be added automatically by React Flow
         // The useEffect will sync it to store
@@ -349,25 +307,21 @@ export default function Screen3ManualEditor() {
     },
     [setEdges, manualFlow, pushToHistory]
   );
-
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       setSelectedNodeId(node.id);
     },
     [setSelectedNodeId]
   );
-
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
   }, [setSelectedNodeId]);
-
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
       // Push to history before deleting
       if (manualFlow) {
         pushToHistory(manualFlow);
       }
-      
       // Filter out deleted nodes and their edges
       setNodes((nds) => nds.filter((n) => !deleted.find((d) => d.id === n.id) || n.id === 'start' || n.id === 'end'));
       setEdges((eds) => eds.filter((e) => 
@@ -376,29 +330,24 @@ export default function Screen3ManualEditor() {
     },
     [setNodes, setEdges, manualFlow, pushToHistory]
   );
-
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }, []);
-
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       const stepType = e.dataTransfer.getData('application/reactflow') as StepType;
       if (!stepType) return;
-
       const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const position = {
         x: e.clientX - reactFlowBounds.left - 100,
         y: e.clientY - reactFlowBounds.top - 50,
       };
-
       // Push to history before adding node
       if (manualFlow) {
         pushToHistory(manualFlow);
       }
-
       // Add new node
       const newNode: Node = {
         id: `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -409,15 +358,12 @@ export default function Screen3ManualEditor() {
           type: stepType,
         },
       };
-
       setNodes((nds) => [...nds, newNode]);
     },
     [setNodes, manualFlow, pushToHistory]
   );
-
   const handleSave = async () => {
     if (!manualFlow || nodes.length === 0) return;
-
     setSaving(true);
     try {
       // Convert nodes/edges to workflow format
@@ -429,13 +375,11 @@ export default function Screen3ManualEditor() {
           position: node.position,
           data: node.data,
         }));
-
       const workflowEdges = edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
       }));
-
       // Update workflowPreview with the edited workflow
       const { setWorkflowPreview, setCurrentScreen } = useOnboardingStore.getState();
       setWorkflowPreview(
@@ -448,7 +392,6 @@ export default function Screen3ManualEditor() {
           channel: node.data.channel,
         }))
       );
-
       // Save to backend
       await apiPost('/api/workflow/save', {
         workflow: {
@@ -456,7 +399,6 @@ export default function Screen3ManualEditor() {
           edges: workflowEdges,
         },
       });
-
       // Update workflow preview and exit edit mode
       setIsEditMode(false);
       setCurrentScreen(1);
@@ -467,15 +409,12 @@ export default function Screen3ManualEditor() {
       setSaving(false);
     }
   };
-
   const handleCancel = () => {
     setIsEditMode(false); // Exit edit mode, go back to 3-panel view
   };
-
   const handlePreview = () => {
     setIsEditMode(false); // Exit edit mode, go back to 3-panel view
   };
-
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -491,28 +430,23 @@ export default function Screen3ManualEditor() {
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRedo]);
-
   const handleUndo = () => {
     if (canUndo()) {
       undo();
     }
   };
-
   const handleRedo = () => {
     if (canRedo()) {
       redo();
     }
   };
-
   // Sync manualFlow changes from undo/redo to ReactFlow nodes/edges
   useEffect(() => {
     if (manualFlow && manualFlow.nodes && manualFlow.edges && !isUpdatingFromStore.current) {
       isUpdatingFromStore.current = true;
-      
       const convertedNodes = convertToNodes(manualFlow);
       const convertedEdges = manualFlow.edges.map((edge: any) => ({
         id: edge.id || `edge-${edge.source}-${edge.target}`,
@@ -521,16 +455,13 @@ export default function Screen3ManualEditor() {
         animated: true,
         style: { stroke: '#7c3aed', strokeWidth: 2 },
       }));
-
       setNodes(convertedNodes);
       setEdges(convertedEdges);
-      
       setTimeout(() => {
         isUpdatingFromStore.current = false;
       }, 100);
     }
   }, [manualFlow, setNodes, setEdges]);
-
   // Full screen editor mode (when Edit is clicked from preview)
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
@@ -558,7 +489,6 @@ export default function Screen3ManualEditor() {
               Edit Workflow
             </Typography>
           </Stack>
-
           <Stack direction="row" spacing={2} alignItems="center">
             <Button
               variant="outlined"
@@ -611,12 +541,10 @@ export default function Screen3ManualEditor() {
           </Stack>
         </Stack>
       </Paper>
-
       {/* Main Content - 3 Column Layout */}
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left Sidebar - Step Library */}
         <StepLibrary />
-
         {/* Center - Flow Canvas */}
         <Box sx={{ flex: 1, position: 'relative' }}>
           <ReactFlow
@@ -638,11 +566,9 @@ export default function Screen3ManualEditor() {
             <Controls />
           </ReactFlow>
         </Box>
-
         {/* Right Sidebar - Step Settings */}
         <StepSettings />
       </Box>
     </Box>
   );
-}
-
+}

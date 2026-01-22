@@ -21,20 +21,17 @@ import {
   CalendarToday as CalendarTodayIcon
 } from '@mui/icons-material';
 import type { Lead } from '../types';
-
 interface TabPanelProps {
   children: React.ReactNode;
   value: number;
   index: number;
   [key: string]: unknown;
 }
-
 interface LeadDetailsDialogProps {
   open: boolean;
   onClose: () => void;
   lead: Lead | null;
 }
-
 const getStatusColor = (status?: string | null): string => {
   switch (status?.toLowerCase()) {
     case 'new': return '#2196F3';
@@ -46,7 +43,6 @@ const getStatusColor = (status?: string | null): string => {
     default: return '#757575';
   }
 };
-
 const getPriorityColor = (priority?: string | null): string => {
   switch (priority?.toLowerCase()) {
     case 'high': return '#F44336';
@@ -55,7 +51,6 @@ const getPriorityColor = (priority?: string | null): string => {
     default: return '#757575';
   }
 };
-
 const formatCurrency = (amount?: number | string | null): string => {
   if (!amount) return '-';
   return new Intl.NumberFormat('en-US', {
@@ -64,7 +59,6 @@ const formatCurrency = (amount?: number | string | null): string => {
     minimumFractionDigits: 0
   }).format(Number(amount));
 };
-
 const formatDate = (dateString?: string | Date | number | null): string => {
   if (!dateString) return '-';
   try {
@@ -73,7 +67,6 @@ const formatDate = (dateString?: string | Date | number | null): string => {
     return '-';
   }
 };
-
 const getDaysRemaining = (closeDate?: string | null): number | null => {
   if (!closeDate) return null;
   const now = new Date();
@@ -82,7 +75,6 @@ const getDaysRemaining = (closeDate?: string | null): number | null => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 };
-
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other }) => (
   <div
     role="tabpanel"
@@ -94,21 +86,16 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
     {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
   </div>
 );
-
 const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, lead }) => {
   const [activeTab, setActiveTab] = useState<number>(0);
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue);
   };
-
   const handleClose = (): void => {
     setActiveTab(0);
     onClose();
   };
-
   if (!lead) return null;
-
   const leadTags = Array.isArray(lead.tags) ? lead.tags : [];
   const leadPhone = lead.phone || lead.phoneNumber;
   const leadCompany = lead.company || (lead as { organization?: string }).organization;
@@ -117,7 +104,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
   const leadPriority = (lead as { priority?: string }).priority || 'Medium';
   const leadAmount = (lead as { amount?: number | string }).amount;
   const leadCloseDate = (lead as { closeDate?: string }).closeDate;
-
   return (
     <Dialog
       open={open}
@@ -163,7 +149,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
           </IconButton>
         </Box>
       </DialogTitle>
-      
       <DialogContent dividers sx={{ flex: 1, overflow: 'auto' }}>
         <Box sx={{ width: '100%' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -178,7 +163,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
               <Tab label="Notes" />
             </Tabs>
           </Box>
-
           <TabPanel value={activeTab} index={0}>
             <Box
               sx={{
@@ -212,7 +196,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                   )}
                 </Box>
               </Paper>
-
               <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
                 <Typography variant="subtitle1" gutterBottom>
                   Pipeline & Deal Information
@@ -266,7 +249,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                   </Box>
                 </Box>
               </Paper>
-
               <Paper
                 elevation={0}
                 sx={{
@@ -282,7 +264,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                   {leadDescription || 'No description provided'}
                 </Typography>
               </Paper>
-
               {leadTags.length > 0 && (
                 <Paper
                   elevation={0}
@@ -310,13 +291,11 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
               )}
             </Box>
           </TabPanel>
-
           <TabPanel value={activeTab} index={1}>
             <Typography variant="body1" color="text.secondary">
               Activity timeline will be displayed here.
             </Typography>
           </TabPanel>
-
           <TabPanel value={activeTab} index={2}>
             <Typography variant="body1" color="text.secondary">
               Notes and comments will be displayed here.
@@ -327,6 +306,4 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
     </Dialog>
   );
 };
-
-export default LeadDetailsDialog;
-
+export default LeadDetailsDialog;

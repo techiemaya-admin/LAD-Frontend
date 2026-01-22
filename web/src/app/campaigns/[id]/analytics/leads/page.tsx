@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -10,12 +9,11 @@ import {
   ArrowBack, People, Search
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
-import { useCampaignLeads, type CampaignLead } from '@/features/campaigns';
+import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
 import { apiPost } from '@/lib/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 import { safeStorage } from '@/utils/storage';
-
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;
@@ -26,36 +24,33 @@ interface ExtendedCampaignLead extends CampaignLead {
   title?: string;
   company?: string;
   photo_url?: string;
+  is_inbound?: boolean;
 }
-
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
   const campaignId = params.id as string;
   const { push } = useToast();
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  
+  // Fetch campaign to get campaign_type
+  const { campaign, loading: campaignLoading } = useCampaign(campaignId);
+  const isInboundCampaign = campaign?.campaign_type === 'inbound';
   // Use SDK hook for leads
   const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
     useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
   );
-  
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
-  const loading = leadsLoading;
-  
+  const loading = leadsLoading || campaignLoading;
   // Note: Pagination would ideally come from SDK
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  
   // Reveal state for employee contacts
   const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
   const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string }>>({});
-  
   // Type-safe state setters
   const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
     setRevealedContacts(updater);
@@ -63,14 +58,12 @@ export default function CampaignLeadsPage() {
   const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
     setRevealingContacts(updater);
   };
-  
   // Profile summary dialog state
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<ExtendedCampaignLead | null>(null);
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
-
   useEffect(() => {
     if (leadsError) {
       push({
@@ -80,7 +73,6 @@ export default function CampaignLeadsPage() {
       });
     }
   }, [leadsError, push]);
-  
   // Update total when leads change (this would ideally come from SDK)
   useEffect(() => {
     if (leads) {
@@ -88,7 +80,6 @@ export default function CampaignLeadsPage() {
       setTotalPages(Math.ceil(leads.length / 50));
     }
   }, [leads]);
-
   // Load summaries for leads (this is UI-specific logic, not SDK)
   useEffect(() => {
     if (leads && leads.length > 0) {
@@ -103,11 +94,9 @@ export default function CampaignLeadsPage() {
           }
         } catch (err) {
           // Silently fail - summary might not exist yet
-          console.log(`[Campaign Leads] No summary for lead ${lead.id}`);
-        }
+          }
         return null;
       });
-      
       Promise.all(summaryPromises).then((summaryResults) => {
         const summaryMap = new Map<string, string>();
         summaryResults.forEach((result) => {
@@ -115,23 +104,18 @@ export default function CampaignLeadsPage() {
             summaryMap.set(result.leadId, result.summary);
           }
         });
-        
         // Update leads with summaries (this would need state management)
         // For now, this is handled by the component's local state
       });
     }
   }, [leads, campaignId]);
-
-
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
-    
     try {
       const response = await apiPost<any>('/api/apollo-leads/reveal-phone', {
         person_id: employee.id
       });
-      
       if (response.success && response.phone) {
         // Store the revealed phone value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: response.phone } }));
@@ -146,16 +130,13 @@ export default function CampaignLeadsPage() {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: false } }));
     }
   };
-
   const handleRevealEmail = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-    
     try {
       const response = await apiPost<any>('/api/apollo-leads/reveal-email', {
         person_id: employee.id
       });
-      
       if (response.success && response.email) {
         // Store the revealed email value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: response.email } }));
@@ -170,14 +151,12 @@ export default function CampaignLeadsPage() {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
     }
   };
-
   const handleViewSummary = async (employee: ExtendedCampaignLead) => {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
     setProfileSummary(null);
     setSummaryError(null);
     setSummaryLoading(true);
-
     try {
       // First, try to get existing summary
       try {
@@ -188,7 +167,6 @@ export default function CampaignLeadsPage() {
           },
         });
         const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
-        
         if (existingSummary.success && existingSummary.summary) {
           setProfileSummary(existingSummary.summary);
           setSummaryLoading(false);
@@ -196,9 +174,7 @@ export default function CampaignLeadsPage() {
         }
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
-        console.log('[Profile Summary] No existing summary found, generating new one...');
-      }
-
+        }
       // Generate new summary
       const token = safeStorage.getItem('token');
       const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
@@ -222,7 +198,6 @@ export default function CampaignLeadsPage() {
         }),
       });
       const response = await generateResponse.json() as { success: boolean; summary: string; generated_at?: string };
-
       if (response.success && response.summary) {
         setProfileSummary(response.summary);
       } else {
@@ -240,14 +215,12 @@ export default function CampaignLeadsPage() {
       setSummaryLoading(false);
     }
   };
-
   const handleCloseSummaryDialog = () => {
     setSummaryDialogOpen(false);
     setSelectedEmployee(null);
     setProfileSummary(null);
     setSummaryError(null);
   };
-
   const filteredLeads = useMemo(() => {
     if (!searchQuery) return leads;
     const query = searchQuery.toLowerCase();
@@ -258,7 +231,6 @@ export default function CampaignLeadsPage() {
       lead.title?.toLowerCase().includes(query)
     );
   }, [leads, searchQuery]);
-
   if (loading && leads.length === 0) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FE' }}>
@@ -269,7 +241,6 @@ export default function CampaignLeadsPage() {
       </Box>
     );
   }
-
   return (
     <Box sx={{ p: 3, bgcolor: '#F8F9FE', minHeight: '100vh' }}>
       {/* Header */}
@@ -292,7 +263,6 @@ export default function CampaignLeadsPage() {
           </Box>
         </Box>
       </Box>
-
       {/* Search */}
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -316,7 +286,6 @@ export default function CampaignLeadsPage() {
           }}
         />
       </Box>
-
       {/* Employee Cards Grid */}
       {filteredLeads.length === 0 ? (
         <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
@@ -356,6 +325,7 @@ export default function CampaignLeadsPage() {
                     phone: lead.phone,
                     linkedin_url: lead.linkedin_url,
                     photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
+                    is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
                   }}
                   employeeViewMode="grid"
                   revealedContacts={revealedContacts}
@@ -364,11 +334,11 @@ export default function CampaignLeadsPage() {
                   handleRevealEmail={handleRevealEmail}
                   onViewSummary={handleViewSummary}
                   profileSummary={lead.profile_summary || null}
+                  hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
                 />
               );
             })}
           </Box>
-
           {/* Pagination */}
           {totalPages > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
@@ -393,7 +363,6 @@ export default function CampaignLeadsPage() {
           )}
         </>
       )}
-
       {/* Profile Summary Dialog */}
       <ProfileSummaryDialog
         open={summaryDialogOpen}
@@ -405,5 +374,4 @@ export default function CampaignLeadsPage() {
       />
     </Box>
   );
-}
-
+}

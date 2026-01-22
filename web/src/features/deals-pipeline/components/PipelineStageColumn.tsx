@@ -16,7 +16,6 @@ import { useDispatch } from 'react-redux';
 import { Stage } from '../store/slices/pipelineSlice';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
-
 interface PipelineStageColumnProps {
   stage: Stage & { name?: string; label?: string; order?: number; display_order?: number; totalStages?: number };
   leads: Lead[];
@@ -37,13 +36,11 @@ interface PipelineStageColumnProps {
   showCardCount?: boolean;
   showTotalValue?: boolean;
 }
-
 interface EditFormData {
   stageName: string;
   position: string;
   positionType: 'before' | 'after';
 }
-
 const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
   stage,
   leads,
@@ -62,18 +59,13 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
   showTotalValue = true
 }) => {
   const cleanDroppableId = String(droppableId);
-  
   // Debug log to check props
-  console.log('[PipelineStageColumn]', stage.name, 'showCardCount:', showCardCount, 'showTotalValue:', showTotalValue, 'compactView:', compactView);
-
   // Provide stage metadata on the droppable so handleDragEnd can read it
   const { setNodeRef, isOver } = useDroppable({
     id: cleanDroppableId,
     data: { type: 'stage', stageId: stage.key || stage.id }
   });
-
   const dispatch = useDispatch();
-
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState<EditFormData>({
@@ -82,13 +74,11 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
     positionType: 'after'
   });
   const [error, setError] = useState<string>('');
-
   // Memoize visible leads to prevent unnecessary recalculation
   const visibleLeads = useMemo(
     () => (activeCardId ? leads.filter((lead) => String(lead.id) !== String(activeCardId)) : leads),
     [leads, activeCardId]
   );
-
   // Calculate total value for the stage
   const totalValue = useMemo(() => {
     return leads.reduce((sum, lead) => {
@@ -96,7 +86,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       return sum + (isNaN(amount) ? 0 : amount);
     }, 0);
   }, [leads]);
-
   // Format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -105,13 +94,11 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       minimumFractionDigits: 0
     }).format(amount);
   };
-
   // Memoize sortable items array
   const sortableItems = useMemo(
     () => visibleLeads.map((l) => String(l.id)),
     [visibleLeads]
   );
-
   const handleEditClick = useCallback((): void => {
     setEditFormData({
       stageName: stage.name || stage.label || '',
@@ -121,23 +108,19 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
     setEditDialogOpen(true);
     setError('');
   }, [stage.name, stage.label]);
-
   const handleDeleteClick = useCallback((): void => {
     setDeleteDialogOpen(true);
   }, []);
-
   const handleEditStage = async (): Promise<void> => {
     if (!editFormData.stageName.trim()) {
       setError('Stage name is required');
       return;
     }
-
     try {
       const updates: Record<string, unknown> = {
         label: editFormData.stageName.trim(),
         name: editFormData.stageName.trim()
       };
-
       if (editFormData.position) {
         const targetStage = allStages.find((s) => (s.key || s.id) === editFormData.position);
         if (targetStage) {
@@ -150,16 +133,13 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
           updates.displayOrder = newDisplayOrder;
         }
       }
-
       const stageKey = stage.key || String(stage.id);
       if (handlers?.onUpdateStage) {
         await handlers.onUpdateStage(stageKey, updates);
       } else {
         await updateStage(stageKey, updates);
       }
-
       if (onStageUpdate) onStageUpdate();
-
       setEditDialogOpen(false);
       setError('');
     } catch (err) {
@@ -169,22 +149,14 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       setError(errorMessage);
     }
   };
-
   const handleDeleteStage = async (): Promise<void> => {
     try {
       const stageKey = stage.key || String(stage.id);
-      console.log('[PipelineStageColumn] Deleting stage:', stageKey);
-      console.log('[PipelineStageColumn] Has onDeleteStageAction handler:', !!handlers?.onDeleteStageAction);
-      
       if (handlers?.onDeleteStageAction) {
-        console.log('[PipelineStageColumn] Calling onDeleteStageAction...');
         await handlers.onDeleteStageAction(stageKey);
-        console.log('[PipelineStageColumn] onDeleteStageAction completed');
-      } else {
-        console.log('[PipelineStageColumn] Calling deleteStage directly...');
+        } else {
         await deleteStage(stageKey);
-        console.log('[PipelineStageColumn] deleteStage completed');
-      }
+        }
       if (onStageDelete) onStageDelete();
       setDeleteDialogOpen(false);
     } catch (err) {
@@ -193,7 +165,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       setError('Failed to delete stage');
     }
   };
-
   return (
     <>
       <div
@@ -245,7 +216,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
         {/* SortableContext for leads inside the column */}
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
           <div className="min-h-2 flex-grow space-y-3">
@@ -265,7 +235,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
           </div>
         </SortableContext>
       </div>
-
       <Dialog open={editDialogOpen} onOpenChange={(isOpen) => !isOpen && setEditDialogOpen(false)}>
         <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
           <DialogTitle className="flex justify-between items-center">
@@ -339,7 +308,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={deleteDialogOpen} onOpenChange={(isOpen) => !isOpen && setDeleteDialogOpen(false)}>
         <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
           <DialogTitle className="flex justify-between items-center">
@@ -372,7 +340,6 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
     </>
   );
 };
-
 // Wrap in React.memo with custom comparison to prevent unnecessary re-renders
 export default React.memo(PipelineStageColumn, (prevProps, nextProps) => {
   // Only re-render if these specific props change
@@ -389,5 +356,4 @@ export default React.memo(PipelineStageColumn, (prevProps, nextProps) => {
     // Deep compare lead IDs to detect if leads array actually changed
     JSON.stringify(prevProps.leads.map(l => l.id)) === JSON.stringify(nextProps.leads.map(l => l.id))
   );
-});
-
+});

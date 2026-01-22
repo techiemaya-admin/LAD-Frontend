@@ -1,10 +1,8 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
 import { Search, DollarSign, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { usePricing } from '@/sdk/features/billing';
 import { LoadingSpinner } from '../LoadingSpinner';
-
 interface PricingGroup {
   component: string;
   providers: {
@@ -20,33 +18,26 @@ interface PricingGroup {
     };
   };
 }
-
 export const PricingCatalog: React.FC = () => {
   const { data: pricing, isLoading, error } = usePricing();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedComponent, setSelectedComponent] = useState<string>('all');
   const [selectedProvider, setSelectedProvider] = useState<string>('all');
   const [showInactiveOnly, setShowInactiveOnly] = useState(false);
-
   // Group pricing by component → provider → model
   const groupedPricing = useMemo(() => {
     if (!pricing) return {};
-
     const groups: { [component: string]: PricingGroup } = {};
-
     pricing.forEach((item) => {
       const component = item.component_type;
       const provider = item.provider || 'default';
       const model = item.model || 'standard';
-
       if (!groups[component]) {
         groups[component] = { component, providers: {} };
       }
-
       if (!groups[component].providers[provider]) {
         groups[component].providers[provider] = { models: [] };
       }
-
       groups[component].providers[provider].models.push({
         model,
         unit: item.unit,
@@ -56,21 +47,16 @@ export const PricingCatalog: React.FC = () => {
         effectiveUntil: item.effective_until,
       });
     });
-
     return groups;
   }, [pricing]);
-
   // Filter based on search and selections
   const filteredGroups = useMemo(() => {
     if (!groupedPricing) return {};
-
     const filtered: typeof groupedPricing = {};
     const search = searchTerm.toLowerCase();
-
     Object.entries(groupedPricing).forEach(([component, group]) => {
       // Component filter
       if (selectedComponent !== 'all' && component !== selectedComponent) return;
-
       // Search filter (component, provider, or model)
       if (
         search &&
@@ -82,37 +68,29 @@ export const PricingCatalog: React.FC = () => {
       ) {
         return;
       }
-
       const filteredProviders: typeof group.providers = {};
-
       Object.entries(group.providers).forEach(([provider, providerData]) => {
         // Provider filter
         if (selectedProvider !== 'all' && provider !== selectedProvider) return;
-
         const filteredModels = providerData.models.filter(model => {
           // Show inactive only filter
           if (showInactiveOnly) return !model.isActive;
           return true; // Show all by default
         });
-
         if (filteredModels.length > 0) {
           filteredProviders[provider] = { models: filteredModels };
         }
       });
-
       if (Object.keys(filteredProviders).length > 0) {
         filtered[component] = { component, providers: filteredProviders };
       }
     });
-
     return filtered;
   }, [groupedPricing, searchTerm, selectedComponent, selectedProvider, showInactiveOnly]);
-
   // Get unique components and providers for filters
   const components = useMemo(() => {
     return Object.keys(groupedPricing).sort();
   }, [groupedPricing]);
-
   const providers = useMemo(() => {
     const providerSet = new Set<string>();
     Object.values(groupedPricing).forEach(group => {
@@ -120,7 +98,6 @@ export const PricingCatalog: React.FC = () => {
     });
     return Array.from(providerSet).sort();
   }, [groupedPricing]);
-
   const formatDate = (date: string | null) => {
     if (!date) return 'Not set';
     return new Date(date).toLocaleDateString('en-US', {
@@ -129,15 +106,12 @@ export const PricingCatalog: React.FC = () => {
       day: 'numeric',
     });
   };
-
   const formatCost = (cost: number, unit: string) => {
     return `$${cost.toFixed(6)} per ${unit}`;
   };
-
   if (isLoading) {
     return <LoadingSpinner size="md" message="Loading pricing catalog..." />;
   }
-
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -147,7 +121,6 @@ export const PricingCatalog: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -165,7 +138,6 @@ export const PricingCatalog: React.FC = () => {
           </span>
         </div>
       </div>
-
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -180,7 +152,6 @@ export const PricingCatalog: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
           {/* Component Filter */}
           <select
             value={selectedComponent}
@@ -194,7 +165,6 @@ export const PricingCatalog: React.FC = () => {
               </option>
             ))}
           </select>
-
           {/* Provider Filter */}
           <select
             value={selectedProvider}
@@ -208,7 +178,6 @@ export const PricingCatalog: React.FC = () => {
               </option>
             ))}
           </select>
-
           {/* Show Inactive */}
           <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
             <input
@@ -221,7 +190,6 @@ export const PricingCatalog: React.FC = () => {
           </label>
         </div>
       </div>
-
       {/* Pricing Groups */}
       <div className="space-y-6">
         {Object.keys(filteredGroups).length === 0 ? (
@@ -239,7 +207,6 @@ export const PricingCatalog: React.FC = () => {
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                 <h3 className="text-xl font-bold text-white">{component}</h3>
               </div>
-
               {/* Providers */}
               <div className="p-6 space-y-6">
                 {Object.entries(group.providers).map(([provider, providerData]) => (
@@ -248,7 +215,6 @@ export const PricingCatalog: React.FC = () => {
                       <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
                       {provider}
                     </h4>
-
                     {/* Models Table */}
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -329,4 +295,4 @@ export const PricingCatalog: React.FC = () => {
       </div>
     </div>
   );
-};
+};

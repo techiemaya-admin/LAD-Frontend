@@ -1,6 +1,5 @@
 // app/api/auth/resolve-login/route.ts (deprecated)
 import { NextRequest, NextResponse } from 'next/server';
-
 export async function POST(_req: NextRequest) {
   return NextResponse.json(
     {
@@ -8,4 +7,4 @@ export async function POST(_req: NextRequest) {
     },
     { status: 410 }
   );
-}
+}

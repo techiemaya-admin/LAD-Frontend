@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import {
   Box,
@@ -29,17 +28,14 @@ import {
   CheckCircle,
   Group,
 } from '@mui/icons-material';
-
 function getCompanySizeLabel(employeeCount: number | string | undefined | null): string {
   const count = parseInt(String(employeeCount || 0), 10);
   if (!count) return 'Unknown';
-
   if (count >= 200) return 'Enterprise (200+ employees)';
   if (count >= 50) return 'Large (50–199 employees)';
   if (count >= 10) return 'Medium (10–49 employees)';
   return 'Small (1–9 employees)';
 }
-
 function getCompanySizeColor(sizeLabel: string): string {
   if (!sizeLabel) return '#757575';
   if (sizeLabel.includes('Enterprise')) return '#d32f2f';
@@ -48,7 +44,6 @@ function getCompanySizeColor(sizeLabel: string): string {
   if (sizeLabel.includes('Small')) return '#2196f3';
   return '#757575';
 }
-
 interface CompanyCardProps {
   company: {
     id?: string;
@@ -83,7 +78,6 @@ interface CompanyCardProps {
   phoneLoading?: Record<string, boolean>;
   phoneError?: Record<string, string>;
 }
-
 export default function CompanyCard({
   company,
   index = 0,
@@ -97,33 +91,26 @@ export default function CompanyCard({
   phoneError,
 }: CompanyCardProps) {
   if (!company) return null;
-
   const companyId = company.id || index;
   const companyName =
     company.companyName || company.username || company.name || 'Unknown Company';
-
   const companyLogo =
     company.logoUrl ||
     company.logo ||
     company.profileImage ||
     company.companyLogo;
-
   const hasEmployees =
     company.employeeCount && parseInt(String(company.employeeCount), 10) > 0;
-
   const sizeLabel = getCompanySizeLabel(company.employeeCount);
   const sizeColor = getCompanySizeColor(sizeLabel);
-
   const locationParts = [
     company.city,
     company.state,
     company.country,
   ].filter(Boolean);
   const locationLabel = locationParts.join(', ');
-
   const hasPhoneBlock = Boolean(phoneData?.[companyId]);
   const phoneInfo = phoneData?.[companyId];
-
   return (
     <Card
       onClick={onSelect}
@@ -194,7 +181,6 @@ export default function CompanyCard({
               >
                 {!companyLogo && <Business />}
               </Avatar>
-
               {isSelected && (
                 <Box
                   sx={{
@@ -217,7 +203,6 @@ export default function CompanyCard({
                 </Box>
               )}
             </Box>
-
             <Box
               sx={{
                 flex: 1,
@@ -258,7 +243,6 @@ export default function CompanyCard({
             </Box>
           </Box>
         </Box>
-
         {/* Body */}
         <Box sx={{ p: 2.5, pt: 2 }}>
           <Box sx={{ mb: 0 }}>
@@ -273,7 +257,6 @@ export default function CompanyCard({
                 />
               )}
             </Box>
-
             {/* Decision Maker Contact */}
             <Box sx={{ minHeight: '60px', mb: 0 }}>
               {hasPhoneBlock && (
@@ -300,7 +283,6 @@ export default function CompanyCard({
                   >
                     ✓ DECISION MAKER CONTACT
                   </Typography>
-
                   {/* Phone */}
                   <Box
                     sx={{
@@ -336,7 +318,6 @@ export default function CompanyCard({
                       />
                     )}
                   </Box>
-
                   {/* Contact person */}
                   {phoneInfo?.name && (
                     <Typography
@@ -353,7 +334,6 @@ export default function CompanyCard({
                 </Box>
               )}
             </Box>
-
             {/* Contact + location row */}
             <Box
               sx={{
@@ -415,7 +395,6 @@ export default function CompanyCard({
                   </Tooltip>
                 )}
               </Box>
-
               {/* Location */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <LocationOn sx={{ fontSize: 18, color: '#0b1957' }} />
@@ -432,7 +411,6 @@ export default function CompanyCard({
                 </Typography>
               </Box>
             </Box>
-
             {/* Company size / scale */}
             <Box
               sx={{
@@ -454,7 +432,6 @@ export default function CompanyCard({
                 {sizeLabel}
               </Typography>
             </Box>
-
             {/* Links row */}
             {(company.website ||
               company.linkedinProfile ||
@@ -570,7 +547,6 @@ export default function CompanyCard({
           </Box>
         </Box>
       </CardContent>
-
       {/* Footer actions */}
       <CardActions
         sx={{
@@ -645,7 +621,6 @@ export default function CompanyCard({
               </Box>
             </Box>
           </Box>
-
           <Button
             variant="contained"
             onClick={(e) => {
@@ -687,5 +662,4 @@ export default function CompanyCard({
       </CardActions>
     </Card>
   );
-}
-
+}

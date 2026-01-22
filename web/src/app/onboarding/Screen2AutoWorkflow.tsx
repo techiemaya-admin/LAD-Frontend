@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { Box, Paper, Typography, Stack, Button, CircularProgress, Chip } from '@mui/material';
 import {
@@ -17,7 +16,6 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-
 const getStepIcon = (type: string) => {
   if (type.includes('linkedin')) return <LinkedInIcon sx={{ fontSize: 24 }} />;
   if (type.includes('email')) return <Email sx={{ fontSize: 24 }} />;
@@ -28,7 +26,6 @@ const getStepIcon = (type: string) => {
   if (type === 'condition') return <CheckCircle sx={{ fontSize: 24 }} />;
   return <ArrowForward sx={{ fontSize: 24 }} />;
 };
-
 const getStepColor = (type: string) => {
   if (type.includes('linkedin')) return '#0077B5';
   if (type.includes('email')) return '#F59E0B';
@@ -39,7 +36,6 @@ const getStepColor = (type: string) => {
   if (type === 'condition') return '#F59E0B';
   return '#64748B';
 };
-
 export default function Screen2AutoWorkflow() {
   const {
     answers,
@@ -52,31 +48,25 @@ export default function Screen2AutoWorkflow() {
   } = useOnboardingStore();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     generateWorkflow();
   }, []);
-
   const generateWorkflow = async () => {
     setIsGenerating(true);
     setError(null);
-
     try {
       const response = await apiPost('/api/workflow/auto-generate', {
         answers,
       }) as { data: { steps: any[]; edges: any[] } };
-
       const workflow: any = {
         steps: response.data.steps || [],
         edges: response.data.edges || [],
       };
-
       setAutoFlow(workflow);
       setManualFlow(workflow); // Also set manual flow for editing
     } catch (err: any) {
       logger.error('Failed to generate workflow', err);
       setError(err.message || 'Failed to generate workflow');
-      
       // Fallback: Generate a simple workflow based on answers
       const fallbackWorkflow = generateFallbackWorkflow();
       setAutoFlow(fallbackWorkflow);
@@ -85,14 +75,11 @@ export default function Screen2AutoWorkflow() {
       setIsGenerating(false);
     }
   };
-
   const generateFallbackWorkflow = () => {
     const steps: any[] = [];
     const edges: any[] = [];
     let stepId = 1;
-
     const channels = answers.channels || [];
-    
     // Add LinkedIn steps if selected
     if (channels.includes('LinkedIn')) {
       steps.push({
@@ -102,7 +89,6 @@ export default function Screen2AutoWorkflow() {
         description: 'Visit the lead\'s LinkedIn profile',
         icon: 'linkedin',
       });
-      
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_follow',
@@ -110,7 +96,6 @@ export default function Screen2AutoWorkflow() {
         description: 'Follow the lead on LinkedIn',
         icon: 'linkedin',
       });
-
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_connect',
@@ -119,7 +104,6 @@ export default function Screen2AutoWorkflow() {
         icon: 'linkedin',
         variables: ['first_name', 'company_name'],
       });
-
       steps.push({
         id: `step_${stepId++}`,
         type: 'condition',
@@ -127,7 +111,6 @@ export default function Screen2AutoWorkflow() {
         description: 'Check if connection request was accepted',
         icon: 'condition',
       });
-
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_message',
@@ -137,7 +120,6 @@ export default function Screen2AutoWorkflow() {
         variables: ['first_name', 'company_name'],
       });
     }
-
     // Add delay
     steps.push({
       id: `step_${stepId++}`,
@@ -146,7 +128,6 @@ export default function Screen2AutoWorkflow() {
       description: 'Delay for 2 days before next step',
       icon: 'delay',
     });
-
     // Add Email fallback if enabled
     if (answers.fallbackLogic?.enabled && channels.includes('Email')) {
       steps.push({
@@ -158,7 +139,6 @@ export default function Screen2AutoWorkflow() {
         variables: ['first_name', 'email', 'company_name'],
       });
     }
-
     // Add WhatsApp if selected
     if (channels.includes('WhatsApp')) {
       steps.push({
@@ -170,7 +150,6 @@ export default function Screen2AutoWorkflow() {
         variables: ['first_name', 'phone'],
       });
     }
-
     // Add Instagram if selected
     if (channels.includes('Instagram')) {
       if (answers.autoposting) {
@@ -193,7 +172,6 @@ export default function Screen2AutoWorkflow() {
         });
       }
     }
-
     // Add Voice Agent if selected
     if (channels.includes('Voice Agent')) {
       steps.push({
@@ -204,7 +182,6 @@ export default function Screen2AutoWorkflow() {
         icon: 'voice',
       });
     }
-
     // Create edges
     for (let i = 0; i < steps.length - 1; i++) {
       edges.push({
@@ -213,22 +190,17 @@ export default function Screen2AutoWorkflow() {
         target: steps[i + 1].id,
       });
     }
-
     return { steps, edges };
   };
-
   const handleSaveWorkflow = async () => {
     if (!autoFlow) return;
-
     try {
       await apiPost('/api/workflow/save', {
         workflow: autoFlow,
         answers,
       });
-
       const { completeOnboarding } = useOnboardingStore.getState();
       completeOnboarding();
-      
       // Redirect to campaigns or dashboard
       router.push('/campaigns');
     } catch (error: any) {
@@ -236,11 +208,9 @@ export default function Screen2AutoWorkflow() {
       alert('Failed to save workflow. Please try again.');
     }
   };
-
   const handleEditWorkflow = () => {
     setCurrentScreen(3);
   };
-
   if (isGenerating) {
     return (
       <Box
@@ -264,7 +234,6 @@ export default function Screen2AutoWorkflow() {
       </Box>
     );
   }
-
   if (error && !autoFlow) {
     return (
       <Box
@@ -291,7 +260,6 @@ export default function Screen2AutoWorkflow() {
       </Box>
     );
   }
-
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
       {/* Header */}
@@ -310,7 +278,6 @@ export default function Screen2AutoWorkflow() {
           Based on your requirements, we've created this automation workflow. Review it and make any changes if needed.
         </Typography>
       </Paper>
-
       {/* Workflow Steps */}
       <Box
         sx={{
@@ -356,7 +323,6 @@ export default function Screen2AutoWorkflow() {
               >
                 {index + 1}
               </Box>
-
               {/* Step Icon */}
               <Box
                 sx={{
@@ -373,7 +339,6 @@ export default function Screen2AutoWorkflow() {
               >
                 {getStepIcon(step.type)}
               </Box>
-
               {/* Step Info */}
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
@@ -401,7 +366,6 @@ export default function Screen2AutoWorkflow() {
                 )}
               </Box>
             </Paper>
-
             {/* Arrow between steps */}
             {index < (autoFlow?.steps.length || 0) - 1 && (
               <ArrowForward sx={{ color: '#94A3B8', fontSize: 32 }} />
@@ -409,7 +373,6 @@ export default function Screen2AutoWorkflow() {
           </React.Fragment>
         ))}
       </Box>
-
       {/* Action Buttons */}
       <Paper
         elevation={0}
@@ -460,5 +423,4 @@ export default function Screen2AutoWorkflow() {
       </Paper>
     </Box>
   );
-}
-
+}

@@ -2,12 +2,9 @@
  * Toast Hook Compatibility Layer
  * Provides a compatible interface for the toast system
  */
-
 import { useToast as useAppToast } from './app-toaster';
-
 export function useToast() {
   const { push } = useAppToast();
-  
   return {
     toast: (options: {
       title?: string;
@@ -22,4 +19,4 @@ export function useToast() {
       });
     }
   };
-}
+}

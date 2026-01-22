@@ -23,7 +23,6 @@ export type StepType =
   | 'condition' 
   | 'start' 
   | 'end';
-
 export type ConditionType = 
   | 'connected'           // LinkedIn: if connected
   | 'linkedin_replied'     // LinkedIn: if replied to message
@@ -44,7 +43,6 @@ export type ConditionType =
   | 'instagram_replied'   // Instagram: if replied to DM
   | 'instagram_commented' // Instagram: if commented on post
   | 'instagram_story_viewed'; // Instagram: if viewed story
-
 export interface StepData {
   title: string;
   message?: string;
@@ -89,14 +87,12 @@ export interface StepData {
   leadGenerationFilters?: Record<string, any>;
   leadGenerationLimit?: number;
 }
-
 export interface FlowNode {
   id: string;
   type: StepType;
   position: { x: number; y: number };
   data: StepData;
 }
-
 export interface FlowEdge {
   id: string;
   source: string;
@@ -104,14 +100,12 @@ export interface FlowEdge {
   type?: string;
   animated?: boolean;
 }
-
 export interface CampaignFlow {
   name: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
   selectedNodeId: string | null;
 }
-
 export interface StepDefinition {
   type: StepType;
   label: string;
@@ -119,5 +113,4 @@ export interface StepDefinition {
   description: string;
   category: 'linkedin' | 'email' | 'whatsapp' | 'voice' | 'instagram' | 'utility' | 'leads';
   defaultData: Partial<StepData>;
-}
-
+}

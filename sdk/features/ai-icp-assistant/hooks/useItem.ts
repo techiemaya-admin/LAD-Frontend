@@ -2,10 +2,8 @@
  * Hook to fetch a single ICP question by step index
  * Generic hook following feature-based architecture
  */
-
 import { useState, useEffect } from 'react';
 import { fetchICPQuestionByStep, type ICPQuestion } from '../api';
-
 export function useItem(
   stepIndex: number,
   category: string = 'lead_generation'
@@ -13,7 +11,6 @@ export function useItem(
   const [item, setItem] = useState<ICPQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
   useEffect(() => {
     const loadItem = async () => {
       try {
@@ -27,14 +24,11 @@ export function useItem(
         setLoading(false);
       }
     };
-
     if (stepIndex > 0) {
       loadItem();
     } else {
       setLoading(false);
     }
   }, [stepIndex, category]);
-
   return { item, loading, error };
-}
-
+}

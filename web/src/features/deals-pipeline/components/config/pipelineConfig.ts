@@ -2,7 +2,6 @@
  * Pipeline Configuration
  * Slot-based composition for different verticals
  */
-
 export interface SlotConfig {
   id: string;
   component: string;
@@ -11,14 +10,12 @@ export interface SlotConfig {
   width?: string;
   order: number;
 }
-
 export interface VerticalConfig {
   id: string;
   name: string;
   description: string;
   slots: SlotConfig[];
 }
-
 export const PIPELINE_CONFIG: Record<string, VerticalConfig> = {
   // Education vertical (Counselor + Student)
   education: {
@@ -52,7 +49,6 @@ export const PIPELINE_CONFIG: Record<string, VerticalConfig> = {
       },
     ],
   },
-
   // SaaS B2B vertical
   saas: {
     id: 'saas',
@@ -85,7 +81,6 @@ export const PIPELINE_CONFIG: Record<string, VerticalConfig> = {
       },
     ],
   },
-
   // Real Estate vertical
   realestate: {
     id: 'realestate',
@@ -118,7 +113,6 @@ export const PIPELINE_CONFIG: Record<string, VerticalConfig> = {
       },
     ],
   },
-
   // Generic/Default vertical
   default: {
     id: 'default',
@@ -144,18 +138,16 @@ export const PIPELINE_CONFIG: Record<string, VerticalConfig> = {
     ],
   },
 };
-
 /**
  * Get pipeline configuration for a specific vertical
  */
 export function getPipelineConfig(vertical: string = 'default'): VerticalConfig {
   return PIPELINE_CONFIG[vertical] || PIPELINE_CONFIG.default;
 }
-
 /**
  * Get slots for a specific vertical
  */
 export function getSlots(vertical: string = 'default'): SlotConfig[] {
   const config = getPipelineConfig(vertical);
   return config.slots.sort((a, b) => a.order - b.order);
-}
+}
