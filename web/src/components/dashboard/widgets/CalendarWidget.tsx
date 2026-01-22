@@ -7,7 +7,8 @@ import {
   Phone, 
   Bot, 
   UserCheck,
-  Calendar as CalendarIcon 
+  Calendar as CalendarIcon,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addDays, isToday } from 'date-fns';
@@ -22,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+import { useDashboardUsers, useBookings } from '../../../../../sdk/features/dashboard';
 
 interface CalendarWidgetProps {
   id: string;
@@ -52,15 +54,19 @@ const eventTypeConfig = {
 
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const { 
-    calendarEvents, 
     calendarViewMode, 
     setCalendarViewMode,
     selectedDate,
     setSelectedDate,
-    addCalendarEvent,
   } = useDashboardStore();
   
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  
+  // Fetch users and bookings using SDK hooks
+  const { data: users = [], isLoading: isLoadingUsers } = useDashboardUsers();
+  const { data: bookings = [], isLoading: isLoadingBookings } = useBookings(selectedUserId || undefined);
+  
   const [newEvent, setNewEvent] = useState({
     title: '',
     type: 'call' as CalendarEvent['type'],
@@ -70,6 +76,13 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     agentName: '',
     leadName: '',
   });
+
+  // Set first user as default when users are loaded
+  React.useEffect(() => {
+    if (users.length > 0 && !selectedUserId) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
 
   // Calendar calculations
   const monthStart = startOfMonth(selectedDate);
@@ -85,8 +98,8 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
 
   const getEventsForDate = (date: Date) => {
-    return calendarEvents.filter(event => 
-      isSameDay(new Date(event.date), date)
+    return bookings.filter(booking => 
+      isSameDay(new Date(booking.scheduled_at), date)
     );
   };
 
@@ -96,18 +109,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const handleNextWeek = () => setSelectedDate(addDays(selectedDate, 7));
 
   const handleAddEvent = () => {
-    const duration = calculateDuration(newEvent.startTime, newEvent.endTime);
-    addCalendarEvent({
-      title: newEvent.title || `${eventTypeConfig[newEvent.type].label}`,
-      type: newEvent.type,
-      date: selectedDate,
-      startTime: newEvent.startTime,
-      endTime: newEvent.endTime,
-      duration,
-      description: newEvent.description,
-      agentName: newEvent.agentName,
-      leadName: newEvent.leadName,
-    });
+    // TODO: Implement add event via SDK when backend endpoint is ready
     setIsAddEventOpen(false);
     setNewEvent({
       title: '',
@@ -120,18 +122,26 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     });
   };
 
-  const calculateDuration = (start: string, end: string): number => {
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-    return (endHour * 60 + endMin) - (startHour * 60 + startMin);
-  };
-
   return (
     <WidgetWrapper
       id={id}
       title="Calendar & Scheduler"
       headerActions={
         <div className="flex items-center gap-2">
+          {/* User Selector */}
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-[180px] h-7 text-xs">
+              <SelectValue placeholder="Select user..." />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <div className="flex gap-1">
             <Button
               size="sm"
@@ -150,6 +160,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
               Week
             </Button>
           </div>
+          
+          {isLoadingBookings && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
           
           <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
             <DialogTrigger asChild>
@@ -331,17 +345,19 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     
                     {events.length > 0 && (
                       <div className="mt-1 space-y-0.5">
-                        {events.slice(0, 2).map((event) => {
-                          const config = eventTypeConfig[event.type];
+                        {events.slice(0, 2).map((booking) => {
+                          const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
+                          const config = eventTypeConfig[type];
                           return (
                             <div
-                              key={event.id}
+                              key={booking.id}
                               className={cn(
                                 'text-[10px] px-1 py-0.5 rounded truncate border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                                 config.className
                               )}
+                              title={booking.task_name || `${type}: ${booking.status}`}
                             >
-                              {event.title}
+                              {booking.task_name || config.label}
                             </div>
                           );
                         })}
@@ -394,7 +410,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     </div>
                     {weekDays.map((day) => {
                       const dayEvents = getEventsForDate(day).filter(e => {
-                        const eventHour = parseInt(e.startTime.split(':')[0]);
+                        const eventHour = parseInt(e.scheduled_at.split('T')[1].split(':')[0]);
                         return eventHour === hour;
                       });
                       
@@ -403,19 +419,21 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                           key={day.toISOString()}
                           className="min-h-[50px] border-l border-border/50 p-1 relative"
                         >
-                          {dayEvents.map((event) => {
-                            const config = eventTypeConfig[event.type];
+                          {dayEvents.map((booking) => {
+                            const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
+                            const config = eventTypeConfig[type];
                             const Icon = config.icon;
                             return (
                               <div
-                                key={event.id}
+                                key={booking.id}
                                 className={cn(
                                   'text-xs p-1.5 rounded border mb-1 flex items-center gap-1 transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                                   config.className
                                 )}
+                                title={`${booking.task_name || config.label} - ${booking.status}`}
                               >
                                 <Icon className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{event.title}</span>
+                                <span className="truncate">{booking.task_name || config.label}</span>
                               </div>
                             );
                           })}
@@ -436,21 +454,22 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
               {format(selectedDate, 'EEEE, MMMM d')}
             </p>
             <span className="text-xs text-muted-foreground">
-              {getEventsForDate(selectedDate).length} events
+              {getEventsForDate(selectedDate).length} bookings
             </span>
           </div>
           <div className="space-y-2 max-h-[120px] overflow-auto custom-scrollbar">
             {getEventsForDate(selectedDate).length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
-                No events scheduled
+                No bookings scheduled
               </p>
             ) : (
-              getEventsForDate(selectedDate).map((event) => {
-                const config = eventTypeConfig[event.type];
+              getEventsForDate(selectedDate).map((booking) => {
+                const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
+                const config = eventTypeConfig[type];
                 const Icon = config.icon;
                 return (
                   <div
-                    key={event.id}
+                    key={booking.id}
                     className={cn(
                       'flex items-center gap-3 p-2 rounded-lg border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                       config.className
@@ -458,11 +477,13 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                   >
                     <Icon className="h-4 w-4 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
+                      <p className="text-sm font-medium truncate">
+                        {booking.task_name || config.label}
+                      </p>
                       <p className="text-xs opacity-75">
-                        {event.startTime} - {event.endTime}
-                        {event.leadName && ` · ${event.leadName}`}
-                        {event.agentName && ` · ${event.agentName}`}
+                        {format(new Date(booking.scheduled_at), 'HH:mm')}
+                        {booking.timezone && ` · ${booking.timezone}`}
+                        {booking.status && ` · ${booking.status}`}
                       </p>
                     </div>
                   </div>

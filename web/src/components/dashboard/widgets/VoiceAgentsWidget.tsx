@@ -73,7 +73,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
         const qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
 
         const callsRes = await apiGet<{ success: boolean; logs: any[] }>(
-          `/api/voice-agent/calls${qs}`
+          `/api/dashboard/calls${qs}`
         );
         const logs = callsRes.logs || [];
 

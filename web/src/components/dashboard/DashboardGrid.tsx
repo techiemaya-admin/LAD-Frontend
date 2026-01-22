@@ -186,7 +186,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       let qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
 
       const res = await apiGet<{ success: boolean; logs: any[] }>(
-        `/api/voice-agent/calls${qs}`
+        `/api/dashboard/calls${qs}`
       );
 
       const rows: any[] = res.logs || [];
