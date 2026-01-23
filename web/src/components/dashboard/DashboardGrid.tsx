@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import {
@@ -17,8 +18,10 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getWidgetTypeFromId, WidgetLayoutItem } from '@/types/dashboard';
+
 // Widget components
 import { StatWidget } from './widgets/StatWidget';
 import { ChartWidget } from './widgets/ChartWidget';
@@ -29,9 +32,11 @@ import { AIInsightsWidget } from './widgets/AIInsightsWidget';
 import { QuickActionsWidget } from './widgets/QuickActionsWidget';
 import { CalendarWidget } from './widgets/CalendarWidget';
 import { cn } from '@/lib/utils';
+
 // Utilities
 import { apiGet } from '@/lib/api';
 import { safeStorage } from '@/utils/storage';
+
 // Types
 type BackendCallLog = {
   id: string;
@@ -45,6 +50,7 @@ type BackendCallLog = {
   agentName?: string;
   leadName?: string;
 };
+
 type PhoneNumber = {
   id: string;
   e164: string;
@@ -53,6 +59,7 @@ type PhoneNumber = {
   sid?: string;
   account?: string;
 };
+
 type CallLog = {
   id: string;
   leadName: string;
@@ -61,13 +68,17 @@ type CallLog = {
   duration: string;
   date: string;
 };
+
 interface DashboardGridProps {
   className?: string;
 }
+
 const DAYS_RANGE = 30;
+
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const { layout, setLayout, isEditMode } = useDashboardStore();
   const [activeId, setActiveId] = React.useState<string | null>(null);
+
   // Data states
   const [calls, setCalls] = useState<BackendCallLog[]>([]);
   const [chartMode, setChartMode] = useState<'month' | 'year'>('month');
@@ -84,21 +95,25 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     usageThisMonth: number;
   } | null>(null);
   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
+
   // Fetch credits data
   const fetchCredits = useCallback(async () => {
     try {
       const token = safeStorage.getItem('auth_token') || safeStorage.getItem('token');
       if (!token) return;
+
       const userData = await apiGet<{
         balance?: number;
         credit_balance?: number;
         credits?: number;
         monthly_usage?: number;
       }>('/api/auth/me');
+
       const balance = userData.balance || userData.credit_balance || userData.credits || 0;
       const usageThisMonth = userData.monthly_usage || 0;
       const totalMinutes = balance * 3.7;
       const remainingMinutes = totalMinutes * (1 - usageThisMonth / 100);
+
       setCreditsData({
         balance,
         totalMinutes,
@@ -115,6 +130,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       });
     }
   }, []);
+
   // Format call duration
   const formatDuration = (call: BackendCallLog) => {
     if (call.timeline && call.timeline.length >= 2) {
@@ -132,6 +148,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     }
     return '-';
   };
+
   // Format call date
   const formatCallDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -150,11 +167,13 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       })
     );
   };
+
   // Fetch call logs
   const fetchCallLogs = useCallback(async () => {
     try {
       const now = new Date();
       let startDate: Date;
+
       if (chartMode === 'month') {
         startDate = new Date(now);
         startDate.setDate(now.getDate() - (DAYS_RANGE - 1));
@@ -162,18 +181,22 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         startDate = new Date(now);
         startDate.setFullYear(now.getFullYear() - 1);
       }
+
       const startDateISO = startDate.toISOString();
       const endDateISO = now.toISOString();
       let qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
+
       const res = await apiGet<{ success: boolean; logs: any[] }>(
-        `/api/voice-agent/calls${qs}`
+        `/api/dashboard/calls${qs}`
       );
+
       const rows: any[] = res.logs || [];
       const mapped: BackendCallLog[] = rows.map((r: any) => {
         const leadFullName = [r.lead_first_name, r.lead_last_name]
           .filter(Boolean)
           .join(' ')
           .trim();
+
         return {
           id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? crypto.randomUUID()),
           from: r.agent || r.initiated_by || r.from || r.from_number || r.fromnum || r.source || r.from_number_id || '-',
@@ -187,11 +210,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
         };
       });
+
       setCalls(mapped);
+
       // Calculate metrics
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const todayCalls = mapped.filter((i) => new Date(i.startedAt) >= todayStart);
       setCountToday(todayCalls.length);
+
       const yesterdayStart = new Date(todayStart);
       yesterdayStart.setDate(yesterdayStart.getDate() - 1);
       const yesterdayCalls = mapped.filter((i) => {
@@ -199,9 +225,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         return callDate >= yesterdayStart && callDate < todayStart;
       });
       setCountYesterday(yesterdayCalls.length);
+
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const thisMonthCalls = mapped.filter((i) => new Date(i.startedAt) >= monthStart);
       setCountThisMonth(thisMonthCalls.length);
+
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       const lastMonthCalls = mapped.filter((i) => {
@@ -209,6 +237,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         return callDate >= lastMonthStart && callDate <= lastMonthEnd;
       });
       setCountLastMonth(lastMonthCalls.length);
+
       // Answer rate calculations
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay());
@@ -219,6 +248,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       ).length;
       const answerRateThisWeek = thisWeekCalls.length > 0 ? Math.round((answeredThisWeek / thisWeekCalls.length) * 100) : 0;
       setAnswerRate(answerRateThisWeek);
+
       const lastWeekStart = new Date(weekStart);
       lastWeekStart.setDate(lastWeekStart.getDate() - 7);
       const lastWeekEnd = new Date(weekStart);
@@ -235,6 +265,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       // Error already logged
     }
   }, [chartMode]);
+
   // Fetch phone numbers
   useEffect(() => {
     const loadNumbers = async () => {
@@ -245,11 +276,13 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     };
     loadNumbers();
   }, []);
+
   // Fetch all data on mount and when chartMode changes
   useEffect(() => {
     fetchCallLogs();
     fetchCredits();
   }, [fetchCallLogs, fetchCredits]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -260,19 +293,24 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+
     if (over && active.id !== over.id) {
       const oldIndex = layout.findIndex((item) => item.i === active.id);
       const newIndex = layout.findIndex((item) => item.i === over.id);
+      
       const newLayout = arrayMove(layout, oldIndex, newIndex);
       setLayout(newLayout);
     }
   };
+
   // Calculate chart data
   const chartData = useMemo(() => {
     if (chartMode === 'month') {
@@ -283,10 +321,12 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         const key = d.toISOString().slice(0, 10);
         counts.set(key, (counts.get(key) || 0) + 1);
       }
+
       const out: Array<{ dateKey: string; date: string; calls: number }> = [];
       const today = new Date();
       const start = new Date();
       start.setDate(today.getDate() - (DAYS_RANGE - 1));
+
       for (let dt = new Date(start); dt <= today; dt.setDate(dt.getDate() + 1)) {
         const key = dt.toISOString().slice(0, 10);
         out.push({
@@ -300,6 +340,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       }
       return out;
     }
+
     // Year mode - group by month
     const monthly = new Map<string, number>();
     for (const c of calls) {
@@ -308,11 +349,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       const key = d.toISOString().slice(0, 7);
       monthly.set(key, (monthly.get(key) || 0) + 1);
     }
+
     const out: Array<{ dateKey: string; date: string; calls: number }> = [];
     const now = new Date();
     const yearAgo = new Date();
     yearAgo.setFullYear(now.getFullYear() - 1);
+
     const cursor = new Date(yearAgo.getFullYear(), yearAgo.getMonth(), 1);
+
     while (cursor <= now) {
       const key = cursor.toISOString().slice(0, 7);
       out.push({
@@ -325,8 +369,10 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       });
       cursor.setMonth(cursor.getMonth() + 1);
     }
+
     return out;
   }, [calls, chartMode]);
+
   // Transform calls to widget format
   const latestCalls: CallLog[] = useMemo(
     () =>
@@ -340,6 +386,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       })),
     [calls]
   );
+
   const calculatePercentageChange = (current: number, previous: number): string => {
     if (previous === 0) {
       if (current === 0) return '0%';
@@ -349,8 +396,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     const formatted = Math.round(change);
     return formatted > 0 ? `+${formatted}%` : `${formatted}%`;
   };
+
+
   const renderWidget = (widgetId: string, isOverlay = false) => {
     const widgetType = getWidgetTypeFromId(widgetId);
+    
     switch (widgetType) {
       case 'calls-today':
         return (
@@ -419,6 +469,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         return <div className="widget-card h-full flex items-center justify-center text-muted-foreground">Unknown widget</div>;
     }
   };
+
   // Get grid style based on widget size
   const getGridStyle = (item: WidgetLayoutItem) => {
     return {
@@ -426,7 +477,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       minHeight: `${item.h * 80}px`,
     };
   };
+
   const sortableItems = layout.map(item => item.i);
+
   return (
     <div className={cn('dashboard-grid', className)}>
       <DndContext
@@ -451,6 +504,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
             ))}
           </div>
         </SortableContext>
+
         <DragOverlay>
           {activeId ? (
             <div 
@@ -465,6 +519,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           ) : null}
         </DragOverlay>
       </DndContext>
+
       {isEditMode && (
         <div className="mt-6 p-4 border-2 border-dashed border-accent/30 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">
@@ -475,4 +530,4 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       )}
     </div>
   );
-};
+};
