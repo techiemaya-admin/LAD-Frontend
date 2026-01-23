@@ -24,12 +24,12 @@ const formatMessage = (prefix: string, ...args: any[]): any[] => {
 export const logger = {
   debug: (...args: any[]) => {
     if (shouldLog('debug') && process.env.NODE_ENV !== 'test') {
-      );
+      console.debug(...formatMessage('DEBUG', ...args));
     }
   },
   info: (...args: any[]) => {
     if (shouldLog('info') && process.env.NODE_ENV !== 'test') {
-      );
+      console.info(...formatMessage('INFO', ...args));
     }
   },
   warn: (...args: any[]) => {
@@ -42,4 +42,4 @@ export const logger = {
       console.error(...formatMessage('ERROR', ...args));
     }
   },
-};
+};

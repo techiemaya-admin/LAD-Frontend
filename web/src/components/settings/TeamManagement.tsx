@@ -76,8 +76,7 @@ export const TeamManagement: React.FC = () => {
       setLoading(true);
       setError('');
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
-      ? 'token' : safeStorage.getItem('auth_token') ? 'auth_token' : 'none'
-      });
+      console.debug('[TeamManagement] Token source:', safeStorage.getItem('token') ? 'token' : safeStorage.getItem('auth_token') ? 'auth_token' : 'none');
       if (!token) {
         // Redirect to login instead of showing error
         console.warn('[TeamManagement] No token found, redirecting to login');
@@ -496,4 +495,4 @@ export const TeamManagement: React.FC = () => {
     </div>
   );
 };
-// Component already exported inline above
+// Component already exported inline above
