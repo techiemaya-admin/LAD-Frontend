@@ -51,7 +51,11 @@ export function convertToProxyUrl(recordingUrl: string | undefined): string {
   
   try {
     const encodedUrl = encodeURIComponent(recordingUrl);
-    return `http://localhost:3000/api/recording-proxy?url=${encodedUrl}`;
+    // Use environment variable or window origin for production compatibility
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_APP_URL || 'https://lad-frontend.com';
+    return `${baseUrl}/api/recording-proxy?url=${encodedUrl}`;
   } catch {
     return "";
   }
