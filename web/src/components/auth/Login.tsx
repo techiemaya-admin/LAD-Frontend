@@ -224,7 +224,7 @@ const Login: React.FC = () => {
       // Verify token is stored before redirecting (use safeStorage, not direct localStorage)
       const { safeStorage } = await import('@/utils/storage');
       const storedToken = safeStorage.getItem('token');
-      + '...');
+      console.debug('[Login] Token stored:', storedToken ? 'Yes' : 'No');
       router.push("/dashboard");
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
@@ -350,4 +350,4 @@ const Login: React.FC = () => {
     </div>
   );
 };
-export default Login;
+export default Login;

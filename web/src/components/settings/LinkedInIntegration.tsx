@@ -157,7 +157,7 @@ export const LinkedInIntegration: React.FC = () => {
       const data = await Promise.race([dataPromise, timeoutPromise]) as LinkedInStatusResponse;
       // Handle both old format (single account) and new format (array of connections)
       if (data.connections && Array.isArray(data.connections)) {
-        ');
+        console.debug('[LinkedIn] Loaded connections:', data.connections.length);
         setLinkedInConnections(data.connections);
       } else {
         // Fallback for old format
@@ -1076,4 +1076,4 @@ export const LinkedInIntegration: React.FC = () => {
       )}
     </>
   );
-};
+};
