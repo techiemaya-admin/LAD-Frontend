@@ -48,11 +48,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
   }, [filters]);
   useEffect(() => {
     fetchCampaigns();
-    // Poll for updates every 10 seconds to refresh stats
-    const pollInterval = setInterval(() => {
-      fetchCampaigns();
-    }, 10000);
-    return () => clearInterval(pollInterval);
   }, [fetchCampaigns]);
   const create = useCallback(async (data: CreateCampaignRequest): Promise<Campaign> => {
     try {

@@ -122,11 +122,4 @@ export interface CampaignLead {
   replied: boolean;
   created_at: string;
   updated_at: string;
-  is_inbound?: boolean; // Flag to identify inbound leads
-  first_name?: string;
-  last_name?: string;
-  title?: string;
-  company?: string;
-  photo_url?: string;
-  profile_summary?: string;
 }

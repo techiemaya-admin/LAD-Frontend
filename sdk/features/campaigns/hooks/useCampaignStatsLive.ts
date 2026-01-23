@@ -108,7 +108,7 @@ export function useCampaignStatsLive({
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
-          
+          `);
           reconnectTimeoutRef.current = setTimeout(() => {
             connectSSE();
           }, delay);
@@ -170,4 +170,4 @@ export function useCampaignStatsLive({
     error,
     refresh
   };
-}
+}

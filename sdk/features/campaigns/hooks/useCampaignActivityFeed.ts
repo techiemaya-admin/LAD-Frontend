@@ -1,15 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-// Get campaign backend URL from environment or default to relative path
-const getCampaignBackendUrl = () => {
-  if (typeof window !== 'undefined') {
-    // Client-side: check for env variable or use relative path
-    return (window as any).__NEXT_DATA__?.props?.pageProps?.campaignBackendUrl 
-      || process.env.NEXT_PUBLIC_BACKEND_URL 
-      || '';
-  }
-  return process.env.NEXT_PUBLIC_BACKEND_URL || '';
-};
 interface CampaignActivity {
   id: string;
   campaign_id: string;
@@ -91,14 +81,7 @@ export function useCampaignActivityFeed(
     // Connect to SSE for live updates
     const connectSSE = () => {
       try {
-        const backendUrl = getCampaignBackendUrl();
-        // Get auth token for SSE (EventSource can't send headers, so use query param)
-        let token = '';
-        if (typeof window !== 'undefined') {
-          token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
-        }
-        const sseUrl = `${backendUrl}/api/campaigns/${campaignId}/events${token ? `?token=${token}` : ''}`;
-        const eventSource = new EventSource(sseUrl);
+        const eventSource = new EventSource(`/api/campaigns/${campaignId}/events`);
         eventSourceRef.current = eventSource;
         eventSource.onopen = () => {
           setIsConnected(true);
@@ -111,10 +94,11 @@ export function useCampaignActivityFeed(
               fetchActivities();
             }
           } catch (err) {
-            // Silently ignore parse errors
+            console.error('[ActivityFeed] Failed to parse SSE:', err);
           }
         };
         eventSource.onerror = () => {
+          console.warn('[ActivityFeed] SSE disconnected');
           setIsConnected(false);
           eventSource.close();
           // Reconnect after 5 seconds
@@ -125,7 +109,7 @@ export function useCampaignActivityFeed(
           }, 5000);
         };
       } catch (err) {
-        // Silently handle SSE connection errors
+        console.error('[ActivityFeed] Failed to connect SSE:', err);
       }
     };
     connectSSE();

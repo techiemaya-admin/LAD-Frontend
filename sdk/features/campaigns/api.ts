@@ -22,9 +22,6 @@ export async function getCampaigns(filters?: CampaignFilters): Promise<Campaign[
   if (filters?.search) params.search = filters.search;
   if (filters?.status && filters.status !== 'all') params.status = filters.status;
   const response = await apiClient.get<{ data: Campaign[] }>('/api/campaigns', { params });
-  // 🔍 DEBUG: Log first campaign to verify stats
-  if (response.data.data && response.data.data.length > 0) {
-    }
   return response.data.data || [];
 }
 /**

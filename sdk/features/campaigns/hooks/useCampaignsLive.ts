@@ -23,8 +23,8 @@ export function useCampaignsLive(filters?: CampaignFilters): UseCampaignsLiveRet
     ['campaigns', filters],
     () => getCampaigns(filters),
     {
-      // Refresh every 30 seconds as fallback (SSE handles real-time updates)
-      refreshInterval: 30000,
+      // Refresh every 10 seconds
+      refreshInterval: 10000,
       // Refresh when window regains focus
       revalidateOnFocus: true,
       // Refresh when network reconnects
