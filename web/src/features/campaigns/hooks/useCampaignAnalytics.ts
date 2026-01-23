@@ -1,3 +1,1 @@
-export * from '../../../../../sdk/features/campaigns/hooks/useCampaignAnalytics';
-
-
+export * from '../../../../../sdk/features/campaigns/hooks/useCampaignAnalytics';

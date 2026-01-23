@@ -4,7 +4,6 @@
  * React hook for fetching and managing campaigns list.
  * Framework-independent (no Next.js imports).
  */
-
 import { useState, useCallback, useEffect } from 'react';
 import {
   getCampaigns,
@@ -16,7 +15,6 @@ import {
   stopCampaign,
 } from '../api';
 import type { Campaign, CampaignFilters, CreateCampaignRequest, UpdateCampaignRequest } from '../types';
-
 export interface UseCampaignsReturn {
   campaigns: Campaign[];
   loading: boolean;
@@ -30,12 +28,10 @@ export interface UseCampaignsReturn {
   stop: (id: string) => Promise<void>;
   clearError: () => void;
 }
-
 export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchCampaigns = useCallback(async () => {
     try {
       setLoading(true);
@@ -50,11 +46,9 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
       setLoading(false);
     }
   }, [filters]);
-
   useEffect(() => {
     fetchCampaigns();
   }, [fetchCampaigns]);
-
   const create = useCallback(async (data: CreateCampaignRequest): Promise<Campaign> => {
     try {
       setError(null);
@@ -67,7 +61,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
       throw err;
     }
   }, [fetchCampaigns]);
-
   const update = useCallback(
     async (id: string, data: UpdateCampaignRequest): Promise<Campaign> => {
       try {
@@ -83,7 +76,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     },
     [fetchCampaigns]
   );
-
   const remove = useCallback(
     async (id: string): Promise<void> => {
       try {
@@ -98,7 +90,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     },
     [fetchCampaigns]
   );
-
   const start = useCallback(
     async (id: string): Promise<void> => {
       try {
@@ -113,7 +104,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     },
     [fetchCampaigns]
   );
-
   const pause = useCallback(
     async (id: string): Promise<void> => {
       try {
@@ -128,7 +118,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     },
     [fetchCampaigns]
   );
-
   const stop = useCallback(
     async (id: string): Promise<void> => {
       try {
@@ -143,7 +132,6 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     },
     [fetchCampaigns]
   );
-
   return {
     campaigns,
     loading,
@@ -157,5 +145,4 @@ export function useCampaigns(filters?: CampaignFilters): UseCampaignsReturn {
     stop,
     clearError: () => setError(null),
   };
-}
-
+}

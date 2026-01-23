@@ -1,18 +1,14 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
 import { ArrowUpRight, ArrowDownLeft, Calendar, Filter, ExternalLink } from 'lucide-react';
 import { useTransactions } from '@/sdk/features/billing';
 import { LoadingSpinner } from '../LoadingSpinner';
-
 type TransactionType = 'credit' | 'debit' | 'all';
 type TimeRange = '7d' | '30d' | '90d' | 'all';
-
 export const TransactionHistory: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [transactionType, setTransactionType] = useState<TransactionType>('all');
   const [searchTerm, setSearchTerm] = useState('');
-
   // Calculate date range
   const { startDate, endDate } = useMemo(() => {
     if (timeRange === 'all') {
@@ -27,7 +23,6 @@ export const TransactionHistory: React.FC = () => {
       endDate: now.toISOString(),
     };
   }, [timeRange]);
-
   // Fetch transactions
   const { data: transactions, isLoading } = useTransactions({
     type: transactionType !== 'all' ? transactionType : undefined,
@@ -35,12 +30,10 @@ export const TransactionHistory: React.FC = () => {
     endDate,
     limit: 100,
   });
-
   // Filter by search term
   const filteredTransactions = useMemo(() => {
     if (!transactions?.transactions) return [];
     if (!searchTerm) return transactions.transactions;
-
     const search = searchTerm.toLowerCase();
     return transactions.transactions.filter((tx) => {
       return (
@@ -51,22 +44,17 @@ export const TransactionHistory: React.FC = () => {
       );
     });
   }, [transactions, searchTerm]);
-
   // Calculate summary stats
   const stats = useMemo(() => {
     if (!filteredTransactions) return { credits: 0, debits: 0, net: 0 };
-
     const credits = filteredTransactions
       .filter((tx) => tx.type === 'credit')
       .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
-
     const debits = filteredTransactions
       .filter((tx) => tx.type === 'debit')
       .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
-
     return { credits, debits, net: credits - debits };
   }, [filteredTransactions]);
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -74,7 +62,6 @@ export const TransactionHistory: React.FC = () => {
       minimumFractionDigits: 2,
     }).format(amount);
   };
-
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString('en-US', {
       year: 'numeric',
@@ -84,13 +71,11 @@ export const TransactionHistory: React.FC = () => {
       minute: '2-digit',
     });
   };
-
   const getTypeColor = (type: string) => {
     return type === 'credit'
       ? 'bg-green-100 text-green-800'
       : 'bg-red-100 text-red-800';
   };
-
   const getTypeIcon = (type: string) => {
     return type === 'credit' ? (
       <ArrowDownLeft className="h-4 w-4" />
@@ -98,11 +83,9 @@ export const TransactionHistory: React.FC = () => {
       <ArrowUpRight className="h-4 w-4" />
     );
   };
-
   if (isLoading) {
     return <LoadingSpinner size="md" message="Loading transaction history..." />;
   }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,7 +108,6 @@ export const TransactionHistory: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600">
@@ -138,7 +120,6 @@ export const TransactionHistory: React.FC = () => {
           </div>
           <p className="text-xs text-gray-500 mt-1">Money added to account</p>
         </div>
-
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm font-medium">Total Debits</span>
@@ -149,7 +130,6 @@ export const TransactionHistory: React.FC = () => {
           </div>
           <p className="text-xs text-gray-500 mt-1">Credits consumed</p>
         </div>
-
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm font-medium">Total Transactions</span>
@@ -161,7 +141,6 @@ export const TransactionHistory: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">In selected period</p>
         </div>
       </div>
-
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -181,7 +160,6 @@ export const TransactionHistory: React.FC = () => {
               <option value="all">All time</option>
             </select>
           </div>
-
           {/* Transaction Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -197,7 +175,6 @@ export const TransactionHistory: React.FC = () => {
               <option value="debit">Debits Only</option>
             </select>
           </div>
-
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -213,7 +190,6 @@ export const TransactionHistory: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Transactions Table */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
@@ -310,4 +286,4 @@ export const TransactionHistory: React.FC = () => {
       </div>
     </div>
   );
-};
+};

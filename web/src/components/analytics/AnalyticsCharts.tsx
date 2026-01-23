@@ -3,9 +3,7 @@ import { Box, Paper, Typography } from '@mui/material';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar
 } from 'recharts';
-
 const COLORS = ['#6366F1', '#06b6d4', '#10b981', '#f59e42', '#0077b5', '#f43f5e'];
-
 export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
   <Box display="flex" flexWrap="wrap" gap={4}>
     {/* Leads Over Time */}
@@ -51,5 +49,4 @@ export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
     </Paper>
   </Box>
 );
-
-export default AnalyticsCharts;
+export default AnalyticsCharts;

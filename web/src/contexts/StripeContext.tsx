@@ -1,9 +1,7 @@
 'use client';
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { logger } from '@/lib/logger';
-
 interface StripeContextType {
   stripe: Stripe | null;
   stripeConfig: {
@@ -14,14 +12,12 @@ interface StripeContextType {
   loading: boolean;
   error: string | null;
 }
-
 const StripeContext = createContext<StripeContextType>({
   stripe: null,
   stripeConfig: null,
   loading: true,
   error: null,
 });
-
 export const useStripe = () => {
   const context = useContext(StripeContext);
   if (!context) {
@@ -29,17 +25,14 @@ export const useStripe = () => {
   }
   return context;
 };
-
 interface StripeProviderProps {
   children: React.ReactNode;
 }
-
 export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [stripeConfig, setStripeConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const initializeStripe = async () => {
       try {
@@ -48,13 +41,10 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         });
-        
         if (!response.ok) {
           throw new Error(`Failed to fetch Stripe configuration: ${response.status} ${response.statusText}`);
         }
-        
         const config = await response.json();
-        
         // Check if we have a valid publishable key
         if (!config.publishableKey) {
           logger.warn('Stripe not configured: Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
@@ -62,9 +52,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
           setLoading(false);
           return;
         }
-        
         setStripeConfig(config);
-
         // Load Stripe with publishable key
         const stripeInstance = await loadStripe(config.publishableKey);
         setStripe(stripeInstance);
@@ -77,17 +65,14 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         setLoading(false);
       }
     };
-
     initializeStripe();
   }, []);
-
   const value = {
     stripe,
     stripeConfig,
     loading,
     error,
   };
-
   return (
     <StripeContext.Provider value={value}>
       {children}

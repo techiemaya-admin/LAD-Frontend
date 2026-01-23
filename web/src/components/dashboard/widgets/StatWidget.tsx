@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { cn } from '@/lib/utils';
-
 interface StatWidgetProps {
   id: string;
   title: string;
@@ -19,7 +18,6 @@ interface StatWidgetProps {
   trendLabel?: string;
   icon?: 'phone' | 'check' | 'trending';
 }
-
 export const StatWidget: React.FC<StatWidgetProps> = ({
   id,
   title,
@@ -34,7 +32,6 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
     check: CheckCircle,
     trending: TrendingUp,
   }[icon];
-
   const getTrendIcon = () => {
     if (trend === undefined || trend === 0) {
       return <Minus className="h-3 w-3" />;
@@ -45,12 +42,10 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
       <TrendingDown className="h-3 w-3" />
     );
   };
-
   const getTrendColor = () => {
     if (trend === undefined || trend === 0) return 'text-muted-foreground';
     return trend > 0 ? 'text-success' : 'text-destructive';
   };
-
   return (
     <WidgetWrapper id={id} title={title}>
       <div className="flex flex-col justify-between h-full">
@@ -67,7 +62,6 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
             <IconComponent className="h-5 w-5 text-primary" />
           </div>
         </div>
-        
         {trend !== undefined && (
           <div className={cn('flex items-center gap-1 text-xs mt-4', getTrendColor())}>
             {getTrendIcon()}
@@ -82,4 +76,4 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};

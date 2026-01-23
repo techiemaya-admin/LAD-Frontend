@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, Button, Table, TableHead, TableRow, TableCell, TableBody,
@@ -9,16 +8,19 @@ import { Add, PlayArrow, Pause, Stop, CheckCircle, MoreVert } from '@mui/icons-m
 import { useRouter } from 'next/navigation';
 import type { Campaign, CampaignStatus } from '@/features/campaigns';
 import { getStatusColor, renderChannelIcons, renderActionChips, getChannelsUsed, PLATFORM_CONFIG, renderPlatformMetrics } from './campaignUtils';
-
 interface CampaignsTableProps {
   campaigns: Campaign[];
   loading: boolean;
   onMenuOpen: (event: React.MouseEvent<HTMLElement>, campaign: Campaign) => void;
 }
-
 export default function CampaignsTable({ campaigns, loading, onMenuOpen }: CampaignsTableProps) {
   const router = useRouter();
-
+  // 🔍 DEBUG: Log campaigns data
+  React.useEffect(() => {
+    if (campaigns && campaigns.length > 0) {
+      } else {
+      }
+  }, [campaigns]);
   const getStatusIconComponent = (status: CampaignStatus) => {
     switch (status) {
       case 'running': return <PlayArrow fontSize="small" />;
@@ -28,9 +30,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       default: return null;
     }
   };
-
   const filteredCampaigns = campaigns;
-
   return (
     <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
       <CardContent sx={{ p: 0 }}>
@@ -132,5 +132,4 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       </CardContent>
     </Card>
   );
-}
-
+}

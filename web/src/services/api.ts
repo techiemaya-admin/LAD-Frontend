@@ -1,10 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { safeStorage } from '../utils/storage';
-
 // Use backend URL directly
 const API_BASE_URL: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
 const API_TIMEOUT_MS: number = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 120000;
-
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   // Prevent infinite loading states if the backend hangs.
@@ -14,7 +12,6 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
@@ -27,7 +24,6 @@ api.interceptors.request.use(
   },
   (error: unknown) => Promise.reject(error)
 );
-
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -40,6 +36,4 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export default api;
-
+export default api;

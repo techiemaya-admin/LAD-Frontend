@@ -9,9 +9,7 @@ import {
   X, 
   Check,
   Layout,
-  ChevronDown,
-  Brain,
-  TvMinimalPlay
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +29,6 @@ import {
 } from '@/components/ui/dialog';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { cn } from '@/lib/utils';
-
 export const DashboardHeader: React.FC = () => {
   const { 
     isEditMode, 
@@ -45,12 +42,9 @@ export const DashboardHeader: React.FC = () => {
     deleteLayout,
     resetToDefault,
   } = useDashboardStore();
-
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [layoutName, setLayoutName] = useState('');
-
   const currentLayout = savedLayouts.find((l) => l.id === currentLayoutId);
-
   const handleSaveLayout = () => {
     if (layoutName.trim()) {
       saveCurrentLayout(layoutName.trim());
@@ -58,19 +52,13 @@ export const DashboardHeader: React.FC = () => {
       setIsSaveDialogOpen(false);
     }
   };
-
   const handleExitEditMode = () => {
     setEditMode(false);
   };
-
   return (
     <div className="flex items-center justify-between mb-6">
       <div>
-        {/* <h1 className="text-2xl font-bold font-display tracking-tight">🧠 Smart Overview</h1> */}
-        <div className="flex items-center gap-2">
-  <TvMinimalPlay className="w-5 h-5 text-primary" />
-  <span className="font-semibold">Smart Overview</span>
-</div>
+        <h1 className="text-2xl font-bold font-display tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           {currentLayout ? currentLayout.name : 'Default Layout'}
           {isEditMode && (
@@ -78,7 +66,6 @@ export const DashboardHeader: React.FC = () => {
           )}
         </p>
       </div>
-
       <div className="flex items-center gap-2">
         {isEditMode ? (
           <>
@@ -92,7 +79,6 @@ export const DashboardHeader: React.FC = () => {
               <Plus className="h-4 w-4" />
               Add Widget
             </Button>
-
             {/* Layout Management Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -125,7 +111,6 @@ export const DashboardHeader: React.FC = () => {
                     </div>
                   </DialogContent>
                 </Dialog>
-
                 {savedLayouts.length > 0 && (
                   <>
                     <DropdownMenuSeparator />
@@ -143,7 +128,6 @@ export const DashboardHeader: React.FC = () => {
                     ))}
                   </>
                 )}
-
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={resetToDefault}>
                   <RotateCcw className="h-4 w-4 mr-2" />
@@ -151,7 +135,6 @@ export const DashboardHeader: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
             {/* Done Button */}
             <Button
               size="sm"
@@ -176,4 +159,4 @@ export const DashboardHeader: React.FC = () => {
       </div>
     </div>
   );
-};
+};

@@ -1,13 +1,10 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useFeatureFlag, FeatureGate } from '../../featureFlags';
-import { logger } from '@/lib/logger';
-
 interface Company {
   id: string;
   name: string;
@@ -22,7 +19,6 @@ interface Company {
   description: string;
   technologies: string[];
 }
-
 interface SearchFilters {
   keywords: string[];
   industry: string;
@@ -31,19 +27,15 @@ interface SearchFilters {
   revenue_range: string;
   technology: string;
 }
-
 const ApolloLeadsSearch: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState('');
   const [filters, setFilters] = useState<Partial<SearchFilters>>({});
   const [showFilters, setShowFilters] = useState(false);
-
   const { isEnabled, loading: featureLoading } = useFeatureFlag('apollo_leads', 'admin');
-
   const handleSearch = async () => {
     if (!searchKeywords.trim()) return;
-
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -52,31 +44,25 @@ const ApolloLeadsSearch: React.FC = () => {
         page: '1',
         ...filters
       });
-
       const response = await fetch(`/api/apollo-leads/search?${params}`);
       const data = await response.json();
-
       if (data.success) {
         setCompanies(data.data);
       } else {
-        logger.error('Search failed:', { message: data.message });
+        console.error('Search failed:', data.message);
       }
     } catch (error) {
-      logger.error('Search error:', error);
+      console.error('Search error:', error);
     } finally {
       setLoading(false);
     }
   };
-
   const handleCompanySelect = (company: Company) => {
     // Navigate to company details or trigger lead generation
-    logger.debug('Selected company:', { company });
-  };
-
+    };
   if (featureLoading) {
     return <div className="flex justify-center p-8">Loading...</div>;
   }
-
   return (
     <FeatureGate 
       feature="apollo_leads" 
@@ -106,7 +92,6 @@ const ApolloLeadsSearch: React.FC = () => {
             {companies.length} Companies Found
           </Badge>
         </div>
-
         {/* Search Section */}
         <Card>
           <CardHeader>
@@ -135,7 +120,6 @@ const ApolloLeadsSearch: React.FC = () => {
                 {loading ? 'Searching...' : 'Search'}
               </Button>
             </div>
-
             {/* Advanced Filters */}
             {showFilters && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-lg">
@@ -168,7 +152,6 @@ const ApolloLeadsSearch: React.FC = () => {
             )}
           </CardContent>
         </Card>
-
         {/* Results */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {companies.map((company) => (
@@ -195,11 +178,9 @@ const ApolloLeadsSearch: React.FC = () => {
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {company.description}
                   </p>
-                  
                   {company.industry && (
                     <Badge variant="secondary">{company.industry}</Badge>
                   )}
-
                   {company.technologies && company.technologies.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {company.technologies.slice(0, 3).map((tech, index) => (
@@ -214,7 +195,6 @@ const ApolloLeadsSearch: React.FC = () => {
                       )}
                     </div>
                   )}
-
                   <div className="flex gap-2 pt-2">
                     <Button size="sm" variant="outline" className="flex-1">
                       Get Emails
@@ -228,7 +208,6 @@ const ApolloLeadsSearch: React.FC = () => {
             </Card>
           ))}
         </div>
-
         {/* Empty State */}
         {!loading && companies.length === 0 && searchKeywords && (
           <Card>
@@ -244,5 +223,4 @@ const ApolloLeadsSearch: React.FC = () => {
     </FeatureGate>
   );
 };
-
 export default ApolloLeadsSearch;

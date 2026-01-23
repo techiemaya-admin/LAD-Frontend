@@ -1,9 +1,7 @@
 'use client';
-
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import CampaignsList from '../../features/campaigns/components/CampaignsList';
-
 /**
  * Campaigns Page - follows LAD architecture pattern
  * 
@@ -21,11 +19,9 @@ export default function CampaignsPage() {
   // if (!session) {
   //   redirect('/login');
   // }
-
   return (
     <Suspense fallback={<div>Loading campaigns...</div>}>
       <CampaignsList />
     </Suspense>
   );
-}
-
+}

@@ -1,19 +1,15 @@
 'use client';
-
 import React, { useState } from 'react';
 import { Check, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface DelaySelectorProps {
   onSubmit: (selectedValue: string) => void;
   onSkip?: () => void;
   options?: string[]; // Dynamic options from backend
 }
-
 export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelectorProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [customDays, setCustomDays] = useState<string>('');
-
   // Use backend options if provided, otherwise fallback to defaults
   const defaultDelayOptions = [
     { value: 'No delay (run immediately)', label: 'No delay', description: 'Actions run immediately' },
@@ -23,14 +19,12 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
     { value: '2 days delay', label: '2 days', description: 'Wait 2 days between actions' },
     { value: 'Custom delay', label: 'Custom', description: 'Specify your own delay' },
   ];
-  
   // Parse backend options to match our format
   const delayOptions = options && options.length > 0
     ? options.map(opt => {
         // Extract label from options like "No delay (run immediately)"
         const match = opt.match(/^([^(]+)(?:\s*\([^)]+\))?$/);
         const label = match ? match[1].trim() : opt;
-        
         // Determine description based on label
         let description = '';
         if (opt.toLowerCase().includes('no delay') || opt.toLowerCase().includes('immediately')) {
@@ -47,7 +41,6 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
             description = '';
           }
         }
-        
         return {
           value: opt, // Send full option text to backend
           label,
@@ -55,7 +48,6 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
         };
       })
     : defaultDelayOptions;
-
   const handleSelect = (value: string) => {
     setSelected(value);
     if (!value.toLowerCase().includes('custom')) {
@@ -65,14 +57,11 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
       }, 100);
     }
   };
-
   const handleCustomSubmit = () => {
     if (customDays.trim()) {
       onSubmit(`${customDays} days delay`);
     }
   };
-
-
   return (
     <div className="mt-4 space-y-4">
       {/* Delay Options */}
@@ -111,7 +100,6 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
           );
         })}
       </div>
-
       {/* Custom Input */}
       {selected === 'Custom' && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -138,8 +126,6 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
           </div>
         </div>
       )}
-
     </div>
   );
-}
-
+}

@@ -1,12 +1,10 @@
 import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import voiceAgentService from './services/voiceAgentService';
 import type { VoiceAgent, CallLog, PhoneNumber, BatchCallLogEntry } from './types';
-
 /**
  * Voice Agent Hooks
  * React Query hooks for voice agent operations
  */
-
 // Query Keys
 export const voiceAgentKeys = {
   all: ['voiceAgent'] as const,
@@ -19,7 +17,6 @@ export const voiceAgentKeys = {
   userAvailableNumbers: () => [...voiceAgentKeys.all, 'userAvailableNumbers'] as const,
   resolvePhones: (ids: string[], type: string) => [...voiceAgentKeys.all, 'resolvePhones', ids, type] as const,
 };
-
 /**
  * Hook to fetch all voice agents
  */
@@ -30,7 +27,6 @@ export function useVoiceAgents(): UseQueryResult<VoiceAgent[], Error> {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
-
 /**
  * Hook to fetch call logs
  * @param voiceAgentId - Optional filter by voice agent ID
@@ -42,7 +38,6 @@ export function useCallLogs(voiceAgentId?: string): UseQueryResult<CallLog[], Er
     staleTime: 30 * 1000, // 30 seconds
   });
 }
-
 /**
  * Hook to fetch a specific call log
  * @param id - Call log ID
@@ -54,7 +49,6 @@ export function useCallLog(id: string): UseQueryResult<CallLog, Error> {
     enabled: !!id,
   });
 }
-
 /**
  * Hook to fetch batch call logs
  * @param batchId - Batch ID
@@ -67,7 +61,6 @@ export function useBatchCallLogs(batchId: string): UseQueryResult<BatchCallLogEn
     staleTime: 10 * 1000, // 10 seconds
   });
 }
-
 /**
  * Hook to fetch tenant phone numbers
  */
@@ -78,7 +71,6 @@ export function useTenantPhoneNumbers(): UseQueryResult<PhoneNumber[], Error> {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
-
 /**
  * Hook to fetch user's available phone numbers
  */
@@ -89,7 +81,6 @@ export function useUserAvailableNumbers(): UseQueryResult<PhoneNumber[], Error> 
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
-
 /**
  * Hook to fetch user's available voice agents
  */
@@ -100,7 +91,6 @@ export function useAvailableAgents(): UseQueryResult<VoiceAgent[], Error> {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
-
 /**
  * Hook to resolve phone numbers from IDs
  */
@@ -112,7 +102,6 @@ export function useResolvePhones(
     mutationFn: () => voiceAgentService.resolvePhones(ids, type),
   });
 }
-
 /**
  * Hook to make a call
  */
@@ -122,7 +111,6 @@ export function useMakeCall(): UseMutationResult<
   { voiceAgentId: string; phoneNumber: string; context?: string; fromNumber?: string }
 > {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ voiceAgentId, phoneNumber, context, fromNumber }: { voiceAgentId: string; phoneNumber: string; context?: string; fromNumber?: string }) =>
       voiceAgentService.makeCall(voiceAgentId, phoneNumber, context, fromNumber),
@@ -131,4 +119,4 @@ export function useMakeCall(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: voiceAgentKeys.callLogs() });
     },
   });
-}
+}

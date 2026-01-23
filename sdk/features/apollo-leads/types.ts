@@ -3,11 +3,9 @@
  * 
  * Comprehensive TypeScript definitions for Apollo.io integration
  */
-
 // ============================================================================
 // COMPANY TYPES
 // ============================================================================
-
 export interface ApolloCompany {
   id: string;
   name: string;
@@ -24,7 +22,6 @@ export interface ApolloCompany {
   keywords?: string[];
   logo_url?: string;
 }
-
 export interface ApolloLocation {
   city?: string;
   state?: string;
@@ -32,17 +29,14 @@ export interface ApolloLocation {
   street_address?: string;
   postal_code?: string;
 }
-
 export interface ApolloSocialProfiles {
   linkedin?: string;
   twitter?: string;
   facebook?: string;
 }
-
 // ============================================================================
 // EMPLOYEE/PERSON TYPES
 // ============================================================================
-
 export interface ApolloPerson {
   id: string;
   first_name: string;
@@ -57,11 +51,9 @@ export interface ApolloPerson {
   seniority?: string;
   department?: string[];
 }
-
 // ============================================================================
 // SEARCH TYPES
 // ============================================================================
-
 export interface ApolloSearchParams {
   query?: string;
   keywords?: string[];
@@ -75,7 +67,6 @@ export interface ApolloSearchParams {
   limit?: number;
   offset?: number;
 }
-
 export interface ApolloSearchResponse {
   companies: ApolloCompany[];
   total: number;
@@ -83,7 +74,6 @@ export interface ApolloSearchResponse {
   limit: number;
   has_more: boolean;
 }
-
 export interface ApolloEmployeeSearchParams {
   company_id?: string;
   company_name?: string;
@@ -93,18 +83,15 @@ export interface ApolloEmployeeSearchParams {
   location?: string;
   limit?: number;
 }
-
 export interface ApolloEmployeeSearchResponse {
   employees: ApolloPerson[];
   total: number;
   page: number;
   limit: number;
 }
-
 // ============================================================================
 // CREDIT & BILLING TYPES
 // ============================================================================
-
 export interface ApolloCredits {
   available: number;
   used: number;
@@ -115,7 +102,6 @@ export interface ApolloCredits {
     phone_reveal: number;
   };
 }
-
 export interface ApolloUsageRecord {
   id: string;
   operation: 'search' | 'email_reveal' | 'phone_reveal';
@@ -124,11 +110,9 @@ export interface ApolloUsageRecord {
   user_id: string;
   details?: any;
 }
-
 // ============================================================================
 // API RESPONSE TYPES
 // ============================================================================
-
 export interface ApolloApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -137,18 +121,15 @@ export interface ApolloApiResponse<T = any> {
   credits_used?: number;
   credits_remaining?: number;
 }
-
 export interface ApolloHealthResponse {
   status: 'healthy' | 'degraded' | 'down';
   feature: string;
   version: string;
   client_id?: string;
 }
-
 // ============================================================================
 // FEATURE FLAG TYPES
 // ============================================================================
-
 export interface ApolloFeatureAccess {
   enabled: boolean;
   tier: 'free' | 'basic' | 'premium' | 'enterprise';
@@ -156,11 +137,9 @@ export interface ApolloFeatureAccess {
   upgrade_required: boolean;
   message?: string;
 }
-
 // ============================================================================
 // HOOK RETURN TYPES
 // ============================================================================
-
 export interface UseApolloLeadsReturn {
   searchCompanies: (params: ApolloSearchParams) => Promise<ApolloSearchResponse>;
   searchEmployees: (params: ApolloEmployeeSearchParams) => Promise<ApolloEmployeeSearchResponse>;
@@ -171,7 +150,6 @@ export interface UseApolloLeadsReturn {
   error: string | null;
   credits: ApolloCredits | null;
 }
-
 export interface UseApolloSearchReturn {
   results: ApolloCompany[];
   loading: boolean;
@@ -181,18 +159,15 @@ export interface UseApolloSearchReturn {
   hasMore: boolean;
   total: number;
 }
-
 export interface UseApolloCreditsReturn {
   credits: ApolloCredits | null;
   loading: boolean;
   refresh: () => Promise<void>;
   canAfford: (operation: 'search' | 'email_reveal' | 'phone_reveal') => boolean;
 }
-
 // ============================================================================
 // SERVICE TYPES
 // ============================================================================
-
 export interface ApolloLeadsServiceInterface {
   searchCompanies(params: ApolloSearchParams): Promise<ApolloSearchResponse>;
   getCompanyDetails(companyId: string): Promise<ApolloCompany>;
@@ -201,11 +176,9 @@ export interface ApolloLeadsServiceInterface {
   revealPhone(personId: string): Promise<string>;
   checkHealth(): Promise<ApolloHealthResponse>;
 }
-
 // ============================================================================
 // COMPONENT PROPS
 // ============================================================================
-
 export interface ApolloLeadsSearchProps {
   onCompanySelect?: (company: ApolloCompany) => void;
   onEmployeeSelect?: (employee: ApolloPerson) => void;
@@ -213,14 +186,12 @@ export interface ApolloLeadsSearchProps {
   showFilters?: boolean;
   maxResults?: number;
 }
-
 export interface ApolloCompanyCardProps {
   company: ApolloCompany;
   onClick?: () => void;
   showActions?: boolean;
   showEmployees?: boolean;
 }
-
 export interface ApolloEmployeeListProps {
   companyId?: string;
   companyName?: string;
@@ -228,11 +199,9 @@ export interface ApolloEmployeeListProps {
   onEmployeeSelect?: (employee: ApolloPerson) => void;
   showRevealActions?: boolean;
 }
-
 // ============================================================================
 // PHONE SERVICE TYPES
 // ============================================================================
-
 export interface PhoneRevealRequest {
   contacts: Array<{
     id: string;
@@ -241,7 +210,6 @@ export interface PhoneRevealRequest {
     title?: string;
   }>;
 }
-
 export interface PhoneRevealResponse {
   success: boolean;
   results: Array<{
@@ -252,4 +220,4 @@ export interface PhoneRevealResponse {
   }>;
   total_credits_used: number;
   credits_remaining: number;
-}
+}

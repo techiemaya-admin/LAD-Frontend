@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
 import {
@@ -16,7 +15,6 @@ import {
 import { StepDefinition } from '@/types/campaign';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import PlatformReorder from './PlatformReorder';
-
 const STEP_DEFINITIONS: StepDefinition[] = [
   // LinkedIn Actions (as per AI chat workflow)
   {
@@ -144,7 +142,6 @@ const STEP_DEFINITIONS: StepDefinition[] = [
     defaultData: { title: 'Condition', conditionType: 'connected' },
   },
 ];
-
 const getIcon = (iconName: string) => {
   switch (iconName) {
     case 'linkedin':
@@ -167,7 +164,6 @@ const getIcon = (iconName: string) => {
       return <Send sx={{ fontSize: 20 }} />;
   }
 };
-
 // Simple toast notification helper
 const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
   const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-amber-500';
@@ -175,37 +171,29 @@ const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'suc
   toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg fixed bottom-4 right-4 z-50 max-w-sm`;
   toast.textContent = message;
   document.body.appendChild(toast);
-  
   setTimeout(() => {
     toast.remove();
   }, 3000);
 };
-
 export default function OnboardingStepLibrary() {
   const { addWorkflowNode, addWorkflowStep, workflowNodes, workflowPreview, addWorkflowEdge } = useOnboardingStore();
-
   const handleDragStart = (e: React.DragEvent, stepType: string) => {
     e.dataTransfer.setData('application/reactflow', stepType);
     e.dataTransfer.effectAllowed = 'move';
   };
-
   const handleClick = (step: StepDefinition) => {
     // Get the current state to check for existing steps
     const currentState = useOnboardingStore.getState();
     const currentWorkflowPreview = currentState.workflowPreview || [];
-    
     // Check if this exact step type already exists in the workflow
     const existingStep = currentWorkflowPreview.find(s => s.type === step.type);
-    
     if (existingStep) {
       showToast(`"${step.label}" step is already added to the workflow`, 'warning');
       return; // Stop execution - don't add duplicate steps
     }
-    
     // Create workflow node using onboarding store
     const nodeId = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const position = { x: 200, y: 150 + workflowNodes.length * 120 };
-
     const workflowNode = {
       id: nodeId,
       type: step.type,
@@ -214,14 +202,11 @@ export default function OnboardingStepLibrary() {
       position,
       data: step.defaultData || {},
     };
-
     // Get current nodes before adding (to find the last node)
     const currentNodes = currentState.workflowNodes;
     const lastNode = currentNodes.length > 0 ? currentNodes[currentNodes.length - 1] : null;
-
     // Add to workflowNodes (preferred)
     addWorkflowNode(workflowNode);
-
     // Also add to workflowPreview for compatibility
     const previewStep = {
       id: nodeId,
@@ -230,7 +215,6 @@ export default function OnboardingStepLibrary() {
       description: step.description,
     };
     addWorkflowStep(previewStep);
-
     // Create edge from last node if exists (and it's not the end node)
     if (lastNode && lastNode.id !== 'end' && lastNode.type !== 'end') {
       addWorkflowEdge({
@@ -241,11 +225,9 @@ export default function OnboardingStepLibrary() {
         target: nodeId,
       });
     }
-    
     // Show success toast
     showToast(`"${step.label}" added to workflow`, 'success');
   };
-
   const linkedinSteps = STEP_DEFINITIONS.filter((s) => s.category === 'linkedin');
   const emailSteps = STEP_DEFINITIONS.filter((s) => s.category === 'email');
   const whatsappSteps = STEP_DEFINITIONS.filter((s) => s.category === 'whatsapp');
@@ -253,7 +235,6 @@ export default function OnboardingStepLibrary() {
   const instagramSteps = STEP_DEFINITIONS.filter((s) => s.category === 'instagram');
   const leadsSteps = STEP_DEFINITIONS.filter((s) => s.category === 'leads');
   const utilitySteps = STEP_DEFINITIONS.filter((s) => s.category === 'utility');
-
   const renderStepCard = (step: StepDefinition, categoryColor: string) => (
     <Paper
       key={step.type}
@@ -304,7 +285,6 @@ export default function OnboardingStepLibrary() {
       </Stack>
     </Paper>
   );
-
   return (
     <Box
       sx={{
@@ -318,18 +298,14 @@ export default function OnboardingStepLibrary() {
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1E293B' }}>
         Step Library
       </Typography>
-
       {/* Platform Reorder Section */}
       <Box sx={{ mb: 3, mx: -2, mt: -1 }}>
         <PlatformReorder />
       </Box>
-
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-      
       <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#475569' }}>
         Add Steps
       </Typography>
-
       {/* Lead Generation Steps */}
       {leadsSteps.length > 0 && (
         <Box sx={{ mb: 4 }}>
@@ -341,7 +317,6 @@ export default function OnboardingStepLibrary() {
           </Stack>
         </Box>
       )}
-
       {linkedinSteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -355,7 +330,6 @@ export default function OnboardingStepLibrary() {
           </Box>
         </>
       )}
-
       {emailSteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -369,7 +343,6 @@ export default function OnboardingStepLibrary() {
           </Box>
         </>
       )}
-
       {whatsappSteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -383,7 +356,6 @@ export default function OnboardingStepLibrary() {
           </Box>
         </>
       )}
-
       {voiceSteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -397,7 +369,6 @@ export default function OnboardingStepLibrary() {
           </Box>
         </>
       )}
-
       {instagramSteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -411,7 +382,6 @@ export default function OnboardingStepLibrary() {
           </Box>
         </>
       )}
-
       {utilitySteps.length > 0 && (
         <>
           <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
@@ -427,5 +397,4 @@ export default function OnboardingStepLibrary() {
       )}
     </Box>
   );
-}
-
+}

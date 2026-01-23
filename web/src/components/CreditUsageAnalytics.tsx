@@ -1,9 +1,7 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Phone, Search, Brain, Linkedin, BarChart3, Calendar } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface FeatureUsage {
   featureName: string;
   totalCredits: number;
@@ -11,7 +9,6 @@ interface FeatureUsage {
   percentage: number;
   icon: string;
 }
-
 interface UsageAnalytics {
   totalCreditsUsed: number;
   topFeatures: FeatureUsage[];
@@ -25,22 +22,18 @@ interface UsageAnalytics {
     percentageChange: number;
   };
 }
-
 interface CreditUsageAnalyticsProps {
   timeRange?: '7d' | '30d' | '90d';
 }
-
 export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({ 
   timeRange = '30d' 
 }) => {
   const [analytics, setAnalytics] = useState<UsageAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState(timeRange);
-
   useEffect(() => {
     fetchAnalytics();
   }, [selectedRange]);
-
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
@@ -52,11 +45,9 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
           }
         }
       );
-
       if (!response.ok) {
         throw new Error('Failed to fetch analytics');
       }
-
       const data = await response.json();
       setAnalytics(data);
     } catch (error) {
@@ -76,7 +67,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
       setLoading(false);
     }
   };
-
   const getFeatureIcon = (icon: string) => {
     switch (icon) {
       case 'phone':
@@ -91,7 +81,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
         return <BarChart3 className="h-5 w-5" />;
     }
   };
-
   const getFeatureColor = (icon: string) => {
     switch (icon) {
       case 'phone':
@@ -106,7 +95,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
         return 'bg-gray-100 text-gray-600';
     }
   };
-
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-md p-8">
@@ -116,11 +104,9 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
       </div>
     );
   }
-
   if (!analytics) {
     return null;
   }
-
   return (
     <div className="space-y-6">
       {/* Header with Time Range Selector */}
@@ -147,7 +133,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
           ))}
         </div>
       </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Credits Used */}
@@ -163,7 +148,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
             in the last {selectedRange === '7d' ? '7' : selectedRange === '30d' ? '30' : '90'} days
           </p>
         </div>
-
         {/* Monthly Trend */}
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
           <div className="flex items-center justify-between mb-2">
@@ -180,7 +164,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
             vs last month ({analytics.monthlyTrend.lastMonth.toLocaleString()} credits)
           </p>
         </div>
-
         {/* Top Feature */}
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
           <div className="flex items-center justify-between mb-2">
@@ -196,7 +179,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
           </p>
         </div>
       </div>
-
       {/* Feature Breakdown */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage by Feature</h3>
@@ -232,7 +214,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
           ))}
         </div>
       </div>
-
       {/* Daily Usage Chart (Simple Text-based for now) */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Usage</h3>
@@ -240,7 +221,6 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
           {analytics.dailyUsage.slice(-7).map((day, index) => {
             const maxCredits = Math.max(...analytics.dailyUsage.map(d => d.credits));
             const heightPercent = (day.credits / maxCredits) * 100;
-            
             return (
               <div key={index} className="text-center">
                 <div className="h-32 flex items-end justify-center mb-2">
@@ -266,4 +246,4 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
       </div>
     </div>
   );
-};
+};

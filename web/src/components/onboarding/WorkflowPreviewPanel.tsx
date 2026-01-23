@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Linkedin, Mail, MessageCircle, Phone, Play, Edit3 } from 'lucide-react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
@@ -13,12 +12,10 @@ import { CustomWorkflowNode } from './workflow/CustomWorkflowNode';
 import { WorkflowCanvas } from './workflow/WorkflowCanvas';
 import { createReactFlowNodes, createReactFlowEdges } from './workflow/workflowFlowBuilder';
 import StepEditor from './workflow/StepEditor';
-
 // Register custom node types
 const nodeTypes = {
   custom: CustomWorkflowNode,
 };
-
 interface WorkflowPreviewPanelProps {
   platforms?: string[];
   platformActions?: Record<string, string[]>;
@@ -29,14 +26,12 @@ interface WorkflowPreviewPanelProps {
   campaignDays?: string;
   workingDays?: string;
 }
-
 const platformIcons: Record<string, React.ReactNode> = {
   linkedin: <Linkedin className="w-4 h-4" />,
   email: <Mail className="w-4 h-4" />,
   whatsapp: <MessageCircle className="w-4 h-4" />,
   voice: <Phone className="w-4 h-4" />,
 };
-
 export default function WorkflowPreviewPanel({
   platforms: propsPlatforms,
   platformActions: propsPlatformActions,
@@ -52,27 +47,21 @@ export default function WorkflowPreviewPanel({
   const workflowNodes = useOnboardingStore((state) => state.workflowNodes);
   const setIsEditorPanelCollapsed = useOnboardingStore((state) => state.setIsEditorPanelCollapsed);
   const setHasRequestedEditor = useOnboardingStore((state) => state.setHasRequestedEditor);
-  
   // Debug logging
   logger.debug('Rendered with workflowPreview', { workflowPreview, length: workflowPreview?.length || 0 });
-  
   // Convert workflow preview steps to React Flow nodes and edges
   const reactFlowNodes = useMemo(() => createReactFlowNodes(workflowPreview), [workflowPreview]);
   const reactFlowEdges = useMemo(() => createReactFlowEdges(workflowPreview), [workflowPreview]);
-  
   const [flowNodes, setNodes, onNodesChange] = useNodesState(reactFlowNodes);
   const [flowEdges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
-  
   // Sync nodes when reactFlowNodes changes
   React.useEffect(() => {
     setNodes(reactFlowNodes);
   }, [reactFlowNodes, setNodes]);
-  
   // Sync edges when reactFlowEdges changes
   React.useEffect(() => {
     setEdges(reactFlowEdges);
   }, [reactFlowEdges, setEdges]);
-
   // Use props if provided, otherwise extract from store
   const platforms = propsPlatforms || [];
   const platformActions = propsPlatformActions || {};
@@ -82,15 +71,12 @@ export default function WorkflowPreviewPanel({
   const campaignName = propsCampaignName;
   const campaignDays = propsCampaignDays;
   const workingDays = propsWorkingDays;
-  
   // If workflow preview is available in store and no props, render from store
   const hasStoreWorkflow = workflowPreview && workflowPreview.length > 0;
   const hasPropsContent = platforms.length > 0 || delays || conditions || campaignName;
   const hasContent = hasPropsContent || hasStoreWorkflow;
-
   // State for step editor
   const [editingStep, setEditingStep] = useState<WorkflowPreviewStep | null>(null);
-  
   // Listen for openStepEditor events from CustomWorkflowNode
   useEffect(() => {
     const handleOpenEditor = (event: CustomEvent) => {
@@ -102,20 +88,17 @@ export default function WorkflowPreviewPanel({
         logger.debug('Opening step editor for', { stepId, step });
       }
     };
-    
     window.addEventListener('openStepEditor', handleOpenEditor as EventListener);
     return () => {
       window.removeEventListener('openStepEditor', handleOpenEditor as EventListener);
     };
   }, [workflowPreview]);
-
   // Handle edit button click - show editor panel instead of full screen
   const handleEditClick = () => {
     setIsEditorPanelCollapsed(false); // Show the editor panel
     setHasRequestedEditor(true); // Track that user wants to edit
     logger.debug('Editor panel opened - showing step library at 30% width');
   };
-
   // Always show the React Flow workflow
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-l border-gray-200 dark:border-gray-700">
@@ -145,7 +128,6 @@ export default function WorkflowPreviewPanel({
           )}
         </div>
       </div>
-      
       {/* SVG Gradients for edges */}
       <svg width="0" height="0" style={{ position: 'absolute' }}>
         <defs>
@@ -159,7 +141,6 @@ export default function WorkflowPreviewPanel({
           </linearGradient>
         </defs>
       </svg>
-      
       <div className="flex-1 min-h-0">
         <ReactFlow
           nodes={flowNodes}
@@ -193,7 +174,6 @@ export default function WorkflowPreviewPanel({
           />
         </ReactFlow>
       </div>
-      
       {/* Step Editor Modal */}
       {editingStep && (
         <StepEditor
@@ -203,4 +183,4 @@ export default function WorkflowPreviewPanel({
       )}
     </div>
   );
-}
+}

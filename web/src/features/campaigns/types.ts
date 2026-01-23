@@ -1,9 +1,7 @@
 /**
  * Campaigns Feature - Type Definitions
  */
-
 export type CampaignStatus = 'draft' | 'running' | 'paused' | 'stopped' | 'completed';
-
 export interface Campaign {
   id: string;
   name: string;
@@ -22,7 +20,6 @@ export interface Campaign {
   replied_count?: number;
   [key: string]: any;
 }
-
 export interface CampaignStats {
   total: number;
   running: number;
@@ -31,7 +28,6 @@ export interface CampaignStats {
   draft: number;
   completed: number;
 }
-
 export interface CampaignLead {
   id: string;
   campaign_id: string;
@@ -42,6 +38,4 @@ export interface CampaignLead {
   lead_data?: any;
   custom_fields?: any;
   [key: string]: any;
-}
-
-
+}

@@ -1,8 +1,6 @@
 "use client";
 import { Phone, Search, Filter, Calendar } from "lucide-react";
-
 type DateFilter = "today" | "month" | "custom" | "all";
-
 interface CallLogsHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
@@ -28,7 +26,6 @@ interface CallLogsHeaderProps {
   perPage: number;
   onPerPageChange: (value: number) => void;
 }
-
 export function CallLogsHeader({
   search,
   onSearchChange,
@@ -68,7 +65,6 @@ export function CallLogsHeader({
             </p>
           </div>
         </div>
-
         {selectedCount > 0 && (
           <div className="flex gap-2">
             {hasFailedCalls && (
@@ -88,7 +84,6 @@ export function CallLogsHeader({
           </div>
         )}
       </div>
-
       {/* Filters Section */}
       <div className="flex flex-col gap-4">
         {/* Row 1: Search and Quick Filters */}
@@ -104,7 +99,6 @@ export function CallLogsHeader({
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300"
             />
           </div>
-
           {/* Type Filter */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-muted-foreground" />
@@ -121,7 +115,6 @@ export function CallLogsHeader({
               ))}
             </select>
           </div>
-
           {/* Items Per Page */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Show:</span>
@@ -138,7 +131,6 @@ export function CallLogsHeader({
             <span className="text-sm text-muted-foreground">per page</span>
           </div>
         </div>
-
         {/* Row 2: Date Range and Call Type Filters */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
           {/* Date Filter Buttons */}
@@ -163,7 +155,6 @@ export function CallLogsHeader({
               </button>
             ))}
           </div>
-
           {/* Call Type / Batch Filter */}
           <div className="flex bg-muted p-1 rounded-xl w-fit">
             {(["all", "current", "batch"] as const).map((filter) => (
@@ -185,7 +176,6 @@ export function CallLogsHeader({
             ))}
           </div>
         </div>
-
         {/* Custom Date Inputs (only show when custom is selected) */}
         {dateFilter === "custom" && (
           <div className="flex flex-col md:flex-row gap-3">
@@ -214,4 +204,4 @@ export function CallLogsHeader({
       </div>
     </div>
   );
-}
+}

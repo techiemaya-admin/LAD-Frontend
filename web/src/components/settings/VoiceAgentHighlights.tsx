@@ -1,6 +1,5 @@
 // components/settings/VoiceAgentHighlights.tsx
 'use client';
-
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,23 +7,19 @@ import { getApiBaseUrl } from "@/lib/api-utils";
 import { safeStorage } from "@/utils/storage";
 import { getCurrentUser } from "@/lib/auth";
 import { Brain, Volume2, Mic, Sparkles } from "lucide-react";
-
 export function VoiceAgentHighlights() {
   const [data, setData] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     async function load() {
       try {
         setIsLoading(true);
-        
         // Check if user has voice-agent capability
         const user: any = await getCurrentUser().catch(() => null);
         const capabilities = user?.capabilities || [];
         const hasVoiceAgentCapability = capabilities.includes('voice-agent-settings');
         setHasAccess(hasVoiceAgentCapability);
-
         // Try to fetch voice agent settings regardless of capability
         // This allows showing the "View more" button even without access
         const res = await fetch(`${getApiBaseUrl()}/api/voice-agent/settings`, {
@@ -32,7 +27,6 @@ export function VoiceAgentHighlights() {
             "Authorization": `Bearer ${safeStorage.getItem("auth_token")}`
           }
         });
-
         if (res.ok) {
           const json = await res.json();
           // Extract data from the response wrapper
@@ -44,10 +38,8 @@ export function VoiceAgentHighlights() {
         setIsLoading(false);
       }
     }
-
     load();
   }, []);
-
   return (
     <Card className="rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
       <CardHeader>
@@ -59,9 +51,7 @@ export function VoiceAgentHighlights() {
           Quick overview of your conversational AI configuration ✨
         </CardDescription>
       </CardHeader>
-
       <CardContent className="space-y-4 text-sm">
-
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : !hasAccess ? (
@@ -74,13 +64,11 @@ export function VoiceAgentHighlights() {
               You don't have access to Voice Agent settings yet
             </p>
             {/* View more button - Only show when no access */}
-          
           </div>
         ) : !data ? (
           <p className="text-sm text-muted-foreground">No settings configured</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
             {/* LLM */}
             <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
               <div className="p-2 bg-purple-100 rounded-full">
@@ -93,7 +81,6 @@ export function VoiceAgentHighlights() {
                 </p>
               </div>
             </div>
-
             {/* TTS */}
             <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
               <div className="p-2 bg-blue-100 rounded-full">
@@ -106,7 +93,6 @@ export function VoiceAgentHighlights() {
                 </p>
               </div>
             </div>
-
             {/* STT */}
             <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
               <div className="p-2 bg-green-100 rounded-full">
@@ -119,7 +105,6 @@ export function VoiceAgentHighlights() {
                 </p>
               </div>
             </div>
-
             {/* Prompt */}
             <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
               <div className="p-2 bg-yellow-100 rounded-full">
@@ -132,7 +117,6 @@ export function VoiceAgentHighlights() {
                 </p>
               </div>
             </div>
-
   <div className="flex justify-center pt-4">
               <Button
                 variant="outline"
@@ -144,9 +128,8 @@ export function VoiceAgentHighlights() {
               </Button>
             </div>
           </div>
-          
         )}
       </CardContent>
     </Card>
   );
-}
+}

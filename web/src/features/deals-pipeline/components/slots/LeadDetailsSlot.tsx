@@ -1,11 +1,9 @@
 'use client';
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-
 interface LeadData {
   id: string;
   name: string;
@@ -18,20 +16,17 @@ interface LeadData {
   tags?: string[];
   custom_fields?: Record<string, any>;
 }
-
 interface LeadDetailsSlotProps {
   lead: LeadData;
   onUpdate?: (updates: Partial<LeadData>) => void;
   readonly?: boolean;
 }
-
 export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: LeadDetailsSlotProps) {
   const handleFieldChange = (field: string, value: any) => {
     if (!readonly && onUpdate) {
       onUpdate({ [field]: value });
     }
   };
-
   return (
     <Card className="h-full">
       <CardHeader>
@@ -48,7 +43,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             disabled={readonly}
           />
         </div>
-
         {/* Email */}
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -60,7 +54,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             disabled={readonly}
           />
         </div>
-
         {/* Phone */}
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
@@ -72,7 +65,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             disabled={readonly}
           />
         </div>
-
         {/* Company */}
         <div className="space-y-2">
           <Label htmlFor="company">Company</Label>
@@ -83,7 +75,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             disabled={readonly}
           />
         </div>
-
         {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
@@ -94,7 +85,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             disabled={readonly}
           />
         </div>
-
         {/* Deal Value */}
         {lead.value !== undefined && (
           <div className="space-y-2">
@@ -108,7 +98,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             />
           </div>
         )}
-
         {/* Tags */}
         {lead.tags && lead.tags.length > 0 && (
           <div className="space-y-2">
@@ -122,7 +111,6 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
             </div>
           </div>
         )}
-
         {/* Stage */}
         {lead.stage && (
           <div className="space-y-2">
@@ -133,4 +121,4 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
       </CardContent>
     </Card>
   );
-}
+}

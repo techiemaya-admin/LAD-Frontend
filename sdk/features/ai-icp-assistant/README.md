@@ -45,8 +45,7 @@ import { createAIICPAssistantService } from '@/frontend/features/ai-icp-assistan
 const service = createAIICPAssistantService(yourApiClient);
 
 const response = await service.chat('I need healthcare companies', []);
-console.log(response.message); // AI response
-console.log(response.searchReady); // true when ICP is complete
+// ...existing code...
 ```
 
 ### In Next.js (lad_ui)

@@ -1,11 +1,8 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {}
-
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -20,9 +17,7 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
   }
 );
 Table.displayName = 'Table';
-
 export interface TableHeaderProps extends React.HTMLAttributes<HTMLTableSectionElement> {}
-
 const TableHeader = React.forwardRef<HTMLTableSectionElement, TableHeaderProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -31,9 +26,7 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, TableHeaderProps>(
   }
 );
 TableHeader.displayName = 'TableHeader';
-
 export interface TableBodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {}
-
 const TableBody = React.forwardRef<HTMLTableSectionElement, TableBodyProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -46,9 +39,7 @@ const TableBody = React.forwardRef<HTMLTableSectionElement, TableBodyProps>(
   }
 );
 TableBody.displayName = 'TableBody';
-
 export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {}
-
 const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -64,9 +55,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
   }
 );
 TableRow.displayName = 'TableRow';
-
 export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {}
-
 const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -82,9 +71,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
   }
 );
 TableHead.displayName = 'TableHead';
-
 export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {}
-
 const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -97,6 +84,4 @@ const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
   }
 );
 TableCell.displayName = 'TableCell';
-
-export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell };
-
+export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell };

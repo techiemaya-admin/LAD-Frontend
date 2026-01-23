@@ -10,7 +10,6 @@ import { useSelector } from 'react-redux';
 import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '@/store/slices/masterDataSlice';
 import { selectUsers, selectUsersLoading } from '@/store/slices/usersSlice';
 import { Stage } from '../store/slices/pipelineSlice';
-
 interface PipelineActiveFilters {
   stages: string[];
   statuses: string[];
@@ -22,7 +21,6 @@ interface PipelineActiveFilters {
     end: string | null;
   } | null;
 }
-
 interface PipelineFilterDialogProps {
   open: boolean;
   onClose: () => void;
@@ -31,7 +29,6 @@ interface PipelineFilterDialogProps {
   stages: Array<Stage & { name?: string; label?: string; key?: string }>;
   onClearFilters: () => void;
 }
-
 interface MultiSelectProps {
   label: string;
   options: Array<{ key: string; label: string }>;
@@ -40,34 +37,28 @@ interface MultiSelectProps {
   disabled?: boolean;
   renderChip?: (key: string) => string;
 }
-
 const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChange, disabled, renderChip }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
-
   const handleToggle = (optionKey: string) => {
     const newValue = value.includes(optionKey)
       ? value.filter(v => v !== optionKey)
       : [...value, optionKey];
     onChange(newValue);
   };
-
   return (
     <div className="w-full relative" ref={dropdownRef}>
       <Label className="text-sm font-medium mb-2 block">{label}</Label>
@@ -118,7 +109,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
     </div>
   );
 };
-
 const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   open,
   onClose,
@@ -132,14 +122,11 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const masterDataLoading = useSelector(selectMasterDataLoading);
-  
   // Get team members from Redux for assignee filter
   const teamMembers = useSelector(selectUsers);
   const usersLoading = useSelector(selectUsersLoading);
-
   // If master data is still loading or empty, show loading state
   const hasNoMasterData = statusOptions.length === 0 && priorityOptions.length === 0 && sourceOptions.length === 0;
-  
   if (masterDataLoading || hasNoMasterData) {
     return (
       <Dialog open={open}>
@@ -160,7 +147,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
       </Dialog>
     );
   }
-
   // Ensure filters has safe defaults
   const safeFilters: PipelineActiveFilters = {
     ...{
@@ -173,10 +159,8 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     },
     ...filters
   };
-
   // Ensure stages is safe
   const safeStages = Array.isArray(stages) ? stages.filter(stage => stage && (stage.key || stage.id)) : [];
-  
   // Add fallback test stages if no stages provided (for testing)
   const testStages = safeStages.length === 0 ? [
     { key: 'lead', label: 'Lead' },
@@ -185,7 +169,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     { key: 'closed-won', label: 'Closed Won' },
     { key: 'closed-lost', label: 'Closed Lost' }
   ] : safeStages;
-
   const handleFilterChange = (field: keyof PipelineActiveFilters, value: string[] | { start: string | null; end: string | null }): void => {
     if (typeof onFiltersChange === 'function') {
       onFiltersChange({ ...safeFilters, [field]: value });
@@ -193,14 +176,12 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
       console.warn('[PipelineFilterDialog] onFiltersChange is not a function:', onFiltersChange);
     }
   };
-
   const handleDateRangeChange = (field: 'start' | 'end', value: string): void => {
     onFiltersChange({
       ...safeFilters,
       dateRange: { ...(safeFilters.dateRange || { start: null, end: null }), [field]: value }
     });
   };
-
   return (
     <Dialog open={open}>
       <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
@@ -228,7 +209,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return stage?.label || stage?.name || key;
             }}
           />
-
           {/* Statuses Filter */}
           <MultiSelect
             label="Statuses"
@@ -240,7 +220,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return statusOption?.label || key;
             }}
           />
-
           {/* Priorities Filter */}
           <MultiSelect
             label="Priorities"
@@ -252,7 +231,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return priorityOption?.label || key;
             }}
           />
-
           {/* Sources Filter */}
           <MultiSelect
             label="Sources"
@@ -264,7 +242,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return sourceOption?.label || key;
             }}
           />
-
           {/* Assignee Filter */}
           <MultiSelect
             label="Assignees"
@@ -277,7 +254,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return user?.name || key;
             }}
           />
-
           {/* Date Range Filter */}
           <div>
             <Label className="text-sm font-medium mb-2 block">Date Range</Label>
@@ -305,7 +281,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             </div>
           </div>
         </div>
-
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
           <Button 
@@ -335,5 +310,4 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     </Dialog>
   );
 };
-
-export default PipelineFilterDialog;
+export default PipelineFilterDialog;

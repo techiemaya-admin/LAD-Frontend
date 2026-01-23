@@ -34,7 +34,6 @@ export const PLATFORM_FEATURES = {
     { id: 'voice_agent_script', label: 'Call Script', description: 'Use predefined call script' },
   ],
 };
-
 export const UTILITY_QUESTIONS = {
   schedule: {
     question: 'When should this run?',
@@ -76,7 +75,5 @@ export const UTILITY_QUESTIONS = {
     multiSelect: true,
   },
 };
-
 export type Platform = keyof typeof PLATFORM_FEATURES;
-export type PlatformFeature = typeof PLATFORM_FEATURES[Platform][number];
-
+export type PlatformFeature = typeof PLATFORM_FEATURES[Platform][number];

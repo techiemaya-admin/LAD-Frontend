@@ -2,12 +2,10 @@ import { loadingFetch } from "@/lib/loading-fetch";
 import { safeStorage } from "@/utils/storage";
 export type LoginPayload = { email: string; password: string };
 export type User = { id: string | number; email: string; name?: string; [k: string]: unknown };
-
 // Use proxy routes when NEXT_PUBLIC_USE_API_PROXY is enabled, otherwise use direct backend URL
 const API_BASE = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true'
   ? ''
   : (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app');
-
 function getApiUrl(path: string) {
   // Ensure Next.js API routes (auth) hit the same-origin Next server (e.g., :3000)
   if (path.startsWith('/api/auth/')) {
@@ -17,7 +15,6 @@ function getApiUrl(path: string) {
   if (API_BASE) return `${API_BASE}${path}`;
   return path;
 }
-
 export async function login(payload: LoginPayload): Promise<void> {
   const res = await loadingFetch(getApiUrl("/api/auth/login"), {
     method: "POST",
@@ -41,7 +38,6 @@ export async function login(payload: LoginPayload): Promise<void> {
     // ignore
   }
 }
-
 export async function getCurrentUser(): Promise<User> {
   const token = typeof window !== "undefined"
     ? (safeStorage.getItem("auth_token") || safeStorage.getItem("token"))
@@ -59,7 +55,6 @@ export async function getCurrentUser(): Promise<User> {
   }
   return res.json();
 }
-
 async function safeError(res: Response): Promise<string | undefined> {
   try {
     const data = await res.json();
@@ -67,4 +62,4 @@ async function safeError(res: Response): Promise<string | undefined> {
   } catch {
     return res.statusText || undefined;
   }
-}
+}

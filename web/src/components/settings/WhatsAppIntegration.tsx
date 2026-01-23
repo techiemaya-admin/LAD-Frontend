@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { 
   MessageSquare, 
@@ -14,17 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { safeStorage } from '@/utils/storage';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 export const WhatsAppIntegration: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-
   const generateQRCode = async () => {
     setIsLoading(true);
     setConnectionStatus('connecting');
-    
     try {
             const response = await fetch(`${getApiBaseUrl()}/api/whatsapp/generate-qr`, {
         method: 'POST',
@@ -33,14 +29,11 @@ export const WhatsAppIntegration: React.FC = () => {
           'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
         }
       });
-
       if (!response.ok) {
         throw new Error('Failed to generate QR code');
       }
-
       const data = await response.json();
       setQrCode(data.qrCode);
-      
       // Poll for connection status
       pollConnectionStatus();
     } catch (error) {
@@ -50,7 +43,6 @@ export const WhatsAppIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const pollConnectionStatus = () => {
     const interval = setInterval(async () => {
       try {
@@ -59,9 +51,7 @@ export const WhatsAppIntegration: React.FC = () => {
             'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
           }
         });
-
         const data = await response.json();
-        
         if (data.connected) {
           setIsConnected(true);
           setConnectionStatus('connected');
@@ -72,14 +62,11 @@ export const WhatsAppIntegration: React.FC = () => {
         console.error('Error checking connection status:', error);
       }
     }, 3000);
-
     // Stop polling after 2 minutes
     setTimeout(() => clearInterval(interval), 120000);
   };
-
   const disconnectWhatsApp = async () => {
     setIsLoading(true);
-    
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/whatsapp/disconnect`, {
         method: 'POST',
@@ -87,7 +74,6 @@ export const WhatsAppIntegration: React.FC = () => {
           'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
         }
       });
-
       if (response.ok) {
         setIsConnected(false);
         setConnectionStatus('disconnected');
@@ -99,7 +85,6 @@ export const WhatsAppIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   return (
     <Card>
       <CardHeader>
@@ -139,7 +124,6 @@ export const WhatsAppIntegration: React.FC = () => {
             )}
           </div>
         </div>
-
         {/* QR Code Display */}
         {qrCode && (
           <div className="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-gray-300 rounded-lg">
@@ -153,7 +137,6 @@ export const WhatsAppIntegration: React.FC = () => {
             </p>
           </div>
         )}
-
         {/* Action Buttons */}
         <div className="flex gap-3">
           {!isConnected ? (
@@ -192,7 +175,6 @@ export const WhatsAppIntegration: React.FC = () => {
             </Button>
           )}
         </div>
-
         {/* Info */}
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800">
@@ -202,4 +184,4 @@ export const WhatsAppIntegration: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+};

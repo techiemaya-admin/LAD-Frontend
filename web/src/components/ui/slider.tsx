@@ -1,9 +1,7 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
   value?: number;
   onValueChange?: (value: number) => void;
@@ -11,7 +9,6 @@ export interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   max?: number;
   step?: number;
 }
-
 const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
   ({ className, value, onValueChange, onChange, min = 0, max = 100, step = 1, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,7 +20,6 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
         onChange(e);
       }
     };
-
     return (
       <div className="w-full">
         <input
@@ -48,6 +44,4 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
   }
 );
 Slider.displayName = 'Slider';
-
-export { Slider };
-
+export { Slider };

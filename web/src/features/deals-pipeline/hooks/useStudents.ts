@@ -2,21 +2,17 @@
  * Students Hooks
  * React hooks for managing student data and operations
  */
-
 import { useState, useEffect } from 'react';
 import { StudentsApi, StudentWithLead, StudentListFilter, StudentCreateData, StudentUpdateData } from '../api/students';
 import { useAuth } from '@/contexts/AuthContext';
-
 export function useStudents(filters?: StudentListFilter) {
   const [data, setData] = useState<StudentWithLead[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-
   // For now, we'll use a default campaign ID since we don't have campaign context
   // This should be updated when campaign selection is implemented
   const campaignId = 'default'; // TODO: Get from campaign context
-
   const fetchStudents = async () => {
     try {
       setLoading(true);
@@ -30,17 +26,14 @@ export function useStudents(filters?: StudentListFilter) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (campaignId) {
       fetchStudents();
     }
   }, [campaignId, filters?.search, filters?.stage, filters?.education_level, filters?.counsellor_id, filters?.status]);
-
   const refetch = () => {
     fetchStudents();
   };
-
   return {
     data,
     loading,
@@ -48,18 +41,14 @@ export function useStudents(filters?: StudentListFilter) {
     refetch
   };
 }
-
 export function useStudent(studentId: string) {
   const [data, setData] = useState<StudentWithLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-
   const campaignId = 'default'; // TODO: Get from campaign context
-
   const fetchStudent = async () => {
     if (!studentId || !campaignId) return;
-
     try {
       setLoading(true);
       setError(null);
@@ -72,15 +61,12 @@ export function useStudent(studentId: string) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchStudent();
   }, [studentId, campaignId]);
-
   const refetch = () => {
     fetchStudent();
   };
-
   return {
     data,
     loading,
@@ -88,14 +74,11 @@ export function useStudent(studentId: string) {
     refetch
   };
 }
-
 export function useStudentActions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-
   const campaignId = 'default'; // TODO: Get from campaign context
-
   const createStudent = async (data: StudentCreateData) => {
     try {
       setLoading(true);
@@ -110,7 +93,6 @@ export function useStudentActions() {
       setLoading(false);
     }
   };
-
   const updateStudent = async (studentId: string, data: StudentUpdateData) => {
     try {
       setLoading(true);
@@ -125,7 +107,6 @@ export function useStudentActions() {
       setLoading(false);
     }
   };
-
   const deleteStudent = async (studentId: string) => {
     try {
       setLoading(true);
@@ -139,7 +120,6 @@ export function useStudentActions() {
       setLoading(false);
     }
   };
-
   const updateStudentStage = async (studentId: string, stage: string, notes?: string) => {
     try {
       setLoading(true);
@@ -154,7 +134,6 @@ export function useStudentActions() {
       setLoading(false);
     }
   };
-
   return {
     createStudent,
     updateStudent,

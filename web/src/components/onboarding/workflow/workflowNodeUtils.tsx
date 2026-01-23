@@ -1,14 +1,12 @@
 import React from 'react';
 import { Linkedin, Mail, MessageCircle, Phone, ArrowRight, Clock, Filter, Play, Square, PersonStanding } from 'lucide-react';
 import { StepType } from '@/types/campaign';
-
 export interface NodeClasses {
   gradient: string;
   icon: string;
   shadow: string;
   glow: string;
 }
-
 export function getNodeClasses(type: StepType): NodeClasses {
   if (type === 'start') return { 
     gradient: 'from-emerald-500 to-emerald-600',
@@ -71,7 +69,6 @@ export function getNodeClasses(type: StepType): NodeClasses {
     glow: 'hover:shadow-indigo-500/60'
   };
 }
-
 export function getNodeIcon(type: StepType): React.ReactNode {
   if (type === 'start') return <Play className="w-4 h-4" />;
   if (type === 'end') return <Square className="w-4 h-4" />;
@@ -83,4 +80,4 @@ export function getNodeIcon(type: StepType): React.ReactNode {
   if (type === 'delay') return <Clock className="w-4 h-4" />;
   if (type === 'condition') return <Filter className="w-4 h-4" />;
   return <ArrowRight className="w-4 h-4" />;
-}
+}

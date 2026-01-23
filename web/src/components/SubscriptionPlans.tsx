@@ -1,11 +1,9 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Check, CreditCard } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useStripe } from '../contexts/StripeContext';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface SubscriptionPlan {
   id: string;
   name: string;
@@ -18,12 +16,10 @@ interface SubscriptionPlan {
   usageBased?: boolean;
   isCustom?: boolean;
 }
-
 interface SubscriptionPlansProps {
   onPlanSelect?: (planId: string) => void;
   currentPlanId?: string;
 }
-
 export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   onPlanSelect,
   currentPlanId
@@ -33,19 +29,15 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [processingCheckout, setProcessingCheckout] = useState<string | null>(null);
   const { stripeConfig } = useStripe();
-
   useEffect(() => {
     fetchPlans();
   }, []);
-
   const fetchPlans = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/subscription-plans`);
-      
       if (!response.ok) {
         throw new Error('Failed to fetch subscription plans');
       }
-      
       const plansData = await response.json();
       setPlans(plansData);
     } catch (error) {
@@ -54,11 +46,9 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       setLoading(false);
     }
   };
-
   const handlePlanSelect = async (planId: string) => {
     setSelectedPlan(planId);
     setProcessingCheckout(planId);
-
     try {
       // Create checkout session
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-checkout-session`, {
@@ -72,18 +62,14 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
           cancelUrl: `${window.location.origin}/cancel`,
         }),
       });
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Checkout session error:', errorText);
         throw new Error(`Failed to create checkout session: ${errorText}`);
       }
-
       const { url } = await response.json();
-      
       // Redirect to Stripe Checkout
       window.location.href = url;
-      
       if (onPlanSelect) {
         onPlanSelect(planId);
       }
@@ -94,7 +80,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       setProcessingCheckout(null);
     }
   };
-
   const formatPrice = (price: number | string, currency: string) => {
     if (price === 'custom' || typeof price === 'string') {
       return 'Custom';
@@ -107,7 +92,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       currency: currency.toUpperCase(),
     }).format(price);
   };
-
   const getPlanBadge = (planId: string) => {
     switch (planId) {
       case 'payAsYouGo':
@@ -126,13 +110,11 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
         return null;
     }
   };
-
   if (loading) {
     return (
       <LoadingSpinner size="md" message="Loading subscription plans..." />
     );
   }
-
   return (
     <div className="py-12 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,7 +126,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             Start with usage-based pricing or scale with enterprise solutions. No hidden fees, transparent billing.
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {plans.map((plan) => (
             <div
@@ -161,7 +142,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               <div className="p-6 pb-4">
                 {getPlanBadge(plan.id)}
               </div>
-
               {/* Plan Header */}
               <div className="px-6 pb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -170,7 +150,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 <p className="text-gray-600 mb-6">
                   {plan.description}
                 </p>
-
                 <div className="flex items-baseline">
                   {typeof plan.price === 'number' && plan.price === 0 ? (
                     <div>
@@ -202,7 +181,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   )}
                 </div>
               </div>
-
               {/* Features */}
               <div className="px-6 pb-8">
                 <ul className="space-y-4">
@@ -214,7 +192,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   ))}
                 </ul>
               </div>
-
               {/* CTA Button */}
               <div className="px-6 pb-6 mt-auto">
                 <button
@@ -243,7 +220,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   }
                 </button>
               </div>
-
               {/* Current Plan Indicator */}
               {currentPlanId === plan.id && (
                 <div className="absolute top-4 right-4">
@@ -255,7 +231,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             </div>
           ))}
         </div>
-
         {/* Additional Info */}
         <div className="mt-12 text-center">
           <p className="text-gray-600 mb-4">

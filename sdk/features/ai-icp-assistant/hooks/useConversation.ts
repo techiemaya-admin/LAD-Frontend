@@ -6,31 +6,25 @@
  * Usage:
  * const { currentQuestion, collectedAnswers, submitAnswer, isLoading } = useConversation();
  */
-
 import { useState, useCallback, useRef } from 'react';
 import { processICPAnswer, type ICPAnswerRequest, type ICPAnswerResponse, type ICPQuestion } from '../api';
-
 export function useConversation(
   category: string = 'lead_generation',
   initialCollectedAnswers: Record<string, any> = {}
 ) {
   // Track all collected answers across the conversation
   const [collectedAnswers, setCollectedAnswers] = useState<Record<string, any>>(initialCollectedAnswers);
-  
   // Current step and question
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(1);
   const [currentQuestion, setCurrentQuestion] = useState<ICPQuestion | null>(null);
   const [currentIntentKey, setCurrentIntentKey] = useState<string>('');
-  
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [clarificationNeeded, setClarificationNeeded] = useState(false);
   const [completed, setCompleted] = useState(false);
-  
   // Track seen message IDs to prevent duplicate rendering
   const seenMessageIds = useRef(new Set<string>());
-
   /**
    * Submit a user answer and get the next question
    * CRITICAL: Sends collectedAnswers back to ensure backend context
@@ -41,11 +35,9 @@ export function useConversation(
         setError(new Error('Answer cannot be empty'));
         return null;
       }
-
       try {
         setIsLoading(true);
         setError(null);
-
         // CRITICAL: Send currentIntentKey and ALL collectedAnswers to backend
         const request: ICPAnswerRequest = {
           currentStepIndex,
@@ -54,14 +46,11 @@ export function useConversation(
           currentIntentKey,  // Helps backend identify which platform/question we're answering
           collectedAnswers,  // CRITICAL: All previous answers to prevent Step 5 loops
         };
-
         const response = await processICPAnswer(request);
-
         if (!response.success) {
           setError(new Error('Failed to process answer'));
           return null;
         }
-
         // CRITICAL: Merge backend's updatedCollectedAnswers with our state
         if (response.updatedCollectedAnswers) {
           setCollectedAnswers(prev => ({
@@ -69,12 +58,10 @@ export function useConversation(
             ...response.updatedCollectedAnswers,
           }));
         }
-
         // Update current step and question
         if (response.nextStepIndex !== null && response.nextStepIndex !== undefined) {
           setCurrentStepIndex(response.nextStepIndex);
         }
-
         if (response.nextQuestion) {
           // Check for duplicate message IDs
           if (response.nextQuestion.messageId) {
@@ -84,16 +71,13 @@ export function useConversation(
             }
             seenMessageIds.current.add(response.nextQuestion.messageId);
           }
-
           setCurrentQuestion(response.nextQuestion);
           setCurrentIntentKey(response.nextQuestion.intentKey || '');
         } else {
           setCurrentQuestion(null);
         }
-
         setClarificationNeeded(response.clarificationNeeded || false);
         setCompleted(response.completed || false);
-
         return response;
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error');
@@ -105,7 +89,6 @@ export function useConversation(
     },
     [currentStepIndex, category, currentIntentKey, collectedAnswers]
   );
-
   /**
    * Reset conversation state (for starting over)
    */
@@ -119,7 +102,6 @@ export function useConversation(
     setCompleted(false);
     seenMessageIds.current.clear();
   }, [initialCollectedAnswers]);
-
   /**
    * Manually set an answer (useful for pre-filling or corrections)
    */
@@ -129,23 +111,20 @@ export function useConversation(
       [intentKey]: value,
     }));
   }, []);
-
   return {
     // Current state
     currentQuestion,
     currentStepIndex,
     currentIntentKey,
     collectedAnswers,
-    
     // UI state
     isLoading,
     error,
     clarificationNeeded,
     completed,
-    
     // Actions
     submitAnswer,
     reset,
     setAnswer,
   };
-}
+}

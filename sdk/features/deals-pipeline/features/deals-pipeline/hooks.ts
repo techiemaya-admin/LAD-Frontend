@@ -2,7 +2,6 @@
  * React Hooks for Deals Pipeline Feature
  * Ready-to-use hooks for React applications
  */
-
 import { useState, useEffect, useCallback } from 'react';
 import { dealsPipelineAPI, DealsPipelineAPI } from './api';
 import type {
@@ -20,17 +19,14 @@ import type {
   CreateStudentPayload,
   UpdateStudentPayload,
 } from './types';
-
 interface UseAPIOptions {
   api?: DealsPipelineAPI;
 }
-
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
 }
-
 /**
  * Hook to use pipeline board data
  */
@@ -41,7 +37,6 @@ export function usePipelineBoard(options: UseAPIOptions = {}) {
     loading: true,
     error: null,
   });
-
   const fetchBoard = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
@@ -51,14 +46,11 @@ export function usePipelineBoard(options: UseAPIOptions = {}) {
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api]);
-
   useEffect(() => {
     fetchBoard();
   }, [fetchBoard]);
-
   return { ...state, refetch: fetchBoard };
 }
-
 /**
  * Hook to use leads data
  */
@@ -69,7 +61,6 @@ export function useLeads(filters?: { stage?: string; status?: string; search?: s
     loading: true,
     error: null,
   });
-
   const fetchLeads = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
@@ -79,14 +70,11 @@ export function useLeads(filters?: { stage?: string; status?: string; search?: s
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api, filters]);
-
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
-
   return { ...state, refetch: fetchLeads };
 }
-
 /**
  * Hook to use single lead data
  */
@@ -97,7 +85,6 @@ export function useLead(id: string, options: UseAPIOptions = {}) {
     loading: true,
     error: null,
   });
-
   const fetchLead = useCallback(async () => {
     if (!id) return;
     setState(prev => ({ ...prev, loading: true }));
@@ -108,14 +95,11 @@ export function useLead(id: string, options: UseAPIOptions = {}) {
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api, id]);
-
   useEffect(() => {
     fetchLead();
   }, [fetchLead]);
-
   return { ...state, refetch: fetchLead };
 }
-
 /**
  * Hook to use stages data
  */
@@ -126,7 +110,6 @@ export function useStages(options: UseAPIOptions = {}) {
     loading: true,
     error: null,
   });
-
   const fetchStages = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
@@ -136,14 +119,11 @@ export function useStages(options: UseAPIOptions = {}) {
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api]);
-
   useEffect(() => {
     fetchStages();
   }, [fetchStages]);
-
   return { ...state, refetch: fetchStages };
 }
-
 /**
  * Hook for lead mutations (create, update, delete)
  */
@@ -151,7 +131,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
   const api = options.api || dealsPipelineAPI;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
   const createLead = useCallback(async (payload: CreateLeadPayload) => {
     setLoading(true);
     setError(null);
@@ -165,7 +144,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
       throw err;
     }
   }, [api]);
-
   const updateLead = useCallback(async (id: string, payload: UpdateLeadPayload) => {
     setLoading(true);
     setError(null);
@@ -179,7 +157,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
       throw err;
     }
   }, [api]);
-
   const deleteLead = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -192,7 +169,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
       throw err;
     }
   }, [api]);
-
   const moveLeadToStage = useCallback(async (leadId: string, stageKey: string) => {
     setLoading(true);
     setError(null);
@@ -206,7 +182,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
       throw err;
     }
   }, [api]);
-
   return {
     createLead,
     updateLead,
@@ -216,7 +191,6 @@ export function useLeadMutations(options: UseAPIOptions = {}) {
     error,
   };
 }
-
 /**
  * Hook to use reference data
  */
@@ -226,7 +200,6 @@ export function useReferenceData(options: UseAPIOptions = {}) {
   const [sources, setSources] = useState<Source[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -240,18 +213,15 @@ export function useReferenceData(options: UseAPIOptions = {}) {
         setSources(sourcesData);
         setPriorities(prioritiesData);
       } catch (error) {
-        // Error caught - no logging (consider adding logger later)
+        console.error('Failed to fetch reference data:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchAll();
   }, [api]);
-
   return { statuses, sources, priorities, loading };
 }
-
 /**
  * Hook to use lead statistics
  */
@@ -262,7 +232,6 @@ export function useLeadStats(options: UseAPIOptions = {}) {
     loading: true,
     error: null,
   });
-
   const fetchStats = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
@@ -272,16 +241,12 @@ export function useLeadStats(options: UseAPIOptions = {}) {
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api]);
-
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
-
   return { ...state, refetch: fetchStats };
 }
-
 // ==================== STUDENTS ====================
-
 /**
  * Hook to use students data
  */
@@ -292,7 +257,6 @@ export function useStudents(filters?: StudentListFilter, options: UseAPIOptions 
     loading: true,
     error: null,
   });
-
   const fetchStudents = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
@@ -302,14 +266,11 @@ export function useStudents(filters?: StudentListFilter, options: UseAPIOptions 
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api, filters]);
-
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
-
   return { ...state, refetch: fetchStudents };
 }
-
 /**
  * Hook to use single student data
  */
@@ -320,7 +281,6 @@ export function useStudent(id: string, options: UseAPIOptions = {}) {
     loading: true,
     error: null,
   });
-
   const fetchStudent = useCallback(async () => {
     if (!id) return;
     setState(prev => ({ ...prev, loading: true }));
@@ -331,14 +291,11 @@ export function useStudent(id: string, options: UseAPIOptions = {}) {
       setState({ data: null, loading: false, error: error as Error });
     }
   }, [api, id]);
-
   useEffect(() => {
     fetchStudent();
   }, [fetchStudent]);
-
   return { ...state, refetch: fetchStudent };
 }
-
 /**
  * Hook to use student mutations (create, update, delete)
  */
@@ -346,7 +303,6 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
   const api = options.api || dealsPipelineAPI;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
   const createStudent = useCallback(async (student: CreateStudentPayload): Promise<StudentWithLead> => {
     setLoading(true);
     setError(null);
@@ -361,7 +317,6 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
       throw error;
     }
   }, [api]);
-
   const updateStudent = useCallback(async (id: string, student: UpdateStudentPayload): Promise<StudentWithLead> => {
     setLoading(true);
     setError(null);
@@ -376,7 +331,6 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
       throw error;
     }
   }, [api]);
-
   const deleteStudent = useCallback(async (id: string): Promise<void> => {
     setLoading(true);
     setError(null);
@@ -390,7 +344,6 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
       throw error;
     }
   }, [api]);
-
   const assignCounsellor = useCallback(async (studentId: string, counsellorId: string): Promise<StudentWithLead> => {
     setLoading(true);
     setError(null);
@@ -405,7 +358,6 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
       throw error;
     }
   }, [api]);
-
   return {
     createStudent,
     updateStudent,
@@ -414,4 +366,4 @@ export function useStudentMutations(options: UseAPIOptions = {}) {
     loading,
     error,
   };
-}
+}

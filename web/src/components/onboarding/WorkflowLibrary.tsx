@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { 
   Linkedin, 
@@ -12,7 +11,6 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface WorkflowTemplate {
   id: string;
   name: string;
@@ -22,7 +20,6 @@ interface WorkflowTemplate {
   steps: string[];
   naturalLanguage: string;
 }
-
 const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'linkedin-connect-message',
@@ -115,15 +112,12 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     naturalLanguage: 'email_send → delay → linkedin_visit → linkedin_connect',
   },
 ];
-
 interface WorkflowLibraryProps {
   onSelectWorkflow: (workflow: WorkflowTemplate) => void;
   onClose: () => void;
 }
-
 export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowLibraryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  
   const categories = [
     { id: 'all', name: 'All Workflows', icon: <Zap className="w-4 h-4" /> },
     { id: 'linkedin', name: 'LinkedIn', icon: <Linkedin className="w-4 h-4" /> },
@@ -133,11 +127,9 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
     { id: 'voice', name: 'Voice', icon: <Phone className="w-4 h-4" /> },
     { id: 'multi-channel', name: 'Multi-Channel', icon: <Zap className="w-4 h-4" /> },
   ];
-
   const filteredWorkflows = selectedCategory === 'all' || !selectedCategory
     ? WORKFLOW_TEMPLATES
     : WORKFLOW_TEMPLATES.filter(w => w.category === selectedCategory);
-
   const getCategoryColor = (category: string) => {
     const colors = {
       linkedin: 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300',
@@ -149,7 +141,6 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
     };
     return colors[category as keyof typeof colors] || 'bg-gray-50 border-gray-200 hover:bg-gray-100';
   };
-
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div 
@@ -169,7 +160,6 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
             <X className="w-5 h-5" />
           </button>
         </div>
-
         {/* Category Filter */}
         <div className="px-6 py-4 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-2">
@@ -190,7 +180,6 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
             ))}
           </div>
         </div>
-
         {/* Workflow Grid */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -223,7 +212,6 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
                     <p className="text-xs text-gray-600">{workflow.description}</p>
                   </div>
                 </div>
-                
                 {/* Steps Preview */}
                 <div className="flex items-center gap-2 flex-wrap mt-3">
                   {workflow.steps.map((step, idx) => (
@@ -244,5 +232,4 @@ export default function WorkflowLibrary({ onSelectWorkflow, onClose }: WorkflowL
       </div>
     </div>
   );
-}
-
+}

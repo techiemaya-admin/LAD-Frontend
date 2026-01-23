@@ -4,11 +4,9 @@
  * React hook for fetching and managing a single campaign.
  * Framework-independent (no Next.js imports).
  */
-
 import { useState, useCallback, useEffect } from 'react';
 import { getCampaign, updateCampaign } from '../api';
 import type { Campaign, UpdateCampaignRequest } from '../types';
-
 export interface UseCampaignReturn {
   campaign: Campaign | null;
   loading: boolean;
@@ -17,19 +15,16 @@ export interface UseCampaignReturn {
   update: (data: UpdateCampaignRequest) => Promise<Campaign>;
   clearError: () => void;
 }
-
 export function useCampaign(campaignId: string | null): UseCampaignReturn {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchCampaign = useCallback(async () => {
     if (!campaignId) {
       setCampaign(null);
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
@@ -47,17 +42,14 @@ export function useCampaign(campaignId: string | null): UseCampaignReturn {
       setLoading(false);
     }
   }, [campaignId]);
-
   useEffect(() => {
     fetchCampaign();
   }, [fetchCampaign]);
-
   const update = useCallback(
     async (data: UpdateCampaignRequest): Promise<Campaign> => {
       if (!campaignId) {
         throw new Error('Campaign ID is required');
       }
-
       try {
         setError(null);
         const updatedCampaign = await updateCampaign(campaignId, data);
@@ -71,7 +63,6 @@ export function useCampaign(campaignId: string | null): UseCampaignReturn {
     },
     [campaignId]
   );
-
   return {
     campaign,
     loading,
@@ -80,5 +71,4 @@ export function useCampaign(campaignId: string | null): UseCampaignReturn {
     update,
     clearError: () => setError(null),
   };
-}
-
+}

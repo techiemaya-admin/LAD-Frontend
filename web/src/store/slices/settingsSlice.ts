@@ -1,7 +1,6 @@
 // Redux slice for user settings (theme, language, timezone, etc.)
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { logger } from '@/lib/logger';
-
 // Initial state for settings
 interface SettingsState {
   theme: 'light' | 'dark';
@@ -13,11 +12,9 @@ interface SettingsState {
   companyLogo: string;
   [key: string]: unknown;
 }
-
 // Load settings from localStorage if available
 const loadSettingsFromStorage = (): Partial<SettingsState> => {
   if (typeof window === 'undefined') return {};
-  
   try {
     const stored = localStorage.getItem('app_settings');
     if (stored) {
@@ -32,11 +29,9 @@ const loadSettingsFromStorage = (): Partial<SettingsState> => {
   }
   return {};
 };
-
 // Save settings to localStorage
 const saveSettingsToStorage = (settings: SettingsState): void => {
   if (typeof window === 'undefined') return;
-  
   try {
     localStorage.setItem('app_settings', JSON.stringify(settings));
     if (process.env.NODE_ENV === 'development') {
@@ -46,7 +41,6 @@ const saveSettingsToStorage = (settings: SettingsState): void => {
     logger.warn('Failed to save settings to localStorage', error);
   }
 };
-
 const defaultState: SettingsState = {
   theme: 'light',
   language: 'en',
@@ -57,12 +51,10 @@ const defaultState: SettingsState = {
   companyLogo: 'https://agent.techiemaya.com/assets/logo-DtZyzd-3.png',
   // ...other settings as needed
 };
-
 const initialState: SettingsState = {
   ...defaultState,
   ...loadSettingsFromStorage()
 };
-
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
@@ -94,11 +86,8 @@ const settingsSlice = createSlice({
     },
   },
 });
-
 // Export actions for use in components
 export const { setTheme, setLanguage, setCompanyName, setCompanyLogo, setUserSettings } = settingsSlice.actions;
 export default settingsSlice.reducer;
-
 // Selector to get the settings object from state
-export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;
-
+export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;

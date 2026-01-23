@@ -1,10 +1,8 @@
 import { loadingFetch } from "@/lib/loading-fetch";
 import { safeStorage } from "@/utils/storage";
 import { logger } from "@/lib/logger";
-
 // Use backend URL directly
 const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app").replace(/\/+$/, "");
-
 function authHeaders() {
   if (typeof window === "undefined") {
     logger.debug('[API] authHeaders: Running on server, no token');
@@ -14,7 +12,6 @@ function authHeaders() {
   logger.debug('[API] authHeaders: Token present:', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
-
 function handleAuthError(status: number, path: string) {
   // Only handle auth errors for core auth endpoints
   // For other endpoints, let the component handle the error
@@ -31,7 +28,6 @@ function handleAuthError(status: number, path: string) {
     }
   }
 }
-
 export async function apiGet<T>(path: string): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, { 
@@ -45,7 +41,6 @@ export async function apiGet<T>(path: string): Promise<T> {
   }
   return res.json();
 }
-
 export async function apiPost<T>(path: string, body: any): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, {
@@ -56,7 +51,6 @@ export async function apiPost<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    
     // Try to extract error message from response body
     let errorMessage = `POST ${path} ${res.status}`;
     try {
@@ -65,7 +59,6 @@ export async function apiPost<T>(path: string, body: any): Promise<T> {
     } catch (e) {
       // If response is not JSON, use default error message
     }
-    
     throw new Error(errorMessage);
   }
   return res.json();
@@ -84,7 +77,6 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
   }
   return res.json();
 }
-
 export async function apiDelete<T>(path: string): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, {

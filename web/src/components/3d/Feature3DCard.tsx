@@ -1,8 +1,6 @@
 'use client';
-
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { ReactNode, useRef } from 'react';
-
 interface Feature3DCardProps {
   title: string;
   description: string;
@@ -10,40 +8,30 @@ interface Feature3DCardProps {
   gradient: string;
   index: number;
 }
-
 const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DCardProps) => {
   const ref = useRef<HTMLDivElement>(null);
-  
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  
   const mouseXSpring = useSpring(x);
   const mouseYSpring = useSpring(y);
-  
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["17.5deg", "-17.5deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-17.5deg", "17.5deg"]);
-  
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
-    
     const rect = ref.current.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-    
     const xPct = mouseX / width - 0.5;
     const yPct = mouseY / height - 0.5;
-    
     x.set(xPct);
     y.set(yPct);
   };
-  
   const handleMouseLeave = () => {
     x.set(0);
     y.set(0);
   };
-
   return (
     <motion.div
       ref={ref}
@@ -67,12 +55,10 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
           transform: "translateZ(-50px)",
         }}
       />
-      
       {/* Card */}
       <div className="relative bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         {/* Background gradient overlay */}
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5`} />
-        
         {/* Floating icon */}
         <motion.div
           className="relative mb-6"
@@ -86,7 +72,6 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
             {icon}
           </div>
         </motion.div>
-        
         {/* Content */}
         <motion.div
           style={{
@@ -100,7 +85,6 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
             {description}
           </p>
         </motion.div>
-        
         {/* Shine effect */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
@@ -112,7 +96,6 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
           }}
           transition={{ duration: 0.6 }}
         />
-        
         {/* 3D depth indicators */}
         <div className="absolute top-4 right-4 flex gap-1">
           {[...Array(3)].map((_, i) => (
@@ -137,5 +120,4 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
     </motion.div>
   );
 };
-
-export default Feature3DCard;
+export default Feature3DCard;

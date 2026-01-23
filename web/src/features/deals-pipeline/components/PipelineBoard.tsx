@@ -8,8 +8,8 @@ import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePrefer
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
+import { logger } from '@/lib/logger';
 import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
-
 // Pipeline component imports
 import PipelineBoardToolbar from './PipelineBoardToolbar';
 import PipelineStageColumn from './PipelineStageColumn';
@@ -21,7 +21,6 @@ import PipelineSortDialog from './PipelineSortDialog';
 import PipelineBoardSettings from './PipelineBoardSettings';
 import PipelineListView from './PipelineListView';
 import PipelineKanbanView from './PipelineKanbanView';
-
 import {
   selectStagesWithNames,
   selectLeadsByStage,
@@ -121,41 +120,32 @@ import {
   setPriorities
 } from '@/store/slices/masterDataSlice';
 import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@/services/pipelineService';
-
 const HEADER_HEIGHT = 64; 
-
 // Feature flags for gradual migration
 const USE_REDUX_PIPELINE = true; // Enable Redux data fetching
 const USE_REDUX_ACTIONS = true;  // Enable Redux actions (create, update, delete)
-
 interface StageData {
   stage: Stage;
   leads: Lead[];
 }
-
 interface LeadsByStage {
   [key: string]: StageData;
 }
-
 interface FilteredLeadsByStage {
   [key: string]: StageData;
 }
-
 interface StageDataForCreate {
   name: string;
   positionStageId: string | undefined;
   positionType: 'before' | 'after';
 }
-
 interface StageUpdateData {
   [key: string]: unknown;
 }
-
 const PipelineBoard: React.FC = () => {
   // Education vertical context
   const { hasFeature } = useAuth();
   const isEducation = hasFeature('education_vertical');
-  
   // Dynamic labels based on vertical
   const labels = useMemo(() => ({
     entity: isEducation ? 'Student' : 'Lead',
@@ -165,10 +155,8 @@ const PipelineBoard: React.FC = () => {
     deal: isEducation ? 'Application' : 'Deal',
     value: isEducation ? 'Program Fee' : 'Value'
   }), [isEducation]);
-  
   // Redux state and dispatch
   const dispatch = useDispatch<AppDispatch>();
-  
   // Redux selectors
   const reduxLeadsByStage = useSelector(selectLeadsByStage);
   const reduxStages = useSelector(selectStagesWithNames);
@@ -177,41 +165,34 @@ const PipelineBoard: React.FC = () => {
   const reduxLeadsLoading = useSelector(selectLeadsLoading);
   const reduxStagesError = useSelector(selectStagesError);
   const reduxLeadsError = useSelector(selectLeadsError);
-  
   // Master data selectors
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const masterDataLoading = useSelector(selectMasterDataLoading);
   const masterDataErrors = useSelector(selectMasterDataErrors);
-
   // Get current user for role checking
   const currentUser = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  
   // Global state from Redux - Using new selectors
   const teamMembers = useSelector(selectUsers);
   const usersLoading = useSelector(selectUsersLoading);
   const usersError = useSelector(selectUsersError);
-  
   // UI state from global Redux state - using selectors from uiSlice
   const viewMode = useSelector(selectPipelineViewMode);
   const zoom = useSelector(selectPipelineZoom);
   const searchQuery = useSelector(selectPipelineSearchQuery);
   const activeFilters = useSelector(selectPipelineActiveFilters);
   const sortConfig = useSelector(selectPipelineSortConfig);
-  
   // Dialog states from global Redux state
   const addDialogOpen = useSelector(selectAddStageDialogOpen);
   const createCardDialogOpen = useSelector(selectCreateLeadDialogOpen);
   const filterDialogOpen = useSelector(selectFilterDialogOpen);
   const sortDialogOpen = useSelector(selectSortDialogOpen);
   const settingsDialogOpen = useSelector(selectSettingsDialogOpen);
-  
   // Selected items from global Redux state
   const selectedLead = useSelector(selectSelectedLead);
   const activeCard = useSelector((state: { ui: { activeCard: Lead | null } }) => state.ui.activeCard);
-  
   // Form states from global Redux state
   const newStageName = useSelector(selectNewStageName);
   const positionStageId = useSelector(selectPositionStageId);
@@ -221,28 +202,20 @@ const PipelineBoard: React.FC = () => {
   const newLead = useSelector(selectNewLead);
   const editingLead = useSelector(selectEditingLead);
   const aiInsights = useSelector(selectAiInsights);
-  
   // Pipeline settings from global Redux state
   const pipelineSettings = useSelector(selectPipelineSettings);
-  
   // Debug log pipeline settings
-  console.log('[PipelineBoard] Current pipelineSettings:', pipelineSettings);
-  
   // Get filtered pipeline data from the new enhanced selector
   const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
-  
   // Add preferences loading state (still local as it's component-specific)
   const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
-  
   // Computed loading state combining all loading states
   const isLoading = reduxStagesLoading || reduxLeadsLoading || masterDataLoading || usersLoading || !preferencesLoaded;
   const currentError = reduxStagesError || reduxLeadsError || usersError || masterDataErrors?.[0] || null;
-
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
     if (!isLoading) return;
-
-    console.log('[PipelineBoard] isLoading=true (reasons):', {
+    console.debug('[PipelineBoard] Loading state:', {
       reduxStagesLoading,
       reduxLeadsLoading,
       masterDataLoading,
@@ -265,48 +238,38 @@ const PipelineBoard: React.FC = () => {
     usersError,
     masterDataErrors
   ]);
-  
   // Use the filtered data directly from selector instead of manual filtering
   const currentStages = pipelineBoardData.stages;
-  
   // Memoize normalized stages to prevent creating new objects on every render
   // This prevents child components from re-rendering unnecessarily
   const normalizedStages = useMemo(
     () => currentStages.map(s => ({ ...s, label: s.label || s.name || s.key })),
     [currentStages]
   );
-  
   const currentLeadsByStage = useMemo<LeadsByStage>(() => {
     return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: any) => {
       acc[stage.key] = { stage: { key: stage.key, label: stage.label || stage.name || stage.key }, leads: stage.leads };
       return acc;
     }, {});
   }, [pipelineBoardData]);
-
   // Use filtered data directly (no manual filtering needed)
   const filteredAndSortedLeadsByStage = currentLeadsByStage;
-
   // Search and filter state handlers (now dispatch to Redux)
   const handleSearchQueryChange = useCallback((query: string) => {
     dispatch(setPipelineSearchQuery(query));
   }, [dispatch]);
-  
   const handleFiltersChange = useCallback((filters: typeof activeFilters) => {
     dispatch(setPipelineActiveFilters(filters));
   }, [dispatch]);
-  
   const handleClearFilters = useCallback(() => {
     dispatch(clearPipelineFilters());
   }, [dispatch]);
-  
   const handleSortConfigChange = useCallback((config: typeof sortConfig) => {
     dispatch(setPipelineSortConfig(config));
   }, [dispatch]);
-
   // Local states that should remain local (component-specific, not shared globally)
   const [updating, setUpdating] = useState<boolean>(false);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
-
   // Detect if we're on a touch device
   const isTouchDevice = () => {
     return (
@@ -316,7 +279,6 @@ const PipelineBoard: React.FC = () => {
         navigator.maxTouchPoints > 0)
     );
   };
-
   // Sensors for drag - optimized for both desktop and mobile
   // Note: useSensors is a hook and must be called at top level (not inside useMemo)
   const sensors = useSensors(
@@ -335,20 +297,17 @@ const PipelineBoard: React.FC = () => {
     }),
     useSensor(KeyboardSensor)
   );
-
   // Load preferences
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
         const preferences = await getPipelinePreferences();
-        console.log('[PipelineBoard] Loaded preferences:', preferences);
         // Merge uiSettings with viewMode and visibleColumns
         const newSettings = { 
           viewMode: preferences.viewMode || 'kanban',
           visibleColumns: preferences.visibleColumns as any || {},
           ...preferences.uiSettings 
         };
-        console.log('[PipelineBoard] Applying settings:', newSettings);
         dispatch(setPipelineSettings(newSettings as any));
       } catch (error) {
         console.error('[PipelineBoard] Failed to load preferences:', error);
@@ -356,33 +315,25 @@ const PipelineBoard: React.FC = () => {
         setPreferencesLoaded(true);
       }
     };
-
     loadUserPreferences();
   }, [dispatch]);
-
   // Load users/team members via Redux when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchUsersAction());
     }
   }, [isAuthenticated, dispatch]);
-
-
-
   // Calculate totals for toolbar
   const totalLeads = useMemo(() => {
     return Object.values(currentLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
   }, [currentLeadsByStage]);
-
   const filteredLeadsCount = useMemo(() => {
     return Object.values(currentLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
   }, [currentLeadsByStage]);
-
   // Flattened leads for ListView
   const sortedAndFilteredLeads = useMemo(() => {
     return Object.values(currentLeadsByStage).flatMap(stageData => stageData.leads);
   }, [currentLeadsByStage]);
-  
   // Memoized stage column component to prevent unnecessary re-renders
   const StageColumnMemo = useMemo(() => {
     return React.memo(({ stageKey, stage, leads, activeCard, handlers, allStages }: {
@@ -402,7 +353,6 @@ const PipelineBoard: React.FC = () => {
       allStages: Stage[];
     }) => {
       const leadIds = useMemo(() => leads?.map(l => l.id) || [], [leads]);
-      
       return (
         <SortableContext 
           key={stageKey}
@@ -434,23 +384,18 @@ const PipelineBoard: React.FC = () => {
       );
     });
   }, [zoom, currentStages, teamMembers]);
-
   // Data loading logic
   const loadStagesAndLeads = async (): Promise<void> => {
     if (USE_REDUX_PIPELINE) {
       // Use Redux for data loading
-      console.log('[PipelineBoard] Loading data via Redux...');
       dispatch(loadPipelineDataAction());
     } else {
       // Fallback to local state - this path is not used but kept for compatibility
-      console.log('[PipelineBoard] Loading data via local state...');
-    }
+      }
   };
-
   // Load master data if not available
   const loadMasterData = useCallback(async (): Promise<void> => {
     if (!statusOptions.length || !priorityOptions.length || !sourceOptions.length) {
-      console.log('[PipelineBoard] Loading master data...');
       try {
         const [statuses, sources, priorities] = await Promise.all([
           fetchStatuses().catch(err => { 
@@ -466,34 +411,24 @@ const PipelineBoard: React.FC = () => {
             return []; 
           })
         ]);
-        
         // Dispatch master data to Redux store
         dispatch(setStatuses(statuses));
         dispatch(setSources(sources));
         dispatch(setPriorities(priorities));
-        
-        console.log('[PipelineBoard] Master data loaded:', { 
-          statuses: statuses.length, 
-          sources: sources.length, 
-          priorities: priorities.length 
-        });
-      } catch (error) {
+        } catch (error) {
         console.warn('[PipelineBoard] Failed to load master data:', error);
       }
     }
   }, [dispatch, statusOptions.length, priorityOptions.length, sourceOptions.length]);
-
   useEffect(() => {
     dispatch(loadPipelineDataAction());
     dispatch(fetchUsersAction());
     loadMasterData();
   }, [dispatch, loadMasterData]);
-
   // Memoize drag handlers to prevent child re-renders
   const handleDragStart = useCallback((event: DragStartEvent): void => {
     const { active } = event;
     if (!active) return;
-
     // Find lead in the appropriate data source
     const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads);
     const card = allLeads.find((l) => String(l.id) === String(active.id));
@@ -501,23 +436,18 @@ const PipelineBoard: React.FC = () => {
       dispatch(setActiveCard(card.id));
     }
   }, [currentLeadsByStage, dispatch]);
-
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const { active, over } = event;
-
     // Early exit checks BEFORE clearing drag state - prevents unnecessary state updates
     if (!over || !active) {
       dispatch(setActiveCard(null));
       return;
     }
-
     const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads || []);
     const activeLeadData = (active.data?.current as { lead?: Lead })?.lead;
     let activeLead = activeLeadData || allLeads.find(l => String(l.id) === String(active.id));
     const activeLeadId = activeLead?.id || active.id;
-
     let destinationStageId: string | number | null = null;
-
     if (over?.data?.current) {
       const d = over.data.current as { type?: string; stageId?: string | number; lead?: Lead };
       if (d.type === 'stage' && (d.stageId !== undefined && d.stageId !== null)) {
@@ -526,7 +456,6 @@ const PipelineBoard: React.FC = () => {
         destinationStageId = d.lead.stage || null;
       }
     }
-
     if (!destinationStageId && over?.id) {
       const stageMatch = currentStages.find(s => s.key === over.id);
       if (stageMatch) {
@@ -538,22 +467,18 @@ const PipelineBoard: React.FC = () => {
         }
       }
     }
-
     if (!destinationStageId) {
       dispatch(setActiveCard(null));
       return;
     }
-
     const sourceStageId = activeLead?.stage;
     if (String(sourceStageId) === String(destinationStageId)) {
       dispatch(setActiveCard(null));
       return;
     }
-
     // Clear active card state immediately for instant UI responsiveness
     // This allows the next drag to start immediately without waiting for API
     dispatch(setActiveCard(null));
-
     // CRITICAL: Fire-and-forget pattern for instant UI responsiveness
     // The moveLeadAction already applies optimistic updates, so UI updates instantly
     // Server sync happens in background without blocking the next drag operation
@@ -574,14 +499,11 @@ const PipelineBoard: React.FC = () => {
         });
     }
   }, [currentLeadsByStage, currentStages, dispatch]);
-
   const handleDragCancel = useCallback((): void => {
     dispatch(setActiveCard(null));
   }, [dispatch]);
-
   const handleAddStage = async (): Promise<void> => {
     dispatch(setAddStageError(''));
-    
     if (!newStageName.trim()) {
       // Show validation error in snackbar and close dialog
       dispatch(showSnackbar({
@@ -590,7 +512,6 @@ const PipelineBoard: React.FC = () => {
       }));
       return;
     }
-
     dispatch(setIsSubmitting(true));
     try {
       const stageData: StageDataForCreate = {
@@ -598,15 +519,12 @@ const PipelineBoard: React.FC = () => {
         positionStageId: positionStageId || undefined,
         positionType
       };
-      
       await handleCreateStage(stageData);
-      
       // Success - show success message and close dialog
       dispatch(showSnackbar({
         message: 'Stage created successfully',
         severity: 'success'
       }));
-      
       dispatch(setNewStageName(''));
       dispatch(setPositionStageId(''));
       dispatch(setPositionType('after'));
@@ -618,7 +536,6 @@ const PipelineBoard: React.FC = () => {
         message: errorMessage,
         severity: 'error'
       }));
-      
       // Close dialog even on error since we're showing the error in snackbar
       dispatch(setNewStageName(''));
       dispatch(setPositionStageId(''));
@@ -628,7 +545,6 @@ const PipelineBoard: React.FC = () => {
       dispatch(setIsSubmitting(false));
     }
   };
-
   const handleCreateCard = async (): Promise<void> => {
     if (!newLead.name.trim()) {
       // Show validation error in snackbar
@@ -646,18 +562,14 @@ const PipelineBoard: React.FC = () => {
       }));
       return;
     }
-
     try {
       // Always use Redux action for creating lead
-      console.log('[PipelineBoard] Creating lead via Redux:', newLead);
       await dispatch(createLeadAction({ ...newLead, status: newLead.status as 'Active' | 'Inactive' | undefined }));
-      
       // Success - show success message and close dialog
       dispatch(showSnackbar({
         message: 'Lead created successfully',
         severity: 'success'
       }));
-      
       // Reset form
       dispatch(setNewLead({
         name: '',
@@ -681,7 +593,6 @@ const PipelineBoard: React.FC = () => {
         message: errorMessage,
         severity: 'error'
       }));
-      
       // Close dialog even on error since we're showing the error in snackbar
       dispatch(setNewLead({
         name: '',
@@ -700,10 +611,8 @@ const PipelineBoard: React.FC = () => {
       dispatch(setCreateLeadDialogOpen(false));
     }
   };
-
   const analyzeLead = async (): Promise<void> => {
     if (!newLead.name.trim() || !newLead.email) return;
-
     dispatch(setAiInsights({ ...aiInsights, loading: true, error: null }));
     try {
       const mockAnalysis = {
@@ -723,9 +632,7 @@ const PipelineBoard: React.FC = () => {
           format: 'International'
         }
       };
-
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
       dispatch(setAiInsights({
         ...aiInsights,
         loading: false,
@@ -743,7 +650,6 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   };
-
   useEffect(() => {
     const timer = setTimeout(() => {
       if (newLead.email) {
@@ -752,12 +658,10 @@ const PipelineBoard: React.FC = () => {
     }, 1000);
     return () => clearTimeout(timer);
   }, [newLead.email]);
-
   const getPositionPreview = (): React.ReactNode => {
     if (!positionStageId) {
       // Show preview for "add at end"
       const stagesCopy = [...currentStages].sort((a, b) => (a.order || 0) - (b.order || 0));
-      
       return (
         <div className="mt-4 p-4 bg-white rounded-lg">
           <h3 className="text-sm font-medium text-gray-600 mb-2">
@@ -782,13 +686,10 @@ const PipelineBoard: React.FC = () => {
         </div>
       );
     }
-    
     const referenceStage = currentStages.find(s => s.key === positionStageId);
     if (!referenceStage) return null;
-
     const stagesCopy = [...currentStages].sort((a, b) => (a.order || 0) - (b.order || 0));
     const referenceIndex = stagesCopy.findIndex(s => s.key === positionStageId);
-    
     let previewStages = [...stagesCopy];
     const previewId = `preview-${Date.now()}`;
     const previewStage = {
@@ -804,13 +705,11 @@ const PipelineBoard: React.FC = () => {
       priority: { high: 0, medium: 0, low: 0 },
       order: positionType === 'before' ? referenceIndex : referenceIndex + 1
     };
-    
     if (positionType === 'before') {
       previewStages.splice(referenceIndex, 0, { key: 'preview', label: newStageName || 'New Stage', isPreview: true } as any);
     } else {
       previewStages.splice(referenceIndex + 1, 0, { key: 'preview', label: newStageName || 'New Stage', isPreview: true } as any);
     }
-
     return (
       <div className="mt-4 p-4 bg-white rounded-lg">
         <h3 className="text-sm font-medium text-gray-600 mb-2">
@@ -833,7 +732,6 @@ const PipelineBoard: React.FC = () => {
       </div>
     );
   };
-
   const handleStageUpdate = useCallback(async (): Promise<void> => {
     if (USE_REDUX_PIPELINE) {
       // Use Redux to force refresh stages data from API
@@ -843,7 +741,6 @@ const PipelineBoard: React.FC = () => {
       loadStagesAndLeads();
     }
   }, [USE_REDUX_PIPELINE, dispatch]);
-
   const handleStageDelete = useCallback(async (): Promise<void> => {
     if (USE_REDUX_PIPELINE) {
       // Use Redux to force refresh stages data from API
@@ -853,15 +750,11 @@ const PipelineBoard: React.FC = () => {
       loadStagesAndLeads();
     }
   }, [USE_REDUX_PIPELINE, dispatch]);
-
   const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<void> => {
     try {
-      console.log('[PipelineBoard] Creating stage with data:', stageData);
-      console.log('[PipelineBoard] Current stages available:', currentStages.map(s => ({ key: s.key, name: s.name })));
-      
+      console.debug('[PipelineBoard] Creating stage:', stageData);
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for creating stage
-        console.log('[PipelineBoard] Creating stage via Redux:', stageData);
         await dispatch(createStageAction({
           ...stageData,
           positionStageId: stageData.positionStageId || undefined
@@ -876,12 +769,10 @@ const PipelineBoard: React.FC = () => {
       throw error;
     }
   }, [USE_REDUX_ACTIONS, dispatch, currentStages]);
-
   const handleUpdateStage = useCallback(async (stageKey: string, updates: StageUpdateData): Promise<void> => {
     try {
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for updating stage
-        console.log('[PipelineBoard] Updating stage via Redux:', stageKey, updates);
         await dispatch(updateStageAction(stageKey, updates));
       } else {
         // Fallback to direct API call
@@ -893,54 +784,39 @@ const PipelineBoard: React.FC = () => {
       throw error;
     }
   }, [USE_REDUX_ACTIONS, dispatch]);
-
   const handleDeleteStage = useCallback(async (stageKey: string): Promise<void> => {
-    console.log('[PipelineBoard] ========== handleDeleteStage START ==========');
-    console.log('[PipelineBoard] stageKey:', stageKey);
     try {
       // Wait for any pending lead move operations to complete
       if (pendingOperations.size > 0) {
-        console.log('[PipelineBoard] Waiting for', pendingOperations.size, 'pending operations to complete...');
-        
         // Wait up to 5 seconds for pending operations to complete
         let waitTime = 0;
         const maxWaitTime = 5000;
         const checkInterval = 100;
-        
         while (pendingOperations.size > 0 && waitTime < maxWaitTime) {
           await new Promise(resolve => setTimeout(resolve, checkInterval));
           waitTime += checkInterval;
         }
-        
         if (pendingOperations.size > 0) {
           console.warn('[PipelineBoard] Timeout waiting for pending operations, proceeding with deletion...');
         } else {
-          console.log('[PipelineBoard] All pending operations completed, proceeding with deletion...');
-        }
+          }
       }
-      
       // Get the most current leads data directly from the Redux store
       // This bypasses any selector caching issues
       const state = store.getState() as { leads?: { leads?: Lead[]; lastUpdated?: number } };
       const currentLeads = state.leads?.leads || [];
       const rawLeadsInStage = currentLeads.filter(lead => lead.stage === stageKey);
-      
-      console.log('[PipelineBoard] Checking stage for deletion with direct store access:', {
+      logger.debug('[PipelineBoard] Stage leads count debug:', {
         stageKey,
         rawLeadsInStage: rawLeadsInStage.length,
-        rawLeads: rawLeadsInStage.map(l => ({ id: l.id, name: l.name, stage: l.stage })),
         allLeadsCount: currentLeads.length,
         timestamp: Date.now(),
         storeTimestamp: state.leads?.lastUpdated || 'unknown',
         pendingOperations: pendingOperations.size
       });
-      
       // Use the raw leads count as the authoritative source
       const actualLeadsCount = rawLeadsInStage.length;
-      console.log('[PipelineBoard] actualLeadsCount:', actualLeadsCount);
-      
       if (actualLeadsCount > 0) {
-        console.log('[PipelineBoard] ⚠️ EARLY RETURN - Stage has leads, cannot delete');
         // Show snackbar notification that stage has cards
         dispatch(showSnackbar({
           message: `Cannot delete stage. It contains ${actualLeadsCount} card${actualLeadsCount > 1 ? 's' : ''}. Please move or delete the cards first.`,
@@ -948,22 +824,16 @@ const PipelineBoard: React.FC = () => {
         }));
         return; // Don't proceed with deletion
       }
-
       // Add a small delay to ensure backend has processed all lead moves
-      console.log('[PipelineBoard] Waiting 500ms to ensure backend synchronization...');
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for deleting stage
-        console.log('[PipelineBoard] Deleting stage via Redux:', stageKey);
         await dispatch(deleteStageAction(stageKey));
-        
         // Show success message
         dispatch(showSnackbar({
           message: 'Stage deleted successfully',
           severity: 'success'
         }));
-        
         // Force refresh of pipeline data to ensure UI consistency
         if (USE_REDUX_PIPELINE) {
           dispatch(loadPipelineDataAction());
@@ -971,18 +841,15 @@ const PipelineBoard: React.FC = () => {
       } else {
         // Fallback to direct API call
         await deleteStage(stageKey);
-        
         // Show success message
         dispatch(showSnackbar({
           message: 'Stage deleted successfully',
           severity: 'success'
         }));
-        
         loadStagesAndLeads();
       }
     } catch (error) {
       console.error('[PipelineBoard] Failed to delete stage:', error);
-      
       // Enhanced error handling for backend sync issues
       const errorObj = error as { response?: { status?: number; data?: { error?: string; leadsCount?: number } }; message?: string };
       if (errorObj.response?.status === 400 && errorObj.response?.data?.error?.includes('existing leads')) {
@@ -998,16 +865,13 @@ const PipelineBoard: React.FC = () => {
           severity: 'error'
         }));
       }
-      
       throw error;
     }
   }, [USE_REDUX_ACTIONS, USE_REDUX_PIPELINE, dispatch, pendingOperations]);
-
   const handleStatusChange = useCallback(async (leadId: string | number, newStatus: string): Promise<void> => {
     try {
       // Always use Redux action - it handles both API call AND state update
       await dispatch(updateLeadAction(leadId, { status: newStatus as 'Active' | 'Inactive' }));
-      
       // Show success message
       dispatch(showSnackbar({
         message: 'Status updated successfully',
@@ -1021,12 +885,9 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   }, [dispatch]);
-  
   // Handler for inline stage editing
   const handleStageChangeInline = useCallback(async (leadId: string | number, newStageKey: string): Promise<void> => {
     try {
-      console.log('[PipelineBoard] Changing lead stage via inline edit:', leadId, 'to', newStageKey);
-      
       if (USE_REDUX_ACTIONS) {
         await dispatch(moveLeadAction(leadId, newStageKey));
       } else {
@@ -1039,15 +900,11 @@ const PipelineBoard: React.FC = () => {
       dispatch(showSnackbar({ message: errorMessage, severity: 'error' }));
     }
   }, [USE_REDUX_ACTIONS, dispatch]);
-
   // Handler for inline priority editing
   const handlePriorityChange = useCallback(async (leadId: string | number, newPriority: string): Promise<void> => {
     try {
-      console.log('[PipelineBoard] Changing lead priority:', leadId, 'to', newPriority);
-      
       // Use Redux action for consistent state management
       await dispatch(updateLeadAction(leadId, { priority: newPriority }));
-      
       // Show success message
       dispatch(showSnackbar({
         message: 'Priority updated successfully',
@@ -1061,15 +918,11 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   }, [dispatch]);
-
   // Handler for inline assignee editing
   const handleAssigneeChange = useCallback(async (leadId: string | number, newAssignee: string): Promise<void> => {
     try {
-      console.log('[PipelineBoard] Changing lead assignee:', leadId, 'to', newAssignee);
-      
       // Use Redux action for consistent state management
       await dispatch(updateLeadAction(leadId, { assignee: newAssignee }));
-      
       // Show success message
       dispatch(showSnackbar({
         message: 'Assignee updated successfully',
@@ -1083,23 +936,16 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   }, [dispatch]);
-
   const handleEditLead = useCallback((lead: Lead): void => {
     // Edit functionality removed as requested
-    console.log('Edit functionality has been removed');
-  }, []);
-
+    }, []);
   const handleSaveLead = useCallback(async (updatedLead: Lead): Promise<void> => {
     // Save functionality removed with edit functionality
-    console.log('Save functionality has been removed with edit functionality');
-  }, []);
-
+    }, []);
   const handleDeleteLead = useCallback(async (leadId: string | number): Promise<void> => {
     try {
       // Always use Redux action for deleting lead
-      console.log('[PipelineBoard] Deleting lead via Redux:', leadId);
       await dispatch(deleteLeadAction(leadId));
-      
       // Show success message
       dispatch(showSnackbar({
         message: 'Lead deleted successfully',
@@ -1113,12 +959,10 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   }, [dispatch]);
-
   const handleZoomChange = useCallback((newZoom: number): void => {
     // Constrain zoom between 0.5 and 2.0
     const constrainedZoom = Math.max(0.5, Math.min(2.0, newZoom));
     dispatch(setPipelineZoom(constrainedZoom));
-    
     // Auto-save zoom preference
     autoSavePipelinePreferences({
       viewMode: pipelineSettings.viewMode,
@@ -1136,31 +980,24 @@ const PipelineBoard: React.FC = () => {
       }
     });
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
-
   // Toolbar dialog handlers
   const handleOpenFilter = useCallback((): void => {
     dispatch(setFilterDialogOpen(true));
   }, [dispatch]);
-
   const handleOpenSort = useCallback((): void => {
     dispatch(setSortDialogOpen(true));
   }, [dispatch]);
-
   const handleOpenSettings = useCallback((): void => {
     dispatch(setSettingsDialogOpen(true));
   }, [dispatch]);
-
   const handleSearchChange = useCallback((query: string): void => {
     dispatch(setPipelineSearchQuery(query));
     // Search is handled by Redux state, not persisted to preferences
   }, [dispatch]);
-
   // Handle pipeline settings changes
   const handleSettingsChange = useCallback(async (newSettings: typeof pipelineSettings): Promise<void> => {
     try {
-      console.log('[PipelineBoard] Saving settings:', newSettings);
       dispatch(setPipelineSettings(newSettings));
-      
       // Save the complete preferences
       const preferences = {
         viewMode: newSettings.viewMode,
@@ -1184,9 +1021,6 @@ const PipelineBoard: React.FC = () => {
         },
         sortConfig: sortConfig
       };
-      
-      console.log('[PipelineBoard] Saving preferences to backend:', preferences);
-      
       await savePipelinePreferences({
         viewMode: preferences.viewMode,
         visibleColumns: preferences.visibleColumns as unknown as Record<string, boolean>,
@@ -1200,9 +1034,6 @@ const PipelineBoard: React.FC = () => {
         sortConfig: preferences.sortConfig,
         uiSettings: preferences.uiSettings
       });
-      
-      console.log('[PipelineBoard] Settings saved successfully');
-      
       // Show success message
       dispatch(showSnackbar({
         message: 'Pipeline settings saved successfully',
@@ -1216,7 +1047,6 @@ const PipelineBoard: React.FC = () => {
       }));
     }
   }, [zoom, activeFilters, sortConfig, dispatch]);
-
   // Memoized handlers object to prevent prop changes - defined after all handlers
   const memoizedHandlers = useMemo(() => ({
     onStageUpdate: handleStageUpdate,
@@ -1231,16 +1061,13 @@ const PipelineBoard: React.FC = () => {
     onUpdateStage: handleUpdateStage,
     onDeleteStageAction: handleDeleteStage
   } as Record<string, unknown>), [handleStageUpdate, handleStageDelete, handleEditLead, handleDeleteLead, handleStatusChange, handleStageChangeInline, handlePriorityChange, handleAssigneeChange, handleCreateStage, handleUpdateStage, handleDeleteStage]);
-
   // Calculate responsive sizes based on zoom
   const getZoomedSize = (baseSize: number): number => {
     return Math.round(baseSize * zoom);
   };
-
   const getZoomedSpacing = (baseSpacing: number): number => {
     return Math.round(baseSpacing * zoom);
   };
-
   if (currentError) {
     return (
       <div className="flex flex-col justify-center items-center mt-32">
@@ -1257,7 +1084,6 @@ const PipelineBoard: React.FC = () => {
       </div>
     );
   }
-
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center mt-32">
@@ -1268,7 +1094,6 @@ const PipelineBoard: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div 
       className="w-full flex flex-col"
@@ -1290,7 +1115,6 @@ const PipelineBoard: React.FC = () => {
         onOpenSort={handleOpenSort}
         onOpenSettings={handleOpenSettings}
       />
-      
       <EnhancedAddStageDialog
         open={addDialogOpen}
         onClose={() => {
@@ -1350,7 +1174,6 @@ const PipelineBoard: React.FC = () => {
               amount: lead.amount ?? undefined, // Convert null to undefined for amount
               assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
             }));
-            
             return (
               <PipelineListView
                 leads={normalizedLeads}
@@ -1366,7 +1189,6 @@ const PipelineBoard: React.FC = () => {
               />
             );
           }
-          
           return (
             <DndContext
               sensors={sensors}
@@ -1375,7 +1197,6 @@ const PipelineBoard: React.FC = () => {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-
               <PipelineKanbanView
                 stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 leadsByStage={currentLeadsByStage}
@@ -1392,7 +1213,6 @@ const PipelineBoard: React.FC = () => {
           );
         })()}
       </div>
-
       <PipelineFilterDialog
         open={filterDialogOpen}
         onClose={() => dispatch(setFilterDialogOpen(false))}
@@ -1420,14 +1240,12 @@ const PipelineBoard: React.FC = () => {
           handleFiltersChange(clearedFilters);
         }}
       />
-
       <PipelineSortDialog
         open={sortDialogOpen}
         onClose={() => dispatch(setSortDialogOpen(false))}
         sortConfig={sortConfig}
         onSortConfigChange={handleSortConfigChange}
       />
-
       <PipelineBoardSettings
         open={settingsDialogOpen}
         onClose={() => dispatch(setSettingsDialogOpen(false))}
@@ -1436,6 +1254,4 @@ const PipelineBoard: React.FC = () => {
     </div>
   );
 };
-
 export default PipelineBoard;
-

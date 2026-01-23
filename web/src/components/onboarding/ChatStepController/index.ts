@@ -3,7 +3,4 @@
  * 
  * Main export for chat step controller hook
  */
-
-export { useChatStepController } from './useChatStepController';
-
-
+export { useChatStepController } from './useChatStepController';

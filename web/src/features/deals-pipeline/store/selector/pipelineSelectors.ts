@@ -3,6 +3,7 @@ import { RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
 import { Lead } from '../../../../components/leads/types';
 import { User } from '../../../../store/slices/usersSlice';
+import { logger } from '@/lib/logger';
 
 // Import selectors
 import { selectStages } from '../slices/pipelineSlice';

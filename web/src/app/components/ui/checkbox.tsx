@@ -1,11 +1,8 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {}
-
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -22,6 +19,4 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   }
 );
 Checkbox.displayName = 'Checkbox';
-
-export { Checkbox };
-
+export { Checkbox };

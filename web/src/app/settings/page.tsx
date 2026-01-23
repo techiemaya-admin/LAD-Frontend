@@ -1,13 +1,11 @@
 'use client';
-
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
-import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
+import { VoiceAgentSettings } from '../../components/settings/VoiceAgentSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';
@@ -15,14 +13,11 @@ import { TeamManagement } from '../../components/settings/TeamManagement';
 import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-
 type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'api' | 'billing' | 'credits';
-
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState<boolean | null>(null);
-
   useEffect(() => {
     (async () => {
       try {
@@ -35,13 +30,11 @@ const SettingsPage: React.FC = () => {
       }
     })();
   }, [router]);
-
   const dispatch = useDispatch();
   const companyName = useSelector((state: any) => state.settings.companyName);
   const companyLogo = useSelector((state: any) => state.settings.companyLogo);
   const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [renewalDate, setRenewalDate] = useState<string>('');
-
   useEffect(() => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
@@ -67,10 +60,8 @@ const SettingsPage: React.FC = () => {
         setRenewalDate('November 29th, 2025'); // Fallback
       }
     };
-
     fetchRenewalDate();
   }, [authed, searchParams]);
-
   if (authed === null) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -78,11 +69,7 @@ const SettingsPage: React.FC = () => {
       </div>
     );
   }
-
   if (!authed) return <></>;
-
-  
-
   const tabs = [
     { id: 'company' as ActiveTab, label: 'Company', icon: Building2 },
     { id: 'team' as ActiveTab, label: 'Team', icon: Users },
@@ -93,7 +80,6 @@ const SettingsPage: React.FC = () => {
     { id: 'billing' as ActiveTab, label: 'Billing', icon: CreditCard },
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
   ];
-
   return (
     <div className="space-y-6">
       {/* Combined Header with Logo, Company Name, Renewal Date, and Tabs */}
@@ -142,7 +128,6 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
-
         {/* Bottom Section: Tabs Navigation */}
         <div className="border-t border-gray-200/50 bg-white/30 backdrop-blur-sm">
           <div className="flex space-x-1 overflow-x-auto p-1">
@@ -168,7 +153,6 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Content */}
       <div className="space-y-6">
         {activeTab === 'company' && (
@@ -181,10 +165,8 @@ const SettingsPage: React.FC = () => {
         )}
         {activeTab === 'integrations' && <IntegrationsSettings />}
         {activeTab === 'api' && <VoiceAgentSettings />}
-        
         {/* Placeholder for other tabs */}
         {activeTab === 'team' && <TeamManagement />}
-
         {false && activeTab === 'accounts' && (
           <div className="space-y-6">
             {/* Enrichment Preferences */}
@@ -225,7 +207,6 @@ const SettingsPage: React.FC = () => {
                 <span>Save Changes</span>
               </button>
             </div>
-
             {/* Email Accounts */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -310,7 +291,6 @@ const SettingsPage: React.FC = () => {
                 </table>
               </div>
             </div>
-
             {/* LinkedIn Accounts */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -371,7 +351,6 @@ const SettingsPage: React.FC = () => {
                 </table>
               </div>
             </div>
-
             {/* Power Dialer Numbers */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -443,20 +422,16 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {false && activeTab === 'website' && (
           <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg p-8 border border-gray-200 shadow-sm">
             <h2 className="text-gray-900 text-xl font-semibold mb-2">Website Settings</h2>
             <p className="text-gray-600">Configure website tracking and integration options.</p>
           </div>
         )}
-        
         {activeTab === 'billing' && <BillingSettings />}
-        
         {activeTab === 'credits' && <CreditsSettings />}
       </div>
     </div>
   );
 };
-
-export default SettingsPage;
+export default SettingsPage;

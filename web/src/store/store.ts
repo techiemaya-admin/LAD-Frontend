@@ -1,6 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { logger } from '@/lib/logger';
-
 import authReducer from './slices/authSlice';
 import conversationReducer from './slices/conversationSlice';
 import settingsReducer from './slices/settingsSlice';
@@ -12,7 +11,6 @@ import leadsReducer from '../features/deals-pipeline/store/slices/leadsSlice';
 import masterDataReducer from './slices/masterDataSlice';
 import usersReducer from './slices/usersSlice';
 import uiReducer from './slices/uiSlice';
-
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -32,7 +30,6 @@ export const store = configureStore({
       serializableCheck: false
     })
 });
-
 // Debug: Log the initial state to verify masterData is initialized (development only)
 if (process.env.NODE_ENV === 'development') {
   logger.debug('[Store] Main store initialized with keys:', {
@@ -40,8 +37,6 @@ if (process.env.NODE_ENV === 'development') {
     masterDataPresent: !!store.getState().masterData
   });
 }
-
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-
-export default store;
+export default store;

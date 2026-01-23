@@ -1,11 +1,9 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { apiGet, apiPost } from '@/lib/api';
 import { safeStorage } from '@/utils/storage';
-
 // Helper to get auth headers for fetch calls
 const getAuthHeaders = () => {
   const token = safeStorage.getItem('token');
@@ -14,7 +12,6 @@ const getAuthHeaders = () => {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
-
 interface LinkedInAccount {
   id?: string;
   connected: boolean;
@@ -38,16 +35,13 @@ interface LinkedInAccount {
     lastChecked: string;
   };
 }
-
 interface LinkedInStatusResponse {
   connected: boolean;
   status: string;
   connections: LinkedInAccount[];
   totalConnections: number;
 }
-
 type AuthMethod = 'credentials' | 'cookies';
-
 export const LinkedInIntegration: React.FC = () => {
   const [linkedInConnections, setLinkedInConnections] = useState<LinkedInAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +51,6 @@ export const LinkedInIntegration: React.FC = () => {
   const [authMethod, setAuthMethod] = useState<AuthMethod>('credentials');
   const [showOptionalSettings, setShowOptionalSettings] = useState(false);
   const [showCookieHelp, setShowCookieHelp] = useState(false);
-  
   // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,30 +61,24 @@ export const LinkedInIntegration: React.FC = () => {
   const [connectionSuccess, setConnectionSuccess] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [statusPolling, setStatusPolling] = useState<NodeJS.Timeout | null>(null);
-  
   // OTP verification states
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [currentCheckpointAccount, setCurrentCheckpointAccount] = useState<LinkedInAccount | null>(null);
-  
   // Yes/No auto-polling states
   const [yesNoPolling, setYesNoPolling] = useState<NodeJS.Timeout | null>(null);
   const [autoResolving, setAutoResolving] = useState(false);
-
   useEffect(() => {
     checkLinkedInConnection();
-    
     // Start polling status every 30 seconds if any connection is active
     const pollInterval = setInterval(() => {
       if (linkedInConnections.some(conn => conn.connected)) {
         checkLinkedInConnection();
       }
     }, 30000); // Poll every 30 seconds
-    
     setStatusPolling(pollInterval);
-    
     return () => {
       if (pollInterval) {
         clearInterval(pollInterval);
@@ -101,46 +88,33 @@ export const LinkedInIntegration: React.FC = () => {
       }
     };
   }, [linkedInConnections.length]);
-
   // Auto-polling for Yes/No checkpoint - monitors LinkedIn and auto-logins when user clicks Yes on mobile
   useEffect(() => {
     // If we have a Yes/No checkpoint, start polling to detect when user clicks Yes on mobile
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
-      console.log('[LinkedIn Integration] Starting Yes/No auto-polling to monitor LinkedIn connection status...');
-      
       const pollInterval = setInterval(async () => {
         try {
           const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
           if (!accountId) return;
-
-          console.log('[LinkedIn Integration] Polling checkpoint status for account:', accountId);
-          
           const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/checkpoint-status?account_id=${accountId}`, {
             method: 'GET',
             headers: getAuthHeaders(),
           });
-
           const data = await response.json();
-          
           // If checkpoint is resolved (user clicked Yes on mobile), auto-login
           if (data.connected || data.status === 'connected' || (data.checkpoint && !data.checkpoint.required)) {
-            console.log('[LinkedIn Integration] ✅ Checkpoint resolved! User clicked Yes on mobile. Auto-logging in...');
-            
             // Stop polling
             if (yesNoPolling) {
               clearInterval(yesNoPolling);
               setYesNoPolling(null);
             }
-            
             // Auto-close modal and refresh
             setAutoResolving(true);
             setShowOtpModal(false);
             setConnectionSuccess(true);
-            
             // Refresh account status
             const accountEmail = currentCheckpointAccount?.email || email;
             await checkLinkedInConnection(accountEmail);
-            
             // Close connection modal after a short delay
             setTimeout(() => {
               setShowConnectionModal(false);
@@ -155,19 +129,15 @@ export const LinkedInIntegration: React.FC = () => {
           console.error('[LinkedIn Integration] Error polling checkpoint status:', error);
         }
       }, 3000); // Poll every 3 seconds
-      
       setYesNoPolling(pollInterval);
-      
       // Cleanup after 5 minutes (stop polling if user hasn't clicked Yes)
       setTimeout(() => {
         if (yesNoPolling) {
           clearInterval(yesNoPolling);
           setYesNoPolling(null);
-          console.log('[LinkedIn Integration] Stopped Yes/No auto-polling after timeout');
-        }
+          }
       }, 5 * 60 * 1000); // 5 minutes
     }
-    
     return () => {
       if (yesNoPolling) {
         clearInterval(yesNoPolling);
@@ -175,32 +145,22 @@ export const LinkedInIntegration: React.FC = () => {
       }
     };
   }, [currentCheckpointAccount?.checkpoint?.is_yes_no, showOtpModal, yesNoPolling, email]);
-
   const checkLinkedInConnection = async (email?: string) => {
     try {
       setLoading(true); // Explicitly set loading at start
-      
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject({ timeout: true }), 15000) // Increased to 15s
       );
-      
       // Use apiGet for authenticated requests with timeout
       const dataPromise = apiGet<LinkedInStatusResponse>('/api/social-integration/linkedin/status');
-      
       const data = await Promise.race([dataPromise, timeoutPromise]) as LinkedInStatusResponse;
-      
-      console.log('[LinkedIn Integration] Status response:', data);
-      console.log('[LinkedIn Integration] Connections array:', data.connections);
-      console.log('[LinkedIn Integration] Total connections:', data.connections?.length || 0);
-      
       // Handle both old format (single account) and new format (array of connections)
       if (data.connections && Array.isArray(data.connections)) {
-        console.log('[LinkedIn Integration] Setting', data.connections.length, 'connection(s)');
+        console.debug('[LinkedIn] Loaded connections:', data.connections.length);
         setLinkedInConnections(data.connections);
       } else {
         // Fallback for old format
-        console.log('[LinkedIn Integration] Using fallback format, setting 1 connection');
         setLinkedInConnections([data as LinkedInAccount]);
       }
     } catch (error: any) {
@@ -216,35 +176,28 @@ export const LinkedInIntegration: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleConnect = async () => {
     setConnecting(true);
     setConnectionError(null);
     setConnectionSuccess(false);
-
     try {
       // Get user agent for cookie method
       const userAgent = typeof window !== 'undefined' ? navigator.userAgent : '';
-      
       const payload = authMethod === 'credentials' 
         ? { method: 'credentials', email, password }
         : { method: 'cookies', li_at: liAtCookie, li_a: liACookie, user_agent: userAgent };
-
       const data = await apiPost<any>('/api/social-integration/linkedin/connect', payload);
-
       if (!data.success) {
         const errorMessage = data.error || data.message || 'Failed to connect LinkedIn account';
         setConnectionError(errorMessage);
         throw new Error(errorMessage);
       }
-
       // Check if checkpoint (OTP or Yes/No) is required
       if (data.checkpoint && data.checkpoint.required) {
         // Show checkpoint modal instead of closing connection modal
         setShowOtpModal(true);
         setConnectionSuccess(false);
         setConnectionError(null);
-        
         // Store checkpoint account info
         const checkpointAccount: LinkedInAccount = {
           id: data.account_id,
@@ -258,15 +211,12 @@ export const LinkedInIntegration: React.FC = () => {
           unipileAccount: data.unipileAccount
         };
         setCurrentCheckpointAccount(checkpointAccount);
-        
         // If it's a Yes/No checkpoint, show message that we're monitoring
         if (data.checkpoint.is_yes_no) {
-          console.log('[LinkedIn Integration] Yes/No checkpoint detected - starting auto-monitoring');
-        }
+          }
       } else {
         // Success - account created or connected
         setConnectionSuccess(true);
-        
         // Clear form after a short delay to show success message
         setTimeout(() => {
           setShowConnectionModal(false);
@@ -287,11 +237,9 @@ export const LinkedInIntegration: React.FC = () => {
       setConnecting(false);
     }
   };
-
   const handleVerifyOtp = async () => {
     setVerifyingOtp(true);
     setOtpError(null);
-
     try {
       // Include account_id and email from checkpoint account to help backend find the correct account
       const payload: any = { otp };
@@ -301,36 +249,29 @@ export const LinkedInIntegration: React.FC = () => {
       if (currentCheckpointAccount?.email || email) {
         payload.email = currentCheckpointAccount?.email || email;
       }
-
       const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/verify-otp`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-
       const data = await response.json();
-
       if (!response.ok || !data.success) {
         const errorMessage = data.error || 'Failed to verify OTP';
         setOtpError(errorMessage);
         throw new Error(errorMessage);
       }
-
       // OTP verified successfully
       setShowOtpModal(false);
       setOtp('');
       setConnectionSuccess(true);
-      
       // Stop Yes/No polling if active
       if (yesNoPolling) {
         clearInterval(yesNoPolling);
         setYesNoPolling(null);
       }
-      
       // Refresh account status with email if available
       const accountEmail = currentCheckpointAccount?.email || email;
       await checkLinkedInConnection(accountEmail);
-      
       // Close connection modal after a short delay
       setTimeout(() => {
         setShowConnectionModal(false);
@@ -339,7 +280,6 @@ export const LinkedInIntegration: React.FC = () => {
         setLiAtCookie('');
         setLiACookie('');
       }, 2000);
-      
     } catch (error) {
       console.error('Error verifying OTP:', error);
       setOtpError(error instanceof Error ? error.message : 'Failed to verify OTP');
@@ -347,11 +287,9 @@ export const LinkedInIntegration: React.FC = () => {
       setVerifyingOtp(false);
     }
   };
-
   const handleSolveYesNoCheckpoint = async (answer: 'YES' | 'NO') => {
     setVerifyingOtp(true);
     setOtpError(null);
-
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/solve-checkpoint`, {
         method: 'POST',
@@ -361,29 +299,23 @@ export const LinkedInIntegration: React.FC = () => {
           account_id: currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id
         }),
       });
-
       const data = await response.json();
-
       if (!response.ok || !data.success) {
         const errorMessage = data.error || `Failed to submit ${answer} answer`;
         setOtpError(errorMessage);
         throw new Error(errorMessage);
       }
-
       // Checkpoint solved successfully
       setShowOtpModal(false);
       setConnectionSuccess(true);
-      
       // Stop Yes/No polling if active
       if (yesNoPolling) {
         clearInterval(yesNoPolling);
         setYesNoPolling(null);
       }
-      
       // Refresh account status with email if available
       const accountEmail = currentCheckpointAccount?.email || email;
       await checkLinkedInConnection(accountEmail);
-      
       // Close connection modal after a short delay
       setTimeout(() => {
         setShowConnectionModal(false);
@@ -392,7 +324,6 @@ export const LinkedInIntegration: React.FC = () => {
         setLiAtCookie('');
         setLiACookie('');
       }, 2000);
-      
     } catch (error) {
       console.error('Error solving checkpoint:', error);
       setOtpError(error instanceof Error ? error.message : `Failed to submit ${answer} answer`);
@@ -400,30 +331,24 @@ export const LinkedInIntegration: React.FC = () => {
       setVerifyingOtp(false);
     }
   };
-
   const disconnectLinkedIn = async (connectionId?: string, email?: string) => {
     const confirmMessage = connectionId 
       ? `Are you sure you want to disconnect this LinkedIn account (${email || 'this account'})?`
       : 'Are you sure you want to disconnect your LinkedIn account?';
-    
     if (!confirm(confirmMessage)) {
       return;
     }
-
     // If no connectionId provided, try to get the first account
     let accountId = connectionId;
     if (!accountId && linkedInConnections.length > 0) {
       accountId = linkedInConnections[0].id;
     }
-
     if (!accountId) {
       alert('No LinkedIn account found to disconnect');
       return;
     }
-
     const disconnectKey = accountId || 'default';
     setDisconnecting(prev => ({ ...prev, [disconnectKey]: true }));
-
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/disconnect`, {
         method: 'POST',
@@ -433,15 +358,12 @@ export const LinkedInIntegration: React.FC = () => {
         },
         body: JSON.stringify({ accountId }),
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'Failed to disconnect LinkedIn');
       }
-
       // Remove the disconnected connection from the list
       setLinkedInConnections(prev => prev.filter(conn => conn.id !== accountId));
-
       alert('LinkedIn account disconnected successfully');
     } catch (error) {
       console.error('Error disconnecting LinkedIn:', error);
@@ -450,33 +372,26 @@ export const LinkedInIntegration: React.FC = () => {
       setDisconnecting(prev => ({ ...prev, [disconnectKey]: false }));
     }
   };
-
   const reconnectLinkedIn = async (useModal = false) => {
     // If useModal is true, open the connection modal for user to enter credentials
     if (useModal) {
       setShowConnectionModal(true);
       return;
     }
-
     setReconnecting(true);
     setConnectionError(null);
-
     try {
       // Try to reconnect with stored credentials/cookies first
       const userAgent = typeof window !== 'undefined' ? navigator.userAgent : '';
-      
       const response = await fetch(`${getApiBaseUrl()}/api/social-integration/linkedin/reconnect`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ user_agent: userAgent }), // Will use stored credentials if available
       });
-
       const data = await response.json();
-
       if (!response.ok || !data.success) {
         const errorMessage = data.error || 'Failed to reconnect LinkedIn account';
         setConnectionError(errorMessage);
-        
         // If reconnect fails and needs credentials, show modal
         if (errorMessage.includes('provide') || errorMessage.includes('credentials') || errorMessage.includes('password')) {
           // Don't show error, just open modal
@@ -485,15 +400,12 @@ export const LinkedInIntegration: React.FC = () => {
         }
         return;
       }
-
       // Success - refresh status
       setConnectionSuccess(true);
       await checkLinkedInConnection();
-      
       setTimeout(() => {
         setConnectionSuccess(false);
       }, 2000);
-
     } catch (error) {
       console.error('Error reconnecting LinkedIn:', error);
       setConnectionError(error instanceof Error ? error.message : 'Failed to reconnect LinkedIn account');
@@ -506,10 +418,8 @@ export const LinkedInIntegration: React.FC = () => {
       setReconnecting(false);
     }
   };
-
   const getStatusDisplay = (accountStatus?: string, isConnected?: boolean) => {
     const status = accountStatus || (isConnected ? 'connected' : 'disconnected');
-    
     switch (status) {
       case 'connected':
         return {
@@ -555,7 +465,6 @@ export const LinkedInIntegration: React.FC = () => {
         };
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -563,7 +472,6 @@ export const LinkedInIntegration: React.FC = () => {
       </div>
     );
   }
-
   return (
     <>
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -582,7 +490,6 @@ export const LinkedInIntegration: React.FC = () => {
               </p>
             </div>
           </div>
-          
           <div className="flex items-center">
             {(() => {
               const hasConnected = linkedInConnections.some(conn => conn.connected);
@@ -611,7 +518,6 @@ export const LinkedInIntegration: React.FC = () => {
             })()}
           </div>
         </div>
-
         {/* Display all connected LinkedIn accounts */}
         {linkedInConnections.length > 0 && (
           <div className="mb-6 space-y-3">
@@ -693,7 +599,6 @@ export const LinkedInIntegration: React.FC = () => {
             })}
           </div>
         )}
-
         <div className="space-y-4">
           <div className="border-t border-gray-200 pt-4">
             <h4 className="font-medium text-gray-900 mb-3">Features</h4>
@@ -720,7 +625,6 @@ export const LinkedInIntegration: React.FC = () => {
               </li>
             </ul>
           </div>
-
           <div className="border-t border-gray-200 pt-4 space-y-3">
             {/* Always show "Add Account" button to allow multiple connections */}
             <button
@@ -734,7 +638,6 @@ export const LinkedInIntegration: React.FC = () => {
               {linkedInConnections.length > 0 ? 'Add Another LinkedIn Account' : 'Connect LinkedIn Account'}
             </button>
           </div>
-
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div className="flex items-start">
               <AlertCircle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
@@ -750,7 +653,6 @@ export const LinkedInIntegration: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Connection Modal */}
       {showConnectionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -767,7 +669,6 @@ export const LinkedInIntegration: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900">Sign in to LinkedIn</h2>
               </div>
             </div>
-
             {/* Content */}
             <div className="p-6">
               {/* Choose Method */}
@@ -796,7 +697,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </button>
                 </div>
               </div>
-
               {/* Credentials Form */}
               {authMethod === 'credentials' && (
                 <div className="space-y-4">
@@ -832,7 +732,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Cookies Form */}
               {authMethod === 'cookies' && (
                 <div className="space-y-4">
@@ -850,7 +749,6 @@ export const LinkedInIntegration: React.FC = () => {
                       Your cookies need to be collected in the same browser as this page.
                     </p>
                   </div>
-
                   {showCookieHelp && (
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
                       <h4 className="font-semibold text-gray-900 mb-3">How to find my cookies?</h4>
@@ -866,7 +764,6 @@ export const LinkedInIntegration: React.FC = () => {
                       </div>
                     </div>
                   )}
-
                   <div>
                     <input
                       type="text"
@@ -876,7 +773,6 @@ export const LinkedInIntegration: React.FC = () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-
                   <div>
                     <p className="text-gray-700 mb-2">
                       If your account has Recruiter or Sales Navigator subscription, copy the li_a too.
@@ -891,7 +787,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Optional Settings */}
               <div className="mt-6">
                 <button
@@ -905,7 +800,6 @@ export const LinkedInIntegration: React.FC = () => {
                   )}
                   Optional settings
                 </button>
-                
                 {showOptionalSettings && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-sm text-gray-600">
@@ -914,7 +808,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 )}
               </div>
-
               {/* Error Message */}
               {connectionError && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -927,7 +820,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Success Message */}
               {connectionSuccess && (
                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -940,7 +832,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Action Buttons */}
               <div className="flex gap-3 mt-8">
                 <button
@@ -989,7 +880,6 @@ export const LinkedInIntegration: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Checkpoint Verification Modal (OTP or Yes/No) */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1015,7 +905,6 @@ export const LinkedInIntegration: React.FC = () => {
                 </div>
               </div>
             </div>
-
             {/* Content */}
             <div className="p-6">
               <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1026,7 +915,6 @@ export const LinkedInIntegration: React.FC = () => {
                      : 'Please check your email or phone for the OTP code sent by LinkedIn.')}
                 </p>
               </div>
-
               {/* Auto-resolving indicator for Yes/No */}
               {currentCheckpointAccount?.checkpoint?.is_yes_no && autoResolving && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1038,14 +926,12 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Yes/No Checkpoint */}
               {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-700 text-center">
                     Did you tap <strong>Yes</strong> or <strong>No</strong> on your phone?
                   </p>
-                  
                   {/* Show monitoring message if polling is active */}
                   {yesNoPolling && !autoResolving && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1055,7 +941,6 @@ export const LinkedInIntegration: React.FC = () => {
                       </p>
                     </div>
                   )}
-                  
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleSolveYesNoCheckpoint('YES')}
@@ -1119,7 +1004,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </p>
                 </div>
               )}
-
               {/* Error Message */}
               {otpError && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -1132,7 +1016,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </div>
                 </div>
               )}
-
               {/* Action Buttons for OTP */}
               {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
                 <div className="flex gap-3 mt-6">
@@ -1167,7 +1050,6 @@ export const LinkedInIntegration: React.FC = () => {
                   </button>
                 </div>
               )}
-
               {/* Cancel button for Yes/No */}
               {currentCheckpointAccount?.checkpoint?.is_yes_no && (
                 <div className="mt-6">

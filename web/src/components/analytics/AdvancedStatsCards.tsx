@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, Stack, LinearProgress, Avatar } from '@mui/material';
 import { TrendingUp, People, Send, CheckCircle, Email, LinkedIn } from '@mui/icons-material';
-
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -10,7 +9,6 @@ interface StatCardProps {
   progress?: number;
   subtitle?: string;
 }
-
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, progress, subtitle }) => (
   <Card sx={{
     minWidth: 220,
@@ -39,7 +37,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, progress
     </CardContent>
   </Card>
 );
-
 export const AdvancedStatsCards: React.FC<{ stats: any }> = ({ stats }) => (
   <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} mb={4}>
     <StatCard title="Total Leads" value={stats.leads} icon={<People />} color="#6366F1" />
@@ -50,5 +47,4 @@ export const AdvancedStatsCards: React.FC<{ stats: any }> = ({ stats }) => (
     <StatCard title="Growth" value={stats.growth} icon={<TrendingUp />} color="#f43f5e" progress={stats.growthRate} subtitle="Growth Rate" />
   </Stack>
 );
-
-export default AdvancedStatsCards;
+export default AdvancedStatsCards;

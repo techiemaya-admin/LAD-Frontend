@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-
 /**
  * Shared API Client for Voice Agent SDK
  * 
@@ -7,10 +6,8 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
  * It should work independently of the web layer.
  * Routes through LAD backend which proxies to voice agent server.
  */
-
 class APIClient {
   private instance: AxiosInstance;
-
   constructor(baseURL: string = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app') {
     // LAD backend instance (proxies voice agent requests)
     // Default to cloud backend URL if env vars not set
@@ -21,7 +18,6 @@ class APIClient {
       },
       timeout: 30000,
     });
-
     // Request interceptor for auth token
     this.instance.interceptors.request.use(
       (config) => {
@@ -31,16 +27,13 @@ class APIClient {
           (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null) ||
           (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('token') : null) ||
           (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('auth_token') : null);
-        
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        
         return config;
       },
       (error) => Promise.reject(error)
     );
-
     // Response interceptor for error handling
     this.instance.interceptors.response.use(
       (response) => response,
@@ -55,27 +48,21 @@ class APIClient {
       }
     );
   }
-
   async get<T = any>(url: string, config?: AxiosRequestConfig) {
     return this.instance.get<T>(url, config);
   }
-
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
     return this.instance.post<T>(url, data, config);
   }
-
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
     return this.instance.put<T>(url, data, config);
   }
-
   async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
     return this.instance.patch<T>(url, data, config);
   }
-
   async delete<T = any>(url: string, config?: AxiosRequestConfig) {
     return this.instance.delete<T>(url, config);
   }
 }
-
 // Export singleton instance
-export default new APIClient();
+export default new APIClient();

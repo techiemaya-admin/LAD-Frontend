@@ -1,15 +1,12 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Building2, Upload, MapPin, Target, FileText, Briefcase, Save, X } from 'lucide-react';
-
 interface CompanySettingsProps {
   companyName: string;
   setCompanyName: (name: string) => void;
   companyLogo: string;
   setCompanyLogo: (logo: string) => void;
 }
-
 export const CompanySettings: React.FC<CompanySettingsProps> = ({
   companyName: externalCompanyName,
   setCompanyName: setExternalCompanyName,
@@ -25,12 +22,10 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     about: '',
     businessServices: '',
   });
-
   // Sync with external state
   useEffect(() => {
     setCompanyData(prev => ({ ...prev, companyName: externalCompanyName }));
   }, [externalCompanyName]);
-
   const [isEditing, setIsEditing] = useState({
     companyName: false,
     location: false,
@@ -38,7 +33,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     about: false,
     businessServices: false,
   });
-
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -49,21 +43,18 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       }));
     }
   };
-
   const handleInputChange = (field: keyof typeof companyData, value: string) => {
     setCompanyData(prev => ({
       ...prev,
       [field]: value,
     }));
   };
-
   const toggleEdit = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
       [field]: !prev[field],
     }));
   };
-
   const handleSaveField = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
@@ -74,9 +65,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       setExternalCompanyName(companyData.companyName);
     }
     // TODO: Implement API call to save specific field
-    console.log(`Saving ${field}:`, companyData[field]);
-  };
-
+    };
   const handleCancelField = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
@@ -84,7 +73,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     }));
     // TODO: Reset to original value from server
   };
-
   const handleKeyDown = (e: React.KeyboardEvent, field: keyof typeof isEditing) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -94,10 +82,8 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       handleCancelField(field);
     }
   };
-
   const handleSave = () => {
     // TODO: Implement API call to save company data
-    console.log('Saving company data:', companyData);
     setIsEditing({
       companyName: false,
       location: false,
@@ -106,7 +92,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       businessServices: false,
     });
   };
-
   return (
     <div className="space-y-6">
       {/* Company Name */}
@@ -147,7 +132,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           <p className="text-gray-700">{companyData.companyName || 'Not set'}</p>
         )}
       </div>
-
       {/* Location */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -186,7 +170,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           <p className="text-gray-700">{companyData.location || 'Not set'}</p>
         )}
       </div>
-
       {/* ICP (Ideal Customer Profile) */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -224,7 +207,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           <p className="text-gray-700 whitespace-pre-wrap">{companyData.icp || 'Not set'}</p>
         )}
       </div>
-
       {/* About Company */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -262,7 +244,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           <p className="text-gray-700 whitespace-pre-wrap">{companyData.about || 'Not set'}</p>
         )}
       </div>
-
       {/* Business Services */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -302,7 +283,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           </p>
         )}
       </div>
-
       {/* Save Button */}
       {Object.values(isEditing).some(val => val) && (
         <div className="flex items-center justify-end gap-3 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -330,4 +310,4 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       )}
     </div>
   );
-};
+};

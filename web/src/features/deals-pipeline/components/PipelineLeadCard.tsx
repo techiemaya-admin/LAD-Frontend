@@ -52,7 +52,6 @@ import { fetchUsersAction } from '@/store/actions/usersActions';
 import BookingSlot from './BookingSlot';
 import * as bookingService from '@/services/bookingService';
 import { selectUser as selectAuthUser } from '@/store/slices/authSlice';
-
 interface Lead {
   id: string | number;
   name?: string;
@@ -78,14 +77,12 @@ interface Lead {
   createdAt?: string;
   [key: string]: unknown;
 }
-
 interface TabPanelProps {
   children: React.ReactNode;
   value: number;
   index: number;
   [key: string]: unknown;
 }
-
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other }) => {
   return (
     <div
@@ -102,12 +99,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
     </div>
   );
 };
-
 const a11yProps = (index: number) => ({
   id: `lead-tab-${index}`,
   'aria-controls': `lead-tabpanel-${index}`,
 });
-
 interface Note {
   id: string | number;
   content: string;
@@ -116,7 +111,6 @@ interface Note {
   user_avatar?: string | null;
   created_at?: string;
 }
-
 interface Comment {
   id: string | number;
   content: string;
@@ -125,7 +119,6 @@ interface Comment {
   user_avatar?: string | null;
   created_at?: string;
 }
-
 interface Attachment {
   id: string | number;
   name: string;
@@ -134,13 +127,11 @@ interface Attachment {
   user_id?: string | number;
   uploadedAt?: string;
 }
-
 interface AssignedUser {
   id: string | number;
   name: string;
   avatar?: string | null;
 }
-
 interface PipelineLeadCardProps {
   lead: Lead;
   isPreview?: boolean;
@@ -163,7 +154,6 @@ interface PipelineLeadCardProps {
   onExternalDetailsClose?: (() => void) | null;
   hideCard?: boolean;
 }
-
 const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ 
   lead, 
   isPreview = false, 
@@ -191,7 +181,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const stageOptions = useSelector(selectStages);
-
   const authUser = useSelector(selectAuthUser) as any;
   const createdBy = String(authUser?.id || authUser?._id || '');
   const tenantId = String(
@@ -211,27 +200,21 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const studentId = String(
     (lead as any)?.student_id || (lead as any)?.studentId || (lead as any)?.student?.id || ''
   );
-  
   // Get team members from global Redux state
   const globalTeamMembers = useSelector(selectUsers);
   const teamMembersLoading = useSelector(selectUsersLoading);
   const teamMembersError = useSelector(selectUsersError);
-  
   // Get leadCard state from Redux
   const globalActiveTab = useSelector(selectLeadCardActiveTab);
   const globalExpanded = useSelector(selectLeadCardExpanded);
   const globalEditingOverview = useSelector(selectLeadCardEditingOverview);
   const globalEditFormData = useSelector(selectLeadCardEditFormData);
-  
   // Use global team members if available, fallback to props for backward compatibility
   const effectiveTeamMembers = globalTeamMembers.length > 0 ? globalTeamMembers : teamMembers;
-  
   const [detailsOpen, setDetailsOpen] = useState(false);
-  
   // Use external dialog control if provided, otherwise use internal state
   const isDetailsOpen = externalDetailsOpen !== null ? externalDetailsOpen : detailsOpen;
   const handleDetailsClose = onExternalDetailsClose || (() => setDetailsOpen(false));
-  
   // Local states that should remain local (component-specific UI states)
   const [newNote, setNewNote] = useState<string>('');
   const [newComment, setNewComment] = useState<string>('');
@@ -248,26 +231,20 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     warning: 'bg-yellow-500 text-gray-900'
   };
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ open: boolean; type: string; id: string | number | null }>({ open: false, type: '', id: null });
-  
   // Edit states for notes and comments
   const [editingNote, setEditingNote] = useState<{ id: string | number | null; content: string }>({ id: null, content: '' });
   const [editingComment, setEditingComment] = useState<{ id: string | number | null; content: string }>({ id: null, content: '' });
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggable, setIsDraggable] = useState(false);
-  
   // Loading states for individual tabs
   const [notesLoading, setNotesLoading] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | number | null>(null);
-  
   // Local state for current status to handle optimistic updates
   const [currentStatus, setCurrentStatus] = useState(lead.status);
-  
   // Local states that remain component-specific
   const [newTagInput, setNewTagInput] = useState('');
-
   // Users state
   const [users, setUsers] = useState<Array<{
     id: string | number;
@@ -275,12 +252,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     email: string;
   }>>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-
   const goalsArray = Array.isArray(lead.goals) ? lead.goals : 
                     typeof lead.goals === 'string' && lead.goals.trim() !== '' ? [lead.goals] : [];
   const tagsArray = Array.isArray(lead.tags) ? lead.tags : [];
   const allTags = [...new Set([...goalsArray, ...tagsArray])];
-
   // Detect mobile using window width
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -290,14 +265,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const cardRef = useRef<HTMLDivElement>(null);
-
   // Critical: Don't disable sortable - use handle strategy instead to prevent re-initialization issues
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
     data: { type: 'lead', lead },
     disabled: isPreview // Only disable for preview, NOT for dialog state
   });
-
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: transition as string,
@@ -305,39 +278,31 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     cursor: 'grab',
     userSelect: 'none' as const,
   };
-
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
       handleCardClick(event as unknown as React.MouseEvent);
     }
   };
-
   const handleTouchStart = () => undefined;
-
   const handleDragHandleMouseDown = (event: React.MouseEvent) => {
     event.stopPropagation();
     setIsDraggable(true);
   };
-
   useEffect(() => {
     const handleMouseUp = () => {
       setIsDraggable(false);
     };
-
     document.addEventListener('mouseup', handleMouseUp);
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
-
   // Load team members via Redux when component mounts
   useEffect(() => {
     if (globalTeamMembers.length === 0 && !teamMembersLoading && !teamMembersError) {
-      console.log('🌐 Loading team members via Redux...');
       dispatch(fetchUsersAction() as any);
     }
   }, [dispatch, globalTeamMembers, teamMembersLoading, teamMembersError]); // Remove dependency on globalTeamMembers.length to prevent infinite loops
-
   // Initialize Redux editFormData when lead changes
   useEffect(() => {
     if (lead) {
@@ -349,33 +314,28 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       dispatch(resetLeadCardEditFormData(leadForForm));
     }
   }, [lead, dispatch]);
-
   // Sync local status with prop changes
   useEffect(() => {
     setCurrentStatus(lead.status);
   }, [lead.status]);
-
   // Load tab data when dialog opens or tab changes
   useEffect(() => {
     if (isDetailsOpen) {
       loadTabData(globalActiveTab);
     }
   }, [isDetailsOpen, globalActiveTab]);
-
   // Fetch users from API only once and only when needed
   useEffect(() => {
     // Skip if users are already loaded from Redux or component state
     if (users.length > 0 || globalTeamMembers.length > 0 || usersLoading) {
       return;
     }
-
     const loadUsers = async () => {
       try {
         setUsersLoading(true);
         const fetchedUsers = await bookingService.fetchUsers();
         setUsers(fetchedUsers);
-        console.log('[PipelineLeadCard] Users loaded:', fetchedUsers.length);
-      } catch (error) {
+        } catch (error) {
         console.error('[PipelineLeadCard] Error loading users:', error);
         // Keep empty array on error
         setUsers([]);
@@ -383,14 +343,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         setUsersLoading(false);
       }
     };
-
     loadUsers();
   }, []); // Only run once on mount
-
   // Load data for specific tab
   const loadTabData = async (tabIndex: number) => {
     if (!lead.id) return;
-
     try {
       switch (tabIndex) {
         case 1: // Notes tab
@@ -429,7 +386,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setAttachmentsLoading(false);
     }
   };
-
 //   useEffect(() => {
 //   const fetchComments = async () => {
 //     try {
@@ -439,23 +395,17 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
 //       console.error('Failed to fetch comments:', err);
 //     }
 //   };
-
 //   fetchComments();
 // }, [lead.id]);
-
 // Fetch comments
-
   // Memoize click handler to prevent stale closures and unnecessary re-renders
   const handleCardClick = useCallback((event?: React.MouseEvent) => {
     if (!event) return;
-    
     // Prevent click if event happened during drag
     if (isDragging || isDraggable) {
       return;
     }
-    
     const target = event.target as HTMLElement;
-    
     // Only ignore clicks on interactive elements (buttons, dropdowns) and drag handle
     if (
       target.closest('[data-ignore-card-click]') ||
@@ -467,24 +417,18 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     ) {
       return;
     }
-
     event.preventDefault();
     event.stopPropagation();
-    
-    console.log('[PipelineLeadCard] Card clicked, opening details for lead:', lead.id);
     setDetailsOpen(true);
   }, [isDragging, isDraggable, lead.id]);
-
   const handleDeleteDialogClose = () => {
     setDeleteDialogOpen(false);
   };
-
   // Get current user from token or auth context
   const getCurrentUserId = () => {
     try {
       const token = safeStorage.getItem('auth_token');
       if (!token) return null;
-      
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.userId || payload.id;
     } catch (error) {
@@ -492,31 +436,23 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       return null;
     }
   };
-
   // Check if current user can edit/delete item
   const canUserModify = (itemUserId?: string | number | null): boolean => {
     const currentUserId = getCurrentUserId();
-    console.log('Checking permissions:', { currentUserId, itemUserId });
     if (!currentUserId || itemUserId === null || itemUserId === undefined) return false;
     return currentUserId === itemUserId || currentUserId.toString() === itemUserId.toString();
   };
-
   const handleDeleteConfirmationOpen = (type: string, id: string | number, userId?: string | number | null) => {
-    console.log(`Delete confirmation opened for ${type}:`, { id, userId });
-    
     // Check user permissions
     if (!canUserModify(userId)) {
       showSnackbar('You can only delete your own items.', 'error');
       return;
     }
-
     setDeleteConfirmation({ open: true, type, id });
   };
-
   const handleDeleteConfirmationClose = () => {
     setDeleteConfirmation({ open: false, type: '', id: null });
   };
-
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     setIsLoading(true);
@@ -533,7 +469,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     setIsLoading(true);
@@ -550,11 +485,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
     setIsLoading(true);
     try {
       const created = await leadsService.uploadLeadAttachment(lead.id, file);
@@ -573,7 +506,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       }
     }
   };
-
   const resolveAttachmentNameAndUrl = (raw: any): { filename: string; url: string } => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
     const filename =
@@ -584,30 +516,25 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       raw?.file?.originalName ||
       raw?.originalName ||
       'Untitled';
-
     const fileUrlPath =
       raw?.url ||
       raw?.file_url ||
       raw?.file_path ||
       raw?.db?.file_url ||
       '';
-
     const url = typeof fileUrlPath === 'string' && fileUrlPath
       ? (fileUrlPath.startsWith('http')
           ? fileUrlPath
           : `${apiBaseUrl}${fileUrlPath.startsWith('/') ? '' : '/'}${fileUrlPath}`)
       : '';
-
     return { filename: String(filename), url };
   };
-
   const handleDownloadAttachment = async (rawAttachment: any) => {
     const { filename, url } = resolveAttachmentNameAndUrl(rawAttachment);
     if (!url) {
       showSnackbar('Attachment URL missing', 'error');
       return;
     }
-
     const attachmentId = rawAttachment?.id ?? rawAttachment?.db?.id ?? null;
     setDownloadingAttachmentId(attachmentId);
     try {
@@ -616,11 +543,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         method: 'GET',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
-
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
-
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -638,16 +563,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setDownloadingAttachmentId(null);
     }
   };
-
   const handleDeleteNote = async (noteId: string | number) => {
-    console.log('Attempting to delete note:', noteId, 'for lead:', lead.id);
     try {
       setIsLoading(true);
       await leadsService.deleteLeadNote(lead.id, noteId);
       setNotes(notes.filter(note => note.id !== noteId));
       showSnackbar('Note deleted successfully', 'success');
-      console.log('Note deleted successfully');
-    } catch (error) {
+      } catch (error) {
       console.error('Failed to delete note:', error);
       const err = error as Error;
       showSnackbar(`Failed to delete note: ${err.message}`, 'error');
@@ -656,16 +578,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
     setDeleteConfirmation({ open: false, type: '', id: null });
   };
-
   const handleDeleteComment = async (commentId: string | number) => {
-    console.log('Attempting to delete comment:', commentId, 'for lead:', lead.id);
     try {
       setIsLoading(true);
       await leadsService.deleteLeadComment(lead.id, commentId);
       setComments(comments.filter(comment => comment.id !== commentId));
       showSnackbar('Comment deleted successfully', 'success');
-      console.log('Comment deleted successfully');
-    } catch (error) {
+      } catch (error) {
       console.error('Failed to delete comment:', error);
       const err = error as Error;
       showSnackbar(`Failed to delete comment: ${err.message}`, 'error');
@@ -674,16 +593,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
     setDeleteConfirmation({ open: false, type: '', id: null });
   };
-
   const handleDeleteAttachment = async (attachmentId: string | number) => {
-    console.log('Attempting to delete attachment:', attachmentId, 'for lead:', lead.id);
     try {
       setIsLoading(true);
       await leadsService.deleteLeadAttachment(lead.id, attachmentId);
       setAttachments(attachments.filter(attachment => attachment.id !== attachmentId));
       showSnackbar('Attachment deleted successfully', 'success');
-      console.log('Attachment deleted successfully');
-    } catch (error) {
+      } catch (error) {
       console.error('Failed to delete attachment:', error);
       const err = error as Error;
       showSnackbar(`Failed to delete attachment: ${err.message}`, 'error');
@@ -692,7 +608,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
     setDeleteConfirmation({ open: false, type: '', id: null });
   };
-
   // Edit handlers for notes and comments
   const handleEditNote = (note: Note) => {
     // Check user permissions
@@ -702,15 +617,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
     setEditingNote({ id: note.id, content: note.content });
   };
-
   const handleCancelEditNote = () => {
     setEditingNote({ id: null, content: '' });
   };
-
   const handleSaveEditNote = async () => {
     if (!editingNote.content.trim()) return;
-    
-    console.log('Attempting to update note:', editingNote.id);
     try {
       setIsLoading(true);
       const updatedNote = await leadsService.updateLeadNote(lead.id, editingNote.id!, editingNote.content.trim());
@@ -725,7 +636,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleEditComment = (comment: Comment) => {
     // Check user permissions
     if (!canUserModify(comment.user_id)) {
@@ -734,15 +644,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
     setEditingComment({ id: comment.id, content: comment.content });
   };
-
   const handleCancelEditComment = () => {
     setEditingComment({ id: null, content: '' });
   };
-
   const handleSaveEditComment = async () => {
     if (!editingComment.content.trim()) return;
-    
-    console.log('Attempting to update comment:', editingComment.id);
     try {
       setIsLoading(true);
       const updatedComment = await leadsService.updateLeadComment(lead.id, editingComment.id!, editingComment.content.trim());
@@ -757,11 +663,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleStatusChange = async (status: string) => {
     // Optimistic update - update UI immediately
     setCurrentStatus(status as Lead['status']);
-    
     try {
       // Call the parent's status change handler
       if (onStatusChange) {
@@ -775,11 +679,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       showSnackbar('Failed to update status', 'error');
     }
   };
-
   // Overview tab edit handlers
   const handleStartEdit = () => {
     dispatch(setLeadCardEditingOverview(true));
-    
     // Use getFieldValue helper to get values from lead object
     const formData = {
       // Lead Information
@@ -800,16 +702,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       description: String(getFieldValue<string>(lead, 'description') || ''),
       tags: (lead.tags as string[]) || []
     };
-    
-    console.log('Starting edit with lead data:', lead);
-    console.log('Initialized form data:', formData);
     dispatch(setLeadCardEditFormData(formData));
   };
-
   const handleCancelEdit = () => {
     dispatch(setLeadCardEditingOverview(false));
     setNewTagInput(''); // Reset tag input
-    
     // Reset form data to original lead values using getFieldValue helper
     const originalFormData = {
       // Lead Information
@@ -830,10 +727,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       description: String(getFieldValue<string>(lead, 'description') || ''),
       tags: (lead.tags as string[]) || []
     };
-    
     dispatch(setLeadCardEditFormData(originalFormData));
   };
-
   const handleSaveEdit = async () => {
     setIsLoading(true);
     try {
@@ -843,9 +738,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           ? undefined
           : Number(amountRaw);
       const amount = Number.isFinite(parsedAmount as number) ? (parsedAmount as number) : undefined;
-
       const { amount: _ignoredAmount, ...restFormData } = (globalEditFormData as any) || {};
-
       // Prepare update data with proper field mapping
       const updateData = {
         ...restFormData,
@@ -855,21 +748,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         close_date: globalEditFormData.closeDate,
         expected_close_date: globalEditFormData.expectedCloseDate
       };
-      
       // Remove empty string values to avoid overwriting with empty data
       Object.keys(updateData).forEach((key: string) => {
         if ((updateData as Record<string, unknown>)[key] === '') {
           delete (updateData as Record<string, unknown>)[key];
         }
       });
-      
-      console.log('Updating lead with data:', updateData);
-      console.log('Current globalEditFormData:', globalEditFormData);
-      console.log('Original lead object:', lead);
-      
       // Use Redux action instead of direct API call
       await dispatch(updateLeadAction(lead.id, updateData as Partial<PipelineLead>) as any);
-      
       dispatch(setLeadCardEditingOverview(false));
       setNewTagInput(''); // Reset tag input on successful save
       showSnackbar('Lead updated successfully', 'success');
@@ -881,37 +767,30 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleFormFieldChange = (field: string, value: unknown) => {
     dispatch(setLeadCardEditFormData({
       ...globalEditFormData,
       [field]: value
     }));
   };
-
   // Tag management functions
   const handleAddTag = (newTag: string) => {
     if (newTag.trim() && !globalEditFormData.tags.includes(newTag.trim())) {
       handleFormFieldChange('tags', [...globalEditFormData.tags, newTag.trim()]);
     }
   };
-
   const handleRemoveTag = (tagToRemove: string) => {
     handleFormFieldChange('tags', globalEditFormData.tags.filter(tag => tag !== tagToRemove));
   };
-
   // Helper function to get assignee name
   const getAssigneeName = (assigneeId?: string | number | null): string => {
     if (!assigneeId) return 'Unassigned';
-    
     if (teamMembersLoading) {
       return `Loading...`;
     }
-    
     if (effectiveTeamMembers.length === 0) {
       return 'Former User';
     }
-    
     const member = effectiveTeamMembers.find(m => {
       const matches = [
         m.id === assigneeId,
@@ -921,42 +800,33 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       ];
       return matches.some(match => match);
     });
-    
     return member?.name || 'Former User';
   };
-
   // Helper function to get field value with fallback (local override)
   const getFieldValueLocal = (obj: unknown, field: string): string => {
     if (!obj || typeof obj !== 'object') return '';
     const objRecord = obj as Record<string, unknown>;
     return String(objRecord[field] || objRecord[field.replace(/([A-Z])/g, '_$1').toLowerCase()] || '');
   };
-
   const normalizeDisplayValue = (value: unknown, fallback = '-'): string => {
     if (value === null || value === undefined) return fallback;
     const asString = String(value).trim();
     if (!asString || asString === 'null' || asString === 'undefined') return fallback;
     return asString;
   };
-
   const getLeadDisplayName = (leadObj: any): string => {
     const name = normalizeDisplayValue(leadObj?.name, '').trim();
     if (name) return name;
-
     const firstName = normalizeDisplayValue(leadObj?.first_name ?? leadObj?.firstName, '').trim();
     const lastName = normalizeDisplayValue(leadObj?.last_name ?? leadObj?.lastName, '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
     if (fullName) return fullName;
-
     const contactName = normalizeDisplayValue(leadObj?.contact_name ?? leadObj?.contactName, '').trim();
     if (contactName) return contactName;
-
     const email = normalizeDisplayValue(leadObj?.email, '').trim();
     if (email) return email;
-
     return 'Unnamed Lead';
   };
-
   // Helper function to format date for input fields
   const formatDateForInput = (dateString?: string | Date | null): string => {
     if (!dateString) return '';
@@ -968,13 +838,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       return '';
     }
   };
-
   // Helper function to get display label for options
   const getOptionLabel = (options: Array<{ key: string; label: string }>, key?: string): string => {
     const option = options.find(opt => opt.key === key);
     return option?.label ?? key ?? '';
   };
-
   const formatCurrency = (amount?: number | string): string => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : (amount || 0);
     return new Intl.NumberFormat('en-US', {
@@ -983,14 +851,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       maximumFractionDigits: 0
     }).format(numAmount);
   };
-
   const formatDate = (dateString?: string | Date | number | null): string => {
     if (!dateString) return 'No date set';
-    
     // Handle various date formats and invalid dates
     try {
       let date;
-      
       // If it's already a Date object
       if (dateString instanceof Date) {
         date = dateString;
@@ -1006,14 +871,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       } else {
         return 'Invalid date';
       }
-      
       // Check if the date is valid
       if (isNaN(date.getTime())) return 'Invalid date';
-      
       // Check for unrealistic dates (before 1900 or too far in future)
       const year = date.getFullYear();
       if (year < 1900 || year > 2100) return 'Invalid date';
-      
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -1025,19 +887,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       return 'Invalid date';
     }
   };
-
   const getProgressValue = (): number => {
     return ((currentStage + 1) / totalStages) * 100;
   };
-
   const getDaysRemaining = (): number | null => {
     const closeDate = getFieldValueLocal(lead, 'closeDate');
     if (!closeDate) return null;
-    
     try {
       const closeDateObj = new Date(closeDate);
       if (isNaN(closeDateObj.getTime())) return null;
-      
       const today = new Date();
       const diffTime = closeDateObj.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -1046,7 +904,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       return null;
     }
   };
-
   const getStatusColor = (status?: string | null): string => {
     switch (status?.toLowerCase()) {
       case 'active': return '#10B981';
@@ -1058,13 +915,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       default: return '#64748B';
     }
   };
-
   const getProbabilityColor = (prob: number): string => {
     if (prob >= 70) return '#10B981';
     if (prob >= 40) return '#F59E0B';
     return '#EF4444';
   };
-
   const getStatusIcon = (status?: string | null): React.ReactElement => {
     const iconClass = "h-4 w-4";
     switch (status?.toLowerCase()) {
@@ -1077,13 +932,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       default: return <Flag className={iconClass} />;
     }
   };
-
   const getActivityTrend = (): number => {
     if (!activityData.length || activityData.length < 2) return 0;
     const recent = activityData.slice(-2);
     return (recent[1] || 0) - (recent[0] || 0);
   };
-
   const handleClose = () => {
     if (onExternalDetailsClose) {
       onExternalDetailsClose();
@@ -1095,33 +948,25 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     setNewComment('');
     dispatch(setLeadCardActiveTab(0)); 
   };
-
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
     setSnackbar({ open: true, message, severity });
     setTimeout(() => setSnackbar(prev => ({ ...prev, open: false })), 4000);
   };
-
   const handleConfirmDelete = async () => {
     const { type, id } = deleteConfirmation;
-    console.log('handleConfirmDelete called with:', { type, id });
-    
     if (type && id) {
       // Handle item deletion (note, comment, attachment)
       switch (type) {
         case 'note':
-          console.log('Calling handleDeleteNote for note ID:', id);
           await handleDeleteNote(id);
           break;
         case 'comment':
-          console.log('Calling handleDeleteComment for comment ID:', id);
           await handleDeleteComment(id);
           break;
         case 'attachment':
-          console.log('Calling handleDeleteAttachment for attachment ID:', id);
           await handleDeleteAttachment(id);
           break;
         default:
-          console.log('Unknown delete type:', type);
           break;
       }
     } else {
@@ -1140,11 +985,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       }
     }
   };
-
   const handleTabChange = (newValue: string) => {
     dispatch(setLeadCardActiveTab(parseInt(newValue)));
   };
-
   const tabs: Array<{ label: string; index: number; content: React.ReactNode }> = [
     { 
       label: 'Overview', 
@@ -1272,7 +1115,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 )}
               </div>
             </div>
-            
             {/* Pipeline & Deal Information Section */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="text-base font-semibold mb-4 text-gray-900">
@@ -1341,7 +1183,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="relative">
                       <Label htmlFor="amount" className="text-sm text-gray-600 mb-1 block">Amount</Label>
                       <div className="relative">
@@ -1443,7 +1284,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 )}
               </div>
             </div>
-
             {/* Schedule Appointment Section */}
             <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 rounded-lg">
               <h3 className="text-base font-semibold mb-4 text-gray-900 flex items-center gap-2">
@@ -1474,7 +1314,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 )}
               </div>
             </div>
-
             {/* Tags Section */}
             <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 rounded-lg">
               <h3 className="text-base font-semibold mb-4 text-gray-900">
@@ -1579,7 +1418,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </Button>
             </div>
           </div>
-          
           {notesLoading ? (
             <div className="flex justify-center py-6">
               <p className="text-sm text-gray-500">Loading notes...</p>
@@ -1695,7 +1533,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </Button>
             </div>
           </div>
-          
           {commentsLoading ? (
             <div className="flex justify-center py-6">
               <p className="text-sm text-gray-500">Loading comments...</p>
@@ -1806,7 +1643,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               Drop files here or click to upload
             </Button>
           </div>
-
           {attachmentsLoading ? (
             <div className="flex justify-center py-6">
               <p className="text-sm text-gray-500">Loading attachments...</p>
@@ -1831,7 +1667,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   );
                   const attachmentId = (rawAttachment as any)?.id ?? (rawAttachment as any)?.db?.id ?? null;
                   const isDownloading = downloadingAttachmentId !== null && attachmentId === downloadingAttachmentId;
-
                   return (
                     <div
                       key={attachmentKey}
@@ -1871,7 +1706,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       )
     }
   ];
-
   const renderDetailsDialog = () => (
     <Dialog 
       open={isDetailsOpen} 
@@ -1910,7 +1744,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </Button>
           </div>
         </DialogTitle>
-        
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="w-full">
             <Tabs 
@@ -1931,7 +1764,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   ))}
                 </TabsList>
               </div>
-
               {tabs.map((tab) => (
                 <TabsContent 
                   key={tab.index} 
@@ -1944,7 +1776,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </Tabs>
           </div>
         </div>
-        
         <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0 bg-white">
           {globalActiveTab === 0 && (
             globalEditingOverview ? (
@@ -1978,18 +1809,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       </DialogContent>
     </Dialog>
   );
-
   // If hideCard is true, only render the dialog
   if (hideCard) {
     return <>{renderDetailsDialog()}</>;
   }
-
   const assignedPreview = assignedUsers.slice(0, isMobile ? 2 : 3);
   const remainingAssignees = Math.max(assignedUsers.length - assignedPreview.length, 0);
   const showDetails = globalExpanded || !isMobile;
   const trendValue = getActivityTrend();
   const progressValue = getProgressValue();
-
   return (
     <div
       ref={setNodeRef}
@@ -2015,7 +1843,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             style={{ width: `${getProgressValue()}%` }}
           />
         </div>
-
         <div className="flex items-start gap-3">
           {/* CRITICAL: Apply drag listeners ONLY to drag handle */}
           <button
@@ -2096,7 +1923,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
         {assignedPreview.length > 0 && (
           <div className="flex items-center gap-2 mt-3">
             <div className="flex -space-x-2">
@@ -2116,7 +1942,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </div>
           </div>
         )}
-
         {showDetails && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
@@ -2136,11 +1961,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 </span>
               )}
             </div>
-
             {(lead.description as string | undefined) && (
               <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
             )}
-
             {allTags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag, index) => (
@@ -2152,7 +1975,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             )}
           </div>
         )}
-
         <div className="mt-4 border-t border-gray-100 pt-2 text-xs text-gray-500 flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
@@ -2180,9 +2002,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
         </div>
         </div>
-
       {renderDetailsDialog()}
-
       <Dialog open={deleteDialogOpen}>
         <DialogContent showCloseButton={false} className="p-6 pt-2">
           <DialogTitle className="flex justify-between items-center">
@@ -2209,7 +2029,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={deleteConfirmation.open}>
         <DialogContent showCloseButton={false} className="p-6 pt-2">
           <DialogTitle className="flex justify-between items-center">
@@ -2238,7 +2057,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-
       {snackbar.open && (
         <div
           className={`fixed bottom-4 right-4 rounded-lg px-4 py-2 text-sm text-white shadow-lg ${snackbarClasses[snackbar.severity]}`}
@@ -2249,7 +2067,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     </div>
   );
 };
-
 export default React.memo(PipelineLeadCard, (prevProps, nextProps) => {
   // Comprehensive comparison to prevent unnecessary re-renders
   return (

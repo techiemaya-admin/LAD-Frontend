@@ -1,17 +1,14 @@
 'use client';
-
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/app-toaster';
-
 interface CreateCampaignDialogProps {
   open: boolean;
   campaignName: string;
   onClose: () => void;
   onNameChange: (value: string) => void;
 }
-
 export default function CreateCampaignDialog({
   open,
   campaignName,
@@ -20,7 +17,6 @@ export default function CreateCampaignDialog({
 }: CreateCampaignDialogProps) {
   const router = useRouter();
   const { push } = useToast();
-
   const handleCreate = () => {
     if (campaignName.trim()) {
       router.push(`/campaigns/new?name=${encodeURIComponent(campaignName)}`);
@@ -29,7 +25,6 @@ export default function CreateCampaignDialog({
       push({ variant: 'error', title: 'Error', description: 'Campaign name is required' });
     }
   };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Create New Campaign</DialogTitle>
@@ -65,5 +60,4 @@ export default function CreateCampaignDialog({
       </DialogActions>
     </Dialog>
   );
-}
-
+}

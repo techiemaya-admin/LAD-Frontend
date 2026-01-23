@@ -14,11 +14,9 @@ import {
   FileText,
   FileType,
 } from 'lucide-react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 interface Attachment {
   id: string | number;
   url: string;
@@ -31,17 +29,14 @@ interface Attachment {
   uploaded_by_name?: string;
   user_id?: string | number;
 }
-
 interface AttachmentPreviewProps {
   attachment: Attachment;
   onDelete?: ((attachmentId: string | number, userId?: string | number) => void) | null;
 }
-
 const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDelete }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
   // Lock body scroll when dialog is open
   React.useEffect(() => {
     if (previewOpen) {
@@ -53,16 +48,13 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
       document.body.style.overflow = '';
     };
   }, [previewOpen]);
-
   // Determine icon based on file type
   const getFileIcon = (mimetype?: string, filename?: string, file_name?: string) => {
     if (!mimetype && !filename && !file_name) {
       return <File className="w-6 h-6 text-slate-500" />;
     }
-    
     const type = mimetype || '';
     const name = file_name || filename || '';
-    
     if (type.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(name)) {
       return <ImageIcon className="w-6 h-6 text-emerald-500" />;
     } else if (type === 'application/pdf' || name.endsWith('.pdf')) {
@@ -73,34 +65,26 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
       return <File className="w-6 h-6 text-slate-500" />;
     }
   };
-
   // Check if file can be previewed
   const canPreview = (mimetype?: string, filename?: string, file_name?: string): boolean => {
     if (!mimetype && !filename && !file_name) return false;
-    
     const type = mimetype || '';
     const name = file_name || filename || '';
-    
     return type.startsWith('image/') || 
            type === 'application/pdf' || 
            /\.(jpg|jpeg|png|gif|bmp|webp|pdf)$/i.test(name);
   };
-
   const handlePreviewOpen = () => {
     setPreviewOpen(true);
   };
-
   const handlePreviewClose = () => {
     setPreviewOpen(false);
     setPreviewLoading(false);
   };
-
   // Render preview content
   const renderPreviewContent = () => {
     if (!attachment?.url) return null;
-    
     const { url, mimetype, filename, file_name } = attachment;
-    
     // Images
     if (mimetype?.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(file_name || filename || '')) {
       return (
@@ -123,7 +107,6 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
         </div>
       );
     }
-    
     // PDFs and other documents
     return (
       <div className="w-full min-h-[600px] relative">
@@ -145,11 +128,9 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
       </div>
     );
   };
-
   const fileName = attachment.file_name || attachment.filename || 'Untitled';
   const uploadedDate = attachment.uploaded_at || attachment.uploadedAt;
   const uploadedByName = attachment.uploaded_by_name;
-
   return (
     <>
       <Card className="max-w-[300px] relative hover:shadow-md transition-shadow cursor-pointer">
@@ -189,7 +170,6 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
           </Button>
         )}
       </Card>
-
       {/* Preview Dialog */}
       {previewOpen && (
         <div
@@ -223,6 +203,4 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onDel
     </>
   );
 };
-
-export default AttachmentPreview;
-
+export default AttachmentPreview;

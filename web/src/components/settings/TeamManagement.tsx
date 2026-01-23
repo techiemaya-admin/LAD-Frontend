@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, 
@@ -14,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import { safeStorage } from '../../utils/storage';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface User {
   id: string;
   name: string;
@@ -26,7 +24,6 @@ interface User {
   capabilities?: string[];
   created_at?: string;
 }
-
 const PAGE_CAPABILITIES = [
   { key: 'view_overview', label: 'View Overview' },
   { key: 'view_scraper', label: 'View Scraper' },
@@ -36,7 +33,6 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
 ];
-
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
   { value: 'co_admin', label: 'Co Admin' },
@@ -44,7 +40,6 @@ const ROLE_OPTIONS = [
   { value: 'sales_rep', label: 'Sales Representative' },
   { value: 'viewer', label: 'Viewer' },
 ];
-
 export const TeamManagement: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -53,8 +48,6 @@ export const TeamManagement: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCapabilitiesDropdown, setShowCapabilitiesDropdown] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -63,11 +56,9 @@ export const TeamManagement: React.FC = () => {
     phoneNumber: '',
     capabilities: [] as string[],
   });
-
   useEffect(() => {
     fetchUsers();
   }, []);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -75,25 +66,17 @@ export const TeamManagement: React.FC = () => {
         setShowCapabilitiesDropdown(false);
       }
     };
-
     if (showCapabilitiesDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showCapabilitiesDropdown]);
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError('');
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
-      
-      console.log('[TeamManagement] Checking authentication:', {
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        tokenSource: safeStorage.getItem('token') ? 'token' : safeStorage.getItem('auth_token') ? 'auth_token' : 'none'
-      });
-      
+      console.debug('[TeamManagement] Token source:', safeStorage.getItem('token') ? 'token' : safeStorage.getItem('auth_token') ? 'auth_token' : 'none');
       if (!token) {
         // Redirect to login instead of showing error
         console.warn('[TeamManagement] No token found, redirecting to login');
@@ -101,14 +84,12 @@ export const TeamManagement: React.FC = () => {
         router.push(`/login?redirect_url=${redirect}`);
         return;
       }
-
       const response = await fetch(`${getApiBaseUrl()}/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      
       if (!response.ok) {
         // If 401, redirect to login
         if (response.status === 401) {
@@ -120,7 +101,6 @@ export const TeamManagement: React.FC = () => {
         const errorMsg = errorData.details ? `${errorData.error}: ${errorData.details}` : (errorData.error || `HTTP ${response.status}`);
         throw new Error(errorMsg);
       }
-      
       const data = await response.json();
       setUsers(Array.isArray(data) ? data : []);
     } catch (error: any) {
@@ -131,7 +111,6 @@ export const TeamManagement: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleAddUser = async () => {
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
@@ -143,7 +122,6 @@ export const TeamManagement: React.FC = () => {
         },
         body: JSON.stringify(newUser),
       });
-
       if (response.ok) {
         setShowAddModal(false);
         setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [] });
@@ -157,7 +135,6 @@ export const TeamManagement: React.FC = () => {
       alert('Failed to add user');
     }
   };
-
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
@@ -169,7 +146,6 @@ export const TeamManagement: React.FC = () => {
         },
         body: JSON.stringify({ role: newRole }),
       });
-      
       if (response.ok) {
         fetchUsers();
       }
@@ -177,16 +153,13 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating role:', error);
     }
   };
-
   const toggleCapability = async (userId: string, capabilityKey: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-
     const currentCapabilities = user.capabilities || [];
     const newCapabilities = currentCapabilities.includes(capabilityKey)
       ? currentCapabilities.filter(c => c !== capabilityKey)
       : [...currentCapabilities, capabilityKey];
-
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/capabilities`, {
@@ -197,7 +170,6 @@ export const TeamManagement: React.FC = () => {
         },
         body: JSON.stringify({ capabilities: newCapabilities }),
       });
-      
       if (response.ok) {
         // Update local state immediately for better UX
         setUsers(users.map(u => 
@@ -208,10 +180,8 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating capabilities:', error);
     }
   };
-
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}`, {
@@ -220,7 +190,6 @@ export const TeamManagement: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
       if (response.ok) {
         fetchUsers();
       }
@@ -228,7 +197,6 @@ export const TeamManagement: React.FC = () => {
       console.error('Error deleting user:', error);
     }
   };
-
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-purple-50 text-purple-700 border border-purple-200';
@@ -239,7 +207,6 @@ export const TeamManagement: React.FC = () => {
       default: return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
   };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -256,7 +223,6 @@ export const TeamManagement: React.FC = () => {
           Add Team Member
         </button>
       </div>
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm">{error}</p>
@@ -268,7 +234,6 @@ export const TeamManagement: React.FC = () => {
           </button>
         </div>
       )}
-
       {/* Users Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -374,7 +339,6 @@ export const TeamManagement: React.FC = () => {
           </table>
         </div>
       </div>
-
       {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -407,7 +371,6 @@ export const TeamManagement: React.FC = () => {
   <label className="block text-sm font-medium text-gray-700 mb-2">
     Password
   </label>
-
   <div className="relative">
     <input
       type={showPassword ? 'text' : 'password'}
@@ -419,7 +382,6 @@ export const TeamManagement: React.FC = () => {
       className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg
                  focus:ring-2 focus:ring-blue-500 focus:border-transparent"
     />
-
     <button
       type="button"
       onClick={() => setShowPassword((prev) => !prev)}
@@ -431,7 +393,6 @@ export const TeamManagement: React.FC = () => {
     </button>
   </div>
 </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
                 <input
@@ -478,7 +439,6 @@ export const TeamManagement: React.FC = () => {
       }`}
     />
   </button>
-
   {showCapabilitiesDropdown && (
     <div
       className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500
@@ -512,7 +472,6 @@ export const TeamManagement: React.FC = () => {
     </div>
   )}
 </div>
-
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
@@ -536,5 +495,4 @@ export const TeamManagement: React.FC = () => {
     </div>
   );
 };
-
 // Component already exported inline above

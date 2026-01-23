@@ -19,39 +19,32 @@ import PersonIcon from '@mui/icons-material/Person';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CodeIcon from '@mui/icons-material/Code';
 import BusinessIcon from '@mui/icons-material/Business';
-
 export default function AIChatSection({ onSendPrompt, onApplyParams, loading, chatHistory = [] }) {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [chatHistory]);
-
   const handleSend = () => {
     if (input.trim()) {
       onSendPrompt(input);
       setInput('');
     }
   };
-
   const handleMicClick = () => {
     setIsRecording(!isRecording);
     // TODO: Integrate audio recording
   };
-
   const handleApplyParams = (params) => {
     if (onApplyParams) {
       onApplyParams(params);
     }
   };
-
   const suggestedActions = [
     { 
       icon: <BusinessIcon />, 
@@ -78,13 +71,10 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
       prompt: 'Search for SaaS companies with more than 50 employees'
     },
   ];
-
   const handleQuickAction = (prompt) => {
     onSendPrompt(prompt);
   };
-
   const showWelcome = chatHistory.length === 0 && !loading;
-
   return (
     <Box 
       id="ai-chat-section"
@@ -131,7 +121,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
           >
             Get started by typing a task and LAD can do the rest. Not sure where to start?
           </Typography>
-
           {/* Suggested Actions */}
           <Box sx={{ 
             display: 'grid', 
@@ -195,7 +184,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
           </Box>
         </Box>
       )}
-
       {/* Chat Messages */}
       {chatHistory.length > 0 && (
         <Box sx={{ 
@@ -256,7 +244,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                   <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#0b1957' }}>
                     {message.content}
                   </Typography>
-                  
                   {/* Show expanded keywords if available */}
                   {message.expandedKeywords && (
                     <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid oklch(0.922 0 0)' }}>
@@ -294,7 +281,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                       </Box>
                     </Box>
                   )}
-                  
                   {message.suggestedParams && (
                     <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid oklch(0.922 0 0)' }}>
                       <Typography variant="caption" sx={{ mb: 1, display: 'block', fontWeight: 600, color: '#0b1957' }}>
@@ -376,7 +362,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
           <div ref={messagesEndRef} />
         </Box>
       )}
-
       {/* Input Area - Fixed at bottom */}
       <Box sx={{ 
         position: 'sticky',
@@ -455,7 +440,6 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
             <SendIcon />
           </IconButton>
         </Box>
-
         {/* Action Buttons and Character Counter */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5, px: 0.5 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -465,9 +449,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
             {input.length} / 3,000
           </Typography>
         </Box>
-
       </Box>
     </Box>
   );
-}
-
+}

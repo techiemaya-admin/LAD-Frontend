@@ -1,18 +1,14 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
 import { BarChart3, TrendingUp, Calendar, Filter, DollarSign } from 'lucide-react';
 import { useUsage, useUsageAggregation } from '@/sdk/features/billing';
 import { LoadingSpinner } from '../LoadingSpinner';
-
 type GroupBy = 'feature' | 'component' | 'provider' | 'model';
 type TimeRange = '7d' | '30d' | '90d';
-
 export const UsageBreakdown: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [groupBy, setGroupBy] = useState<GroupBy>('component');
   const [selectedFeature, setSelectedFeature] = useState<string>('all');
-
   // Calculate date range
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();
@@ -24,7 +20,6 @@ export const UsageBreakdown: React.FC = () => {
       endDate: now.toISOString(),
     };
   }, [timeRange]);
-
   // Fetch aggregated usage for charts and totals
   const { data: aggregation, isLoading: loadingAgg } = useUsageAggregation({
     startDate,
@@ -32,7 +27,6 @@ export const UsageBreakdown: React.FC = () => {
     groupBy,
     featureKey: selectedFeature !== 'all' ? selectedFeature : undefined,
   });
-
   // Fetch detailed usage for row-level breakdown
   const { data: usageData, isLoading: loadingUsage } = useUsage({
     startDate,
@@ -40,16 +34,13 @@ export const UsageBreakdown: React.FC = () => {
     featureKey: selectedFeature !== 'all' ? selectedFeature : undefined,
     limit: 100,
   });
-
   const isLoading = loadingAgg || loadingUsage;
-
   // Extract unique features for filter
   const features = useMemo(() => {
     if (!usageData?.events) return [];
     const featureSet = new Set(usageData.events.map((e) => e.feature_key));
     return Array.from(featureSet).sort();
   }, [usageData]);
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -57,7 +48,6 @@ export const UsageBreakdown: React.FC = () => {
       minimumFractionDigits: 4,
     }).format(amount);
   };
-
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
@@ -66,14 +56,11 @@ export const UsageBreakdown: React.FC = () => {
       minute: '2-digit',
     });
   };
-
   if (isLoading) {
     return <LoadingSpinner size="md" message="Loading usage breakdown..." />;
   }
-
   const totalCost = aggregation?.total || 0;
   const groups = aggregation?.groups || [];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -89,7 +76,6 @@ export const UsageBreakdown: React.FC = () => {
           <span className="text-2xl font-bold text-gray-900">{formatCurrency(totalCost)}</span>
         </div>
       </div>
-
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -116,7 +102,6 @@ export const UsageBreakdown: React.FC = () => {
               ))}
             </div>
           </div>
-
           {/* Group By */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -133,7 +118,6 @@ export const UsageBreakdown: React.FC = () => {
               <option value="model">Model</option>
             </select>
           </div>
-
           {/* Feature Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -152,7 +136,6 @@ export const UsageBreakdown: React.FC = () => {
               ))}
             </select>
           </div>
-
           {/* Stats Summary */}
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
@@ -164,14 +147,12 @@ export const UsageBreakdown: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Aggregated Groups */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-blue-600" />
           Aggregated by {groupBy}
         </h3>
-
         {groups.length === 0 ? (
           <div className="text-center py-12">
             <TrendingUp className="h-16 w-16 mx-auto text-gray-400 mb-4" />
@@ -206,7 +187,6 @@ export const UsageBreakdown: React.FC = () => {
           </div>
         )}
       </div>
-
       {/* Detailed Events */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
@@ -215,7 +195,6 @@ export const UsageBreakdown: React.FC = () => {
             Recent Usage Events
           </h3>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -272,7 +251,6 @@ export const UsageBreakdown: React.FC = () => {
             </tbody>
           </table>
         </div>
-
         {usageData?.events && usageData.events.length > 50 && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-center">
             <p className="text-sm text-gray-600">
@@ -286,4 +264,4 @@ export const UsageBreakdown: React.FC = () => {
       </div>
     </div>
   );
-};
+};

@@ -1,11 +1,9 @@
 'use client';
-
 import React from 'react';
 import { Menu, MenuItem } from '@mui/material';
 import { Edit, Visibility, PlayArrow, Pause, Stop, Delete } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import type { Campaign } from '@/features/campaigns';
-
 interface CampaignActionsMenuProps {
   anchorEl: HTMLElement | null;
   selectedCampaign: Campaign | null;
@@ -15,7 +13,6 @@ interface CampaignActionsMenuProps {
   onStop: (id: string) => void;
   onDelete: (id: string) => void;
 }
-
 export default function CampaignActionsMenu({
   anchorEl,
   selectedCampaign,
@@ -26,9 +23,7 @@ export default function CampaignActionsMenu({
   onDelete,
 }: CampaignActionsMenuProps) {
   const router = useRouter();
-
   if (!selectedCampaign) return null;
-
   return (
     <Menu
       anchorEl={anchorEl}
@@ -66,5 +61,4 @@ export default function CampaignActionsMenu({
       </MenuItem>
     </Menu>
   );
-}
-
+}

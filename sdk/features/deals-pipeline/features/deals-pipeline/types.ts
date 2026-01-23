@@ -1,7 +1,6 @@
 /**
  * TypeScript Type Definitions for Deals Pipeline
  */
-
 export interface Lead {
   id: string;
   name: string;
@@ -17,7 +16,6 @@ export interface Lead {
   updated_at: Date;
   tenant_id: string;
 }
-
 export interface Stage {
   key: string;
   label: string;
@@ -26,23 +24,19 @@ export interface Stage {
   created_at: Date;
   tenant_id: string;
 }
-
 export interface Status {
   key: string;
   label: string;
   color?: string;
 }
-
 export interface Source {
   key: string;
   label: string;
 }
-
 export interface Priority {
   key: string;
   label: string;
 }
-
 export interface Note {
   id: string;
   lead_id: string;
@@ -50,19 +44,16 @@ export interface Note {
   created_by: string;
   created_at: Date;
 }
-
 export interface PipelineBoard {
   stages: Stage[];
   leads: Lead[];
   leadsByStage: Record<string, Lead[]>;
 }
-
 export interface LeadStats {
   total: number;
   byStage: Record<string, number>;
   conversionRate: number;
 }
-
 export interface CreateLeadPayload {
   name: string;
   email?: string;
@@ -74,30 +65,23 @@ export interface CreateLeadPayload {
   source?: string;
   priority?: string;
 }
-
 export interface UpdateLeadPayload extends Partial<CreateLeadPayload> {}
-
 export interface CreateStagePayload {
   key: string;
   label: string;
   color?: string;
   order?: number;
 }
-
 export interface UpdateStagePayload extends Partial<CreateStagePayload> {}
-
 export interface ApiError {
   error: string;
   details?: string;
 }
-
 export interface ApiResponse<T> {
   data?: T;
   error?: ApiError;
 }
-
 // ==================== STUDENTS ====================
-
 export interface Student {
   id: string;
   lead_id: string;
@@ -116,7 +100,6 @@ export interface Student {
   current_education_level?: string;
   target_countries?: string[];
 }
-
 export interface StudentWithLead {
   id: string;
   name: string;
@@ -133,7 +116,6 @@ export interface StudentWithLead {
   counsellor_first_name?: string;
   counsellor_last_name?: string;
 }
-
 export interface StudentListFilter {
   stage?: string;
   status?: string;
@@ -142,7 +124,6 @@ export interface StudentListFilter {
   education_level?: string;
   country_of_interest?: string;
 }
-
 export interface CreateStudentPayload {
   lead_id: string;
   country_of_residence?: string;
@@ -154,5 +135,4 @@ export interface CreateStudentPayload {
   counsellor_id?: string;
   metadata?: Record<string, any>;
 }
-
-export interface UpdateStudentPayload extends Partial<CreateStudentPayload> {}
+export interface UpdateStudentPayload extends Partial<CreateStudentPayload> {}

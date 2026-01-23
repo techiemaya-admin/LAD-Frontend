@@ -1,22 +1,16 @@
 "use client";
-
 export const dynamic = 'force-dynamic';
-
-
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
 import { apiGet, apiPost } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { logger } from "@/lib/logger";
-import type { SortConfig } from "@/utils/sortingUtils";
-
 import { CallLogsHeader } from "@/components/CallLogsHeader";
 import { CallLogsTable } from "@/components/CallLogsTable";
 import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
-
 interface CallLogResponse {
   call_log_id: string;
   id?: string;
@@ -34,16 +28,10 @@ interface CallLogResponse {
   call_cost?: number;
   batch_status?: string;
   batch_id?: string;
-  lead_category?: string;
-  signed_recording_url?: string;
-  recording_url?: string;
-  call_recording_url?: string;
 }
-
 interface CallLogsResponse {
   logs: CallLogResponse[];
 }
-
 interface BatchResultItem {
   to_number?: string | null;
   status?: string | null;
@@ -56,27 +44,21 @@ interface BatchResultItem {
   error?: string | null;
   batch_status?: string | null;
 }
-
 interface BatchPayload {
   job_id: string;
   status: string;
   results: BatchResultItem[];
 }
-
 interface BatchApiResponse {
   success: boolean;
   batch?: BatchPayload;
   result?: BatchPayload; // fallback shape
 }
-
 type TimeFilter = "all" | "current" | "previous" | "batch";
-
 export default function CallLogsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [authed, setAuthed] = useState<boolean | null>(null);
-
   const [items, setItems] = useState<
     Array<{
       id: string;
@@ -89,28 +71,17 @@ export default function CallLogsPage() {
       cost: number;
       batch_status?: string;
       batch_id?: string;
-      lead_category?: string;
-      signed_recording_url?: string;
-      recording_url?: string;
-      call_recording_url?: string;
     }>
   >([]);
-
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | undefined>();
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-
-  
-
-
   // Filters
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState("All");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
-
   const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
   const socket = useRef(io(socketUrl, { 
     transports: ["websocket"],
@@ -123,50 +94,37 @@ export default function CallLogsPage() {
     upgrade: false,
     rememberUpgrade: false
   })).current;
-
   // Pagination
 const [page, setPage] = useState(1);
 const [perPage, setPerPage] = useState(20);
-
 // Date filter
 type DateFilter = "today" | "month" | "custom" | "all";
 const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 const [fromDate, setFromDate] = useState<string | null>(null);
 const [toDate, setToDate] = useState<string | null>(null);
-
 const resolveDateRange = () => {
   const now = new Date();
-
   if (dateFilter === "today") {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-
     const end = new Date();
     end.setHours(23, 59, 59, 999);
-
     return { from: start.toISOString(), to: end.toISOString() };
   }
-
   if (dateFilter === "month") {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     return { from: start.toISOString(), to: now.toISOString() };
   }
-
   if (dateFilter === "custom" && fromDate && toDate) {
     // Parse dates and set to full day range
     const from = new Date(fromDate);
     from.setHours(0, 0, 0, 0);
-    
     const to = new Date(toDate);
     to.setHours(23, 59, 59, 999);
-    
     return { from: from.toISOString(), to: to.toISOString() };
   }
-
   return {};
 };
-
-
   // ----------------------
   // AUTH
   // ----------------------
@@ -181,24 +139,18 @@ const resolveDateRange = () => {
       }
     })();
   }, [router]);
-
   // Initialize batchJobId + mode from query params (when redirected from batch start)
   useEffect(() => {
     // Wait for client-side hydration
     if (!searchParams) return;
-    
     const jobId = searchParams.get("jobId");
     const mode = searchParams.get("mode");
-
     logger.debug('[Call Logs] Query params detected', { jobId, mode });
-
     if (jobId) {
       // Accept both UUID format and "batch-" prefixed format
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId);
       const isBatchFormat = /^batch-[0-9a-f]{32}$/i.test(jobId);
-      
       logger.debug('[Call Logs] Batch ID validation', { isUUID, isBatchFormat });
-      
       if (isUUID || isBatchFormat) {
         logger.debug('[Call Logs] Setting batchJobId', { jobId });
         setBatchJobId(jobId);
@@ -213,11 +165,9 @@ const resolveDateRange = () => {
       }
     }
   }, [searchParams, router]);
-
   // ----------------------
   // LOAD CALLS (ORG handled in backend using JWT)
   // ----------------------
-  
   const load = async () => {
     try {
       // Batch View
@@ -229,15 +179,12 @@ const resolveDateRange = () => {
           const res = await apiGet<BatchApiResponse>(url);
           logger.debug('[Call Logs] Batch API response received');
           const batch = res.batch || res.result;
-
           if (!batch) {
             setItems([]);
             return;
           }
-
           const batchStatus = batch.status || "";
           const results = batch.results || [];
-
           const logs = results.map((r, idx) => ({
             id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
             assistant: "", // not provided by this endpoint
@@ -250,11 +197,9 @@ const resolveDateRange = () => {
             batch_status: r.batch_status || batchStatus,
             batch_id: batchJobId, // Set the batch_id so filtering works
           }));
-
           setItems(logs);
           return;
         } 
-        
         catch (error) {
           logger.error('[Call Logs] Failed to load batch status', error);
           // Reset to normal mode when batch loading fails
@@ -265,10 +210,7 @@ const resolveDateRange = () => {
           // Fall through to load normal call logs
         }
       }
-
-
       const { from, to } = resolveDateRange();
-
       // Build query with ONLY date range (no limit param)
       // API fetches all records for the date range
       // Frontend handles pagination via perPage
@@ -276,17 +218,14 @@ const resolveDateRange = () => {
         ...(from && { from_date: from }),
         ...(to && { to_date: to }),
       });
-
       // Normal mode — backend auto-filters by org based on JWT
       // API returns ALL calls matching the date range (no pagination)
       const res = await apiGet<CallLogsResponse>(`/api/voice-agent/calls?${query.toString()}`);
-
       const logs = (res.logs || []).map((r) => {
         // Construct lead name from first and last name
         const leadName = [r.lead_first_name, r.lead_last_name]
           .filter(Boolean)
           .join(' ') || '';
-
         return {
           id: String(r.call_log_id || r.id || ''),
           assistant: r.agent_name || '',
@@ -298,19 +237,13 @@ const resolveDateRange = () => {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
-          lead_category: r.lead_category,
-          signed_recording_url: r.signed_recording_url,
-          recording_url: r.recording_url,
-          call_recording_url: r.call_recording_url,
         };
       });
-
       logger.debug('[Call Logs] Loaded call logs with count:', {
         total: logs.length,
         withBatchId: logs.filter(l => l.batch_id).length,
         sample: logs.slice(0, 3),
       });
-
       setItems(logs);
     } catch (error) {
       logger.error('Failed to load call logs', error);
@@ -320,48 +253,36 @@ const resolveDateRange = () => {
       setInitialLoading(false); // 👈 IMPORTANT
     }
   };
-
   useEffect(() => {
     logger.debug('[Call Logs] Load effect triggered', { timeFilter, batchJobId });
     load(); // initial + whenever filter/batch changes
-
     // Suppress socket connection errors
     socket.on("connect_error", () => {
       // Silently ignore connection errors since socket.io is optional for real-time updates
     });
-
     socket.on("calllogs:update", () => {
       load();
     });
-    
-
     return () => {
       socket.off("calllogs:update");
       socket.off("connect_error");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    
   }, [timeFilter, batchJobId, perPage, dateFilter, fromDate, toDate]);
-
   // ----------------------
   // FILTERS
   // ----------------------
   const filtered = useMemo(() => {
     const now = Date.now();
-
     return items.filter((i) => {
       const s = search.toLowerCase();
-
       const matchSearch =
         (i.id || "").toLowerCase().includes(s) ||
         (i.assistant || "").toLowerCase().includes(s) ||
         (i.lead_name || "").toLowerCase().includes(s);
-
       const matchProvider =
         providerFilter === "All" || i.type === providerFilter;
-
       let matchTime = true;
-
       if (timeFilter === "current") {
         // Current Batch: only show batch calls with running/pending/queued status
         if (i.batch_id) {
@@ -388,32 +309,20 @@ const resolveDateRange = () => {
           matchTime = !!i.batch_id;
         }
       }
-
       return matchSearch && matchProvider && matchTime;
     });
   }, [items, search, providerFilter, timeFilter]);
-
   const uniqueProviders = useMemo(
     () => [...new Set(items.map((i) => i.type))],
     [items]
   );
-
-  // Apply sorting to filtered results for consistent ordering across pages
-  const sortedFiltered = useMemo(() => {
-    if (!sortConfig) return filtered;
-    const { sortCallLogs } = require("@/utils/sortingUtils");
-    return sortCallLogs(filtered, sortConfig);
-  }, [filtered, sortConfig]);
-
-  const totalPages = Math.ceil(sortedFiltered.length / perPage) || 1;
-  const paginated = sortedFiltered.slice((page - 1) * perPage, page * perPage);
-
+  const totalPages = Math.ceil(filtered.length / perPage) || 1;
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
   // Group calls by batch (from paginated items)
   const batchGroups = useMemo(() => {
     const groups: Record<string, typeof paginated> = {};
     const noBatchCalls: typeof paginated = [];
-
-    paginated.forEach((call: typeof paginated[0]) => {
+    paginated.forEach((call) => {
       if (call.batch_id) {
         if (!groups[call.batch_id]) {
           groups[call.batch_id] = [];
@@ -423,17 +332,14 @@ const resolveDateRange = () => {
         noBatchCalls.push(call);
       }
     });
-
     logger.debug('[Call Logs] Batch grouping prepared', {
       totalCalls: paginated.length,
       batchGroups: Object.keys(groups).length,
       noBatchCalls: noBatchCalls.length,
       groups,
     });
-
     return { groups, noBatchCalls };
   }, [paginated]);
-
   // Toggle batch expansion
   const toggleBatch = (batchId: string) => {
     setExpandedBatches((prev) => {
@@ -446,7 +352,6 @@ const resolveDateRange = () => {
       return next;
     });
   };
-
   // ----------------------
   // SELECTION
   // ----------------------
@@ -457,7 +362,6 @@ const resolveDateRange = () => {
       return next;
     });
   };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       // ✅ NEW: Collect ALL call IDs from FILTERED results (all pages, not just current page)
@@ -467,26 +371,21 @@ const resolveDateRange = () => {
       setSelected(new Set());
     }
   };
-
   // ✅ Handle row click - prevent modal for active calls
   const handleRowClick = (id: string) => {
     const call = items.find(i => i.id === id);
     const status = call?.status.toLowerCase() || '';
-    
     // Don't open modal for calling, queue, or ongoing calls
     if (['calling', 'queue', 'queued', 'ongoing', 'in_queue'].includes(status)) {
       return;
     }
-    
     setOpenId(id);
   };
-
   async function endSelectedCalls() {
     alert("Ending " + selected.size + " calls");
     await load();
     setSelected(new Set());
   }
-
   // ✅ NEW: End a single call
   async function endSingleCall(callId: string) {
     try {
@@ -498,7 +397,6 @@ const resolveDateRange = () => {
       alert("Failed to end call. Please try again.");
     }
   }
-
   // ✅ NEW: Retry failed calls
   async function retrySelectedCalls() {
     const failedCallIds = Array.from(selected);
@@ -508,7 +406,6 @@ const resolveDateRange = () => {
     await load();
     setSelected(new Set());
   }
-
   // ----------------------
   // BULK BATCH START HANDLER (if you emit socket event with job_id)
   // ----------------------
@@ -519,7 +416,6 @@ const resolveDateRange = () => {
     router.push(`/call-logs?jobId=${jobId}&mode=current-batch`);
     await load();
   }
-
   if (authed === null) {
     return (
       <div className="max-w-7xl mx-auto space-y-8 p-6">
@@ -559,16 +455,13 @@ const resolveDateRange = () => {
       </div>
     );
   }
-
   if (!authed) return <></>;
-
   // Check if any selected calls have "failed" status and count them
   const failedCallIds = Array.from(selected).filter(id => {
     const call = items.find(i => i.id === id);
     return call && call.status.toLowerCase() === "failed";
   });
   const hasFailedCalls = failedCallIds.length > 0;
-
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-6">
       {/* Header */}
@@ -603,7 +496,6 @@ const resolveDateRange = () => {
           setPage(1);
         }}
       />
-
      {/* Table */}
 {initialLoading ? (
   <CallLogsTableSkeleton />
@@ -618,22 +510,15 @@ const resolveDateRange = () => {
         batchGroups={batchGroups}
         expandedBatches={expandedBatches}
         onToggleBatch={toggleBatch}
-        totalFilteredCount={sortedFiltered.length}
-        onSortChange={(newSort) => {
-          setSortConfig(newSort);
-          setPage(1); // Reset to first page when sorting changes
-        }}
+        totalFilteredCount={filtered.length}
       />
 )}
-
-
       {/* Pagination */}
       <Pagination
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
       />
-
       {/* Modal */}
       <CallLogModal
         id={openId}
@@ -642,4 +527,4 @@ const resolveDateRange = () => {
       />
     </div>
   );
-}
+}

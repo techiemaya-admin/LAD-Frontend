@@ -1,14 +1,11 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
 }
-
 const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
   ({ className, checked, onCheckedChange, onChange, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,7 +16,6 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
         onChange(e);
       }
     };
-
     return (
       <label className="relative inline-flex items-center cursor-pointer">
         <input
@@ -39,6 +35,4 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
   }
 );
 Switch.displayName = 'Switch';
-
-export { Switch };
-
+export { Switch };

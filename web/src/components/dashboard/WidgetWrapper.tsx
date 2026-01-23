@@ -1,5 +1,4 @@
 "use client";
-
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -8,7 +7,6 @@ import { GripVertical, Settings, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Button } from '@/components/ui/button';
-
 interface WidgetWrapperProps {
   id: string;
   title: string;
@@ -17,7 +15,6 @@ interface WidgetWrapperProps {
   headerActions?: React.ReactNode;
   onSettings?: () => void;
 }
-
 export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
   id,
   title,
@@ -27,7 +24,6 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
   onSettings,
 }) => {
   const { isEditMode, removeWidget } = useDashboardStore();
-  
   const {
     attributes,
     listeners,
@@ -39,14 +35,12 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
     id,
     disabled: !isEditMode,
   });
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.8 : 1,
     zIndex: isDragging ? 50 : 1,
   };
-
   return (
     <div
       ref={setNodeRef}
@@ -72,10 +66,8 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
           )}
           <h3 className="font-semibold text-sm font-display">{title}</h3>
         </div>
-        
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {headerActions}
-          
           {isEditMode && (
             <>
               {onSettings && (
@@ -106,11 +98,10 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
           )}
         </div>
       </div>
-      
       {/* Widget Content */}
       <div className="flex-1 p-4 overflow-auto custom-scrollbar">
         {children}
       </div>
     </div>
   );
-};
+};

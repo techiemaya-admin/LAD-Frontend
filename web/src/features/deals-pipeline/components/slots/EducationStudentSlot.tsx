@@ -1,30 +1,25 @@
 'use client';
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-
 interface StudentData {
   id: string;
   name: string;
   email?: string;
   phone?: string;
-  
   // Academic fields
   current_education_level?: string;
   current_institution?: string;
   gpa?: number;
   graduation_year?: number;
-  
   // Target fields
   target_degree?: string;
   target_major?: string;
   target_universities?: string[];
   target_countries?: string[];
-  
   // Test scores
   sat_score?: number;
   act_score?: number;
@@ -32,26 +27,22 @@ interface StudentData {
   ielts_score?: number;
   gre_score?: number;
   gmat_score?: number;
-  
   // Preferences
   budget_range?: string;
   preferred_intake?: string;
   scholarship_interest?: boolean;
 }
-
 interface EducationStudentSlotProps {
   student: StudentData;
   onUpdate?: (updates: Partial<StudentData>) => void;
   readonly?: boolean;
 }
-
 export default function EducationStudentSlot({ student, onUpdate, readonly = false }: EducationStudentSlotProps) {
   const handleFieldChange = (field: string, value: any) => {
     if (!readonly && onUpdate) {
       onUpdate({ [field]: value });
     }
   };
-
   return (
     <Card className="h-full overflow-auto">
       <CardHeader>
@@ -61,7 +52,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
         {/* Current Education */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold">Current Education</h3>
-          
           <div className="space-y-2">
             <Label htmlFor="current_education_level">Education Level</Label>
             <Select
@@ -80,7 +70,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="current_institution">Current Institution</Label>
             <Input
@@ -90,7 +79,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               disabled={readonly}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="gpa">GPA</Label>
@@ -104,7 +92,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
                 disabled={readonly}
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="graduation_year">Graduation Year</Label>
               <Input
@@ -117,11 +104,9 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
             </div>
           </div>
         </div>
-
         {/* Target Education */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold">Target Program</h3>
-          
           <div className="space-y-2">
             <Label htmlFor="target_degree">Target Degree</Label>
             <Input
@@ -132,7 +117,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               placeholder="e.g., Master of Science"
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="target_major">Major/Specialization</Label>
             <Input
@@ -143,7 +127,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               placeholder="e.g., Computer Science"
             />
           </div>
-
           {student.target_universities && student.target_universities.length > 0 && (
             <div className="space-y-2">
               <Label>Target Universities</Label>
@@ -156,7 +139,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               </div>
             </div>
           )}
-
           {student.target_countries && student.target_countries.length > 0 && (
             <div className="space-y-2">
               <Label>Target Countries</Label>
@@ -170,11 +152,9 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
             </div>
           )}
         </div>
-
         {/* Test Scores */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold">Test Scores</h3>
-          
           <div className="grid grid-cols-2 gap-4">
             {student.sat_score && (
               <div className="space-y-2">
@@ -182,35 +162,30 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
                 <Badge variant="secondary">{student.sat_score}</Badge>
               </div>
             )}
-
             {student.act_score && (
               <div className="space-y-2">
                 <Label>ACT Score</Label>
                 <Badge variant="secondary">{student.act_score}</Badge>
               </div>
             )}
-
             {student.toefl_score && (
               <div className="space-y-2">
                 <Label>TOEFL Score</Label>
                 <Badge variant="secondary">{student.toefl_score}</Badge>
               </div>
             )}
-
             {student.ielts_score && (
               <div className="space-y-2">
                 <Label>IELTS Score</Label>
                 <Badge variant="secondary">{student.ielts_score}</Badge>
               </div>
             )}
-
             {student.gre_score && (
               <div className="space-y-2">
                 <Label>GRE Score</Label>
                 <Badge variant="secondary">{student.gre_score}</Badge>
               </div>
             )}
-
             {student.gmat_score && (
               <div className="space-y-2">
                 <Label>GMAT Score</Label>
@@ -219,11 +194,9 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
             )}
           </div>
         </div>
-
         {/* Preferences */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold">Preferences</h3>
-          
           <div className="space-y-2">
             <Label htmlFor="budget_range">Budget Range</Label>
             <Input
@@ -234,7 +207,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               placeholder="e.g., $20,000 - $40,000/year"
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="preferred_intake">Preferred Intake</Label>
             <Select
@@ -252,7 +224,6 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               </SelectContent>
             </Select>
           </div>
-
           {student.scholarship_interest && (
             <div className="space-y-2">
               <Badge variant="default">Interested in Scholarships</Badge>
@@ -262,4 +233,4 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
       </CardContent>
     </Card>
   );
-}
+}

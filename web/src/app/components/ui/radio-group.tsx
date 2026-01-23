@@ -1,15 +1,12 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface RadioGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   name?: string;
   value?: string;
   onValueChange?: (value: string) => void;
 }
-
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
   ({ className, name, value, onValueChange, children, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -17,7 +14,6 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
         onValueChange(e.target.value);
       }
     };
-
     return (
       <div
         ref={ref}
@@ -40,12 +36,10 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
   }
 );
 RadioGroup.displayName = 'RadioGroup';
-
 export interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> {
   value: string;
   label?: string;
 }
-
 const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
   ({ className, label, id, ...props }, ref) => {
     const radioId = id || `radio-${props.value}`;
@@ -71,6 +65,4 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
   }
 );
 Radio.displayName = 'Radio';
-
-export { RadioGroup, Radio };
-
+export { RadioGroup, Radio };

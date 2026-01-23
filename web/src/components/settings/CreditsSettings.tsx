@@ -1,9 +1,7 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, X, Loader2 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 export const CreditsSettings: React.FC = () => {
   const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
@@ -12,14 +10,12 @@ export const CreditsSettings: React.FC = () => {
   const [balance, setBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('Just now');
-
   const presetAmounts = [
     { value: 29, label: 'Starter Pack' },
     { value: 129, label: 'Professional' },
     { value: 349, label: 'Business' },
     { value: 999, label: 'Enterprise' },
   ];
-
   // Fetch wallet balance on component mount
   useEffect(() => {
     const fetchBalance = async () => {
@@ -29,13 +25,11 @@ export const CreditsSettings: React.FC = () => {
           setIsLoadingBalance(false);
           return;
         }
-
         const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
-
         if (response.ok) {
           const data = await response.json();
           setBalance(data.balance || 0);
@@ -50,9 +44,7 @@ export const CreditsSettings: React.FC = () => {
         setIsLoadingBalance(false);
       }
     };
-
     fetchBalance();
-
     // Check URL parameters to auto-open Add Credits modal
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -63,16 +55,13 @@ export const CreditsSettings: React.FC = () => {
       }
     }
   }, []);
-
   const handleProceedToPayment = async () => {
     const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
     if (!amount || amount <= 0) {
       alert('Please select or enter a valid amount');
       return;
     }
-
     setIsProcessing(true);
-
     try {
       // Create Stripe checkout session for credit purchase
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-credits-checkout`, {
@@ -89,14 +78,11 @@ export const CreditsSettings: React.FC = () => {
           },
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create checkout session');
       }
-
       const { url } = await response.json();
-      
       // Redirect to Stripe Checkout
       window.location.href = url;
     } catch (error) {
@@ -105,17 +91,14 @@ export const CreditsSettings: React.FC = () => {
       setIsProcessing(false);
     }
   };
-
   const handleSelectAmount = (amount: number) => {
     setSelectedAmount(amount);
     setCustomAmount(''); // Clear custom amount when preset is selected
   };
-
   const handleCustomAmountChange = (value: string) => {
     setCustomAmount(value);
     setSelectedAmount(null); // Clear preset selection when custom amount is entered
   };
-
   return (
     <div className="space-y-6">
       {/* Wallet Balance Card */}
@@ -133,7 +116,6 @@ export const CreditsSettings: React.FC = () => {
             Add Credits
           </button>
         </div>
-        
         <div className="flex items-center justify-between">
           <div>
             <p className="text-blue-100 text-sm mb-1">Available Credits</p>
@@ -151,7 +133,6 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Add Credits Modal */}
       {showAddCreditsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddCreditsModal(false)}>
@@ -238,7 +219,6 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Credits Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">How Credits Work</h3>
@@ -254,7 +234,6 @@ export const CreditsSettings: React.FC = () => {
               </p>
             </div>
           </div>
-          
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
               2
@@ -266,7 +245,6 @@ export const CreditsSettings: React.FC = () => {
               </p>
             </div>
           </div>
-          
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
               3
@@ -280,7 +258,6 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Credit Pricing Guide */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Credit Pricing</h3>
@@ -292,7 +269,6 @@ export const CreditsSettings: React.FC = () => {
             </div>
             <p className="text-xs text-gray-600">Per minute of call time</p>
           </div>
-          
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-900">SMS Messages</span>
@@ -300,7 +276,6 @@ export const CreditsSettings: React.FC = () => {
             </div>
             <p className="text-xs text-gray-600">Per SMS message sent</p>
           </div>
-          
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-900">Lead Credits</span>
@@ -308,7 +283,6 @@ export const CreditsSettings: React.FC = () => {
             </div>
             <p className="text-xs text-gray-600">Credits for lead generation</p>
           </div>
-          
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-900">Data Enrichment</span>
@@ -320,4 +294,4 @@ export const CreditsSettings: React.FC = () => {
       </div>
     </div>
   );
-};
+};

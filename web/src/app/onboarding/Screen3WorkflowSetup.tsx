@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
@@ -15,7 +14,6 @@ import {
   ArrowLeft,
   Instagram
 } from 'lucide-react';
-
 export default function Screen3WorkflowSetup() {
   const router = useRouter();
   const {
@@ -27,14 +25,11 @@ export default function Screen3WorkflowSetup() {
     completeOnboarding,
     setCurrentScreen,
   } = useOnboardingStore();
-
   const [isSaving, setIsSaving] = useState(false);
-
   const handleConnect = async (channel: keyof typeof channels) => {
     // In a real app, this would open OAuth flow or connection modal
     // For now, just toggle the connection state
     setChannelConnection(channel, !channels[channel]);
-    
     try {
       await apiPost('/api/onboarding/connect-channel', {
         channel,
@@ -44,10 +39,8 @@ export default function Screen3WorkflowSetup() {
       logger.error('Failed to connect channel', error);
     }
   };
-
   const handleSaveWorkflow = async () => {
     setIsSaving(true);
-    
     try {
       // Save workflow to backend
       await apiPost('/api/onboarding/save-workflow', {
@@ -55,10 +48,8 @@ export default function Screen3WorkflowSetup() {
         channels,
         mainOption,
       });
-
       // Complete onboarding
       completeOnboarding();
-      
       // Redirect to campaigns or dashboard
       setTimeout(() => {
         router.push('/campaigns');
@@ -70,12 +61,10 @@ export default function Screen3WorkflowSetup() {
       setIsSaving(false);
     }
   };
-
   const getBackScreen = () => {
     if (mainOption === 'automation') return 1;
     return 2; // For leads, go back to inbound/outbound selection
   };
-
   return (
     <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
@@ -88,7 +77,6 @@ export default function Screen3WorkflowSetup() {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Connect Your Channels
@@ -97,7 +85,6 @@ export default function Screen3WorkflowSetup() {
               Connect the channels you want to use for your automation
             </p>
           </div>
-
           {/* Channel Connection Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* LinkedIn */}
@@ -129,7 +116,6 @@ export default function Screen3WorkflowSetup() {
                 {channels.linkedin ? 'Connected' : 'Connect LinkedIn'}
               </button>
             </div>
-
             {/* Email */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-transparent hover:border-blue-500 transition-all">
               <div className="flex items-center justify-between mb-4">
@@ -159,7 +145,6 @@ export default function Screen3WorkflowSetup() {
                 {channels.email ? 'Connected' : 'Connect Email'}
               </button>
             </div>
-
             {/* WhatsApp */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-transparent hover:border-blue-500 transition-all">
               <div className="flex items-center justify-between mb-4">
@@ -189,7 +174,6 @@ export default function Screen3WorkflowSetup() {
                 {channels.whatsapp ? 'Connected' : 'Connect WhatsApp'}
               </button>
             </div>
-
             {/* Voice Agent */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-transparent hover:border-blue-500 transition-all">
               <div className="flex items-center justify-between mb-4">
@@ -219,7 +203,6 @@ export default function Screen3WorkflowSetup() {
                 {channels.voiceAgent ? 'Connected' : 'Connect Voice Agent'}
               </button>
             </div>
-
             {/* Instagram (if automation suite) */}
             {mainOption === 'automation' && (
               <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-transparent hover:border-blue-500 transition-all">
@@ -252,7 +235,6 @@ export default function Screen3WorkflowSetup() {
               </div>
             )}
           </div>
-
           {/* Workflow Builder Placeholder */}
           <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -272,7 +254,6 @@ export default function Screen3WorkflowSetup() {
               </p>
             </div>
           </div>
-
           {/* Save Button */}
           <div className="flex justify-end">
             <button
@@ -297,5 +278,4 @@ export default function Screen3WorkflowSetup() {
       </div>
     </div>
   );
-}
-
+}

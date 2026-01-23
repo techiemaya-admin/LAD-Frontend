@@ -1,11 +1,8 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
-
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
     return (
@@ -21,6 +18,4 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   }
 );
 Textarea.displayName = 'Textarea';
-
-export { Textarea };
-
+export { Textarea };

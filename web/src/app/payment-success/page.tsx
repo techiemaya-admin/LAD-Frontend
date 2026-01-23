@@ -1,19 +1,15 @@
 'use client';
-
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Loader2, Home, Receipt } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [sessionData, setSessionData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const sessionId = searchParams?.get('session_id');
-
   useEffect(() => {
     if (sessionId) {
       fetchSessionData();
@@ -22,15 +18,12 @@ function PaymentSuccessContent() {
       setError('No session ID provided');
     }
   }, [sessionId]);
-
   const fetchSessionData = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/session/${sessionId}`);
-      
       if (!response.ok) {
         throw new Error('Failed to fetch session data');
       }
-      
       const data = await response.json();
       setSessionData(data.session);
     } catch (err) {
@@ -40,14 +33,12 @@ function PaymentSuccessContent() {
       setLoading(false);
     }
   };
-
   const formatAmount = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency?.toUpperCase() || 'USD',
     }).format(amount / 100);
   };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -58,7 +49,6 @@ function PaymentSuccessContent() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -81,7 +71,6 @@ function PaymentSuccessContent() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
@@ -94,7 +83,6 @@ function PaymentSuccessContent() {
             Thank you for your subscription. Your account has been upgraded.
           </p>
         </div>
-
         {sessionData && (
           <div className="bg-gray-50 p-6 rounded-lg mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -126,7 +114,6 @@ function PaymentSuccessContent() {
             </div>
           </div>
         )}
-
         <div className="bg-blue-50 p-6 rounded-lg mb-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
             What's Next?
@@ -138,7 +125,6 @@ function PaymentSuccessContent() {
             <li>• Manage your subscription in the billing section</li>
           </ul>
         </div>
-
         <div className="flex space-x-4">
           <button
             onClick={() => router.push('/dashboard')}
@@ -159,7 +145,6 @@ function PaymentSuccessContent() {
     </div>
   );
 }
-
 export default function PaymentSuccessPage() {
   return (
     <Suspense fallback={

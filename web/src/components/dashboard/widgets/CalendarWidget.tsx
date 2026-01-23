@@ -23,12 +23,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
-import { useDashboardUsers, useBookings } from '../../../../../sdk/features/dashboard';
 
 interface CalendarWidgetProps {
   id: string;
 }
-
 const eventTypeConfig = {
   call: { 
     icon: Phone, 
@@ -51,7 +49,6 @@ const eventTypeConfig = {
     label: 'Meeting'
   },
 };
-
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const { 
     calendarViewMode, 
@@ -59,7 +56,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     selectedDate,
     setSelectedDate,
   } = useDashboardStore();
-  
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   
@@ -77,37 +73,25 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     leadName: '',
   });
 
-  // Set first user as default when users are loaded
-  React.useEffect(() => {
-    if (users.length > 0 && !selectedUserId) {
-      setSelectedUserId(users[0].id);
-    }
-  }, [users, selectedUserId]);
-
   // Calendar calculations
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
-  
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  
   // Week view calculations
   const weekStart = startOfWeek(selectedDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
-
   const getEventsForDate = (date: Date) => {
     return bookings.filter(booking => 
       isSameDay(new Date(booking.scheduled_at), date)
     );
   };
-
   const handlePrevMonth = () => setSelectedDate(subMonths(selectedDate, 1));
   const handleNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
   const handlePrevWeek = () => setSelectedDate(addDays(selectedDate, -7));
   const handleNextWeek = () => setSelectedDate(addDays(selectedDate, 7));
-
   const handleAddEvent = () => {
     // TODO: Implement add event via SDK when backend endpoint is ready
     setIsAddEventOpen(false);
@@ -120,6 +104,12 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
       agentName: '',
       leadName: '',
     });
+  };
+
+  const calculateDuration = (start: string, end: string): number => {
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    return (endHour * 60 + endMin) - (startHour * 60 + startMin);
   };
 
   return (
@@ -161,10 +151,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             </Button>
           </div>
           
-          {isLoadingBookings && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          
           <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="h-7 px-3 text-xs gap-1">
@@ -186,7 +172,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     placeholder="Event title..."
                   />
                 </div>
-                
                 <div className="grid gap-2">
                   <Label>Event Type</Label>
                   <Select
@@ -206,7 +191,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Start Time</Label>
@@ -225,7 +209,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     />
                   </div>
                 </div>
-                
                 {(newEvent.type === 'call' || newEvent.type === 'followup') && (
                   <div className="grid gap-2">
                     <Label>Lead Name</Label>
@@ -236,7 +219,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     />
                   </div>
                 )}
-                
                 {newEvent.type === 'ai-task' && (
                   <div className="grid gap-2">
                     <Label>AI Agent</Label>
@@ -255,7 +237,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     </Select>
                   </div>
                 )}
-                
                 <div className="grid gap-2">
                   <Label>Notes</Label>
                   <Textarea
@@ -265,7 +246,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     rows={2}
                   />
                 </div>
-                
                 <Button onClick={handleAddEvent} className="mt-2">
                   Add Event
                 </Button>
@@ -301,7 +281,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-
         {/* Month View */}
         {calendarViewMode === 'month' && (
           <div className="flex-1">
@@ -313,7 +292,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                 </div>
               ))}
             </div>
-            
             {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map((day) => {
@@ -321,7 +299,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                 const isCurrentMonth = isSameMonth(day, selectedDate);
                 const isSelected = isSameDay(day, selectedDate);
                 const isTodayDate = isToday(day);
-                
                 return (
                   <motion.div
                     key={day.toISOString()}
@@ -330,19 +307,18 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     className={cn(
                       'relative p-1 min-h-[60px] rounded-lg border cursor-pointer transition-colors',
                       !isCurrentMonth && 'opacity-40',
-                      isSelected && 'border-primary bg-primary text-white',
+                      isSelected && 'border-accent bg-accent/5',
                       isTodayDate && !isSelected && 'border-primary/50 bg-primary/5',
                       !isSelected && !isTodayDate && 'border-transparent hover:border-border hover:bg-secondary/50'
                     )}
                   >
                     <span className={cn(
                       'text-xs font-medium',
-                      isTodayDate && !isSelected && 'text-primary',
-                      isSelected && 'text-white'
+                      isTodayDate && 'text-primary',
+                      isSelected && 'text-accent'
                     )}>
                       {format(day, 'd')}
                     </span>
-                    
                     {events.length > 0 && (
                       <div className="mt-1 space-y-0.5">
                         {events.slice(0, 2).map((booking) => {
@@ -374,7 +350,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             </div>
           </div>
         )}
-
         {/* Week View */}
         {calendarViewMode === 'week' && (
           <div className="flex-1 overflow-auto custom-scrollbar">
@@ -400,7 +375,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                   </div>
                 ))}
               </div>
-              
               {/* Time slots */}
               <div className="relative">
                 {hours.map((hour) => (
@@ -413,7 +387,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                         const eventHour = parseInt(e.scheduled_at.split('T')[1].split(':')[0]);
                         return eventHour === hour;
                       });
-                      
                       return (
                         <div
                           key={day.toISOString()}
@@ -446,7 +419,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             </div>
           </div>
         )}
-
         {/* Selected Date Events */}
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex items-center justify-between mb-2">

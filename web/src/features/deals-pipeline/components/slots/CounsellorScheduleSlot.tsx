@@ -1,11 +1,9 @@
 'use client';
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Video, Phone, MessageSquare, Plus } from 'lucide-react';
-
 interface Appointment {
   id: string;
   date: string;
@@ -15,14 +13,12 @@ interface Appointment {
   counsellor_name?: string;
   notes?: string;
 }
-
 interface CounsellorScheduleSlotProps {
   studentId: string;
   appointments?: Appointment[];
   onSchedule?: (appointment: Partial<Appointment>) => void;
   readonly?: boolean;
 }
-
 export default function CounsellorScheduleSlot({ 
   studentId, 
   appointments = [], 
@@ -30,7 +26,6 @@ export default function CounsellorScheduleSlot({
   readonly = false 
 }: CounsellorScheduleSlotProps) {
   const [selectedDate, setSelectedDate] = useState<string>('');
-
   const getAppointmentIcon = (type: string) => {
     switch (type) {
       case 'online':
@@ -43,7 +38,6 @@ export default function CounsellorScheduleSlot({
         return <Calendar className="h-4 w-4" />;
     }
   };
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
       scheduled: 'default',
@@ -52,19 +46,15 @@ export default function CounsellorScheduleSlot({
     };
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
   };
-
   const sortedAppointments = [...appointments].sort((a, b) => 
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
-
   const upcomingAppointments = sortedAppointments.filter(
     apt => apt.status === 'scheduled' && new Date(apt.date) >= new Date()
   );
-
   const pastAppointments = sortedAppointments.filter(
     apt => apt.status === 'completed' || new Date(apt.date) < new Date()
   );
-
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -93,27 +83,23 @@ export default function CounsellorScheduleSlot({
                   </div>
                   {getStatusBadge(apt.status)}
                 </div>
-
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span>{new Date(apt.date).toLocaleDateString()}</span>
                   <Clock className="h-3 w-3 ml-2" />
                   <span>{apt.time}</span>
                 </div>
-
                 {apt.counsellor_name && (
                   <div className="text-sm">
                     <span className="text-muted-foreground">Counselor: </span>
                     <span className="font-medium">{apt.counsellor_name}</span>
                   </div>
                 )}
-
                 {apt.notes && (
                   <div className="text-sm text-muted-foreground mt-2 pt-2 border-t">
                     {apt.notes}
                   </div>
                 )}
-
                 {!readonly && (
                   <div className="flex gap-2 pt-2">
                     <Button size="sm" variant="outline">
@@ -128,7 +114,6 @@ export default function CounsellorScheduleSlot({
             ))}
           </div>
         )}
-
         {/* Past Appointments */}
         {pastAppointments.length > 0 && (
           <div className="space-y-3">
@@ -145,20 +130,17 @@ export default function CounsellorScheduleSlot({
                   </div>
                   {getStatusBadge(apt.status)}
                 </div>
-
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span>{new Date(apt.date).toLocaleDateString()}</span>
                   <Clock className="h-3 w-3 ml-2" />
                   <span>{apt.time}</span>
                 </div>
-
                 {apt.counsellor_name && (
                   <div className="text-xs text-muted-foreground">
                     Counselor: {apt.counsellor_name}
                   </div>
                 )}
-
                 {apt.notes && (
                   <div className="text-xs text-muted-foreground mt-1">
                     {apt.notes}
@@ -168,7 +150,6 @@ export default function CounsellorScheduleSlot({
             ))}
           </div>
         )}
-
         {/* Empty State */}
         {appointments.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
@@ -189,4 +170,4 @@ export default function CounsellorScheduleSlot({
       </CardContent>
     </Card>
   );
-}
+}

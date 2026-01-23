@@ -11,9 +11,7 @@
 // import { AnimatePresence, motion } from "framer-motion";
 // import { apiGet, apiPost } from "@/lib/api";
 // import Swal from 'sweetalert2';
-
 // type Props = { onCreated: () => void; existingContacts?: Array<{ id: string; name: string; phone: string }>; };
-
 // export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) {
 //   const [open, setOpen] = useState(false);
 //   const [step, setStep] = useState<"create" | "assign">("create");
@@ -28,7 +26,6 @@
 //   const [createdNumberId, setCreatedNumberId] = useState<string | null>(null);
 //   const [agents, setAgents] = useState<{id:string; name:string}[]>([]);
 //   const audioRef = useRef<HTMLAudioElement | null>(null);
-
 //   const playSelectionSound = () => {
 //     try {
 //       if (audioRef.current && audioRef.current.src && audioRef.current.readyState > 0) {
@@ -36,13 +33,11 @@
 //       }
 //     } catch {}
 //   };
-
 //   // Load agents when dialog opens so we can show real names
 //   useEffect(() => {
 //     if (!open) return;
 //     apiGet<{items:{id:string; name:string}[]}>("/api/voice-agents").then(r => setAgents(r.items));
 //   }, [open]);
-
 //   const handleCreate = async () => {
 //     setLoading(true);
 //     try {
@@ -67,10 +62,8 @@
 //       setLoading(false);
 //     }
 //   };
-
 //   const handleAssign = async () => {
 //     if (!createdNumberId || !selectedAgent) return;
-
 //     const result1 = await Swal.fire({
 //       title: 'Are you sure?',
 //       text: 'You are about to assign this phone number to the selected agent.',
@@ -78,12 +71,9 @@
 //       showCancelButton: true,
 //       confirmButtonText: 'Yes, assign it!'
 //     });
-
 //     if (!result1.isConfirmed) return;
-
 //     const phone = importMethod === "twilio" ? twilioPhoneNumber : phoneNumber;
 //     const agentName = agents.find(a => a.id === selectedAgent)?.name || selectedAgent;
-
 //     const result2 = await Swal.fire({
 //       title: 'Confirm Details',
 //       html: `
@@ -97,9 +87,7 @@
 //       showCancelButton: true,
 //       confirmButtonText: 'Looks correct!'
 //     });
-
 //     if (!result2.isConfirmed) return;
-
 //     setLoading(true);
 //     try {
 //       await apiPost(`/api/phoneNumbers/${createdNumberId}/assign`, { agentId: selectedAgent });
@@ -120,7 +108,6 @@
 //       handleClose();
 //     }
 //   };
-
 //   const handleSkip = async () => {
 //     const result = await Swal.fire({
 //       title: 'Skip Assignment?',
@@ -129,7 +116,6 @@
 //       showCancelButton: true,
 //       confirmButtonText: 'Yes, skip'
 //     });
-
 //     if (result.isConfirmed) {
 //       await Swal.fire({
 //         title: 'Success!',
@@ -139,7 +125,6 @@
 //       handleClose();
 //     }
 //   };
-
 //   const handleClose = () => {
 //     setOpen(false);
 //     setTimeout(() => {
@@ -155,32 +140,26 @@
 //       onCreated();
 //     }, 400);
 //   };
-
 //   const modalVariants = {
 //     hidden: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
 //     visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
 //     exit: { opacity: 0, scale: 0.95, y: -20, transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] } },
 //   } as const;
-
 //   const stepVariants = {
 //     hidden: { opacity: 0, x: 20, transition: { duration: 0.3, ease: "easeOut" } },
 //     visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut" } },
 //     exit: { opacity: 0, x: -20, transition: { duration: 0.2, ease: "easeIn" } },
 //   } as const;
-
 //   const isCreateReady = importMethod === "manual"
 //     ? !!phoneNumber
 //     : !!(twilioAccountSid && twilioAuthToken && twilioPhoneNumber);
-
 //   return (
 //     <>
 //       <Button size="sm" onClick={() => setOpen(true)} className="gap-2">
 //         <Plus className="h-4 w-4" />
 //         Create Phone Number
 //       </Button>
-
 //       <audio ref={audioRef} src="/sounds/selection.mp3" preload="auto" />
-
 //       <Dialog open={open} onOpenChange={setOpen}>
 //         <AnimatePresence mode="wait">
 //           {open && (
@@ -190,7 +169,6 @@
 //                   {step === "create" ? (
 //                     <motion.div key="create" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full">
 //                       <motion.div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, ease: "easeOut" }} />
-
 //                       <DialogHeader className="relative px-6 pt-8 pb-4">
 //                         <DialogTitle className="sr-only">Add Phone Number</DialogTitle>
 //                         <motion.div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 backdrop-blur-sm" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}>
@@ -203,7 +181,6 @@
 //                           Import a new number to your system
 //                         </motion.p>
 //                       </DialogHeader>
-
 //                       <div className="px-6 pb-6 space-y-5">
 //                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.3 }} className="w-full">
 //                           <Tabs
@@ -236,7 +213,6 @@
 //                                 </Label>
 //                                 <Input id="phone" placeholder="+1 (555) 000-0000" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="h-11" />
 //                               </motion.div>
-
 //                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
 //                                 <Label htmlFor="label" className="flex items-center gap-2 text-sm font-medium">
 //                                   <Sparkles className="h-4 w-4 text-primary" />
@@ -253,7 +229,6 @@
 //                                 </Label>
 //                                 <Input id="twilio-account-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
 //                               </motion.div>
-
 //                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
 //                                 <Label htmlFor="twilio-auth-token" className="flex items-center gap-2 text-sm font-medium">
 //                                   <Users className="h-4 w-4 text-primary" />
@@ -261,7 +236,6 @@
 //                                 </Label>
 //                                 <Input id="twilio-auth-token" type="password" placeholder="your_auth_token" value={twilioAuthToken} onChange={(e) => setTwilioAuthToken(e.target.value)} className="h-11" />
 //                               </motion.div>
-
 //                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
 //                                 <Label htmlFor="twilio-phone" className="flex items-center gap-2 text-sm font-medium">
 //                                   <Phone className="h-4 w-4 text-primary" />
@@ -269,7 +243,6 @@
 //                                 </Label>
 //                                 <Input id="twilio-phone" placeholder="+1 (555) 000-0000" value={twilioPhoneNumber} onChange={(e) => setTwilioPhoneNumber(e.target.value)} className="h-11" />
 //                               </motion.div>
-
 //                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.4 }}>
 //                                 <Label htmlFor="label" className="flex items-center gap-2 text-sm font-medium">
 //                                   <Sparkles className="h-4 w-4 text-primary" />
@@ -280,7 +253,6 @@
 //                             </TabsContent>
 //                           </Tabs>
 //                         </motion.div>
-
 //                         <motion.div className="flex gap-3 pt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.4 }}>
 //                           <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 h-11">
 //                             <X className="h-4 w-4 mr-2" />
@@ -296,7 +268,6 @@
 //                   ) : (
 //                     <motion.div key="assign" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full">
 //                       <motion.div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, ease: "easeOut" }} />
-
 //                       <DialogHeader className="relative px-6 pt-8 pb-4">
 //                         <DialogTitle className="sr-only">Assign Agent</DialogTitle>
 //                         <motion.div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 backdrop-blur-sm" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}>
@@ -309,7 +280,6 @@
 //                           Choose an agent for this number or skip for now
 //                         </motion.p>
 //                       </DialogHeader>
-
 //                       <div className="px-6 pb-6 space-y-4">
 //                         <motion.div className="rounded-lg border bg-muted/30 p-4 space-y-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.4 }}>
 //                           <div className="flex items-center gap-3">
@@ -322,7 +292,6 @@
 //                             </div>
 //                           </div>
 //                         </motion.div>
-
 //                         <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
 //                           <Label className="flex items-center gap-2 text-sm font-medium">
 //                             <UserPlus className="h-4 w-4 text-primary" />
@@ -345,7 +314,6 @@
 //                             </SelectContent>
 //                           </Select>
 //                         </motion.div>
-
 //                         <motion.div className="flex flex-col gap-3 pt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
 //                           <Button onClick={handleAssign} disabled={loading || !selectedAgent} className="w-full h-11 bg-primary hover:bg-primary/90">
 //                             <UserPlus className="h-4 w-4 mr-2" />
@@ -367,10 +335,6 @@
 //     </>
 //   );
 // }
-
-
-
-
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -384,9 +348,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { apiGet, apiPost } from "@/lib/api";
 // Removed SweetAlert usage in favor of built-in confirmation modals
 import { useToast } from "@/components/ui/app-toaster";
-
 type Props = { onCreated: () => void; existingContacts?: Array<{ id: string; name: string; phone: string }>; };
-
 export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"create" | "assign">("create");
@@ -401,11 +363,9 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
   const [createdNumberId, setCreatedNumberId] = useState<string | null>(null);
   const [agents, setAgents] = useState<{id:string; name:string}[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
   // Local confirmation modal state
   const [confirmType, setConfirmType] = useState<null | "close" | "skip">(null);
   const { push } = useToast();
-
   const playSelectionSound = () => {
     try {
       if (audioRef.current && audioRef.current.src && audioRef.current.readyState > 0) {
@@ -413,13 +373,11 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
       }
     } catch {}
   };
-
   // Load agents when dialog opens so we can show real names
   useEffect(() => {
     if (!open) return;
     apiGet<{items:{id:string; name:string}[]}>("/api/voice-agent").then(r => setAgents(r.items));
   }, [open]);
-
   const handleCreate = async () => {
     setLoading(true);
     try {
@@ -447,13 +405,10 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
       setLoading(false);
     }
   };
-
   // const handleAssign = async () => {
   //   if (!createdNumberId || !selectedAgent) return;
-
   //   const phone = importMethod === "twilio" ? twilioPhoneNumber : phoneNumber;
   //   const agentName = agents.find(a => a.id === selectedAgent)?.name || selectedAgent;
-
   //   const result = await Swal.fire({
   //     title: 'Are you sure the data is correct?',
   //     html: `
@@ -468,9 +423,7 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
   //     confirmButtonText: 'Yes, assign it!',
   //     cancelButtonText: 'Cancel'
   //   });
-
   //   if (!result.isConfirmed) return;
-
   //   setLoading(true);
   //   try {
   //     await apiPost(`/api/phoneNumbers/${createdNumberId}/assign`, { agentId: selectedAgent });
@@ -491,8 +444,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
   //     handleClose();
   //   }
   // };
-
-
   const handleAssign = async () => {
     if (!createdNumberId || !selectedAgent) return;
     setLoading(true);
@@ -506,10 +457,8 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
       handleClose();
     }
   };
-
   const requestSkip = () => setConfirmType("skip");
   const requestClose = () => setConfirmType("close");
-
   const handleClose = () => {
     setOpen(false);
     setTimeout(() => {
@@ -525,32 +474,25 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
       onCreated();
     }, 400);
   };
-
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
     visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
     exit: { opacity: 0, scale: 0.95, y: -20, transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] } },
   } as const;
-
   const stepVariants = {
     hidden: { opacity: 0, x: 20, transition: { duration: 0.3, ease: "easeOut" } },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut" } },
     exit: { opacity: 0, x: -20, transition: { duration: 0.2, ease: "easeIn" } },
   } as const;
-
   const isCreateReady = importMethod === "manual"
     ? !!phoneNumber
     : !!(twilioAccountSid && twilioAuthToken && twilioPhoneNumber);
-
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)} className="gap-2 bg-[#037f5c] text-white" aria-label="Create Phone Number">
         <Plus className="h-4 w-4" />
-        
       </Button>
-
       <audio ref={audioRef} src="/sounds/selection.mp3" preload="auto" />
-
       <Dialog open={open} onOpenChange={(v) => { if (!v) requestClose(); else setOpen(v); }}>
         <AnimatePresence mode="wait">
           {open && (
@@ -560,7 +502,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                   {step === "create" ? (
                     <motion.div key="create" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full">
                       <motion.div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, ease: "easeOut" }} />
-
                       <DialogHeader className="relative px-6 pt-8 pb-4">
                         <DialogTitle className="sr-only">Add Phone Number</DialogTitle>
                         <motion.div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 backdrop-blur-sm" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}>
@@ -581,7 +522,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                           Import a new number to your system
                         </motion.p>
                       </DialogHeader>
-
                       <div className="px-6 pb-6 space-y-5">
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.3 }} className="w-full">
                           <Tabs
@@ -614,7 +554,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                                 </Label>
                                 <Input id="phone" placeholder="+1 (555) 000-0000" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="h-11" />
                               </motion.div>
-
                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
                                 <Label htmlFor="label" className="flex items-center gap-2 text-sm font-medium">
                                   <Sparkles className="h-4 w-4 text-primary" />
@@ -631,7 +570,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                                 </Label>
                                 <Input id="twilio-account-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
                               </motion.div>
-
                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
                                 <Label htmlFor="twilio-auth-token" className="flex items-center gap-2 text-sm font-medium">
                                   <Users className="h-4 w-4 text-primary" />
@@ -639,7 +577,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                                 </Label>
                                 <Input id="twilio-auth-token" type="password" placeholder="your_auth_token" value={twilioAuthToken} onChange={(e) => setTwilioAuthToken(e.target.value)} className="h-11" />
                               </motion.div>
-
                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
                                 <Label htmlFor="twilio-phone" className="flex items-center gap-2 text-sm font-medium">
                                   <Phone className="h-4 w-4 text-primary" />
@@ -647,7 +584,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                                 </Label>
                                 <Input id="twilio-phone" placeholder="+1 (555) 000-0000" value={twilioPhoneNumber} onChange={(e) => setTwilioPhoneNumber(e.target.value)} className="h-11" />
                               </motion.div>
-
                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.4 }}>
                                 <Label htmlFor="label" className="flex items-center gap-2 text-sm font-medium">
                                   <Sparkles className="h-4 w-4 text-primary" />
@@ -658,7 +594,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                             </TabsContent>
                           </Tabs>
                         </motion.div>
-
                         <motion.div className="flex gap-3 pt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.4 }}>
                           <Button variant="outline" onClick={requestClose} className="flex-1 h-11">
                             <X className="h-4 w-4 mr-2" />
@@ -674,7 +609,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                   ) : (
                     <motion.div key="assign" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full">
                       <motion.div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, ease: "easeOut" }} />
-
                       <DialogHeader className="relative px-6 pt-8 pb-4">
                         <DialogTitle className="sr-only">Assign Agent</DialogTitle>
                         <motion.div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 backdrop-blur-sm" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}>
@@ -695,7 +629,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                           Choose an agent for this number or skip for now
                         </motion.p>
                       </DialogHeader>
-
                       <div className="px-6 pb-6 space-y-4">
                         <motion.div className="rounded-lg border bg-muted/30 p-4 space-y-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.4 }}>
                           <div className="flex items-center gap-3">
@@ -708,7 +641,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                             </div>
                           </div>
                         </motion.div>
-
                         <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
                           <Label className="flex items-center gap-2 text-sm font-medium">
                             <UserPlus className="h-4 w-4 text-primary" />
@@ -749,7 +681,6 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
           )}
         </AnimatePresence>
       </Dialog>
-
       {/* Confirmation modal */}
       <Dialog open={!!confirmType} onOpenChange={(v) => { if (!v) setConfirmType(null); }}>
         <AnimatePresence>

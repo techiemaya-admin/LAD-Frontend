@@ -1,7 +1,7 @@
-import React, { useMemo, useCallback } from "react";
-import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, FileDown } from "lucide-react";
+import React from "react";
+import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -10,11 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { categorizeLead, getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
-import { sortCallLogs, toggleSortDirection, type SortConfig } from "@/utils/sortingUtils";
-import { generateRecordingFilename, downloadRecording } from "@/utils/recordingDownload";
-import { exportToCSV, exportToJSON, exportToExcel, prepareExportData } from "@/utils/exportToExcel";
-
 interface CallLog {
   id: string;
   assistant?: string;
@@ -26,12 +21,7 @@ interface CallLog {
   cost?: number;
   call_cost?: number;
   batch_id?: string;
-  lead_category?: string;
-  signed_recording_url?: string;
-  recording_url?: string;
-  call_recording_url?: string;
 }
-
 interface CallLogsTableProps {
   items: CallLog[];
   selectedCalls: Set<string>;
@@ -43,9 +33,7 @@ interface CallLogsTableProps {
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
   totalFilteredCount?: number;
-  onSortChange?: (sortConfig: SortConfig | null) => void;
 }
-
 export function CallLogsTable({
   items,
   selectedCalls,
@@ -57,93 +45,11 @@ export function CallLogsTable({
   expandedBatches = new Set(),
   onToggleBatch,
   totalFilteredCount = 0,
-  onSortChange,
 }: CallLogsTableProps) {
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
-  const [downloadErrors, setDownloadErrors] = useState<Map<string, string>>(new Map());
-
-  // Handle sort column click
-  const handleSortClick = useCallback((field: string) => {
-    const newSort = toggleSortDirection(sortConfig, field);
-    setSortConfig(newSort);
-    onSortChange?.(newSort);
-  }, [sortConfig, onSortChange]);
-
-  // Get lead tag for categorization
-  const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    // Prioritize API-provided lead_category and normalize it
-    if (item.lead_category) {
-      const normalized = normalizeLeadCategory(item.lead_category);
-      if (normalized) {
-        return normalized;
-      }
-    }
-    // Fallback to calculated categorization
-    return categorizeLead({
-      status: item.status,
-      duration: item.duration,
-      type: item.type,
-    });
-  }, []);
-  // Handle recording download with error handling
-  const handleDownloadRecording = useCallback(
-    async (callId: string, leadName?: string, startedAt?: string) => {
-      const item = items.find(i => i.id === callId);
-      if (!item) return;
-
-      const recordingUrl = item.signed_recording_url || item.recording_url || item.call_recording_url;
-      if (!recordingUrl) {
-        setDownloadErrors(prev => new Map(prev).set(callId, "No recording available"));
-        return;
-      }
-
-      setDownloadingIds(prev => new Set(prev).add(callId));
-      setDownloadErrors(prev => {
-        const next = new Map(prev);
-        next.delete(callId);
-        return next;
-      });
-
-      try {
-        const filename = generateRecordingFilename(leadName, startedAt);
-        await downloadRecording(recordingUrl, filename, (error) => {
-          setDownloadErrors(prev => new Map(prev).set(callId, error.message));
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Download failed";
-        setDownloadErrors(prev => new Map(prev).set(callId, message));
-      } finally {
-        setDownloadingIds(prev => {
-          const next = new Set(prev);
-          next.delete(callId);
-          return next;
-        });
-      }
-    },
-    [items]
-  );
-
-  // Add computed tags to items for sorting
-  const itemsWithTags = useMemo(() => {
-    return items.map(item => ({
-      ...item,
-      tags: getLeadTag(item),
-      tag: getLeadTag(item),
-    }));
-  }, [items, getLeadTag]);
-
-  // Memoized sorted items to avoid unnecessary re-renders
-  const sortedItems = useMemo(() => {
-    if (!sortConfig) return itemsWithTags;
-    return sortCallLogs(itemsWithTags, sortConfig);
-  }, [itemsWithTags, sortConfig]);
-
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
     if (!leadName || !leadName.trim()) return "—";
-    
     const cleaned = leadName.trim();
     const placeholders = [
       'optional name',
@@ -153,215 +59,103 @@ export function CallLogsTable({
       'enter name',
       'name here',
     ];
-    
     const lowerName = cleaned.toLowerCase();
     // Check if the entire name is a placeholder
     if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
       return "—";
     }
-    
     return cleaned;
   };
-
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleString();
   };
-
   const formatDuration = (seconds?: number) => {
     if (!seconds) return "—";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
-
-  // Helper component for sortable column header
-  const SortableHeader = ({ 
-    field, 
-    label, 
-    sortable = true 
-  }: { 
-    field: string; 
-    label: string; 
-    sortable?: boolean; 
-  }) => {
-    const isActive = sortConfig?.field === field;
-    const isAsc = isActive && sortConfig?.direction === "asc";
-    const tagFilter = (sortConfig as any)?.tagFilter;
-    
-    if (!sortable) {
-      return <TableHead className="font-semibold text-foreground">{label}</TableHead>;
-    }
-
-    return (
-      <TableHead 
-        className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => handleSortClick(field)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            handleSortClick(field);
-          }
-        }}
-      >
-        <div className="flex items-center gap-2">
-          {label}
-          {isActive && tagFilter ? (
-            // Show tag filter status
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white"
-              style={{
-                backgroundColor: tagFilter === 'hot' ? '#ef4444' : tagFilter === 'warm' ? '#f59e0b' : '#3b82f6'
-              }}
-            >
-              {tagFilter.toUpperCase()}
-            </span>
-          ) : isActive ? (
-            isAsc ? (
-              <ArrowUp className="w-4 h-4 text-primary" />
-            ) : (
-              <ArrowDown className="w-4 h-4 text-primary" />
-            )
-          ) : (
-            <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
-          )}
-        </div>
-      </TableHead>
-    );
-  };
+  // Calculate total calls when using batch groups
   const totalCalls = totalFilteredCount > 0 ? totalFilteredCount : (batchGroups 
     ? Object.values(batchGroups.groups).flat().length + batchGroups.noBatchCalls.length
     : items.length);
-  
   const allSelected = totalCalls > 0 && selectedCalls.size === totalCalls;
   const someSelected = selectedCalls.size > 0 && selectedCalls.size < totalCalls;
-
   // Update header checkbox indeterminate state
   useEffect(() => {
     if (headerCheckboxRef.current) {
       headerCheckboxRef.current.indeterminate = someSelected;
     }
   }, [someSelected]);
-
-  const renderCallRow = (item: CallLog, index: number, indent = false) => {
-    const tag = getLeadTag(item);
-    const tagConfig = getTagConfig(tag);
-    const isDownloading = downloadingIds.has(item.id);
-    const downloadError = downloadErrors.get(item.id);
-    const hasRecording = !!(item.signed_recording_url || item.recording_url || item.call_recording_url);
-
-    return (
-      <TableRow
-        key={item.id || `call-${index}`}
-        onClick={() => onRowClick(item.id)}
-        className={`table-row-hover cursor-pointer border-b border-border/30 ${
-          selectedCalls.has(item.id) ? "bg-primary/5" : ""
-        } ${indent ? "bg-muted/20" : ""}`}
-        style={{ animationDelay: `${index * 0.05}s` }}
-      >
-        <TableCell onClick={(e) => e.stopPropagation()} className={indent ? "pl-8" : ""}>
-          <input
-            type="checkbox"
-            checked={selectedCalls.has(item.id)}
-            onChange={(e) => {
-              e.stopPropagation();
-              onSelectCall(item.id);
-            }}
-            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-          />
-        </TableCell>
-        <TableCell className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
-          {item.id.slice(0, 8)}...
-        </TableCell>
-        <TableCell className="font-medium">{item.assistant || "—"}</TableCell>
-        <TableCell className="text-muted-foreground">{cleanLeadName(item.lead_name)}</TableCell>
-        <TableCell>
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-              item.type === "Outbound"
-                ? "bg-warning/15 text-warning border border-warning/30"
-                : "bg-primary/15 text-primary border border-primary/30"
-            }`}
-          >
-            {item.type === "Outbound" ? (
-              <PhoneOutgoing className="w-3.5 h-3.5" />
-            ) : (
-              <PhoneIncoming className="w-3.5 h-3.5" />
-            )}
-            {item.type}
-          </span>
-        </TableCell>
-        <TableCell>
-          <StatusBadge status={item.status} />
-        </TableCell>
-        <TableCell className="text-sm text-muted-foreground">
-          {formatDateTime(item.startedAt)}
-        </TableCell>
-        <TableCell className="font-mono text-sm">
-          {formatDuration(item.duration)}
-        </TableCell>
-        {/* Tags Column */}
-        <TableCell>
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor}`}
-            title={`${tagConfig.label} priority lead`}
-          >
-            {tagConfig.label}
-          </span>
-        </TableCell>
-        <TableCell className="font-mono text-sm">
-          {item.cost || item.call_cost
-            ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}`
-            : "—"}
-        </TableCell>
-        <TableCell onClick={(e) => e.stopPropagation()} className="flex gap-2 items-center">
-          {/* Download Recording Button */}
+  const renderCallRow = (item: CallLog, index: number, indent = false) => (
+    <TableRow
+      key={item.id || `call-${index}`}
+      onClick={() => onRowClick(item.id)}
+      className={`table-row-hover cursor-pointer border-b border-border/30 ${
+        selectedCalls.has(item.id) ? "bg-primary/5" : ""
+      } ${indent ? "bg-muted/20" : ""}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <TableCell onClick={(e) => e.stopPropagation()} className={indent ? "pl-8" : ""}>
+        <input
+          type="checkbox"
+          checked={selectedCalls.has(item.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelectCall(item.id);
+          }}
+          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+        />
+      </TableCell>
+      <TableCell className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
+        {item.id.slice(0, 8)}...
+      </TableCell>
+      <TableCell className="font-medium">{item.assistant || "—"}</TableCell>
+      <TableCell className="text-muted-foreground">{cleanLeadName(item.lead_name)}</TableCell>
+      <TableCell>
+        <span
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+            item.type === "Outbound"
+              ? "bg-warning/15 text-warning border border-warning/30"
+              : "bg-primary/15 text-primary border border-primary/30"
+          }`}
+        >
+          {item.type === "Outbound" ? (
+            <PhoneOutgoing className="w-3.5 h-3.5" />
+          ) : (
+            <PhoneIncoming className="w-3.5 h-3.5" />
+          )}
+          {item.type}
+        </span>
+      </TableCell>
+      <TableCell>
+        <StatusBadge status={item.status} />
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {formatDateTime(item.startedAt)}
+      </TableCell>
+      <TableCell className="font-mono text-sm">
+        {formatDuration(item.duration)}
+      </TableCell>
+      <TableCell className="font-mono text-sm">
+        {item.cost || item.call_cost
+          ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}`
+          : "—"}
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        {item.status?.toLowerCase().includes("ongoing") && (
           <button
-            onClick={() => handleDownloadRecording(item.id, item.lead_name, item.startedAt)}
-            disabled={!hasRecording || isDownloading}
-            className={`p-2 rounded-lg transition-colors ${
-              !hasRecording 
-                ? "text-muted-foreground/50 cursor-not-allowed" 
-                : isDownloading
-                ? "text-primary/50 cursor-wait"
-                : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-            }`}
-            title={
-              !hasRecording 
-                ? "No recording available" 
-                : isDownloading
-                ? "Downloading..."
-                : "Download recording"
-            }
+            onClick={() => onEndCall(item.id)}
+            className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+            title="End Call"
           >
-            <Download className="w-5 h-5" />
+            <StopCircle className="w-5 h-5" />
           </button>
-
-          {/* End Call Button */}
-          {item.status?.toLowerCase().includes("ongoing") && (
-            <button
-              onClick={() => onEndCall(item.id)}
-              className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-              title="End Call"
-            >
-              <StopCircle className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* Error Indicator */}
-          {downloadError && (
-            <div 
-              className="text-xs text-destructive px-2 py-1 bg-destructive/10 rounded max-w-[150px] truncate"
-              title={downloadError}
-            >
-              {downloadError}
-            </div>
-          )}
-        </TableCell>
-      </TableRow>
-    );
-  };
-
+        )}
+      </TableCell>
+    </TableRow>
+  );
   const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
     const isExpanded = expandedBatches.has(batchId);
     const totalCalls = calls.length;
@@ -370,14 +164,13 @@ export function CallLogsTable({
       const cost = Number(call.cost || call.call_cost || 0);
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
-
     return (
       <TableRow
         key={`batch-${batchId}`}
         onClick={() => onToggleBatch?.(batchId)}
         className="bg-primary/5 hover:bg-primary/10 cursor-pointer border-b-2 border-primary/20 transition-colors"
       >
-        <TableCell colSpan={12} className="py-4">
+        <TableCell colSpan={10} className="py-4">
           <div className="flex items-center gap-3">
             {isExpanded ? (
               <ChevronDown className="w-5 h-5 text-primary" />
@@ -403,64 +196,13 @@ export function CallLogsTable({
                 </span>
               </div>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleExportBatch(batchId, calls);
-              }}
-              className="ml-4 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors flex items-center gap-2"
-              title="Export batch to CSV"
-            >
-              <FileDown className="w-4 h-4" />
-              <span className="text-xs font-medium">Export</span>
-            </button>
           </div>
         </TableCell>
       </TableRow>
     );
   };
-
-  // Sort calls within a batch
-  const getSortedBatchCalls = useCallback((calls: CallLog[]): CallLog[] => {
-    if (!sortConfig) return calls;
-    const itemsWithTags = calls.map(item => ({
-      ...item,
-      tags: getLeadTag(item),
-      tag: getLeadTag(item),
-    }));
-    return sortCallLogs(itemsWithTags, sortConfig);
-  }, [sortConfig, getLeadTag]);
-
-  // Export batch to Excel
-  const handleExportBatch = useCallback(async (batchId: string, batchCalls: CallLog[]) => {
-    const exportData = prepareExportData(batchCalls, getLeadTag);
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `batch-${batchId.slice(0, 8)}-${timestamp}.csv`;
-    exportToCSV(exportData, filename);
-  }, [getLeadTag]);
-
-  // Export all logs to Excel
-  const handleExportAll = useCallback(async () => {
-    const exportData = prepareExportData(items, getLeadTag);
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `call-logs-export-${timestamp}.csv`;
-    exportToCSV(exportData, filename);
-  }, [items, getLeadTag]);
-
   return (
     <div className="glass-card rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-      {/* Export Button */}
-      <div className="p-4 border-b border-border/30 bg-muted/10 flex justify-end">
-        <button
-          onClick={handleExportAll}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/90 hover:bg-primary text-white font-medium transition-colors"
-          title="Export all call logs to CSV"
-        >
-          <FileDown className="w-4 h-4" />
-          Export All Logs
-        </button>
-      </div>
-
       <Table>
         <TableHeader>
           <TableRow className="border-b border-border/50 bg-muted/30">
@@ -471,58 +213,55 @@ export function CallLogsTable({
                 checked={allSelected}
                 onChange={(e) => {
                   e.stopPropagation();
+                  // If we're in indeterminate state or unchecked, select all
+                  // If all are already selected, deselect all
                   const shouldSelectAll = !allSelected;
                   onSelectAll(shouldSelectAll);
                 }}
                 className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
               />
             </TableHead>
-            <SortableHeader field="id" label="Call ID" sortable={true} />
-            <SortableHeader field="assistant" label="Agent" sortable={true} />
-            <SortableHeader field="lead_name" label="Lead" sortable={true} />
-            <SortableHeader field="type" label="Type" sortable={true} />
-            <SortableHeader field="status" label="Status" sortable={true} />
-            <SortableHeader field="startedAt" label="Started" sortable={true} />
-            <SortableHeader field="duration" label="Duration" sortable={true} />
-            <SortableHeader field="tags" label="Tags" sortable={true} />
-            <SortableHeader field="cost" label="Cost" sortable={true} />
-            {/* <TableHead className="w-16">Actions</TableHead> */}
+            <TableHead className="font-semibold text-foreground">Call ID</TableHead>
+            <TableHead className="font-semibold text-foreground">Agent</TableHead>
+            <TableHead className="font-semibold text-foreground">Lead</TableHead>
+            <TableHead className="font-semibold text-foreground">Type</TableHead>
+            <TableHead className="font-semibold text-foreground">Status</TableHead>
+            <TableHead className="font-semibold text-foreground">Started</TableHead>
+            <TableHead className="font-semibold text-foreground">Duration</TableHead>
+            <TableHead className="font-semibold text-foreground">Cost</TableHead>
+            <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {batchGroups ? (
             <>
               {/* Render batch groups */}
-              {Object.entries(batchGroups.groups).map(([batchId, calls]) => {
-                const sortedBatchCalls = getSortedBatchCalls(calls);
-                return (
-                  <React.Fragment key={`batch-group-${batchId}`}>
-                    {renderBatchHeader(batchId, calls)}
-                    {expandedBatches.has(batchId) &&
-                      sortedBatchCalls.map((call, idx) => renderCallRow(call, idx, true))}
-                  </React.Fragment>
-                );
-              })}
-              
+              {Object.entries(batchGroups.groups).map(([batchId, calls]) => (
+                <React.Fragment key={`batch-group-${batchId}`}>
+                  {renderBatchHeader(batchId, calls)}
+                  {expandedBatches.has(batchId) &&
+                    calls.map((call, idx) => renderCallRow(call, idx, true))}
+                </React.Fragment>
+              ))}
               {/* Render non-batch calls */}
               {batchGroups.noBatchCalls.length > 0 && (
                 <>
                   {batchGroups.noBatchCalls.length > 0 && Object.keys(batchGroups.groups).length > 0 && (
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={12} className="py-3 text-sm font-semibold text-muted-foreground">
+                      <TableCell colSpan={10} className="py-3 text-sm font-semibold text-muted-foreground">
                         Individual Calls
                       </TableCell>
                     </TableRow>
                   )}
-                  {getSortedBatchCalls(batchGroups.noBatchCalls).map((call, idx) => renderCallRow(call, idx, false))}
+                  {batchGroups.noBatchCalls.map((call, idx) => renderCallRow(call, idx, false))}
                 </>
               )}
             </>
-          ) : sortedItems.length > 0 ? (
-            sortedItems.map((item, index) => renderCallRow(item, index, false))
+          ) : items.length > 0 ? (
+            items.map((item, index) => renderCallRow(item, index, false))
           ) : (
             <TableRow>
-              <TableCell colSpan={12} className="text-center py-12">
+              <TableCell colSpan={10} className="text-center py-12">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                     <PhoneOutgoing className="w-8 h-8 text-muted-foreground" />
@@ -539,4 +278,4 @@ export function CallLogsTable({
       </Table>
     </div>
   );
-}
+}

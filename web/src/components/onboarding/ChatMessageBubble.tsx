@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Bot, User } from 'lucide-react';
@@ -11,7 +10,6 @@ import ConditionSelector from './ConditionSelector';
 import TemplateInput from './TemplateInput';
 import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import { logger } from '@/lib/logger';
-
 interface ChatMessageBubbleProps {
   role: 'ai' | 'user';
   content: string;
@@ -23,8 +21,8 @@ interface ChatMessageBubbleProps {
   onRequirementsComplete?: (data: Record<string, any>) => void;
   onOptionSubmit?: (selectedValues: string[]) => void;
   isLastMessage?: boolean;
+  options?: Array<{ label: string; value: string }>; // Clickable options from backend
 }
-
 export default function ChatMessageBubble({
   role,
   content,
@@ -36,12 +34,12 @@ export default function ChatMessageBubble({
   onRequirementsComplete,
   onOptionSubmit,
   isLastMessage = false,
+  options: propsOptions,
 }: ChatMessageBubbleProps) {
   const isAI = role === 'ai';
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
-
   // CRITICAL FIX: Detect template input request FIRST (before parsing options)
   // Template questions should take priority over action options
   const contentLower = content.toLowerCase();
@@ -62,12 +60,10 @@ export default function ChatMessageBubble({
     // CRITICAL: If message says "You selected X actions" followed by "Please provide template", it's a template question
     (contentLower.includes('you selected') && contentLower.includes('actions') && (contentLower.includes('please provide') || contentLower.includes('provide the') || contentLower.includes('template')))
   );
-
   // Parse options from message content (only for last AI message and NOT a template request)
   // If it's a template request, don't parse options even if they exist in the message
   const parsedOptions = isAI && isLastMessage && !isTemplateRequest ? parseMessageOptions(content) : null;
   const showOptions = parsedOptions !== null && onOptionSubmit !== undefined;
-
   return (
     <div
       className={cn(
@@ -82,7 +78,6 @@ export default function ChatMessageBubble({
           </div>
         </div>
       )}
-
       {/* Message Content */}
       <div className={cn(
         'flex-1 min-w-0 max-w-[85%]',
@@ -101,7 +96,6 @@ export default function ChatMessageBubble({
             {showOptions && parsedOptions ? parsedOptions.questionText : content}
           </div>
         </div>
-
         {/* Selectable Options - Render based on step type */}
         {showOptions && parsedOptions && (
           <div className="mt-3 w-full">
@@ -138,7 +132,6 @@ export default function ChatMessageBubble({
             )}
           </div>
         )}
-
         {/* Template Input */}
         {isTemplateRequest && onOptionSubmit && (
           <div className="mt-3 w-full">
@@ -149,7 +142,6 @@ export default function ChatMessageBubble({
             />
           </div>
         )}
-
         {/* Requirements Collection Component */}
         {showRequirements && onRequirementsComplete && missing && (
           <div className="mt-4">
@@ -161,7 +153,6 @@ export default function ChatMessageBubble({
             />
           </div>
         )}
-
         {/* Search Results Cards */}
         {showSearchResults && (
           <div className="mt-4">
@@ -174,7 +165,6 @@ export default function ChatMessageBubble({
             />
           </div>
         )}
-
         {timestamp && (
           <div className={cn(
             'mt-1.5 text-xs',
@@ -187,7 +177,6 @@ export default function ChatMessageBubble({
           </div>
         )}
       </div>
-
       {!isAI && (
         <div className="flex-shrink-0">
           <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center shadow-sm">
@@ -197,5 +186,4 @@ export default function ChatMessageBubble({
       )}
     </div>
   );
-}
-
+}

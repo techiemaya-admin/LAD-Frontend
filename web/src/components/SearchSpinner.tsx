@@ -1,19 +1,15 @@
 'use client';
-
 interface SearchSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   message?: string;
 }
-
 const SearchSpinner = ({ size = 'md', message }: SearchSpinnerProps) => {
   const sizeMap = {
     sm: 42,
     md: 84,
     lg: 126,
   };
-
   const spinnerSize = sizeMap[size];
-
   return (
     <div className="flex flex-col items-center justify-center gap-4">
       <div 
@@ -62,5 +58,4 @@ const SearchSpinner = ({ size = 'md', message }: SearchSpinnerProps) => {
     </div>
   );
 };
-
-export default SearchSpinner;
+export default SearchSpinner;

@@ -2,7 +2,6 @@
  * Billing Feature - TypeScript Types
  * Shared type definitions for billing operations
  */
-
 export interface WalletBalance {
   walletId: string;
   tenantId: string;
@@ -13,7 +12,6 @@ export interface WalletBalance {
   status: 'active' | 'suspended' | 'closed';
   lowBalanceThreshold?: number;
 }
-
 export interface UsageEvent {
   id: string;
   tenantId: string;
@@ -25,7 +23,6 @@ export interface UsageEvent {
   chargedAt?: string;
   usageItems?: UsageItem[];
 }
-
 export interface UsageItem {
   category: string;
   provider: string;
@@ -35,7 +32,6 @@ export interface UsageItem {
   unitPrice: number;
   cost: number;
 }
-
 export interface LedgerTransaction {
   id: string;
   tenantId: string;
@@ -50,7 +46,6 @@ export interface LedgerTransaction {
   createdBy?: string;
   createdAt: string;
 }
-
 export interface PricingItem {
   id: string;
   tenantId?: string; // null = global pricing
@@ -64,11 +59,9 @@ export interface PricingItem {
   effectiveTo?: string;
   isActive: boolean;
 }
-
 export interface QuoteRequest {
   items: QuoteItem[];
 }
-
 export interface QuoteItem {
   category: string;
   provider: string;
@@ -76,18 +69,15 @@ export interface QuoteItem {
   unit: string;
   quantity: number;
 }
-
 export interface QuoteResponse {
   totalCost: number;
   currency: string;
   items: QuoteResponseItem[];
 }
-
 export interface QuoteResponseItem extends QuoteItem {
   unitPrice: number;
   cost: number;
 }
-
 export interface ChargeRequest {
   featureKey: string;
   externalReferenceId?: string;
@@ -95,18 +85,15 @@ export interface ChargeRequest {
   items: QuoteItem[];
   metadata?: Record<string, any>;
 }
-
 export interface ChargeResponse {
   usageEvent: UsageEvent;
   transaction: LedgerTransaction;
 }
-
 export interface TopUpRequest {
   amount: number;
   description?: string;
   idempotencyKey: string;
 }
-
 export interface UsageListParams {
   from?: string;
   to?: string;
@@ -115,33 +102,28 @@ export interface UsageListParams {
   limit?: number;
   offset?: number;
 }
-
 export interface UsageListResponse {
   events: UsageEvent[];
   summary: UsageSummary;
 }
-
 export interface UsageSummary {
   totalEvents: number;
   totalCost: number;
   byFeature: Record<string, { events: number; cost: number }>;
   byStatus: Record<string, { events: number; cost: number }>;
 }
-
 export interface UsageAggregation {
   featureKey: string;
   status: string;
   eventCount: number;
   totalCost: number;
 }
-
 export interface TransactionListParams {
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
 }
-
 /**
  * LEGACY TYPES - For backward compatibility
  */
@@ -158,7 +140,6 @@ export interface LegacyWalletBalance {
   totalSpent: number;
   transactions?: LegacyTransaction[];
 }
-
 export interface LegacyTransaction {
   id: string;
   amount: number;
@@ -167,7 +148,6 @@ export interface LegacyTransaction {
   timestamp: string;
   status: 'completed' | 'pending' | 'failed';
 }
-
 export interface CreditPackage {
   id: string;
   name: string;
@@ -177,4 +157,4 @@ export interface CreditPackage {
   savings: number;
   popular?: boolean;
   description: string;
-}
+}

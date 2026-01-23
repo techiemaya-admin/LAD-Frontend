@@ -1,21 +1,17 @@
 "use client";
-
 import React from 'react';
 import { Brain, Lightbulb, TrendingUp, AlertCircle } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { cn } from '@/lib/utils';
-
 interface Insight {
   id: string;
   type: 'tip' | 'warning' | 'trend';
   title: string;
   description: string;
 }
-
 interface AIInsightsWidgetProps {
   id: string;
 }
-
 const demoInsights: Insight[] = [
   {
     id: '1',
@@ -36,19 +32,16 @@ const demoInsights: Insight[] = [
     description: 'Schedule these before end of day for best results',
   },
 ];
-
 const insightIcons = {
   tip: Lightbulb,
   trend: TrendingUp,
   warning: AlertCircle,
 };
-
 const insightStyles = {
   tip: 'bg-blue-50 border-blue-200 text-blue-700',
   trend: 'bg-green-50 border-green-200 text-green-700',
   warning: 'bg-amber-50 border-amber-200 text-amber-700',
 };
-
 export const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ id }) => {
   return (
     <WidgetWrapper id={id} title="AI Insights">
@@ -74,4 +67,4 @@ export const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ id }) => {
       </div>
     </WidgetWrapper>
   );
-};
+};

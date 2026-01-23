@@ -1,14 +1,11 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
-
 export default function Screen2OutboundQuestions() {
   const { setOutboundRequirements, setCurrentScreen } = useOnboardingStore();
-  
   const [requirements, setRequirements] = useState({
     industry: '',
     jobTitles: [''],
@@ -19,10 +16,8 @@ export default function Screen2OutboundQuestions() {
     needPhones: false,
     volume: 100,
   });
-
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
-
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -30,13 +25,11 @@ export default function Screen2OutboundQuestions() {
       handleSubmit();
     }
   };
-
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
-
   const handleSubmit = async () => {
     const outboundData = {
       ...requirements,
@@ -47,58 +40,48 @@ export default function Screen2OutboundQuestions() {
         max: requirements.companySize.max ? parseInt(requirements.companySize.max) : undefined,
       },
     };
-
     setOutboundRequirements(outboundData);
-
     try {
       await apiPost('/api/onboarding/outbound/requirements', outboundData);
     } catch (error) {
       logger.error('Failed to save requirements', error);
     }
-
     setCurrentScreen(5); // Move to workflow setup
   };
-
   const addJobTitle = () => {
     setRequirements({
       ...requirements,
       jobTitles: [...requirements.jobTitles, ''],
     });
   };
-
   const removeJobTitle = (index: number) => {
     setRequirements({
       ...requirements,
       jobTitles: requirements.jobTitles.filter((_, i) => i !== index),
     });
   };
-
   const updateJobTitle = (index: number, value: string) => {
     const newTitles = [...requirements.jobTitles];
     newTitles[index] = value;
     setRequirements({ ...requirements, jobTitles: newTitles });
   };
-
   const addLocation = () => {
     setRequirements({
       ...requirements,
       locations: [...requirements.locations, ''],
     });
   };
-
   const removeLocation = (index: number) => {
     setRequirements({
       ...requirements,
       locations: requirements.locations.filter((_, i) => i !== index),
     });
   };
-
   const updateLocation = (index: number, value: string) => {
     const newLocations = [...requirements.locations];
     newLocations[index] = value;
     setRequirements({ ...requirements, locations: newLocations });
   };
-
   return (
     <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
@@ -111,7 +94,6 @@ export default function Screen2OutboundQuestions() {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
@@ -129,7 +111,6 @@ export default function Screen2OutboundQuestions() {
               />
             </div>
           </div>
-
           <div className="bg-white rounded-2xl p-8 shadow-lg">
             {/* Step 1: Industry & Job Titles */}
             {currentStep === 1 && (
@@ -137,7 +118,6 @@ export default function Screen2OutboundQuestions() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Industry & Job Titles
                 </h2>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Industry *
@@ -152,7 +132,6 @@ export default function Screen2OutboundQuestions() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Job Titles *
@@ -186,14 +165,12 @@ export default function Screen2OutboundQuestions() {
                 </div>
               </div>
             )}
-
             {/* Step 2: Locations */}
             {currentStep === 2 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Target Locations
                 </h2>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Locations *
@@ -227,14 +204,12 @@ export default function Screen2OutboundQuestions() {
                 </div>
               </div>
             )}
-
             {/* Step 3: Company Size */}
             {currentStep === 3 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Company Size
                 </h2>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -279,14 +254,12 @@ export default function Screen2OutboundQuestions() {
                 </div>
               </div>
             )}
-
             {/* Step 4: Data Requirements & Volume */}
             {currentStep === 4 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Data Requirements & Volume
                 </h2>
-
                 <div className="space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -302,7 +275,6 @@ export default function Screen2OutboundQuestions() {
                     />
                     <span className="text-gray-700">Need LinkedIn URLs</span>
                   </label>
-
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -317,7 +289,6 @@ export default function Screen2OutboundQuestions() {
                     />
                     <span className="text-gray-700">Need Email Addresses</span>
                   </label>
-
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -333,7 +304,6 @@ export default function Screen2OutboundQuestions() {
                     <span className="text-gray-700">Need Phone Numbers</span>
                   </label>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Volume Required *
@@ -357,7 +327,6 @@ export default function Screen2OutboundQuestions() {
                 </div>
               </div>
             )}
-
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
               <button
@@ -381,5 +350,4 @@ export default function Screen2OutboundQuestions() {
       </div>
     </div>
   );
-}
-
+}

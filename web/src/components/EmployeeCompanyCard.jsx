@@ -18,7 +18,6 @@ import {
   Lock,
   CheckCircle,
 } from '@mui/icons-material';
-
 export default function EmployeeCompanyCard({
   employee,
   employeeViewMode = 'grid',
@@ -28,14 +27,11 @@ export default function EmployeeCompanyCard({
   handleRevealEmail,
 }) {
   if (!employee) return null;
-
   const idKey = employee.id || employee.name;
-
   const phoneRevealed = revealedContacts[idKey]?.phone;
   const emailRevealed = revealedContacts[idKey]?.email;
   const phoneLoading = revealingContacts[idKey]?.phone;
   const emailLoading = revealingContacts[idKey]?.email;
-
   return (
     <Card
       sx={{
@@ -105,7 +101,6 @@ export default function EmployeeCompanyCard({
                 }}
               />
             </Avatar>
-
             {/* Name & Title */}
             <Box
               sx={{
@@ -167,7 +162,6 @@ export default function EmployeeCompanyCard({
               )}
             </Box>
           </Box>
-
           {/* Right: contact info */}
           <Box
             sx={{
@@ -268,7 +262,6 @@ export default function EmployeeCompanyCard({
                 </span>
               </Tooltip>
             </Box>
-
             {/* Email */}
             <Box
               sx={{
@@ -364,4 +357,4 @@ export default function EmployeeCompanyCard({
       </CardContent>
     </Card>
   );
-}
+}

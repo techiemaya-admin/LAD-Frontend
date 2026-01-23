@@ -1,2 +1,1 @@
-export { default } from './RequirementsCollection/index';
-
+export { default } from './RequirementsCollection/index';

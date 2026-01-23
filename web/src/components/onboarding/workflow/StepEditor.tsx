@@ -1,24 +1,19 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
 import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle } from 'lucide-react';
-
 interface StepEditorProps {
   step: WorkflowPreviewStep;
   onClose: () => void;
 }
-
 export default function StepEditor({ step, onClose }: StepEditorProps) {
   const { updateWorkflowStep } = useOnboardingStore();
-  
   // Parse delay values from step title/description if not set
   const parseDelayFromTitle = () => {
     const title = step.title?.toLowerCase() || '';
     // Extract number from title (e.g., "Wait 2 hours delay" -> 2)
     const match = title.match(/(\d+)/);
     const num = match ? parseInt(match[1]) : 0;
-    
     if (title.includes('hour')) {
       return { days: 0, hours: num };
     } else if (title.includes('day')) {
@@ -27,9 +22,7 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     // Fallback to stored values
     return { days: step.delayDays || 0, hours: step.delayHours || 0 };
   };
-  
   const parsedDelay = parseDelayFromTitle();
-  
   const [formData, setFormData] = useState({
     title: step.title || '',
     description: step.description || '',
@@ -41,7 +34,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     delayHours: parsedDelay.hours,
     leadLimit: step.leadLimit || 10,
   });
-
   const getStepIcon = () => {
     if (step.type.startsWith('linkedin_')) return <Linkedin className="w-5 h-5" />;
     if (step.type.startsWith('whatsapp_')) return <MessageCircle className="w-5 h-5" />;
@@ -52,7 +44,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     if (step.type === 'condition') return <CheckCircle className="w-5 h-5" />;
     return null;
   };
-
   const getStepColor = () => {
     if (step.type.startsWith('linkedin_')) return 'bg-[#0077B5]';
     if (step.type.startsWith('whatsapp_')) return 'bg-[#25D366]';
@@ -62,13 +53,11 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     if (step.type === 'delay') return 'bg-gray-500';
     return 'bg-blue-500';
   };
-
   const handleSave = () => {
     // For delay steps, update title and description based on days/hours values
     if (step.type === 'delay') {
       const days = formData.delayDays || 0;
       const hours = formData.delayHours || 0;
-      
       // Build a user-friendly title
       let delayTitle = 'Wait ';
       const parts = [];
@@ -76,7 +65,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
       if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
       if (parts.length === 0) parts.push('0 hours');
       delayTitle += parts.join(' ');
-      
       updateWorkflowStep(step.id, {
         ...formData,
         title: delayTitle,
@@ -91,7 +79,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     }
     onClose();
   };
-
   const renderFields = () => {
     switch (step.type) {
       case 'lead_generation':
@@ -128,7 +115,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'linkedin_visit':
       case 'linkedin_follow':
         return (
@@ -147,7 +133,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'linkedin_connect':
         return (
           <div className="space-y-4">
@@ -168,7 +153,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'linkedin_message':
         return (
           <div className="space-y-4">
@@ -189,7 +173,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'whatsapp_broadcast':
       case 'whatsapp_message':
       case 'whatsapp_followup':
@@ -212,7 +195,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'whatsapp_template':
         return (
           <div className="space-y-4">
@@ -242,7 +224,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'email_send':
       case 'email_followup':
         return (
@@ -276,7 +257,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'voice_call':
         return (
           <div className="space-y-4">
@@ -294,7 +274,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'voice_script':
         return (
           <div className="space-y-4">
@@ -315,7 +294,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       case 'delay':
         return (
           <div className="space-y-4">
@@ -348,7 +326,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             </div>
           </div>
         );
-
       default:
         return (
           <div className="space-y-4">
@@ -367,7 +344,6 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
         );
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
@@ -387,12 +363,10 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
             <X className="w-5 h-5" />
           </button>
         </div>
-
         {/* Content */}
         <div className="p-6">
           {renderFields()}
         </div>
-
         {/* Footer */}
         <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
           <button
@@ -412,4 +386,4 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
       </div>
     </div>
   );
-}
+}

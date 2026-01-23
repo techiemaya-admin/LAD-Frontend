@@ -8,11 +8,9 @@
  * - Smart caching
  * - Shows stale data while revalidating
  */
-
 import useSWR from 'swr';
 import { getCampaigns } from '../api';
 import type { Campaign, CampaignFilters } from '../types';
-
 export interface UseCampaignsLiveReturn {
   campaigns: Campaign[];
   loading: boolean;
@@ -20,7 +18,6 @@ export interface UseCampaignsLiveReturn {
   mutate: () => void; // Manual refresh
   isValidating: boolean; // True when fetching in background
 }
-
 export function useCampaignsLive(filters?: CampaignFilters): UseCampaignsLiveReturn {
   const { data, error, isValidating, mutate } = useSWR(
     ['campaigns', filters],
@@ -38,7 +35,6 @@ export function useCampaignsLive(filters?: CampaignFilters): UseCampaignsLiveRet
       keepPreviousData: true,
     }
   );
-
   return {
     campaigns: data || [],
     loading: !data && !error,
@@ -46,4 +42,4 @@ export function useCampaignsLive(filters?: CampaignFilters): UseCampaignsLiveRet
     mutate,
     isValidating,
   };
-}
+}

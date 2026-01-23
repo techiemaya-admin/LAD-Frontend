@@ -2,7 +2,6 @@
  * API Client for Deals Pipeline Feature
  * TypeScript SDK for frontend applications
  */
-
 import type {
   Lead,
   Stage,
@@ -23,11 +22,9 @@ import type {
   CreateStudentPayload,
   UpdateStudentPayload,
 } from './types';
-
 export class DealsPipelineAPI {
   private baseUrl: string;
   private headers: HeadersInit;
-
   constructor(baseUrl: string = 'https://lad-backend-develop-741719885039.us-central1.run.app/api/deals-pipeline', headers: HeadersInit = {}) {
     this.baseUrl = baseUrl;
     this.headers = {
@@ -35,7 +32,6 @@ export class DealsPipelineAPI {
       ...headers,
     };
   }
-
   /**
    * Set authentication token
    */
@@ -45,7 +41,6 @@ export class DealsPipelineAPI {
       Authorization: `Bearer ${token}`,
     };
   }
-
   /**
    * Generic fetch wrapper with error handling
    */
@@ -58,20 +53,16 @@ export class DealsPipelineAPI {
         ...options.headers,
       },
     };
-
     try {
       const response = await fetch(url, config);
-      
       if (!response.ok) {
         const error: ApiError = await response.json();
         throw new Error(error.error || `HTTP ${response.status}`);
       }
-
       // Handle 204 No Content
       if (response.status === 204) {
         return undefined as T;
       }
-
       return await response.json();
     } catch (error) {
       if (error instanceof Error) {
@@ -80,9 +71,7 @@ export class DealsPipelineAPI {
       throw new Error('Network error');
     }
   }
-
   // ==================== LEADS ====================
-
   /**
    * List all leads
    */
@@ -91,18 +80,15 @@ export class DealsPipelineAPI {
     if (filters?.stage) params.append('stage', filters.stage);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
-    
     const query = params.toString() ? `?${params}` : '';
     return this.fetch<Lead[]>(`/leads${query}`);
   }
-
   /**
    * Get a single lead by ID
    */
   async getLead(id: string): Promise<Lead> {
     return this.fetch<Lead>(`/leads/${id}`);
   }
-
   /**
    * Create a new lead
    */
@@ -112,7 +98,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(payload),
     });
   }
-
   /**
    * Update a lead
    */
@@ -122,7 +107,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(payload),
     });
   }
-
   /**
    * Delete a lead
    */
@@ -131,23 +115,19 @@ export class DealsPipelineAPI {
       method: 'DELETE',
     });
   }
-
   /**
    * Get lead statistics
    */
   async getLeadStats(): Promise<LeadStats> {
     return this.fetch<LeadStats>('/leads/stats');
   }
-
   // ==================== STAGES ====================
-
   /**
    * List all pipeline stages
    */
   async listStages(): Promise<Stage[]> {
     return this.fetch<Stage[]>('/stages');
   }
-
   /**
    * Create a new stage
    */
@@ -157,7 +137,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(payload),
     });
   }
-
   /**
    * Update a stage
    */
@@ -167,7 +146,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(payload),
     });
   }
-
   /**
    * Delete a stage
    */
@@ -176,7 +154,6 @@ export class DealsPipelineAPI {
       method: 'DELETE',
     });
   }
-
   /**
    * Reorder stages
    */
@@ -186,16 +163,13 @@ export class DealsPipelineAPI {
       body: JSON.stringify({ stages }),
     });
   }
-
   // ==================== PIPELINE ====================
-
   /**
    * Get complete pipeline board data
    */
   async getPipelineBoard(): Promise<PipelineBoard> {
     return this.fetch<PipelineBoard>('/pipeline/board');
   }
-
   /**
    * Move a lead to a different stage
    */
@@ -205,7 +179,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify({ stageKey }),
     });
   }
-
   /**
    * Update lead status
    */
@@ -215,39 +188,32 @@ export class DealsPipelineAPI {
       body: JSON.stringify({ statusKey }),
     });
   }
-
   // ==================== REFERENCE DATA ====================
-
   /**
    * Get all lead statuses
    */
   async getStatuses(): Promise<Status[]> {
     return this.fetch<Status[]>('/reference/statuses');
   }
-
   /**
    * Get all lead sources
    */
   async getSources(): Promise<Source[]> {
     return this.fetch<Source[]>('/reference/sources');
   }
-
   /**
    * Get all lead priorities
    */
   async getPriorities(): Promise<Priority[]> {
     return this.fetch<Priority[]>('/reference/priorities');
   }
-
   // ==================== NOTES ====================
-
   /**
    * Get all notes for a lead
    */
   async getLeadNotes(leadId: string): Promise<Note[]> {
     return this.fetch<Note[]>(`/leads/${leadId}/notes`);
   }
-
   /**
    * Create a note for a lead
    */
@@ -257,7 +223,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify({ content, created_by: createdBy }),
     });
   }
-
   /**
    * Delete a note
    */
@@ -266,9 +231,7 @@ export class DealsPipelineAPI {
       method: 'DELETE',
     });
   }
-
   // ==================== STUDENTS ====================
-
   /**
    * List all students
    */
@@ -280,18 +243,15 @@ export class DealsPipelineAPI {
     if (filters?.counsellor_id) params.append('counsellor_id', filters.counsellor_id);
     if (filters?.education_level) params.append('education_level', filters.education_level);
     if (filters?.country_of_interest) params.append('country_of_interest', filters.country_of_interest);
-    
     const query = params.toString() ? `?${params}` : '';
     return this.fetch<StudentWithLead[]>(`/students${query}`);
   }
-
   /**
    * Get a single student by ID
    */
   async getStudent(id: string): Promise<StudentWithLead> {
     return this.fetch<StudentWithLead>(`/students/${id}`);
   }
-
   /**
    * Create a new student
    */
@@ -301,7 +261,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(student),
     });
   }
-
   /**
    * Update a student
    */
@@ -311,7 +270,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify(student),
     });
   }
-
   /**
    * Delete a student
    */
@@ -320,7 +278,6 @@ export class DealsPipelineAPI {
       method: 'DELETE',
     });
   }
-
   /**
    * Assign counsellor to student
    */
@@ -330,7 +287,6 @@ export class DealsPipelineAPI {
       body: JSON.stringify({ counsellor_id: counsellorId }),
     });
   }
-
   /**
    * Get all counsellors
    */
@@ -338,9 +294,7 @@ export class DealsPipelineAPI {
     return this.fetch<any[]>('/counsellors');
   }
 }
-
 // Export singleton instance
 export const dealsPipelineAPI = new DealsPipelineAPI();
-
 // Export for custom instances
-export default DealsPipelineAPI;
+export default DealsPipelineAPI;

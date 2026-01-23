@@ -1,11 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-
 export function AgentAudioPlayer({ src }: { src?: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-
   useEffect(() => {
     setPlaying(false);
     if (audioRef.current) {
@@ -13,7 +11,6 @@ export function AgentAudioPlayer({ src }: { src?: string }) {
       audioRef.current.currentTime = 0;
     }
   }, [src]);
-
   return (
     <div className="rounded-lg bg-secondary p-4">
       <audio ref={audioRef} src={src} />
@@ -37,4 +34,4 @@ export function AgentAudioPlayer({ src }: { src?: string }) {
       <div className="mt-2 text-xs text-muted-foreground">{src ? "Preview the selected agent voice" : "Select an agent to preview audio"}</div>
     </div>
   );
-}
+}

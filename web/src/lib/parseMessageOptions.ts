@@ -17,17 +17,13 @@ export interface ParsedOptions {
   subStepType?: 'campaign_days' | 'working_days'; // For campaign_settings
   preSelectedOptions?: string[]; // Pre-selected options (for platform actions)
 }
-
 export function parseMessageOptions(message: string): ParsedOptions | null {
   if (!message || typeof message !== 'string') {
     return null;
   }
-
   const messageLower = message.toLowerCase();
-  
   // Check if message contains "Options:" keyword
   const optionsMatch = message.match(/Options?:/i);
-  
   // If no "Options:" keyword, check if it's a platform actions question that might have options in examples
   if (!optionsMatch) {
     // Check if it's a platform actions question with examples
@@ -42,12 +38,10 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       messageLower.includes('which voice call actions') ||
       (messageLower.includes('actions') && (messageLower.includes('linkedin') || messageLower.includes('email') || messageLower.includes('whatsapp') || messageLower.includes('voice')))
     );
-    
     if (isPlatformActionsQuestion) {
       // Extract platform name
       const platformMatch = message.match(/(linkedin|email|whatsapp|voice)/i);
       const platformKey = platformMatch ? platformMatch[1].toLowerCase() : '';
-      
       // Known platform actions (from backend GeminiIntentService.js)
       const platformActionsMap: Record<string, string[]> = {
         linkedin: ['Visit profile', 'Follow profile', 'Send connection request', 'Send message (after accepted)'],
@@ -55,13 +49,10 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
         whatsapp: ['Send broadcast', 'Send 1:1 message', 'Follow-up message', 'Template message'],
         voice: ['Trigger call', 'Use call script'],
       };
-      
       const knownOptions = platformActionsMap[platformKey] || [];
-      
       // Try to extract options from examples in parentheses or after "e.g."
       const exampleMatch = message.match(/\(e\.g\.\s*([^)]+)\)/i) || message.match(/examples?:\s*([^\.]+)/i);
       let options = knownOptions;
-      
       if (exampleMatch && knownOptions.length === 0) {
         // If we don't have known options, try to extract from examples
         const exampleText = exampleMatch[1];
@@ -69,12 +60,10 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
           .split(',')
           .map(opt => opt.trim())
           .filter(opt => opt.length > 0);
-        
         if (extractedOptions.length > 0) {
           options = extractedOptions;
         }
       }
-      
       // Only return if we have options to show
       if (options.length > 0) {
         // Extract platform index
@@ -85,7 +74,6 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
           platformIndex = parseInt(platformIndexMatch[1], 10);
           totalPlatforms = parseInt(platformIndexMatch[2], 10);
         }
-        
         // Clean question text - remove clarification prefixes and examples
         let cleanQuestionText = message
           .replace(/^it looks like[^!]+!?\s*/i, '') // Remove "It looks like..." prefix
@@ -94,17 +82,14 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
           .split('(')[0] // Remove everything after first parenthesis
           .split('e.g.')[0] // Remove everything after "e.g."
           .trim();
-        
         // If question text is too short, use a default
         if (cleanQuestionText.length < 10) {
           cleanQuestionText = `What ${platformKey.charAt(0).toUpperCase() + platformKey.slice(1)} actions do you want to include?`;
         }
-        
         // Check if message says "pre-selected" or "all actions are pre-selected"
         const isPreSelected = messageLower.includes('pre-selected') || 
                              messageLower.includes('all actions are pre-selected') ||
                              messageLower.includes('all') && messageLower.includes('pre-selected');
-        
         return {
           options,
           multiSelect: true, // Platform actions are always multi-select
@@ -118,16 +103,13 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
         };
       }
     }
-    
     // If still no options found, return null
     return null;
   }
-
   // Split message into question and options sections
   const optionsIndex = message.indexOf(optionsMatch[0]);
   const questionText = message.substring(0, optionsIndex).trim();
   const optionsSection = message.substring(optionsIndex + optionsMatch[0].length).trim();
-
   // Extract options (support bullet points: •, *, -, or numbered)
   const optionLines = optionsSection
     .split('\n')
@@ -141,20 +123,16 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       return line.replace(/^[•\*\-]\s+/, '').replace(/^\d+\.\s+/, '').trim();
     })
     .filter(line => line.length > 0 && !line.toLowerCase().includes('modify your selection')); // Filter out helper text
-
   // Check for multi-select hint
   const multiSelectKeywords = ['multiple', 'choose multiple', 'select multiple', 'one or more', 'any'];
   const multiSelect = multiSelectKeywords.some(keyword => 
     message.toLowerCase().includes(keyword)
   );
-
   // Skip is no longer allowed - all questions are required
   const allowSkip = false;
-
   if (optionLines.length === 0) {
     return null;
   }
-
   // Detect step type from message content
   let stepType: ParsedOptions['stepType'];
   let platformName: string | undefined;
@@ -162,7 +140,6 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
   let totalPlatforms: number | undefined;
   let subStepType: ParsedOptions['subStepType'];
   let preSelectedOptions: string[] | undefined;
-  
   // Platform selection (Step 4)
   if (messageLower.includes('which platforms') || messageLower.includes('platforms do you want')) {
     stepType = 'platform_selection';
@@ -181,12 +158,10 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       platformIndex = parseInt(platformIndexMatch[1], 10);
       totalPlatforms = parseInt(platformIndexMatch[2], 10);
     }
-    
     // Check if message says "pre-selected" or "all actions are pre-selected"
     const isPreSelected = messageLower.includes('pre-selected') || 
                          messageLower.includes('all actions are pre-selected') ||
                          (messageLower.includes('all') && messageLower.includes('pre-selected'));
-    
     // If pre-selected, pre-select ALL options
     if (isPreSelected && optionLines.length > 0) {
       preSelectedOptions = [...optionLines]; // Pre-select all extracted options
@@ -222,7 +197,6 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       subStepType = 'working_days';
     }
   }
-
   return {
     options: optionLines,
     multiSelect,
@@ -235,6 +209,4 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     subStepType,
     preSelectedOptions,
   };
-}
-
-
+}

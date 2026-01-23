@@ -1,7 +1,5 @@
 
-
 "use client";
-
 import { useState } from "react";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent
@@ -17,16 +15,12 @@ import ExcelJS from "exceljs";
 import { useMakeCall } from "@sdk/features/voice-agent/features/voice-agent";
 import { logger } from "@/lib/logger";
 import { apiPost } from "@/lib/api";
-
-  
-
 type BulkEntry = {
   to_number: string;
   lead_name?: string;
   added_context?: string;
   lead_id?: string; // V2: UUID string instead of int
   knowledge_base_store_ids?: string[]; // V2: New field
-  
   // Legacy/UI fields for backward compatibility
   name?: string;
   company_name?: string;
@@ -34,21 +28,17 @@ type BulkEntry = {
   requested_id?: string;
   _extra?: Record<string, any>;
 };
-
 interface CallOptionsProps {
   useCsv: boolean;
   onUseCsvChange: (useCsv: boolean) => void;
-
   // Single
   dial: string;
   onDialChange: (dial: string) => void;
   clientName: string;
   onClientNameChange: (clientName: string) => void;
-
   // Bulk
   bulkEntries?: BulkEntry[];
   onBulkEntriesChange?: (rows: BulkEntry[]) => void;
-
   loading: boolean;
   selectedNumberId: string | undefined;
   agentId: string | undefined;
@@ -62,7 +52,6 @@ interface CallOptionsProps {
   dataType?: 'company' | 'employee'; // Track data type for backend updates
   onDataSourceChange?: (source: 'backend' | 'file' | 'localStorage') => void; // Allow updating data source
 }
-
 export function CallOptions(props: CallOptionsProps) {
   const {
     useCsv, onUseCsvChange,
@@ -77,17 +66,13 @@ export function CallOptions(props: CallOptionsProps) {
     dataType = 'company',
     onDataSourceChange,
   } = props;
-
   const { push } = useToast();
   const router = useRouter();
-  
   // LAD Architecture Compliance: Use SDK hook instead of direct API calls
   const makeCallMutation = useMakeCall();
-
   const [expanded, setExpanded] = useState(false);
   const hasBulk = (bulkEntries?.length || 0) > 0;
   const visibleCount = expanded ? bulkEntries.length : Math.min(5, bulkEntries.length);
-
   // --- new state for radio selection and modal ---
   const [selectedSummaryIndex, setSelectedSummaryIndex] = useState<number | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -101,7 +86,6 @@ export function CallOptions(props: CallOptionsProps) {
     company_sales_summary?: string; // for employees
   }>({ to_number: "", name: "", summary: "" });
   const [savingSummary, setSavingSummary] = useState(false);
-
   // Helper function to filter out placeholder/template text from names
   const cleanLeadName = (name: string | undefined, phone: string): string => {
     if (!name || !name.trim()) return phone;
@@ -122,19 +106,16 @@ export function CallOptions(props: CallOptionsProps) {
     }
     return cleaned;
   };
-
   const handleSubmit = async () => {
     onLoadingChange?.(true);
     try {
       if (!agentId) throw new Error("Please select a voice agent");
       if (!fromNumber) throw new Error("Please select a valid from number");
-
       // Determine effective initiator
       const effectiveInitiator =
         initiatedBy !== undefined
           ? initiatedBy
           : (agentId && !Number.isNaN(Number(agentId)) ? Number(agentId) : undefined);
-
       if (useCsv) {
         if (!hasBulk) throw new Error("No numbers in the bulk list");
 // updated bulk payload - include per-row summary and top-level added_context
@@ -156,23 +137,19 @@ export function CallOptions(props: CallOptionsProps) {
             })),
           ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
         };
-
         logger.debug('Sending bulk payload', { entriesCount: payload.entries.length });
         // Using backend voice-agent batch calls API (V2 endpoint)
         const res = await apiPost("/api/voice-agent/batch/trigger-batch-call", payload);
-
         // Expect backend response like { success: true, result: { job_id: "batch-..." } }
         const anyRes: any = res;
         const jobId: string | undefined =
           anyRes?.result?.job_id ||
           anyRes?.batch?.job_id ||
           anyRes?.job_id;
-
         push({
           title: "Bulk Calls Started",
           description: `${payload.entries.length} numbers queued.`,
         });
-
         if (jobId) {
           router.push(
             `/call-logs?jobId=${encodeURIComponent(jobId)}&mode=current-batch`
@@ -183,19 +160,15 @@ export function CallOptions(props: CallOptionsProps) {
         }
         return;
       }
-
       if (!dial) throw new Error("Please enter a phone number to call");
       const normalizedPhone = dial.replace(/\s+/g, ""); // Remove all spaces from phone number
-      
       // LAD Architecture Compliance: Use SDK hook instead of direct API call
       if (!agentId) throw new Error("Please select a voice agent");
-      
       logger.debug("Initiating single call via SDK", { 
         hasAgent: !!agentId, 
         hasPhone: !!normalizedPhone,
         hasContext: !!additionalInstructions 
       });
-      
       // Use SDK hook which handles VAPI disable logic and error handling
       await makeCallMutation.mutateAsync({
         voiceAgentId: agentId,
@@ -203,7 +176,6 @@ export function CallOptions(props: CallOptionsProps) {
         context: additionalInstructions || "Call initiated from dashboard",
         fromNumber: fromNumber // Pass from number from call configuration
       });
-      
       push({ title: "Success", description: "Call initiated successfully!" });
       onDialChange("");
       onClientNameChange("");
@@ -215,7 +187,6 @@ export function CallOptions(props: CallOptionsProps) {
       onLoadingChange?.(false);
     }
   };
-
   const openEditorFor = (idx: number) => {
     const row = bulkEntries[idx];
     setEditorRowIndex(idx);
@@ -231,7 +202,6 @@ export function CallOptions(props: CallOptionsProps) {
     });
     setEditorOpen(true);
   };
-
   const saveEditor = async () => {
     if (editorRowIndex === null) return;
     setSavingSummary(true);
@@ -240,7 +210,6 @@ export function CallOptions(props: CallOptionsProps) {
       const copy = [...bulkEntries];
       copy[editorRowIndex] = { ...copy[editorRowIndex], ...editorValues };
       onBulkEntriesChange?.(copy);
-
       // 2. Persist to localStorage for file-uploaded or localStorage-sourced data
       if (dataSource === 'file' || dataSource === 'localStorage') {
         try {
@@ -250,7 +219,6 @@ export function CallOptions(props: CallOptionsProps) {
           logger.warn('Failed to update localStorage', { error: lsError });
         }
       }
-
       // 3. Persist to database for backend-sourced data
       if (dataSource === 'backend') {
         try {
@@ -290,7 +258,6 @@ export function CallOptions(props: CallOptionsProps) {
           });
         }
       }
-
       // If this edited row is currently selected for Additional Instructions, sync the edited summary
       if (selectedSummaryIndex !== null && selectedSummaryIndex === editorRowIndex) {
         const activeText = dataType === 'employee' ? (editorValues.company_sales_summary || editorValues.summary || '') : (editorValues.sales_summary || editorValues.summary || '');
@@ -305,7 +272,6 @@ export function CallOptions(props: CallOptionsProps) {
       setSavingSummary(false);
     }
   };
-
   // When radio selection changes, update Additional Instructions with the selected summary
   const onRadioChange = (idx: number | null) => {
     setSelectedSummaryIndex(idx);
@@ -316,11 +282,9 @@ export function CallOptions(props: CallOptionsProps) {
     const s = bulkEntries[idx]?.summary || '';
     onAdditionalInstructionsChange?.(s);
   };
-
   const removeRow = (idx: number) => {
     const copy = bulkEntries.filter((_, i) => i !== idx);
     onBulkEntriesChange?.(copy);
-
     // adjust selectedSummaryIndex reliably
     if (selectedSummaryIndex === idx) {
       onRadioChange(null);
@@ -329,37 +293,31 @@ export function CallOptions(props: CallOptionsProps) {
       setSelectedSummaryIndex((prev) => (prev !== null ? prev - 1 : null));
     }
   };
-
   // ----------------------------
   // Template download (xlsx) using ExcelJS
   // ----------------------------
   // const downloadTemplate = async () => {
   //   const wb = new ExcelJS.Workbook();
   //   const ws = wb.addWorksheet("Template");
-
   //   ws.columns = [
   //     { header: "Phone", key: "phone", width: 20 },
   //     { header: "Name", key: "name", width: 20 },
   //     { header: "Summary", key: "summary", width: 40 },
   //   ];
-
   //   ws.addRow({
   //     phone: "+1XXXXXXXXXX",
   //     name: "(optional - phone used if empty)",
   //     summary: "(optional context for the call)",
   //   });
-
   //   ws.eachRow((row) => {
   //     row.eachCell((cell) => {
   //       cell.numFmt = "@"; // TEXT format
   //     });
   //   });
-
   //   const buffer = await wb.xlsx.writeBuffer();
   //   const blob = new Blob([buffer], {
   //     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   //   });
-
   //   const url = URL.createObjectURL(blob);
   //   const a = document.createElement("a");
   //   a.href = url;
@@ -367,24 +325,20 @@ export function CallOptions(props: CallOptionsProps) {
   //   a.click();
   //   URL.revokeObjectURL(url);
   // };
-
     const downloadTemplate = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Template");
- 
     // Force Text format for all template columns (prevents Excel from treating values as General/Number)
     ws.columns = [
       { header: "Phone", key: "phone", width: 20, style: { numFmt: "@" } },
       { header: "Name", key: "name", width: 20, style: { numFmt: "@" } },
       { header: "Summary", key: "summary", width: 40, style: { numFmt: "@" } },
     ];
- 
     ws.addRow({
       phone: "+1XXXXXXXXXX",
       name: "Optional Name",
       summary: "Optional summary for call context",
     });
- 
     // Also explicitly apply to existing cells (header + sample row) for maximum compatibility.
     ws.getRow(1).eachCell((cell) => {
       cell.numFmt = "@";
@@ -392,12 +346,10 @@ export function CallOptions(props: CallOptionsProps) {
     ws.getRow(2).eachCell((cell) => {
       cell.numFmt = "@";
     });
- 
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
- 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -405,7 +357,6 @@ export function CallOptions(props: CallOptionsProps) {
     a.click();
     URL.revokeObjectURL(url);
   };
-
   const [isRephrasing, setIsRephrasing] = useState(false);
   // ----------------------------
   // Parse uploaded file and update bulkEntries
@@ -413,7 +364,6 @@ export function CallOptions(props: CallOptionsProps) {
   const handleFile = async (file: File | null) => {
     if (!file) return;
     const filename = file.name.toLowerCase();
-
     try {
       // CSV parsing
       if (filename.endsWith(".csv")) {
@@ -424,7 +374,6 @@ export function CallOptions(props: CallOptionsProps) {
           push({ variant: "error", title: "Empty file", description: "Uploaded file contained no rows." });
           return;
         }
-
         // detect header row
         let startIdx = 0;
         const firstCols = rows[0].split(",").map((c) => c.trim().toLowerCase());
@@ -445,7 +394,6 @@ export function CallOptions(props: CallOptionsProps) {
             if (/requested_id/.test(h)) requestedIdIdx = i;
           }
         }
-
         for (let i = startIdx; i < rows.length; i++) {
           // naive CSV split (doesn't handle quoted commas); works for simple CSVs
           const cols = rows[i].split(",").map((c) => c.trim());
@@ -458,7 +406,6 @@ export function CallOptions(props: CallOptionsProps) {
           else if (requestedIdIdx !== null && cols[requestedIdIdx]) requested_id = String(cols[requestedIdIdx]).trim();
           if (phone) parsed.push({ to_number: phone, name: name || undefined, summary: summary || undefined, requested_id });
         }
-
         onBulkEntriesChange?.(parsed);
         onUseCsvChange?.(true as any);
         onDataSourceChange?.('file'); // Mark as file-sourced
@@ -472,7 +419,6 @@ export function CallOptions(props: CallOptionsProps) {
         push({ title: "File parsed", description: `${parsed.length} rows loaded from CSV.` });
         return;
       }
-
       // Excel parsing (.xlsx) using ExcelJS
       if (filename.endsWith(".xls")) {
         push({
@@ -482,7 +428,6 @@ export function CallOptions(props: CallOptionsProps) {
         });
         return;
       }
-
       // Only .xlsx files should reach this point; reject other unsupported types explicitly
       if (!filename.endsWith(".xlsx")) {
         push({
@@ -495,25 +440,21 @@ export function CallOptions(props: CallOptionsProps) {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
-
       const worksheet = workbook.worksheets[0];
       if (!worksheet) {
         push({ variant: "error", title: "Invalid file", description: "No worksheet found" });
         return;
       }
-
       // Read headers
       const headers: string[] = [];
       worksheet.getRow(1).eachCell((cell, col) => {
         headers[col - 1] = String((cell.value as any) || "").toLowerCase().trim();
       });
-
       // Detect columns
       const phoneIdx = headers.findIndex((h) => /phone|number|to_number/.test(h));
       const nameIdx = headers.findIndex((h) => /name|lead|client/.test(h));
       const summaryIdx = headers.findIndex((h) => /summary|note|context/.test(h));
       const requestedIdx = headers.findIndex((h) => /requested_id|employee_data_id|company_data_id/.test(h));
-
       if (phoneIdx === -1) {
         push({
           variant: "error",
@@ -522,25 +463,20 @@ export function CallOptions(props: CallOptionsProps) {
         });
         return;
       }
-
       const parsed: BulkEntry[] = [];
-
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-
         const values = row.values as any[];
         const phone = String(values[phoneIdx + 1] || "")
           .replace(/\s+/g, "")
           .trim();
         if (!phone) return;
-
         const extra: Record<string, any> = {};
         headers.forEach((h, i) => {
           if (![phoneIdx, nameIdx, summaryIdx, requestedIdx].includes(i)) {
             extra[h] = values[i + 1];
           }
         });
-
         parsed.push({
           to_number: phone,
           name: nameIdx >= 0 ? String(values[nameIdx + 1] || "").trim() : undefined,
@@ -549,15 +485,12 @@ export function CallOptions(props: CallOptionsProps) {
           _extra: Object.keys(extra).length ? extra : undefined,
         });
       });
-
       onBulkEntriesChange?.(parsed);
       onUseCsvChange?.(true as any);
       onDataSourceChange?.("file");
-
       try {
         localStorage.setItem("bulk_call_targets", JSON.stringify({ data: parsed }));
       } catch {}
-
       push({
         title: "Excel imported",
         description: `${parsed.length} rows loaded`,
@@ -567,7 +500,6 @@ export function CallOptions(props: CallOptionsProps) {
       push({ variant: "error", title: "Parse Error", description: "Unable to process uploaded file." });
     }
   };
-
   const BulkTable = () => {
     // Collect all extra column names dynamically
     const extraColumns = (() => {
@@ -580,20 +512,17 @@ export function CallOptions(props: CallOptionsProps) {
       });
       return Array.from(set);
     })();
-
     return (
       <div className="w-full mx-0">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700 block">Bulk List</label>
           <div className="text-xs text-gray-500">{bulkEntries.length} numbers</div>
         </div>
-
       {/* New UI row: Download template + Choose file */}
       <div className="flex gap-3 mb-3">
         <Button variant="outline" onClick={downloadTemplate} className="flex items-center gap-2">
           <Download className="w-4 h-4" /> Download Template
         </Button>
-
         {/* File chooser */}
         <label className="flex-1">
           <input
@@ -612,7 +541,6 @@ export function CallOptions(props: CallOptionsProps) {
           </div>
         </label>
       </div>
-
       <div className="max-h-64 overflow-auto border rounded-[10px]">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 sticky top-0">
@@ -645,7 +573,6 @@ export function CallOptions(props: CallOptionsProps) {
                         aria-label={`Select summary from row ${idx}`}
                       />
                     </label> */}
-
                     <button
                       type="button"
                       aria-label={`View summary for row ${idx}`}
@@ -659,7 +586,6 @@ export function CallOptions(props: CallOptionsProps) {
                         <EyeOff className="w-4 h-4" />
                       )}
                     </button>
-
                     <button
                       type="button"
                       aria-label={`Edit summary for row ${idx}`}
@@ -670,7 +596,6 @@ export function CallOptions(props: CallOptionsProps) {
                     </button>
                   </div>
                 </td>
-
                 <td className="p-2">
                   <Input
                     disabled
@@ -685,7 +610,6 @@ export function CallOptions(props: CallOptionsProps) {
                     className="bg-gray-100 cursor-not-allowed"
                   />
                 </td>
-
                 <td className="p-2">
                   <Input
                   disabled
@@ -698,14 +622,12 @@ export function CallOptions(props: CallOptionsProps) {
                     placeholder="Lead name (optional)"
                   />
                 </td>
-
                 {/* Extra Excel data */}
                 {extraColumns.map((col) => (
                   <td key={col} className="p-2 text-gray-600 text-sm">
                     {String((row._extra as any)?.[col] ?? "")}
                   </td>
                 ))}
-
                 <td className="p-2 text-right">
                   <Button
                     variant="outline"
@@ -718,7 +640,6 @@ export function CallOptions(props: CallOptionsProps) {
                 </td>
               </tr>
             ))}
-
             {bulkEntries.length === 0 && (
               <tr>
                 <td colSpan={4 + extraColumns.length} className="p-4 text-center text-gray-500">
@@ -729,7 +650,6 @@ export function CallOptions(props: CallOptionsProps) {
           </tbody>
         </table>
       </div>
-
       {bulkEntries.length > 5 && (
         <div className="mt-3">
           <Button
@@ -741,12 +661,10 @@ export function CallOptions(props: CallOptionsProps) {
           </Button>
         </div>
       )}
-
         <p className="text-xs text-gray-500 mt-2">These rows came from your “Resolve Phones” selection.</p>
       </div>
     );
   };
-
   return (
     <Card className="rounded-2xl transition-all p-6 bg-white border border-gray-100">
       <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-6 py-3 border border-white/30 dark:border-white/10 mb-4 -mx-6 mt-0">
@@ -755,7 +673,6 @@ export function CallOptions(props: CallOptionsProps) {
         </CardTitle>
         <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Single or bulk mode</CardDescription>
       </CardHeader>
-
       <CardContent className="space-y-5">
         <div className="flex gap-3">
           <Button
@@ -765,7 +682,6 @@ export function CallOptions(props: CallOptionsProps) {
           >
             Single Call
           </Button>
-
           <Button
             variant={useCsv ? "default" : "outline"}
             className="flex-1 h-12 rounded-[10px]"
@@ -774,7 +690,6 @@ export function CallOptions(props: CallOptionsProps) {
             Bulk List
           </Button>
         </div>
-
         {!useCsv ? (
           // — Single Call UI (omitted for brevity) —
           <div className="space-y-3">
@@ -784,7 +699,6 @@ export function CallOptions(props: CallOptionsProps) {
         ) : (
           <BulkTable />
         )}
-
         <Button
           disabled={loading || (!useCsv && !dial) || (useCsv && (!bulkEntries || bulkEntries.length === 0))}
           onClick={handleSubmit}
@@ -805,30 +719,24 @@ export function CallOptions(props: CallOptionsProps) {
           )}
         </Button>
       </CardContent>
-
       {/* Summary editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Summary</DialogTitle>
           </DialogHeader>
-
           <div className="grid gap-2">
             <label className="text-xs text-gray-600">Phone</label>
             <Input value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
-
             <label className="text-xs text-gray-600">Name</label>
             <Input value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
-
             <label className="text-xs text-gray-600">Identifier ({dataType === 'employee' ? 'employee_data_id' : 'company_data_id'})</label>
             <Input
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
             />
-
             <div className="relative">
-
               <textarea
                 value={dataType === 'employee' ? (editorValues.company_sales_summary || "") : (editorValues.sales_summary || "")}
                 onChange={(e) => setEditorValues((v) => (
@@ -839,8 +747,6 @@ export function CallOptions(props: CallOptionsProps) {
                 className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder="Enter summary to save..."
               />
-
-
               <button
                 type="button"
                 title="Maya-Rephrase"
@@ -850,10 +756,8 @@ export function CallOptions(props: CallOptionsProps) {
                     : (editorValues.sales_summary || editorValues.summary || '')).trim();
                   const text = activeText;
                   if (!text) return;
-
                   try {
                     setIsRephrasing(true);
-
                     const res = await fetch(
                       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/gemini/generate-phrase`,
                       {
@@ -862,7 +766,6 @@ export function CallOptions(props: CallOptionsProps) {
                         body: JSON.stringify({ context: text }),
                       }
                     );
-
                     const data = await res.json();
                     if (data.success) {
                       const generated = data.generatedText as string;
@@ -890,7 +793,6 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-
           <DialogActions>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button>
@@ -901,5 +803,4 @@ export function CallOptions(props: CallOptionsProps) {
       </Dialog>
     </Card>
   );
-}
-
+}

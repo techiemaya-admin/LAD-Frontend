@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
@@ -18,15 +17,12 @@ import {
   Mail,
   ArrowRight
 } from 'lucide-react';
-
 export default function Screen1MainOptions() {
   const { setCurrentScreen, setOnboardingMode, setSelectedPath, setHasSelectedOption, setIsAIChatActive } = useOnboardingStore();
-
   const handleSelect = async (option: 'automation' | 'leads') => {
     setSelectedPath(option);
     setHasSelectedOption(true);
     setIsAIChatActive(true);
-    
     // IMPORTANT: Set onboardingMode to CHAT for leads to show AI chat interface
     if (option === 'leads') {
       setOnboardingMode('CHAT');
@@ -37,14 +33,12 @@ export default function Screen1MainOptions() {
       // Go to workflow setup for automation (screen 3)
       setCurrentScreen(3);
     }
-    
     try {
       await apiPost('/api/onboarding/select-main-option', { option });
     } catch (error) {
       logger.error('Failed to save main option', error);
     }
   };
-
   return (
     <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 flex items-center justify-center p-8">
@@ -57,7 +51,6 @@ export default function Screen1MainOptions() {
               Select the solution that best fits your needs
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Option A - Automation Suite */}
             <div
@@ -73,7 +66,6 @@ export default function Screen1MainOptions() {
                   <p className="text-gray-500">Automate your social media and messaging</p>
                 </div>
               </div>
-
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3 text-gray-700">
                   <Linkedin className="w-5 h-5 text-blue-600" />
@@ -104,13 +96,11 @@ export default function Screen1MainOptions() {
                   <span>Voice agent for automation calls</span>
                 </div>
               </div>
-
               <div className="flex items-center gap-2 text-blue-600 font-semibold group-hover:gap-4 transition-all">
                 <span>Select this option</span>
                 <ArrowRight className="w-5 h-5" />
               </div>
             </div>
-
             {/* Option B - Lead Generation & Outreach */}
             <div
               onClick={() => handleSelect('leads')}
@@ -125,7 +115,6 @@ export default function Screen1MainOptions() {
                   <p className="text-gray-500">Find and engage with your ideal customers</p>
                 </div>
               </div>
-
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3 text-gray-700">
                   <Search className="w-5 h-5 text-blue-600" />
@@ -148,7 +137,6 @@ export default function Screen1MainOptions() {
                   <span>Voice agent for calls</span>
                 </div>
               </div>
-
               <div className="flex items-center gap-2 text-green-600 font-semibold group-hover:gap-4 transition-all">
                 <span>Select this option</span>
                 <ArrowRight className="w-5 h-5" />
@@ -159,5 +147,4 @@ export default function Screen1MainOptions() {
       </div>
     </div>
   );
-}
-
+}

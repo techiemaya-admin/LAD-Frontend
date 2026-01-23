@@ -5,18 +5,14 @@ import type { WebhookEvent } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/logger';
-
 const prisma = new PrismaClient();
-
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.text();
     const headerPayload = headers();
-
     const svixId = (await headerPayload).get('svix-id');
     const svixTimestamp = (await headerPayload).get('svix-timestamp');
     const svixSignature = (await headerPayload).get('svix-signature');
-
     // Debug logs (development only)
     if (process.env.NODE_ENV === 'development') {
       logger.debug('Webhook headers received', {
@@ -25,30 +21,24 @@ export async function POST(req: NextRequest) {
         hasSignature: !!svixSignature
       });
     }
-
     if (!svixId || !svixTimestamp || !svixSignature) {
       logger.error('Missing Svix headers');
       return NextResponse.json({ error: 'Missing Svix headers' }, { status: 400 });
     }
-
     const secret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
     if (!secret) {
       logger.error('Missing CLERK_WEBHOOK_SIGNING_SECRET');
       return NextResponse.json({ error: 'Missing CLERK_WEBHOOK_SIGNING_SECRET' }, { status: 400 });
     }
-
     const wh = new Webhook(secret);
     const evt = wh.verify(payload, {
       'svix-id': svixId,
       'svix-timestamp': svixTimestamp,
       'svix-signature': svixSignature,
     }) as WebhookEvent;
-
     const { type: eventType } = evt;
     const clerkUserId = evt.data.id as string;
-
     logger.debug('Processing webhook', { eventType, clerkUserId });
-
     switch (eventType) {
       case 'user.created':
       case 'user.updated': {
@@ -57,7 +47,6 @@ export async function POST(req: NextRequest) {
         const last_name = data.last_name || null;
         const imageUrl = data.image_url || null;
         const email = data.email_addresses?.[0]?.email_address || null;
-
         await prisma.user.upsert({
           where: { clerk_user_id: clerkUserId },
           create: {
@@ -76,7 +65,6 @@ export async function POST(req: NextRequest) {
         });
         break;
       }
-
       case 'user.deleted': {
         // Soft-delete example (add `deleted_at: DateTime?` to your User model in schema.prisma)
         await prisma.user.updateMany({
@@ -86,11 +74,9 @@ export async function POST(req: NextRequest) {
         // Or hard delete: await prisma.user.delete({ where: { clerk_user_id: clerkUserId } });
         break;
       }
-
       default:
         logger.warn('Unhandled webhook event type', { eventType });
     }
-
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     logger.error('Webhook processing error', error);
