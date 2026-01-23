@@ -173,7 +173,13 @@ export function useCampaignLiveUpdates() {
   useEffect(() => {
     // Connect to SSE endpoint for all campaigns updates
     const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
-    const eventSource = new EventSource(`${baseUrl}/api/campaigns/stream`);
+    // Get auth token from localStorage (EventSource doesn't support custom headers)
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      console.error('[SSE] No auth token found, skipping campaign live updates');
+      return;
+    }
+    const eventSource = new EventSource(`${baseUrl}/api/campaigns/stream?token=${encodeURIComponent(token)}`);
     eventSourceRef.current = eventSource;
     eventSource.onmessage = (event) => {
       try {

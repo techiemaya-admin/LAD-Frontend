@@ -58,7 +58,6 @@ export function useCampaignStatsLive({
         setError(null);
       }
     } catch (err) {
-      console.error('[CampaignStatsLive] Failed to fetch stats:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch stats'));
     } finally {
       setIsLoading(false);
@@ -69,10 +68,14 @@ export function useCampaignStatsLive({
     if (!enabled || !campaignId) return;
     try {
       // Get auth token from localStorage
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        setError(new Error('Authentication required'));
+        return;
+      }
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       // Construct SSE URL with auth token
-      const sseUrl = `${baseUrl}/campaigns/${campaignId}/events${token ? `?token=${token}` : ''}`;
+      const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
       const eventSource = new EventSource(sseUrl);
       eventSourceRef.current = eventSource;
       eventSource.onopen = () => {
@@ -92,15 +95,14 @@ export function useCampaignStatsLive({
             setStats(data.stats);
             setIsLoading(false);
           } else if (data.type === 'ERROR') {
-            console.error('[CampaignStatsLive] Server error:', data.message);
-            setError(new Error(data.message));
+            // Don't set error state for stats issues - keep connection open
+            setIsLoading(false);
           }
         } catch (err) {
-          console.error('[CampaignStatsLive] Failed to parse SSE message:', err);
+          // Silently handle parse errors
         }
       };
       eventSource.onerror = (err) => {
-        console.error('[CampaignStatsLive] SSE error:', err);
         setIsConnected(false);
         eventSource.close();
         eventSourceRef.current = null;
@@ -114,12 +116,10 @@ export function useCampaignStatsLive({
           }, delay);
         } else {
           // Fall back to polling after max reconnect attempts
-          console.warn('[CampaignStatsLive] Max reconnect attempts reached, falling back to polling');
           startFallbackPolling();
         }
       };
     } catch (err) {
-      console.error('[CampaignStatsLive] Failed to connect SSE:', err);
       setError(err instanceof Error ? err : new Error('Failed to connect'));
       startFallbackPolling();
     }

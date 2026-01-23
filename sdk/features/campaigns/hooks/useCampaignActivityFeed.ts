@@ -81,29 +81,49 @@ export function useCampaignActivityFeed(
     // Connect to SSE for live updates
     const connectSSE = () => {
       try {
-        const eventSource = new EventSource(`/api/campaigns/${campaignId}/events`);
+        // Get auth token from localStorage (EventSource doesn't support custom headers)
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token');
+        if (!token) {
+          console.warn('[ActivityFeed] No auth token found, cannot connect to SSE');
+          setIsConnected(false);
+          return;
+        }
+        
+        // Use backend URL for SSE connection
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+        const sseUrl = `${baseUrl}/api/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
+        console.log('[ActivityFeed] Connecting to SSE:', sseUrl.replace(token, 'TOKEN_HIDDEN'));
+        
+        const eventSource = new EventSource(sseUrl);
         eventSourceRef.current = eventSource;
+        
         eventSource.onopen = () => {
+          console.log('[ActivityFeed] SSE connected successfully');
           setIsConnected(true);
         };
+        
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            console.log('[ActivityFeed] SSE message received:', data.type);
             // When stats update, refetch activities to show new ones
-            if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'STATS_UPDATE') {
+            if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'STATS_UPDATE' || data.type === 'INITIAL_STATS') {
               fetchActivities();
             }
           } catch (err) {
             console.error('[ActivityFeed] Failed to parse SSE:', err);
           }
         };
-        eventSource.onerror = () => {
-          console.warn('[ActivityFeed] SSE disconnected');
+        
+        eventSource.onerror = (err) => {
+          console.error('[ActivityFeed] SSE error:', err);
+          console.log('[ActivityFeed] SSE readyState:', eventSource.readyState);
           setIsConnected(false);
           eventSource.close();
           // Reconnect after 5 seconds
           setTimeout(() => {
             if (eventSourceRef.current === eventSource) {
+              console.log('[ActivityFeed] Attempting to reconnect...');
               connectSSE();
             }
           }, 5000);
@@ -128,4 +148,4 @@ export function useCampaignActivityFeed(
     error,
     refresh: fetchActivities
   };
-}
+}

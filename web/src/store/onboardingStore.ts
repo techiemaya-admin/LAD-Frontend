@@ -23,6 +23,7 @@ export interface InboundLeadData {
   websiteUrl?: string;
   phoneNumbers: string[];
   notes?: string;
+  leadIds?: string[]; // IDs of leads saved to database
 }
 // Inbound analysis result from Gemini
 export interface InboundAnalysisResult {
@@ -226,7 +227,7 @@ interface OnboardingState {
   setInboundAnalysis: (analysis: InboundAnalysisResult | null) => void;
   setIsInboundFormVisible: (visible: boolean) => void;
 }
-const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'addAIMessage' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setOnboardingMode' | 'completeOnboarding' | 'reset'> = {
+const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setMobileView' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'setWorkflowState' | 'addAIMessage' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'removeWorkflowStep' | 'updateWorkflowStep' | 'moveWorkflowStep' | 'reorderPlatforms' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setPlatformsConfirmed' | 'setSelectedCategory' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setIsEditorPanelCollapsed' | 'setHasRequestedEditor' | 'pushToHistory' | 'undo' | 'redo' | 'canUndo' | 'canRedo' | 'setOnboardingMode' | 'completeOnboarding' | 'reset' | 'setIsICPFlowStarted' | 'setCampaignDataType' | 'setInboundLeadData' | 'setInboundAnalysis' | 'setIsInboundFormVisible'> = {
   currentScreen: 0,
   hasSelectedOption: false,
   selectedPath: null,
@@ -326,11 +327,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       reorderPlatforms: (platformOrder) =>
         set((state) => {
           const steps = [...state.workflowPreview];
-          // Separate fixed steps (start, end, lead_generation, delay_between_platforms) and platform steps
+          // Separate fixed steps (start, end, lead_generation, delay) and platform steps
           const startStep = steps.find(s => s.type === 'start');
           const endStep = steps.find(s => s.type === 'end');
           const leadStep = steps.find(s => s.type === 'lead_generation');
-          const delaySteps = steps.filter(s => s.type === 'delay_between_platforms');
+          const delaySteps = steps.filter(s => s.type === 'delay');
           // Group steps by platform
           const platformSteps: Record<string, typeof steps> = {
             linkedin: steps.filter(s => s.type.startsWith('linkedin_')),
@@ -405,7 +406,6 @@ export const useOnboardingStore = create<OnboardingState>()(
         })),
       setIsEditorPanelCollapsed: (collapsed) => set({ isEditorPanelCollapsed: collapsed }),
       setHasRequestedEditor: (requested) => set({ hasRequestedEditor: requested }),
-      setOnboardingMode: (mode) => set({ onboardingMode: mode }),
       pushToHistory: (workflow) =>
         set((state) => {
           const newUndoStack = [...state.history.undoStack, workflow];
@@ -504,4 +504,4 @@ export const useOnboardingStore = create<OnboardingState>()(
       }),
     }
   )
-);
+);
