@@ -8,6 +8,16 @@ export {
   fetchICPQuestionByStep,
   processICPAnswer,
 } from './api';
+// Leads Upload API
+export {
+  downloadLeadsTemplate,
+  getLeadsTemplateColumns,
+  uploadLeadsFile,
+  uploadLeadsContent,
+  analyzeLeads,
+  getPlatformQuestions,
+  validateLeadsForExecution,
+} from './api';
 // ICP Types
 export type {
   ICPQuestion,
@@ -15,12 +25,31 @@ export type {
   ICPAnswerRequest,
   ICPAnswerResponse,
 } from './types';
+// Leads Types
+export type {
+  LeadsTemplateColumn,
+  ParsedLead,
+  PlatformCoverage,
+  PlatformDetection,
+  LeadsAnalysis,
+  LeadsUploadResponse,
+  PlatformQuestion,
+  PlatformQuestionOption,
+  PlatformQuestionsResponse,
+  RecommendedAction,
+  LeadsAIAnalysisResponse,
+  LeadsValidation,
+  LeadsFlowContext,
+} from './types';
 // ICP Hooks
 export {
   useItem,
   useItems,
   useConversation,
 } from './hooks';
+// Leads Upload Hook
+export { useLeadsUpload } from './hooks/useLeadsUpload';
+export type { LeadsUploadState } from './hooks/useLeadsUpload';
 // Legacy service (if exists)
 export { 
   AIICPAssistantService,

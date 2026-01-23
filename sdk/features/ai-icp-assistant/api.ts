@@ -9,6 +9,13 @@ import type {
   ICPQuestionsResponse,
   ICPAnswerRequest,
   ICPAnswerResponse,
+  LeadsTemplateColumn,
+  LeadsUploadResponse,
+  LeadsAIAnalysisResponse,
+  PlatformQuestionsResponse,
+  LeadsValidation,
+  ParsedLead,
+  PlatformDetection,
 } from './types';
 /**
  * Get the backend API URL from environment variables
@@ -117,6 +124,163 @@ export async function processICPAnswer(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to process answer: ${response.statusText}`);
+  }
+  return response.json();
+}
+// ============================================================================
+// Leads Upload API
+// ============================================================================
+/**
+ * Download leads template CSV
+ * Returns the template file as a blob
+ */
+export async function downloadLeadsTemplate(): Promise<Blob> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/template`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to download template: ${response.statusText}`);
+  }
+  return response.blob();
+}
+/**
+ * Get template column definitions
+ */
+export async function getLeadsTemplateColumns(): Promise<{
+  success: boolean;
+  columns: LeadsTemplateColumn[];
+  platformFields: Record<string, string[]>;
+}> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/template/columns`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get template columns: ${response.statusText}`);
+  }
+  return response.json();
+}
+/**
+ * Upload leads CSV file
+ */
+export async function uploadLeadsFile(file: File): Promise<LeadsUploadResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/upload`;
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: formData,
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to upload file: ${response.statusText}`);
+  }
+  return response.json();
+}
+/**
+ * Upload leads as CSV content string
+ */
+export async function uploadLeadsContent(csvContent: string): Promise<LeadsUploadResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/upload`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ csvContent }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to upload content: ${response.statusText}`);
+  }
+  return response.json();
+}
+/**
+ * Deep AI analysis of uploaded leads
+ */
+export async function analyzeLeads(leads: ParsedLead[]): Promise<LeadsAIAnalysisResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/analyze`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ leads }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to analyze leads: ${response.statusText}`);
+  }
+  return response.json();
+}
+/**
+ * Get platform-specific questions based on lead data
+ */
+export async function getPlatformQuestions(
+  leads?: ParsedLead[],
+  platforms?: PlatformDetection
+): Promise<PlatformQuestionsResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/platform-questions`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ leads, platforms }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to get platform questions: ${response.statusText}`);
+  }
+  return response.json();
+}
+/**
+ * Validate leads for campaign execution
+ */
+export async function validateLeadsForExecution(
+  leads: ParsedLead[],
+  selectedPlatforms: string[]
+): Promise<{ success: boolean; data: LeadsValidation }> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/leads/validate`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ leads, selectedPlatforms }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to validate leads: ${response.statusText}`);
   }
   return response.json();
 }
