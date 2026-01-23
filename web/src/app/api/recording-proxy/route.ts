@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";import { logger } from '@/lib/logger';import { cookies } from "next/headers";
-
 export async function GET(req: NextRequest) {
   try {
     const url = req.nextUrl.searchParams.get("url");
     const agentId = req.nextUrl.searchParams.get("agentId");
-
     if (!url) {
       return NextResponse.json(
         { error: "Missing `url` parameter" },
         { status: 400 }
       );
     }
-
     let targetUrl = url;
-
     // If it's already a signed URL (storage.googleapis.com) or HTTP/HTTPS, use it directly
     if (url.includes("storage.googleapis.com") || url.startsWith("http://") || url.startsWith("https://")) {
       targetUrl = url;
@@ -26,12 +22,10 @@ export async function GET(req: NextRequest) {
           { status: 400 }
         );
       }
-
       try {
         // Get auth token - try multiple sources
         const cookieStore = await cookies();
         let token = cookieStore.get("token")?.value;
-        
         // Also check cookie header directly
         if (!token) {
           const cookieHeader = req.headers.get("cookie");
@@ -42,7 +36,6 @@ export async function GET(req: NextRequest) {
             }
           }
         }
-        
         // Check authorization header
         if (!token) {
           const authHeader = req.headers.get("authorization");
@@ -50,12 +43,10 @@ export async function GET(req: NextRequest) {
             token = authHeader.replace("Bearer ", "");
           }
         }
-
         // If still no token, try getting from query param as fallback
         if (!token) {
           token = req.nextUrl.searchParams.get("token") || undefined;
         }
-
         if (!token) {
           logger.error('[recording-proxy] No token found in cookies, headers, or query params');
           return NextResponse.json(
@@ -63,10 +54,8 @@ export async function GET(req: NextRequest) {
             { status: 401 }
           );
         }
-
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
         const signingEndpoint = `${backendUrl}/api/voice-agent/agents/${agentId}/sample-signed-url`;
-
         const signingResp = await fetch(signingEndpoint, {
           method: "GET",
           headers: {
@@ -74,7 +63,6 @@ export async function GET(req: NextRequest) {
             'Content-Type': 'application/json'
           },
         });
-
         if (!signingResp.ok) {
           const errorData = await signingResp.json().catch(() => ({}));
           const errorMsg = errorData.error || errorData.message || 'Unknown error';
@@ -86,12 +74,9 @@ export async function GET(req: NextRequest) {
           });
           throw new Error(`Signing service returned ${signingResp.status}: ${errorMsg}`);
         }
-
         const payload = await signingResp.json();
-
         // Backend returns signed_url at top level OR in data.signed_url
         targetUrl = payload?.signed_url || payload?.data?.signed_url;
-
         if (!targetUrl) {
           const errorMsg = `Invalid signing response: ${JSON.stringify(payload)}`;
           logger.error('[recording-proxy] Missing signed_url in response', { payload });
@@ -105,25 +90,20 @@ export async function GET(req: NextRequest) {
         );
       }
     }
-
     // Fetch audio binary with streaming support
     try {
       // Check if Range header is present (for streaming/partial content)
       const rangeHeader = req.headers.get("range");
-      
       const fetchHeaders: HeadersInit = {
         'Accept': 'audio/*',
       };
-      
       // Forward Range header for partial content requests (streaming)
       if (rangeHeader) {
         fetchHeaders['Range'] = rangeHeader;
       }
-
       const audioResp = await fetch(targetUrl, {
         headers: fetchHeaders,
       });
-
       if (!audioResp.ok) {
         // Don't log 206 (Partial Content) as error - it's expected for Range requests
         if (audioResp.status !== 206) {
@@ -133,7 +113,6 @@ export async function GET(req: NextRequest) {
             statusText: audioResp.statusText
           });
         }
-        
         // For non-206 errors, return error response
         if (audioResp.status !== 206) {
           return NextResponse.json(
@@ -146,10 +125,8 @@ export async function GET(req: NextRequest) {
           );
         }
       }
-
       // Stream the response instead of loading full file into memory
       const audioStream = audioResp.body;
-      
       if (!audioStream) {
         return NextResponse.json(
           {
@@ -158,7 +135,6 @@ export async function GET(req: NextRequest) {
           { status: 502 }
         );
       }
-
       // Determine content type
       const contentType =
         audioResp.headers.get("Content-Type") ||
@@ -166,7 +142,6 @@ export async function GET(req: NextRequest) {
         (targetUrl.endsWith(".wav") && "audio/wav") ||
         (targetUrl.endsWith(".ogg") && "audio/ogg") ||
         "application/octet-stream";
-
       // Build response headers
       const responseHeaders: HeadersInit = {
         "Content-Type": contentType,
@@ -178,13 +153,11 @@ export async function GET(req: NextRequest) {
         "Access-Control-Allow-Headers": "Content-Type, Range",
         "Accept-Ranges": "bytes",
       };
-
       // Forward content length if available
       const contentLength = audioResp.headers.get("Content-Length");
       if (contentLength) {
         responseHeaders["Content-Length"] = contentLength;
       }
-
       // Forward content range for partial content (206)
       if (audioResp.status === 206) {
         const contentRange = audioResp.headers.get("Content-Range");
@@ -193,7 +166,6 @@ export async function GET(req: NextRequest) {
         }
         responseHeaders["Content-Length"] = audioResp.headers.get("Content-Length") || "0";
       }
-
       // Return streaming response
       return new NextResponse(audioStream, {
         status: audioResp.status === 206 ? 206 : 200,
@@ -220,7 +192,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -230,4 +201,4 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
-}
+}

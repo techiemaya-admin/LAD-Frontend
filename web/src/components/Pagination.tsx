@@ -1,15 +1,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }
-
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null;
-
   return (
     <div className="flex items-center justify-center gap-2 mt-6 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
       <Button
@@ -22,7 +19,6 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         <ChevronLeft className="w-4 h-4" />
         Previous
       </Button>
-
       <div className="flex items-center gap-1 px-4">
         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
           let pageNum: number;
@@ -35,7 +31,6 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           } else {
             pageNum = currentPage - 2 + i;
           }
-
           return (
             <button
               key={pageNum}
@@ -51,7 +46,6 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           );
         })}
       </div>
-
       <Button
         variant="outline"
         size="sm"
@@ -64,4 +58,4 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       </Button>
     </div>
   );
-}
+}

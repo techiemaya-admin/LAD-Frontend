@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/app-toaster";
@@ -12,7 +11,6 @@ import {
   useAvailableAgents, 
   useResolvePhones 
 } from "@sdk/features/voice-agent/features/voice-agent";
-
 type NumberItem = {
   id: string;
   phone_number: string;
@@ -23,7 +21,6 @@ type NumberItem = {
   assignedAgentId?: string;
   e164?: string;
 };
-
 type VoiceAgent = {
   id: string;
   name: string;
@@ -34,7 +31,6 @@ type VoiceAgent = {
   description?: string;
   voice_sample_url?: string | null;
 };
-
 type BulkEntry = {
   to_number: string;
   name?: string;
@@ -42,11 +38,9 @@ type BulkEntry = {
   summary?: string;
   requested_id?: string;
 };
-
 export default function MakeCallContent() {
   const params = useSearchParams();
   const { push } = useToast();
-
   // ----- Query params -----
   const qpDial = params.get("dial") || "";
   const qpClientName = params.get("clientName") || "";
@@ -56,37 +50,28 @@ export default function MakeCallContent() {
   const qpSeed = params.get("seed"); // legacy fallback (optional)
   const qpSummary = params.get("summary") || params.get("sales_summary") || "";
   const qpType = params.get("type") || "company";
-
-
-
   // ----- Data state -----
   const [numbers, setNumbers] = useState<NumberItem[]>([]);
   const [agents, setAgents] = useState<VoiceAgent[]>([]);
   const [uniqueAccents, setUniqueAccents] = useState<string[]>([]);
-
   // ----- Selections -----
   const [selectedNumberId, setSelectedNumberId] = useState<string | undefined>();
   const [agentId, setAgentId] = useState<string | undefined>();
   const [selectedLanguageId, setSelectedLanguageId] = useState<string>("en");
   const [selectedAccentId, setSelectedAccentId] = useState<string | undefined>();
-
   // ----- Single-call fields -----
   const [dial, setDial] = useState<string>("");
   const [clientName, setClientName] = useState<string>("");
-
   // ----- Bulk -----
   const [useCsv, setUseCsv] = useState<boolean>(false);
   const [bulkEntries, setBulkEntries] = useState<BulkEntry[]>([]);
-
   const sanitizePhoneNumber = (phone: string): string =>
     phone ? String(phone).replace(/\s+/g, "") : "";
-
   const normalizeE164Like = (phone: unknown): string => {
     const s = sanitizePhoneNumber(String(phone ?? "").trim());
     // Defensive: if backend accidentally returns "++<digits>", collapse to "+<digits>".
     return s.replace(/^\+{2,}/, "+");
   };
-
   const setBulkEntriesSanitized = (
     entries: BulkEntry[] | ((prev: BulkEntry[]) => BulkEntry[])
   ) => {
@@ -107,29 +92,23 @@ export default function MakeCallContent() {
       );
     }
   };
-
   const [dataSource, setDataSource] =
     useState<"backend" | "file" | "localStorage">("localStorage");
   const [dataType, setDataType] = useState<"company" | "employee">("company");
-
   const [loading, setLoading] = useState<boolean>(false);
   const [additionalInstructions, setAdditionalInstructions] =
     useState<string>("");
   const [initiatedBy, setInitiatedBy] = useState<string | undefined>(
     undefined
   );
-
   // User ID (UUID) - backend uses JWT req.user.id, so this is mainly for local state
   const [voiceAgentUserId, setVoiceAgentUserId] = useState<string | null>(null);
-
   // Refs to track last processed data and prevent infinite loops
   const lastProcessedNumbersRef = useRef<string>("");
   const lastProcessedAgentsRef = useRef<string>("");
-
   // SDK Hooks for fetching numbers and agents
   const { data: availableNumbers = [], isLoading: numbersLoading, error: numbersError } = useUserAvailableNumbers();
   const { data: availableAgents = [], isLoading: agentsLoading, error: agentsError } = useAvailableAgents();
-
   // Get user ID from /auth/me (architecture-compliant: core platform returns user.id)
   useEffect(() => {
     (async () => {
@@ -150,7 +129,6 @@ export default function MakeCallContent() {
       }
     })();
   }, []);
-
   // Seed single-call from query params
   useEffect(() => {
     if (qpDial || qpClientName) {
@@ -163,16 +141,13 @@ export default function MakeCallContent() {
       }
     }
   }, [qpDial, qpClientName, qpSummary]);
-
   // ids → /resolve-phones
   useEffect(() => {
     (async () => {
       if (!qpIds) return;
-
       try {
         let ids: unknown;
         const decoded = decodeURIComponent(qpIds).trim();
-
         // Try base64(JSON)
         try {
           const maybeJson = atob(decoded);
@@ -183,7 +158,6 @@ export default function MakeCallContent() {
         } catch {
           /* ignore */
         }
-
         // Fallback: comma-separated
         if (!ids && decoded.includes(",")) {
           ids = decoded
@@ -191,7 +165,6 @@ export default function MakeCallContent() {
             .map((s) => s.trim())
             .filter(Boolean);
         }
-
         // Fallback: JSON array literal
         if (!ids && decoded.startsWith("[")) {
           try {
@@ -203,17 +176,14 @@ export default function MakeCallContent() {
             /* ignore */
           }
         }
-
         // Last resort: single id
         if (!ids) {
           ids = decoded ? [decoded] : [];
         }
-
         if (!Array.isArray(ids) || ids.length === 0) {
           logger.debug("[make-call] No valid ids parsed from qpIds, skipping resolve-phones.");
           return;
         }
-
         let idsPayload: any[] = [];
         if (qpType === "employee") {
           const idSet = new Set<string>();
@@ -255,30 +225,24 @@ export default function MakeCallContent() {
             )
             .filter((v) => Boolean(v));
         }
-
         if (!Array.isArray(idsPayload) || idsPayload.length === 0) {
           logger.debug("[make-call] Parsed ids are all empty after normalization; skipping.");
           return;
         }
-
         setLoading(true);
-
         // Use SDK service directly for resolvePhones
         const voiceAgentService = (
           await import("@sdk/features/voice-agent/features/voice-agent/services/voiceAgentService")
         ).default;
         const json = await voiceAgentService.resolvePhones(idsPayload, qpType as 'company' | 'employee');
-
         const totalResolved = Array.isArray(json)
           ? json.length
           : 0;
-
         const rows: BulkEntry[] = (Array.isArray(json)
           ? json
             .filter((row: any) => row?.phone)
             .map((row: any) => ({
               to_number: String(row.phone).trim().replace(/\s+/g, ""),
-
               name:
                 (typeof row.name === "string" && row.name.trim()) ||
                 (typeof row.employee_name === "string" &&
@@ -286,7 +250,6 @@ export default function MakeCallContent() {
                 (typeof row.company_name === "string" &&
                   row.company_name.trim()) ||
                 undefined,
-
               company_name:
                 row.company_name ||
                 row.raw?.organization?.name ||
@@ -294,9 +257,7 @@ export default function MakeCallContent() {
                 row.raw?.organization?.companyName ||
                 row.raw?.rawData?.companyName ||
                 undefined,
-
               requested_id: row.requested_id || undefined,
-
               summary:
                 (qpType === "employee"
                   ? row.company_sales_summary ||
@@ -305,11 +266,9 @@ export default function MakeCallContent() {
                     row.company?.sales_summary) || undefined,
             }))
           : []);
-
         // Dedupe by phone + name/company
         const deduped: BulkEntry[] = [];
         const seen = new Set<string>();
-
         for (const r of rows) {
           const key =
             r.to_number + "|" + (r.name || r.company_name || "");
@@ -318,13 +277,11 @@ export default function MakeCallContent() {
             deduped.push(r);
           }
         }
-
         const sanitizedBulkEntries = deduped.map((entry) => ({
           ...entry,
           to_number: entry.to_number.replace(/\s+/g, ""),
         }));
         setBulkEntriesSanitized(sanitizedBulkEntries);
-
         if (deduped[0]?.to_number) {
           setDial(deduped[0].to_number);
           setClientName(
@@ -334,15 +291,11 @@ export default function MakeCallContent() {
         if (deduped[0]?.summary) {
           setAdditionalInstructions(deduped[0].summary);
         }
-
         const first = rows[0];
-
         setDataSource("backend");
         setDataType(qpType === "employee" ? "employee" : "company");
-
         const loadedCount = rows.length;
         const skippedCount = Math.max(0, totalResolved - loadedCount);
-
         if (loadedCount > 1 || qpBulk === "1") {
           setUseCsv(true);
           setBulkEntriesSanitized(rows);
@@ -392,18 +345,14 @@ export default function MakeCallContent() {
       }
     })();
   }, [qpIds, qpBulk, qpType, push]);
-
   // Fallbacks if no ids: localStorage / seed
   useEffect(() => {
     if (qpIds) return;
-
     try {
       let raw =
         localStorage.getItem("bulk_call_targets") ||
         localStorage.getItem("make_call_targets");
-
       let arrayLike: any[] | undefined;
-
       if (raw) {
         const parsed = JSON.parse(raw);
         arrayLike =
@@ -411,7 +360,6 @@ export default function MakeCallContent() {
           (Array.isArray(parsed?.data) && parsed.data) ||
           (Array.isArray(parsed) ? parsed : undefined);
       }
-
       if ((!arrayLike || arrayLike.length === 0) && qpSeed) {
         try {
           const seedDecoded = JSON.parse(
@@ -422,7 +370,6 @@ export default function MakeCallContent() {
           /* ignore */
         }
       }
-
       if (Array.isArray(arrayLike) && arrayLike.length > 0) {
         const normalized: BulkEntry[] = arrayLike
           .filter((it: any) => it && (it.phone || it.to || it.number))
@@ -436,9 +383,7 @@ export default function MakeCallContent() {
             company_name: it.company_name || undefined,
             requested_id: it.requested_id || undefined,
           }));
-
         const first = normalized[0];
-
         if (qpBulk === "1" || normalized.length > 1) {
           setUseCsv(true);
           setBulkEntries(normalized);
@@ -465,12 +410,10 @@ export default function MakeCallContent() {
       /* ignore */
     }
   }, [qpSeed, qpBulk, qpIds]);
-
   // 🔥 Sync SDK hook data to local state
   // Numbers should load even if agents API fails
   useEffect(() => {
     if (!voiceAgentUserId) return;
-
     // 1) Handle available numbers from SDK hook
     if (availableNumbers && availableNumbers.length > 0) {
       const formatted = (availableNumbers || []).map((n: any) => ({
@@ -480,15 +423,12 @@ export default function MakeCallContent() {
         type: n.type,
         assignedAgentId: n.assignedAgentId,
       })) as NumberItem[];
-
       // Only update if numbers actually changed
       const currentHash = `${formatted.length}-${formatted[0]?.id || ''}`;
       if (currentHash !== lastProcessedNumbersRef.current) {
         lastProcessedNumbersRef.current = currentHash;
         setNumbers(formatted);
-
         logger.debug("[make-call] loaded available numbers", { count: formatted.length });
-
         if (formatted.length) {
           setSelectedNumberId((prev) => prev ?? formatted[0].id);
           if (formatted[0].assignedAgentId) {
@@ -499,11 +439,9 @@ export default function MakeCallContent() {
         }
       }
     }
-
     if (numbersError) {
       logger.error("[make-call] Failed to load numbers", { error: numbersError });
     }
-
     // 2) Handle available agents from SDK hook
     if (availableAgents && availableAgents.length > 0) {
       const voiceAgents: VoiceAgent[] = (availableAgents || []).map(
@@ -518,19 +456,15 @@ export default function MakeCallContent() {
           voice_sample_url: v.voice_sample_url || null,
         })
       );
-
       // Only update if agents actually changed
       const currentHash = `${voiceAgents.length}-${voiceAgents[0]?.id || ''}`;
       if (currentHash !== lastProcessedAgentsRef.current) {
         lastProcessedAgentsRef.current = currentHash;
         setAgents(voiceAgents);
-
         logger.debug("[make-call] loaded available agents", { count: voiceAgents.length });
-
         if (!agentId && voiceAgents.length) {
           setAgentId(voiceAgents[0].id);
         }
-
         const accents = Array.from(
           new Set(voiceAgents.map((a) => a.accent).filter(Boolean))
         ) as string[];
@@ -540,12 +474,10 @@ export default function MakeCallContent() {
         }
       }
     }
-
     if (agentsError) {
       logger.warn("[make-call] Failed to load agents (non-fatal)", { error: agentsError });
     }
   }, [voiceAgentUserId, availableNumbers, availableAgents, numbersError, agentsError, agentId, selectedAccentId]);
-
   // Keep agent selection in sync with chosen number (if assigned)
   useEffect(() => {
     if (!selectedNumberId) return;
@@ -554,7 +486,6 @@ export default function MakeCallContent() {
       setAgentId(String(num.assignedAgentId));
     }
   }, [selectedNumberId, numbers, agentId]);
-
   // Sync bulkEntries → localStorage
   useEffect(() => {
     if (
@@ -571,7 +502,6 @@ export default function MakeCallContent() {
       }
     }
   }, [bulkEntries, dataSource]);
-
   const fromNumber = useMemo(
     () =>
       selectedNumberId
@@ -579,9 +509,8 @@ export default function MakeCallContent() {
         : undefined,
     [numbers, selectedNumberId]
   );
-
   return (
-    <div className="min-h-screen p-6 md:p-10">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <CallConfiguration
@@ -599,7 +528,6 @@ export default function MakeCallContent() {
             additionalInstructions={additionalInstructions}
             onAdditionalInstructionsChange={setAdditionalInstructions}
           />
-
           <CallOptions
             useCsv={useCsv}
             onUseCsvChange={setUseCsv}
@@ -626,4 +554,4 @@ export default function MakeCallContent() {
       </div>
     </div>
   );
-}
+}

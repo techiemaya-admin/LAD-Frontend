@@ -1,8 +1,6 @@
 'use client';
-
 import React from 'react';
 import { WalletBalance } from '../../components/WalletBalance';
-
 export default function WalletPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -13,9 +11,8 @@ export default function WalletPage() {
             Manage your credits and view transaction history
           </p>
         </div>
-        
         <WalletBalance />
       </div>
     </div>
   );
-}
+}

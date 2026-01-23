@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,15 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { apiPost } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { safeStorage } from '@/utils/storage';
-
 export const GoogleAuthIntegration: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-
   useEffect(() => {
     checkGoogleConnection();
-    
     // Check if we're returning from OAuth flow
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('google') === 'connected') {
@@ -23,30 +19,24 @@ export const GoogleAuthIntegration: React.FC = () => {
       handleOAuthCallback();
     }
   }, []);
-
   const checkGoogleConnection = async () => {
     try {
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject({ timeout: true }), 15000) // Increased to 15s
       );
-      
       // Check if user has Google Calendar connected
       const mePromise = fetch('/api/auth/me', {
         method: 'GET',
       });
-      
       const meRes = await Promise.race([mePromise, timeoutPromise]) as Response;
-
       if (meRes.ok) {
         const meData = await meRes.json();
         // Use user.id from the response (architecture-compliant: core platform returns user.id)
         const userId = meData?.user?.id || meData?.id;
-
         if (userId) {
           // Check calendar connection status from our database with timeout
           const statusPromise = apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
-          
           const statusData = await Promise.race([statusPromise, timeoutPromise]);
           setIsConnected(statusData.connected || false);
           setUserEmail(statusData.email || null);
@@ -64,22 +54,18 @@ export const GoogleAuthIntegration: React.FC = () => {
       setUserEmail(null);
     }
   };
-
   const handleOAuthCallback = async () => {
     try {
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
       });
-
       if (meRes.ok) {
         const meData = await meRes.json();
         // Use user.id from the response (architecture-compliant: core platform returns user.id)
         const userId = meData?.user?.id || meData?.id;
-
         if (userId) {
           // Check status from our backend (which already has the data from VOAG callback)
           const statusData = await apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
-            
           if (statusData.connected && statusData.email) {
             // Connection is already recorded in database from callback
             setIsConnected(true);
@@ -87,17 +73,14 @@ export const GoogleAuthIntegration: React.FC = () => {
           }
         }
       }
-
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
     } catch (error) {
       console.error('Error handling OAuth callback:', error);
     }
   };
-
   const connectGoogle = async () => {
     setIsLoading(true);
-    
     try {
       // Get the logged-in user's id
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
@@ -108,36 +91,28 @@ export const GoogleAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
       if (!meRes.ok) {
         throw new Error('Failed to fetch user data');
       }
-
       const meData = await meRes.json();
       // Use user.id from the response (architecture-compliant: core platform returns user.id)
       const userId = meData?.user?.id || meData?.id;
-
       if (!userId) {
         alert('User ID not available');
         setIsLoading(false);
         return;
       }
-
       // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
       const result = await apiPost<any>('/api/social-integration/calendar/google/start', { 
         user_id: userId, 
         frontend_id: 'settings' 
       });
-      
-      console.log('[Google Integration] Start response:', result);
-      
       if (!result?.url) {
         console.error('[Google Integration] No OAuth URL in response:', result);
         alert('Failed to get Google authorization URL. Please try again.');
         setIsLoading(false);
         return;
       }
-      
       // Redirect to Google OAuth URL
       window.location.href = result.url;
     } catch (error) {
@@ -147,10 +122,8 @@ export const GoogleAuthIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const disconnectGoogle = async () => {
     setIsLoading(true);
-    
     try {
       const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
       const meRes = await fetch('/api/auth/me', {
@@ -160,19 +133,15 @@ export const GoogleAuthIntegration: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
       if (!meRes.ok) {
         throw new Error('Failed to fetch user data');
       }
-
       const meData = await meRes.json();
       // Use user.id from the response (architecture-compliant: core platform returns user.id)
       const userId = meData?.user?.id || meData?.id;
-
       if (userId) {
         // Call our backend to disconnect (it will update voag and database)
         const response = await apiPost<any>('/api/social-integration/calendar/google/disconnect', { user_id: userId });
-
         if (response.success) {
           setIsConnected(false);
           setUserEmail(null);
@@ -187,7 +156,6 @@ export const GoogleAuthIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   return (
     <Card>
       <CardHeader>
@@ -223,7 +191,6 @@ export const GoogleAuthIntegration: React.FC = () => {
             )}
           </div>
         </div>
-
         {/* Permissions */}
         {isConnected && (
           <div className="space-y-2">
@@ -240,7 +207,6 @@ export const GoogleAuthIntegration: React.FC = () => {
             </div>
           </div>
         )}
-
         {/* Action Buttons */}
         <div className="flex gap-3">
           {!isConnected ? (
@@ -291,7 +257,6 @@ export const GoogleAuthIntegration: React.FC = () => {
             </Button>
           )}
         </div>
-
         {/* Info */}
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800">
@@ -301,4 +266,4 @@ export const GoogleAuthIntegration: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+};

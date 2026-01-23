@@ -1,14 +1,11 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string | null;
   alt?: string;
 }
-
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, src, alt, children, ...props }, ref) => {
     return (
@@ -32,6 +29,4 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   }
 );
 Avatar.displayName = 'Avatar';
-
-export { Avatar };
-
+export { Avatar };

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-
 export async function POST() {
   const res = NextResponse.json({ success: true });
   // Clear the session cookie
@@ -11,4 +10,4 @@ export async function POST() {
     maxAge: 0,
   });
   return res;
-}
+}

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useCallback, useRef } from 'react';
 import ReactFlow, {
   Node,
@@ -17,7 +16,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useCampaignStore } from '../store/campaignStore';
 import CustomNode from './nodes/CustomNode';
-
 // Register all node types - React Flow uses the 'type' field from nodes
 // Defined outside component to prevent recreation on each render
 const NODE_TYPES: NodeTypes = {
@@ -53,7 +51,6 @@ const NODE_TYPES: NodeTypes = {
   lead_generation: CustomNode,
   custom: CustomNode, // Fallback
 };
-
 export default function FlowCanvas() {
   const {
     nodes: storeNodes,
@@ -65,20 +62,16 @@ export default function FlowCanvas() {
     selectStep,
     selectedNodeId,
   } = useCampaignStore();
-
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-
   // Sync store nodes/edges with React Flow state
   React.useEffect(() => {
     setNodes(storeNodes);
   }, [storeNodes, setNodes]);
-
   React.useEffect(() => {
     setEdges(storeEdges);
   }, [storeEdges, setEdges]);
-
   // Update store when nodes change
   const onNodesChangeInternal = useCallback(
     (changes: any) => {
@@ -97,7 +90,6 @@ export default function FlowCanvas() {
     },
     [onNodesChange, updateNodePosition, selectStep, selectedNodeId]
   );
-
   const onConnect = useCallback(
     (params: Connection) => {
       if (params.source && params.target) {
@@ -107,40 +99,32 @@ export default function FlowCanvas() {
     },
     [setEdges, addStoreEdge]
   );
-
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }, []);
-
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const stepType = e.dataTransfer.getData('application/reactflow');
-
       if (!stepType || !reactFlowBounds) {
         return;
       }
-
       const position = {
         x: e.clientX - reactFlowBounds.left - 100,
         y: e.clientY - reactFlowBounds.top - 50,
       };
-
       addStep(stepType as any, position);
     },
     [addStep]
   );
-
   const onNodeClick = useCallback(
     (_: React.MouseEvent<Element>, node: Node) => {
       selectStep(node.id);
     },
     [selectStep]
   );
-
   return (
     <div
       ref={reactFlowWrapper}
@@ -177,5 +161,4 @@ export default function FlowCanvas() {
       </ReactFlow>
     </div>
   );
-}
-
+}

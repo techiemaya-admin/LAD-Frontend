@@ -1,6 +1,5 @@
 // components/settings/CreditsHighlightCard.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Line } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
 import { useRouter } from "next/navigation";
-
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
-
 interface CreditsHighlightCardProps {
   balance?: number;
   totalMinutes?: number;
@@ -20,7 +17,6 @@ interface CreditsHighlightCardProps {
   onRefresh?: () => void;
   isLoading?: boolean;
 }
-
 export function CreditsHighlightCard({ 
   balance = 0,
   totalMinutes = 0,
@@ -29,17 +25,14 @@ export function CreditsHighlightCard({
   onRefresh,
   isLoading = false
 }: CreditsHighlightCardProps) {
-  
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const usedThisMonth = Math.min(usageThisMonth, 100);
   const depletionForecast = Math.round((100 - usedThisMonth) / 3);
   const usagePercentage = Math.min(usedThisMonth, 100);
-
   useEffect(() => {
     setMounted(true);
   }, []);
-
   const sparklineData = {
     labels: Array.from({ length: 7 }, (_, i) => i + 1),
     datasets: [
@@ -57,16 +50,13 @@ export function CreditsHighlightCard({
       },
     ],
   };
-
   const getBalanceStatus = (bal: number) => {
     if (bal >= 100) return { color: "text-green-600", bg: "bg-green-50", label: "Healthy" };
     if (bal >= 50) return { color: "text-blue-600", bg: "bg-blue-50", label: "Good" };
     if (bal >= 20) return { color: "text-yellow-600", bg: "bg-yellow-50", label: "Low" };
     return { color: "text-red-600", bg: "bg-red-50", label: "Critical" };
   };
-
   const status = getBalanceStatus(balance);
-
   return (
     <div className="w-full animate-fade-in">
       <Card className={`
@@ -79,12 +69,10 @@ export function CreditsHighlightCard({
         hover:shadow-xl hover:shadow-gray-200/30
         ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
       `}>
-        
         <div className="relative z-10">
           {/* HEADER */}
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              
               <div className="flex items-center gap-4">
                 <div className={`
                   p-3 rounded-2xl 
@@ -94,7 +82,6 @@ export function CreditsHighlightCard({
                 `}>
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
-
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Credits Overview</CardTitle>
                   <CardDescription className="text-sm text-gray-600 mt-0.5">
@@ -102,7 +89,6 @@ export function CreditsHighlightCard({
                   </CardDescription>
                 </div>
               </div>
-
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -119,10 +105,8 @@ export function CreditsHighlightCard({
               </Button>
             </div>
           </CardHeader>
-
           {/* CONTENT */}
           <CardContent className="space-y-6">
-
             {/* CREDIT BALANCE - Enhanced */}
             <div className="space-y-2">
               <div className="flex justify-between items-start">
@@ -143,7 +127,6 @@ export function CreditsHighlightCard({
                 </div>
               </div>
             </div>
-
             {/* SPARKLINE */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-gray-600">7-Day Trend</p>
@@ -172,7 +155,6 @@ export function CreditsHighlightCard({
                 />
               </div>
             </div>
-
             {/* USAGE PROGRESS - Enhanced */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -202,10 +184,8 @@ export function CreditsHighlightCard({
                 />
               </div>
             </div>
-
             {/* STATS - Enhanced with animations */}
             <div className="grid grid-cols-2 gap-4">
-              
               <div className={`
                 group p-4 rounded-xl border border-blue-200/50 
                 bg-gradient-to-br from-blue-50/80 to-blue-100/40
@@ -224,7 +204,6 @@ export function CreditsHighlightCard({
                   <Clock className="h-4 w-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
-              
               <div className={`
                 group p-4 rounded-xl border border-purple-200/50 
                 bg-gradient-to-br from-purple-50/80 to-purple-100/40
@@ -243,9 +222,7 @@ export function CreditsHighlightCard({
                   <TrendingUp className="h-4 w-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
-
             </div>
-
             {/* ACTION BUTTONS - Enhanced */}
             <div className="flex gap-3 pt-2">
               <Button 
@@ -262,7 +239,6 @@ export function CreditsHighlightCard({
               >
                 View details
               </Button>
-
               <Button 
                 className={`
                   flex-1 rounded-lg
@@ -280,11 +256,9 @@ export function CreditsHighlightCard({
                 Add credits
               </Button>
             </div>
-
           </CardContent>
         </div>
       </Card>
-
       <style jsx>{`
         @keyframes fadeIn {
           from {
@@ -296,11 +270,9 @@ export function CreditsHighlightCard({
             transform: translateY(0);
           }
         }
-
         :global(.animate-fade-in) {
           animation: fadeIn 0.6s ease-out;
         }
-
         @keyframes shimmer {
           0% {
             background-position: -1000px 0;
@@ -312,4 +284,4 @@ export function CreditsHighlightCard({
       `}</style>
     </div>
   );
-}
+}

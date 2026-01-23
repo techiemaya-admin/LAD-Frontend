@@ -2,9 +2,7 @@
  * Status and Stage Mapping Utilities
  * Provides label mapping for lead statuses and stages
  */
-
 import { normalizeFieldNames } from './fieldMappings';
-
 interface StatusOption {
   key?: string;
   value?: string;
@@ -12,7 +10,6 @@ interface StatusOption {
   name?: string;
   [key: string]: unknown;
 }
-
 interface StageOption {
   key?: string;
   id?: string;
@@ -20,13 +17,11 @@ interface StageOption {
   name?: string;
   [key: string]: unknown;
 }
-
 interface Lead {
   status?: string;
   stage?: string;
   [key: string]: unknown;
 }
-
 // Status mappings (key -> label)
 export const STATUS_MAPPINGS: Record<string, string> = {
   'active': 'Active',
@@ -40,7 +35,6 @@ export const STATUS_MAPPINGS: Record<string, string> = {
   'new': 'New',
   'completed': 'Completed'
 };
-
 // Default stage mappings (key -> label) - can be overridden by dynamic stages
 export const DEFAULT_STAGE_MAPPINGS: Record<string, string> = {
   'lead': 'Lead',
@@ -51,7 +45,6 @@ export const DEFAULT_STAGE_MAPPINGS: Record<string, string> = {
   'won': 'Won',
   'lost': 'Lost'
 };
-
 /**
  * Get status label from status key
  * @param statusKey - The status key (e.g., 'active', 'won')
@@ -60,7 +53,6 @@ export const DEFAULT_STAGE_MAPPINGS: Record<string, string> = {
  */
 export const getStatusLabel = (statusKey: string | null | undefined, statusOptions: StatusOption[] = []): string => {
   if (!statusKey) return 'Unknown';
-  
   // First try to find in provided status options (dynamic data)
   if (Array.isArray(statusOptions) && statusOptions.length > 0) {
     const status = statusOptions.find(s => s.key === statusKey || s.value === statusKey);
@@ -68,11 +60,9 @@ export const getStatusLabel = (statusKey: string | null | undefined, statusOptio
       return status.label || status.name || statusKey;
     }
   }
-  
   // Fallback to hardcoded mappings
   return STATUS_MAPPINGS[statusKey] || statusKey || 'Unknown';
 };
-
 /**
  * Get stage label from stage key and stages data
  * @param stageKey - The stage key
@@ -81,17 +71,14 @@ export const getStatusLabel = (statusKey: string | null | undefined, statusOptio
  */
 export const getStageLabel = (stageKey: string | null | undefined, stages: StageOption[] = []): string => {
   if (!stageKey) return 'Unknown';
-  
   // First try to find in provided stages data
   const stage = stages.find(s => s.key === stageKey || s.id === stageKey);
   if (stage) {
     return stage.label || stage.name || stageKey;
   }
-  
   // Fallback to default mappings
   return DEFAULT_STAGE_MAPPINGS[stageKey] || stageKey || 'Unknown';
 };
-
 /**
  * Get all available status options for dropdowns
  * @returns Array of {key, label} objects
@@ -103,7 +90,6 @@ export const getStatusOptions = (): Array<{ key: string; label: string; value: s
     value: key
   }));
 };
-
 /**
  * Get stage options from stages data
  * @param stages - Array of stage objects
@@ -116,7 +102,6 @@ export const getStageOptions = (stages: StageOption[] = []): Array<{ key: string
     value: stage.key || String(stage.id || '')
   }));
 };
-
 /**
  * Enhance lead data with display labels and normalize field names
  * @param lead - Lead object with status and stage keys
@@ -125,17 +110,14 @@ export const getStageOptions = (stages: StageOption[] = []): Array<{ key: string
  */
 export const enhanceLeadWithLabels = (lead: Lead | null | undefined, stages: StageOption[] = []): Lead => {
   if (!lead) return lead as Lead;
-  
   // Use the comprehensive field normalization utility
   const normalizedLead = normalizeFieldNames(lead);
-  
   return {
     ...normalizedLead,
     status_label: getStatusLabel(normalizedLead.status, []),
     stage_label: getStageLabel(normalizedLead.stage, stages)
   };
 };
-
 /**
  * Enhance multiple leads with display labels
  * @param leads - Array of lead objects
@@ -144,4 +126,4 @@ export const enhanceLeadWithLabels = (lead: Lead | null | undefined, stages: Sta
  */
 export const enhanceLeadsWithLabels = (leads: Lead[] = [], stages: StageOption[] = []): Lead[] => {
   return leads.map(lead => enhanceLeadWithLabels(lead, stages));
-};
+};

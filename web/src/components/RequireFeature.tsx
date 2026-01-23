@@ -1,16 +1,13 @@
 'use client';
-
 import React, { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock } from 'lucide-react';
-
 interface RequireFeatureProps {
   featureKey: string;
   children: ReactNode;
   fallback?: ReactNode;
   showMessage?: boolean;
 }
-
 /**
  * RequireFeature - Guard component for tenant-level feature enablement
  * 
@@ -29,19 +26,15 @@ export const RequireFeature: React.FC<RequireFeatureProps> = ({
   showMessage = true,
 }) => {
   const { hasFeature } = useAuth();
-
   if (hasFeature(featureKey)) {
     return <>{children}</>;
   }
-
   if (fallback) {
     return <>{fallback}</>;
   }
-
   if (!showMessage) {
     return null;
   }
-
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
       <Lock className="h-12 w-12 mx-auto text-blue-600 mb-4" />
@@ -56,4 +49,4 @@ export const RequireFeature: React.FC<RequireFeatureProps> = ({
       </button>
     </div>
   );
-};
+};

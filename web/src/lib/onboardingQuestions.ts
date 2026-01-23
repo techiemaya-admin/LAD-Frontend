@@ -27,7 +27,6 @@ export const questionSequences = {
     },
   ],
 };
-
 // Platform-specific feature questions (dynamically generated)
 export function getPlatformFeaturesQuestion(platform: string) {
   const platformLabels: Record<string, string> = {
@@ -37,7 +36,6 @@ export function getPlatformFeaturesQuestion(platform: string) {
     email: 'Email',
     voice: 'Voice Agent',
   };
-
   return {
     key: `features_${platform}`,
     question: `Which ${platformLabels[platform] || platform} features do you want? (You can select multiple)`,
@@ -45,7 +43,6 @@ export function getPlatformFeaturesQuestion(platform: string) {
     platform,
   };
 }
-
 // Utility questions for each feature
 export function getUtilityQuestions() {
   return [
@@ -96,5 +93,4 @@ export function getUtilityQuestions() {
       ],
     },
   ];
-}
-
+}

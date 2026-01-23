@@ -9,17 +9,14 @@ import {
   WIDGET_CATALOG,
   generateWidgetId,
 } from '@/types/dashboard';
-
 interface DashboardState {
   // Edit mode
   isEditMode: boolean;
   setEditMode: (mode: boolean) => void;
   toggleEditMode: () => void;
-  
   // Current layout
   layout: WidgetLayoutItem[];
   setLayout: (layout: WidgetLayoutItem[]) => void;
-  
   // Saved layouts
   savedLayouts: DashboardLayout[];
   currentLayoutId: string | null;
@@ -27,28 +24,23 @@ interface DashboardState {
   loadLayout: (layoutId: string) => void;
   deleteLayout: (layoutId: string) => void;
   resetToDefault: () => void;
-  
   // Widget management
   addWidget: (type: WidgetType) => void;
   removeWidget: (widgetId: string) => void;
-  
   // Calendar events
   calendarEvents: CalendarEvent[];
   addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => void;
   updateCalendarEvent: (id: string, event: Partial<CalendarEvent>) => void;
   deleteCalendarEvent: (id: string) => void;
-  
   // Calendar view mode
   calendarViewMode: 'month' | 'week';
   setCalendarViewMode: (mode: 'month' | 'week') => void;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  
   // Widget library drawer
   isWidgetLibraryOpen: boolean;
   setWidgetLibraryOpen: (open: boolean) => void;
 }
-
 export const useDashboardStore = create<DashboardState>()(
   persist(
     (set, get) => ({
@@ -56,15 +48,12 @@ export const useDashboardStore = create<DashboardState>()(
       isEditMode: false,
       setEditMode: (mode) => set({ isEditMode: mode }),
       toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
-      
       // Current layout
       layout: DEFAULT_LAYOUT,
       setLayout: (layout) => set({ layout }),
-      
       // Saved layouts
       savedLayouts: [],
       currentLayoutId: null,
-      
       saveCurrentLayout: (name) => {
         const { layout, savedLayouts } = get();
         const newLayout: DashboardLayout = {
@@ -79,7 +68,6 @@ export const useDashboardStore = create<DashboardState>()(
           currentLayoutId: newLayout.id,
         });
       },
-      
       loadLayout: (layoutId) => {
         const { savedLayouts } = get();
         const layout = savedLayouts.find((l) => l.id === layoutId);
@@ -90,7 +78,6 @@ export const useDashboardStore = create<DashboardState>()(
           });
         }
       },
-      
       deleteLayout: (layoutId) => {
         const { savedLayouts, currentLayoutId } = get();
         set({
@@ -98,23 +85,19 @@ export const useDashboardStore = create<DashboardState>()(
           currentLayoutId: currentLayoutId === layoutId ? null : currentLayoutId,
         });
       },
-      
       resetToDefault: () => {
         set({
           layout: DEFAULT_LAYOUT,
           currentLayoutId: null,
         });
       },
-      
       // Widget management
       addWidget: (type) => {
         const { layout } = get();
         const config = WIDGET_CATALOG[type];
         const widgetId = generateWidgetId(type);
-        
         // Find the lowest y position to place the new widget
         const maxY = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
-        
         const newWidget: WidgetLayoutItem = {
           i: widgetId,
           x: 0,
@@ -126,15 +109,12 @@ export const useDashboardStore = create<DashboardState>()(
           maxW: config.maxSize?.w,
           maxH: config.maxSize?.h,
         };
-        
         set({ layout: [...layout, newWidget] });
       },
-      
       removeWidget: (widgetId) => {
         const { layout } = get();
         set({ layout: layout.filter((item) => item.i !== widgetId) });
       },
-      
       // Calendar events
       calendarEvents: [
         {
@@ -169,7 +149,6 @@ export const useDashboardStore = create<DashboardState>()(
           leadName: 'Sarah Johnson',
         },
       ],
-      
       addCalendarEvent: (event) => {
         const { calendarEvents } = get();
         const newEvent: CalendarEvent = {
@@ -178,7 +157,6 @@ export const useDashboardStore = create<DashboardState>()(
         };
         set({ calendarEvents: [...calendarEvents, newEvent] });
       },
-      
       updateCalendarEvent: (id, updates) => {
         const { calendarEvents } = get();
         set({
@@ -187,18 +165,15 @@ export const useDashboardStore = create<DashboardState>()(
           ),
         });
       },
-      
       deleteCalendarEvent: (id) => {
         const { calendarEvents } = get();
         set({ calendarEvents: calendarEvents.filter((e) => e.id !== id) });
       },
-      
       // Calendar view
       calendarViewMode: 'month',
       setCalendarViewMode: (mode) => set({ calendarViewMode: mode }),
       selectedDate: new Date(),
       setSelectedDate: (date) => set({ selectedDate: date }),
-      
       // Widget library
       isWidgetLibraryOpen: false,
       setWidgetLibraryOpen: (open) => set({ isWidgetLibraryOpen: open }),
@@ -213,4 +188,4 @@ export const useDashboardStore = create<DashboardState>()(
       }),
     }
   )
-);
+);

@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { cookies } from 'next/headers';
-
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
-
 export async function GET(request: NextRequest) {
   try {
     // Get auth token from cookies or Authorization header
     const cookieStore = await cookies();
     const token = cookieStore.get('access_token')?.value || 
                   request.headers.get('Authorization')?.replace('Bearer ', '');
-
     if (!token) {
       return NextResponse.json(
         { error: 'Unauthorized - No token provided' },
         { status: 401 }
       );
     }
-
     // Forward request to backend
     const response = await fetch(`${BACKEND_URL}/api/stripe/subscription-plans`, {
       method: 'GET',
@@ -26,16 +22,13 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       return NextResponse.json(
         data,
         { status: response.status }
       );
     }
-
     return NextResponse.json(data);
   } catch (error) {
     logger.error('Error fetching subscription plans', error);
@@ -45,23 +38,19 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     // Get auth token from cookies or Authorization header
     const cookieStore = await cookies();
     const token = cookieStore.get('access_token')?.value || 
                   request.headers.get('Authorization')?.replace('Bearer ', '');
-
     if (!token) {
       return NextResponse.json(
         { error: 'Unauthorized - No token provided' },
         { status: 401 }
       );
     }
-
     const body = await request.json();
-
     // Forward request to backend
     const response = await fetch(`${BACKEND_URL}/api/stripe/subscription-plans`, {
       method: 'POST',
@@ -71,16 +60,13 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       return NextResponse.json(
         data,
         { status: response.status }
       );
     }
-
     return NextResponse.json(data);
   } catch (error) {
     logger.error('Error creating subscription plan', error);
@@ -89,4 +75,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}

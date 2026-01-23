@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ChatPanel from '@/components/onboarding/ChatPanel';
@@ -8,14 +7,11 @@ import EditorPanel from '@/components/onboarding/EditorPanel';
 import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
 import ResizableDivider from '@/components/onboarding/ResizableDivider';
 import { ChevronRight, MessageCircle, GitBranch } from 'lucide-react';
-
 interface Onboarding3PanelProps {
   campaignId?: string | null;
 }
-
 export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) {
   const { hasSelectedOption, isEditMode, isEditorPanelCollapsed, setIsEditorPanelCollapsed, hasRequestedEditor, mobileView, setMobileView, setHasSelectedOption, setSelectedPath } = useOnboardingStore();
-  
   // When campaignId is present, skip option selection
   useEffect(() => {
     if (campaignId) {
@@ -23,36 +19,29 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       setSelectedPath('automation');
     }
   }, [campaignId, setHasSelectedOption, setSelectedPath]);
-  
   // Panel widths as percentages
   const [chatWidth, setChatWidth] = useState(40); // Left panel (Chat)
   const [workflowWidth, setWorkflowWidth] = useState(30); // Middle panel (Workflow Preview)
   const [editorWidth, setEditorWidth] = useState(30); // Right panel (Editor)
-  
   // Load saved widths from localStorage
   useEffect(() => {
     const savedChatWidth = localStorage.getItem('onboarding-chat-width');
     const savedWorkflowWidth = localStorage.getItem('onboarding-workflow-width');
     const savedEditorWidth = localStorage.getItem('onboarding-editor-width');
-    
     if (savedChatWidth) setChatWidth(parseFloat(savedChatWidth));
     if (savedWorkflowWidth) setWorkflowWidth(parseFloat(savedWorkflowWidth));
     if (savedEditorWidth) setEditorWidth(parseFloat(savedEditorWidth));
   }, []);
-  
   // Save widths to localStorage when they change
   useEffect(() => {
     localStorage.setItem('onboarding-chat-width', chatWidth.toString());
   }, [chatWidth]);
-  
   useEffect(() => {
     localStorage.setItem('onboarding-workflow-width', workflowWidth.toString());
   }, [workflowWidth]);
-  
   useEffect(() => {
     localStorage.setItem('onboarding-editor-width', editorWidth.toString());
   }, [editorWidth]);
-  
   // Update widths when editor panel is collapsed/expanded
   useEffect(() => {
     if (isEditorPanelCollapsed) {
@@ -75,13 +64,11 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       }
     }
   }, [isEditorPanelCollapsed, chatWidth]);
-  
   // Handle resizing between chat and workflow panels
   const handleChatResize = (newWidth: number) => {
     const remaining = 100 - newWidth;
     const workflowRatio = workflowWidth / (workflowWidth + editorWidth || 1);
     const editorRatio = editorWidth / (workflowWidth + editorWidth || 1);
-    
     setChatWidth(newWidth);
     if (!isEditorPanelCollapsed) {
       setWorkflowWidth(remaining * workflowRatio);
@@ -90,20 +77,16 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       setWorkflowWidth(remaining);
     }
   };
-  
   // Handle resizing between workflow and editor panels
   const handleWorkflowResize = (newWidth: number) => {
     if (isEditorPanelCollapsed) return;
-    
     const remaining = 100 - chatWidth;
     const newEditorWidth = remaining - newWidth;
-    
     if (newEditorWidth >= 15 && newWidth >= 15) {
       setWorkflowWidth(newWidth);
       setEditorWidth(newEditorWidth);
     }
   };
-
   // Initially show only chat with option cards
   if (!hasSelectedOption) {
     return (
@@ -135,13 +118,11 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
               Workflow
             </button>
           </div>
-          
           {/* Mobile Content */}
           <div className="flex-1 overflow-hidden">
             {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel />}
           </div>
         </div>
-
         {/* Desktop Layout */}
         <div className="hidden md:block w-full h-full bg-white overflow-hidden">
           <ChatPanel />
@@ -149,7 +130,6 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       </>
     );
   }
-
   // When Edit is clicked, show only the full editor (Screen 3)
   if (isEditMode) {
     return (
@@ -158,7 +138,6 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       </div>
     );
   }
-
   // After selection, show 3-panel layout (full screen)
   // On mobile: show toggle tabs to switch between chat and workflow
   return (
@@ -190,13 +169,11 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
             Workflow
           </button>
         </div>
-        
         {/* Mobile Content */}
         <div className="flex-1 overflow-hidden">
           {mobileView === 'chat' ? <ChatPanel campaignId={campaignId} /> : <WorkflowPreviewPanel />}
         </div>
       </div>
-
       {/* Desktop Layout - Side by side panels */}
       <div className="hidden md:flex w-full h-full bg-gray-50 overflow-hidden">
         {/* LEFT PANEL - Chat (Resizable) */}
@@ -206,14 +183,12 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
         >
           <ChatPanel campaignId={campaignId} />
         </div>
-
         {/* RESIZABLE DIVIDER 1 - Between Chat and Workflow */}
         <ResizableDivider
           onResize={handleChatResize}
           minWidth={15}
           maxWidth={70}
         />
-
         {/* MIDDLE PANEL - Workflow Preview (Resizable) */}
         <div 
           className="border-r border-gray-200 bg-white overflow-hidden relative h-full"
@@ -224,7 +199,6 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
           }}
         >
           <WorkflowPreviewPanel />
-        
         {/* Show Editor Button - only appears when user has clicked Edit AND panel is collapsed */}
         {isEditorPanelCollapsed && hasRequestedEditor && (
           <button
@@ -237,7 +211,6 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
           </button>
         )}
       </div>
-
       {/* RESIZABLE DIVIDER 2 - Between Workflow and Editor (only when editor is visible) */}
       {!isEditorPanelCollapsed && (
         <>
@@ -246,7 +219,6 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
             minWidth={15}
             maxWidth={70}
           />
-
           {/* RIGHT PANEL - Editor (Step Library / Step Settings) - Resizable */}
           <div 
             className="bg-white overflow-hidden h-full"
@@ -259,5 +231,4 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
       </div>
     </>
   );
-}
-
+}

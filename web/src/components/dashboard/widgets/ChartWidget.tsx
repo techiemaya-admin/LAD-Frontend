@@ -13,14 +13,12 @@ import {
 } from 'recharts';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { Button } from '@/components/ui/button';
-
 interface ChartWidgetProps {
   id: string;
   data: Array<{ date: string; calls: number }>;
   chartMode?: 'month' | 'year';
   onChartModeChange?: (mode: 'month' | 'year') => void;
 }
-
 export const ChartWidget: React.FC<ChartWidgetProps> = ({
   id,
   data,
@@ -29,7 +27,6 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
 }) => {
   const [localChartMode, setLocalChartMode] = useState<'month' | 'year'>('month');
   const chartMode = externalChartMode ?? localChartMode;
-
   const handleChartModeChange = (mode: 'month' | 'year') => {
     if (onChartModeChange) {
       onChartModeChange(mode);
@@ -37,12 +34,10 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
       setLocalChartMode(mode);
     }
   };
-
   const chartRangeLabel = useMemo(() => {
     if (!data.length) return 'No data available';
     return `From ${data[0].date} to ${data[data.length - 1].date}`;
   }, [data]);
-
   return (
     <WidgetWrapper
       id={id}
@@ -120,4 +115,4 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};

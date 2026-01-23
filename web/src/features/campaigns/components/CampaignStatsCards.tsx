@@ -1,16 +1,13 @@
 'use client';
-
 import React from 'react';
 import { Box, Card, CardContent, Typography, Avatar } from '@mui/material';
 import {
   BarChart, PlayArrow, LinkedIn as LinkedInIcon, Email, Phone, Videocam
 } from '@mui/icons-material';
 import type { CampaignStats } from '@/features/campaigns';
-
 interface CampaignStatsCardsProps {
   stats: CampaignStats;
 }
-
 export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: { xs: 'wrap', md: 'nowrap' }, alignItems: 'stretch' }}>
@@ -198,5 +195,4 @@ export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
       </Box>
     </Box>
   );
-}
-
+}

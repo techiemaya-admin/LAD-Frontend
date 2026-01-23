@@ -5,16 +5,13 @@ import { useRouter } from 'next/navigation';
 import { apolloLeadsService, getDecisionMakerPhone } from '@/features/apollo-leads';
 import { Phone as PhoneIcon } from '@mui/icons-material';
 import { safeStorage } from '../utils/storage';
-
 // Get API base URL from environment variable
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
-
 // Helper function to get userId from auth token
 const getUserId = () => {
   try {
     const token = safeStorage.getItem('auth_token');
     if (!token) return 'demo_user_123';
-    
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.userId || payload.id || 'demo_user_123';
   } catch (error) {
@@ -94,7 +91,6 @@ import {
   FilterList
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
-
 export default function CompanyDataTable({ 
   data = [], 
   columns = [], 
@@ -127,46 +123,35 @@ export default function CompanyDataTable({
   const [selectAll, setSelectAll] = useState(false);
   const [selectAllEmployees, setSelectAllEmployees] = useState(false);
   const [showAITrigger, setShowAITrigger] = useState(false);
-  
   const [internalActiveTab, setInternalActiveTab] = useState(0); // 0 = Companies, 1 = Employees
-  
   // Determine if component is controlled (prop was provided)
   const isControlled = controlledActiveTab !== undefined;
-  
   const { push } = useToast(); // For notifications
   const router = useRouter();
   const [intelligentCallingLoading, setIntelligentCallingLoading] = useState(false);
-  
   // Use controlled tab if provided, otherwise use internal state
   const activeTab = isControlled ? controlledActiveTab : internalActiveTab;
-  
   // Helper to update tab - if controlled, notify parent; otherwise update internal state
   const updateActiveTab = (newValue) => {
-    console.log('🔄 updateActiveTab called:', newValue, 'isControlled:', isControlled, 'onActiveTabChange exists:', !!onActiveTabChange);
     if (isControlled) {
       // Controlled: notify parent
       if (onActiveTabChange) {
-        console.log('📞 Calling onActiveTabChange with:', newValue);
         onActiveTabChange(newValue);
       } else {
         console.warn('⚠️ Component is controlled but onActiveTabChange is not provided!');
       }
     } else {
       // Uncontrolled: update internal state
-      console.log('📝 Updating internal tab state to:', newValue);
       setInternalActiveTab(newValue);
     }
   };
-  
   // Notify parent when activeTab changes (only for uncontrolled mode)
   // When controlled, parent already knows the value, so we don't need to notify
   const onActiveTabChangeRef = useRef(onActiveTabChange);
   const lastNotifiedTabRef = useRef(activeTab);
-  
   useEffect(() => {
     onActiveTabChangeRef.current = onActiveTabChange;
   }, [onActiveTabChange]);
-  
   useEffect(() => {
     // Only notify parent if component is uncontrolled and tab actually changed
     if (!isControlled && activeTab !== lastNotifiedTabRef.current && onActiveTabChangeRef.current) {
@@ -178,37 +163,30 @@ export default function CompanyDataTable({
     }
   }, [activeTab, isControlled]);
   const filterButtonRef = useRef(null);
-  
   // Helper function to normalize company IDs for comparison
   const normalizeCompanyId = (id) => {
     // Do not treat 0 as null; only undefined or null are invalid
 if (!id) return null;
     return String(id).trim();
   };
-  
   // Track employeeData changes (removed console.log for performance)
   // useEffect(() => {
-  //   console.log('👥 EmployeeData changed in CompanyDataTable:', {
-  //     length: employeeData.length,
-  //     isArray: Array.isArray(employeeData),
+  //   ,
   //     type: typeof employeeData,
   //     firstItem: employeeData[0],
   //     fullData: employeeData
   //   });
   // }, [employeeData]);
-  
   // Track the original data lengths to detect actual search result changes (not filter changes)
   const prevEmployeeDataLengthRef = useRef(employeeData.length);
   const prevDataLengthRef = useRef(data.length);
   const isInitialMountRef = useRef(true);
   const activeTabRef = useRef(activeTab);
   const userManuallyChangedTabRef = useRef(false); // Track if user manually changed tab
-  
   // Update ref when activeTab changes (for use in useEffect without causing re-renders)
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
-  
   // Auto-switch tabs based on which search was performed most recently
   // IMPORTANT: Only switch tabs when actual search results change, NOT when filters are applied
   // Filters change the displayed data but shouldn't trigger tab switches
@@ -234,7 +212,6 @@ if (!id) return null;
       prevDataLengthRef.current = data.length;
       return;
     }
-    
     // If component is controlled, parent manages tab switching - don't auto-switch here
     if (isControlled) {
       // Just update refs to track data changes, but don't switch tabs
@@ -242,7 +219,6 @@ if (!id) return null;
       prevDataLengthRef.current = data.length;
       return;
     }
-    
     // Don't auto-switch if user manually changed the tab
     if (userManuallyChangedTabRef.current) {
       // Update refs but don't switch tabs
@@ -250,7 +226,6 @@ if (!id) return null;
       prevDataLengthRef.current = data.length;
       return;
     }
-    
     // Special case: If employeeData exists and showCompanyFirst is false, switch to Employees tab
     // This handles restoration of employee searches
     if (employeeData.length > 0 && !showCompanyFirst && activeTabRef.current === 0) {
@@ -262,24 +237,20 @@ if (!id) return null;
         return;
       }
     }
-    
     // Check if this is a real search result change (not just a filter change)
     const employeeDataChanged = prevEmployeeDataLengthRef.current !== employeeData.length;
     const companyDataChanged = prevDataLengthRef.current !== data.length;
-    
     // CRITICAL: Don't switch tabs if user is currently viewing a tab and just applying filters
     // Only switch tabs when actual new search results arrive (significant length changes)
     // Small length changes are likely filter changes, not new searches
     const significantEmployeeChange = Math.abs(prevEmployeeDataLengthRef.current - employeeData.length) > (prevEmployeeDataLengthRef.current * 0.5);
     const significantCompanyChange = Math.abs(prevDataLengthRef.current - data.length) > (prevDataLengthRef.current * 0.5);
-    
     // Only auto-switch if:
     // 1. Data went from 0 to >0 (new search results arrived)
     // 2. OR there's a significant change (more than 50% difference) indicating new search, not filter
     // 3. AND we're not already on the correct tab (prevent unnecessary switches)
     if ((employeeDataChanged && (prevEmployeeDataLengthRef.current === 0 || significantEmployeeChange)) ||
         (companyDataChanged && (prevDataLengthRef.current === 0 || significantCompanyChange))) {
-      
       // Don't switch if user is actively viewing a tab - only switch on new searches
       // If both tabs have data, respect the current tab choice unless it's a new search
       if (employeeData.length > 0 && data.length === 0) {
@@ -308,45 +279,32 @@ if (!id) return null;
         }
         // Otherwise, keep current tab (user might be filtering)
       }
-      
       // Update refs to track current lengths
       prevEmployeeDataLengthRef.current = employeeData.length;
       prevDataLengthRef.current = data.length;
     }
   }, [employeeData.length, data.length, showCompanyFirst, isControlled]);
-  
   // Sync selectAllEmployees state with actual selection (optimized)
   useEffect(() => {
     if (employeeData.length === 0) {
       if (selectAllEmployees) setSelectAllEmployees(false);
       return;
     }
-    
     // Only check if selection count matches total (faster than .every())
     const isAllSelected = selectedEmployees.size === employeeData.length && selectedEmployees.size > 0;
     if (isAllSelected !== selectAllEmployees) {
       setSelectAllEmployees(isAllSelected);
     }
   }, [selectedEmployees.size, employeeData.length]); // Removed selectAllEmployees from deps to avoid loop
-  
   // Debug logging (disabled for performance - enable only when debugging)
-  // console.log('🔍 CompanyDataTable received data:', { 
-  //   companiesCount: data.length, 
-  //   employeesCount: employeeData.length,
-  //   activeTab,
-  // });
-  
-  // Discount intelligence removed - no longer needed
-  
+  // // Discount intelligence removed - no longer needed
   // Filter menu states
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [selectedFilters, setSelectedFilters] = useState(new Set());
-  
   // Phone number states
   const [phoneData, setPhoneData] = useState({}); // { companyId: { phone, name, title, status } }
   const [phoneLoading, setPhoneLoading] = useState({}); // { companyId: true/false }
   const [phoneError, setPhoneError] = useState({}); // { companyId: errorMessage }
-
   // Persist company phone data across page refreshes
   useEffect(() => {
     try {
@@ -361,7 +319,6 @@ if (!id) return null;
       console.warn('Failed to load phone data from storage');
     }
   }, []);
-
   // Persist phone data to localStorage whenever it changes
   useEffect(() => {
     try {
@@ -372,11 +329,9 @@ if (!id) return null;
       console.warn('Failed to save phone data to storage:', e);
     }
   }, [phoneData]);
-  
   // Employee fetching states
   const [fetchedEmployeeData, setFetchedEmployeeData] = useState({}); // { companyId: [employees array] }
   const [employeeLoading, setEmployeeLoading] = useState({}); // { companyId: true/false }
-  
   // Phone reveal confirmation dialog
   const [phoneConfirmDialog, setPhoneConfirmDialog] = useState({
     open: false,
@@ -389,22 +344,18 @@ if (!id) return null;
   const [employeeRoleFilter, setEmployeeRoleFilter] = useState('all'); // Role filter
   const [employeeCacheInfo, setEmployeeCacheInfo] = useState({}); // { companyId: { from_cache: true, cache_age_days: 5 } }
   const [selectedDialogEmployees, setSelectedDialogEmployees] = useState(new Set()); // Selected employees in dialog
-  
   // Individual employee detail dialog state
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeDetailDialogOpen, setEmployeeDetailDialogOpen] = useState(false);
-  
   // Employee contact reveal states
   const [revealedContacts, setRevealedContacts] = useState({}); // { employeeId: { phone: '...', email: '...' } }
   const [revealingContacts, setRevealingContacts] = useState({}); // { employeeId: { phone: true, email: true } }
-
   // Helper function to get consistent employee ID (priority: id > linkedin_url > name)
   const getEmployeeId = (employee) => {
     if (!employee) return null;
     // Use consistent priority: id > linkedin_url > name
     return employee.id || employee.linkedin_url || employee.name || null;
   };
-
   // Persist revealed contacts across dialog open/close and page refreshes
   useEffect(() => {
     try {
@@ -419,7 +370,6 @@ if (!id) return null;
       console.warn('Failed to load revealed contacts from storage');
     }
   }, []);
-
   // Persist revealed contacts to localStorage whenever they change
   useEffect(() => {
     try {
@@ -431,7 +381,6 @@ if (!id) return null;
       console.warn('Failed to save revealed contacts to storage:', e);
     }
   }, [revealedContacts]);
-
   // Update showAITrigger when employee or company selection changes
   useEffect(() => {
     if (activeTab === 0) {
@@ -442,17 +391,13 @@ if (!id) return null;
       setShowAITrigger(selectedEmployees.size > 0);
     }
   }, [selectedEmployees, selectedCompanies, activeTab]);
-
-  // console.log('🔍 CompanyDataTable received data:', data); // Disabled for performance
-
+  // // Disabled for performance
   // Filter employees by role
   const filterEmployeesByRole = (employees, roleFilter) => {
     if (!employees || roleFilter === 'all') return employees;
-    
     const filterLower = roleFilter.toLowerCase();
     return employees.filter(emp => {
       const title = (emp.title || '').toLowerCase();
-      
       switch(roleFilter) {
         case 'executive':
           return title.includes('ceo') || title.includes('cto') || title.includes('cfo') || 
@@ -478,78 +423,55 @@ if (!id) return null;
       }
     });
   };
-
   // Function to validate LinkedIn URL
   const isValidLinkedInUrl = (url) => {
     if (!url) return false;
     return (url.includes('linkedin.com/company/') || url.includes('linkedin.com/in/')) && url.startsWith('http');
   };
-
   // Function to get LinkedIn company name from URL
   const getLinkedInCompanyName = (url) => {
     if (!isValidLinkedInUrl(url)) return null;
-    
     // Handle company pages
     const companyMatch = url.match(/linkedin\.com\/company\/([^\/\?]+)/);
     if (companyMatch) {
       return companyMatch[1].replace(/-/g, ' ');
     }
-    
     // Handle personal profiles
     const personalMatch = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
     if (personalMatch) {
       return personalMatch[1].replace(/-/g, ' ');
     }
-    
     return null;
   };
-
   // Function to detect if LinkedIn URL was likely generated
   const isGeneratedLinkedInUrl = (url) => {
     if (!url) return false;
     // Check if URL looks like it was generated (simple pattern)
     const profileName = getLinkedInCompanyName(url)?.toLowerCase() || '';
     const commonPatterns = ['samover', 'packndash', 'allied', 'moversup', 'relocate', 'wow', 'speed', 'move', 'anymove'];
-    
     // For personal profiles, be more lenient - they're often legitimate
     if (url.includes('linkedin.com/in/')) {
       return false; // Assume personal profiles are legitimate
     }
-    
     return commonPatterns.some(pattern => profileName.includes(pattern));
   };
-  console.log('📊 Data length:', data.length);
   if (data.length > 0) {
-    console.log('📋 First company in CompanyDataTable:', data[0]);
-    console.log('👥 First company executives in CompanyDataTable:', data[0].cLevelExecutives);
-    console.log('📝 First company description in CompanyDataTable:', data[0].companyDescription);
-    console.log('🔗 First company LinkedIn Profile in CompanyDataTable:', data[0].linkedinProfile);
-  }
-
+    }
   const handleViewDetails = async (company) => {
     // Fetch richer company details for Apollo results when available
       try {
-        console.log('🔍 Company Details Data (initial):', company);
-        console.log('📝 Available companySummaries keys:', Object.keys(companySummaries));
-        
+        :', company);
+        );
         // Get company ID for summary lookup
       const companyId = normalizeCompanyId(company.id || company.company_id || company.apollo_organization_id);
-      console.log('🔑 Looking up summary for company ID:', companyId);
-      
       // First check if company already has summary attached (from restoration)
       let summary = company.summary;
-      console.log('🔍 Initial summary check:', {
-        companyHasSummary: !!company.summary,
-        summaryLength: company.summary?.length || 0,
-        summaryPreview: company.summary?.substring(0, 50) || 'none'
+      || 'none'
       });
-      
       // If not, try to find in companySummaries prop with multiple matching strategies
       if (!summary && companyId && Object.keys(companySummaries).length > 0) {
-        console.log('🔍 Looking up summary in companySummaries prop...');
         // Try direct lookup
         summary = companySummaries[companyId] || companySummaries[String(companyId)];
-        
         // If still not found, try normalized matching
         if (!summary) {
           const foundEntry = Object.entries(companySummaries).find(([key]) => {
@@ -558,31 +480,21 @@ if (!id) return null;
           });
           if (foundEntry) {
             summary = foundEntry[1];
-            console.log('✅ Found summary using normalized matching');
-          }
+            }
         }
       }
-      
       // Log summary lookup result
       if (summary) {
-        console.log('✅ Summary found for company:', companyId, 'Length:', summary.length);
-      } else {
-        console.log('⚠️ No summary found for company ID:', companyId);
-        console.log('   Company object has summary?', !!company.summary);
-        console.log('   Company summary value:', company.summary);
-        console.log('   Available company IDs in summaries:', Object.keys(companySummaries));
+        } else {
+        );
       }
-        
         // Always set company with summary (preserve if it exists, add if found)
         const companyWithSummary = {
           ...company,
           ...(summary ? { summary } : {}) // Always include summary if we have it
         };
-        
-        console.log('📦 Setting selectedCompany with summary:', !!companyWithSummary.summary);
         setSelectedCompany(companyWithSummary);
         setDialogOpen(true);
-        
         // Only attempt to fetch details for Apollo-sourced companies with an id
         if (company.source === 'apollo_io' && company.id) {
           // show a temporary loading marker
@@ -592,20 +504,11 @@ if (!id) return null;
           if (details) {
             // apolloLeadsService returns the raw `company` field from the backend
             const detailed = details.company || details;
-            console.log('✅ Company details fetched:', detailed);
             // Merge detailed fields into selected company, preserve summary
             setSelectedCompany(prev => {
               // Prioritize prev.summary (from restoration) over other sources
               const companyIdForSummary = prev.id || prev.company_id || company.id || company.company_id;
               const currentSummary = prev.summary || summary || companySummaries[companyIdForSummary] || companySummaries[String(companyIdForSummary)];
-              
-              console.log('🔄 Merging Apollo details, preserving summary:', {
-                prevHasSummary: !!prev.summary,
-                summaryVar: !!summary,
-                companySummariesHasIt: !!companySummaries[companyIdForSummary],
-                finalSummary: !!currentSummary
-              });
-              
               return {
                 ...prev, 
                 ...detailed,
@@ -639,12 +542,10 @@ if (!id) return null;
       console.error('❌ Failed fetching company details:', e);
     }
   };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedCompany(null);
   };
-
   // Selection handlers
   const handleSelectCompany = (companyId) => {
     const newSelected = new Set(selectedCompanies);
@@ -656,7 +557,6 @@ if (!id) return null;
     setSelectedCompanies(newSelected);
     setShowAITrigger(newSelected.size > 0);
   };
-
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedCompanies(new Set());
@@ -672,7 +572,6 @@ if (!id) return null;
     }
     setShowAITrigger(!selectAll);
   };
-
   const handleSelectAllEmployees = () => {
     if (selectAllEmployees) {
       if (onEmployeeSelectionChange) {
@@ -685,7 +584,6 @@ if (!id) return null;
       // Use indices from the filtered array (0, 1, 2, ... for filtered employees)
       // This matches how individual selection works in the rendered cards
       const allEmployeeIndices = new Set(filteredEmployees.map((_, index) => index));
-      
       if (onEmployeeSelectionChange) {
         onEmployeeSelectionChange(allEmployeeIndices);
       }
@@ -693,32 +591,25 @@ if (!id) return null;
     }
     setShowAITrigger(!selectAllEmployees);
   };
-
   // inside CompanyDataTable.jsx
 // const handleAITrigger = async () => {
 //   const selectedData = data.filter((company, index) =>
 //     selectedCompanies.has(company.id || index)
 //   );
-
 //   try {
 //     const ids = selectedData
 //       .map(c => c.apollo_organization_id || c.id)
 //       .filter(Boolean);
-
 //     if (!ids.length) {
 //       alert("No valid company IDs found. Please select companies with valid IDs.");
 //       return;
 //     }
-
-//     console.log("📞 Resolving phones for IDs:", ids);
-
-//     // resolve now so we can decide single vs bulk
+//     //     // resolve now so we can decide single vs bulk
 //     const res = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
 //       method: "POST",
 //       headers: { "Content-Type": "application/json" },
 //       body: JSON.stringify({ ids }),
 //     });
-    
 //     const contentType = res.headers.get('content-type') || '';
 //     let payload;
 //     if (contentType.includes('application/json')) {
@@ -738,7 +629,6 @@ if (!id) return null;
       push({ variant: 'error', title: 'No Selection', description: 'Please select at least one company.' });
       return;
     }
-
     setIntelligentCallingLoading(true);
     try {
       // Build IDs from selected rows, preferring real IDs over indices
@@ -753,22 +643,18 @@ if (!id) return null;
       const response = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      
 	  body: JSON.stringify({ ids: companyIds, type: 'company' }),
       });
-
       const json = await response.json();
       if (!response.ok || !json.success) {
         throw new Error(json?.error || 'Failed to resolve phones');
       }
-
       // Prefer IDs returned by API, but fall back to originally requested IDs if missing
       const apiIds = Array.isArray(json.data)
         ? json.data.map(row => row.company_id || row.id).filter(Boolean)
         : [];
       const idsToForward = apiIds.length > 0 ? apiIds : companyIds;
       const encodedIds = btoa(JSON.stringify(idsToForward));
-
       push({ title: 'Success', description: `${json.data.length} target(s) resolved. Redirecting to call...` });
       router.push(`/make-call?ids=${encodedIds}&bulk=1&prefilled=1&type=company`);
     } catch (error) {
@@ -778,29 +664,24 @@ if (!id) return null;
       setIntelligentCallingLoading(false);
     }
   };
-
   // New: Handle Start Intelligent Calling for Employees Tab
   const handleStartIntelligentCallingEmployees = async () => {
     if (selectedEmployees.size === 0) {
       push({ variant: 'error', title: 'No Selection', description: 'Please select at least one employee.' });
       return;
     }
-
     setIntelligentCallingLoading(true);
     try {
       const idSet = new Set();
       const filteredEmployees = getFilteredEmployeeData();
-
       filteredEmployees.forEach((employee, index) => {
         // Selection in UI is tracked by index; use index here
         if (!selectedEmployees.has(index)) return;
-
         // Prefer Apollo person id with sensible fallbacks
         let personId =
           employee.id ||
           employee.apollo_person_id ||
           employee.person_id;
-
         // Try nested payload if present
         if (!personId && employee.employee_data) {
           try {
@@ -813,12 +694,9 @@ if (!id) return null;
             // Ignore parsing errors
           }
         }
-
         if (personId) idSet.add(String(personId).trim());
       });
-
       const employeeIds = Array.from(idSet);
-
       if (employeeIds.length === 0) {
         push({
           variant: "error",
@@ -828,7 +706,6 @@ if (!id) return null;
         setIntelligentCallingLoading(false);
         return;
       }
-
       const response = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -837,20 +714,15 @@ if (!id) return null;
           type: "employee",
         }),
       });
-
       const json = await response.json();
-
       if (!response.ok || !json.success) {
         throw new Error(json?.error || "Failed to resolve phones");
       }
-
       const encodedIds = btoa(JSON.stringify(employeeIds));
-
       push({
         title: "Success",
         description: `${json.data.length} target(s) resolved. Redirecting to call...`,
       });
-
       router.push(
         `/make-call?ids=${encodedIds}&bulk=1&prefilled=1&type=employee`
       );
@@ -865,17 +737,12 @@ if (!id) return null;
       setIntelligentCallingLoading(false);
     }
   };
-
 //     const rows = Array.isArray(payload?.data) ? payload.data : [];
-//     console.log("📞 Resolved phones:", rows);
-
-//     if (rows.length === 0) {
+//     //     if (rows.length === 0) {
 //       alert("No phone numbers found for the selected companies.");
 //       return;
 //     }
-
 //     const ERP_URL = process.env.NEXT_PUBLIC_ERP_URL || "https://erp.techiemaya.com";
-
 //     if (rows.length === 1) {
 //       // ✅ single call via query params
 //       const first = rows[0];
@@ -887,7 +754,7 @@ if (!id) return null;
 //       href.searchParams.set("dial", String(first.phone || "").trim());
 //       href.searchParams.set("clientName", String(first.name || "").trim());
 //       href.searchParams.set("prefilled", "1");
-//       console.log("📞 Opening single call URL:", href.toString());
+//       );
 //       const newWindow = window.open(href.toString(), "_blank");
 //       if (!newWindow) {
 //         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
@@ -896,8 +763,7 @@ if (!id) return null;
 //       // ✅ bulk flow — just pass ids, and page.tsx will fetch + show list
 //       const encodedIds = encodeURIComponent(btoa(JSON.stringify(ids)));
 //       const href = `${ERP_URL}/make-call?bulk=1&ids=${encodedIds}`;
-//       console.log("📞 Opening bulk call URL:", href);
-//       const newWindow = window.open(href, "_blank");
+//       //       const newWindow = window.open(href, "_blank");
 //       if (!newWindow) {
 //         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
 //       }
@@ -907,8 +773,6 @@ if (!id) return null;
 //     alert(`Error: ${err.message || "Failed to initiate calling. Please try again."}`);
 //   }
 // };
-
-
   // Filter handlers
   const handleFilterClick = (event) => {
     event.stopPropagation();
@@ -922,11 +786,9 @@ if (!id) return null;
       setFilterAnchorEl(elementToUse);
     }
   };
-
   const handleFilterClose = () => {
     setFilterAnchorEl(null);
   };
-
   const handleFilterToggle = (filterType) => {
     const newFilters = new Set(selectedFilters);
     if (newFilters.has(filterType)) {
@@ -936,95 +798,76 @@ if (!id) return null;
     }
     setSelectedFilters(newFilters);
   };
-
   // Apply filters to data
   const getFilteredData = () => {
     if (selectedFilters.size === 0) {
       return data;
     }
-
     // Separate filters into categories
     const sizeFilters = ['enterprise', 'large', 'medium', 'small'];
     const availabilityFilters = ['with-phone', 'with-linkedin', 'with-website', 'with-summary'];
-    
     const selectedSizeFilters = Array.from(selectedFilters).filter(f => sizeFilters.includes(f));
     const selectedAvailabilityFilters = Array.from(selectedFilters).filter(f => availabilityFilters.includes(f));
-    
     // If no filters selected, return all data
     if (selectedSizeFilters.length === 0 && selectedAvailabilityFilters.length === 0) {
       return data;
     }
-
     return data.filter((company, index) => {
       // Check Company Size filters (OR logic within this category)
       let matchesSizeCategory = true;
       if (selectedSizeFilters.length > 0) {
         matchesSizeCategory = false; // Must match at least one size filter
-        
         for (const filterType of selectedSizeFilters) {
           let matchesThisSize = false;
-          
           switch (filterType) {
             case 'enterprise':
               const count1 = parseInt(company.employeeCount) || 0;
               matchesThisSize = count1 >= 200;
               break;
-            
             case 'large':
               const count2 = parseInt(company.employeeCount) || 0;
               matchesThisSize = count2 >= 50 && count2 < 200;
               break;
-            
             case 'medium':
               const count3 = parseInt(company.employeeCount) || 0;
               matchesThisSize = count3 >= 10 && count3 < 50;
               break;
-            
             case 'small':
               const count4 = parseInt(company.employeeCount) || 0;
               matchesThisSize = count4 < 10 && count4 > 0;
               break;
           }
-          
           if (matchesThisSize) {
             matchesSizeCategory = true; // Matches at least one size filter
             break;
           }
         }
       }
-      
       // Check Data Availability filters (OR logic within this category)
       let matchesAvailabilityCategory = true;
       if (selectedAvailabilityFilters.length > 0) {
         matchesAvailabilityCategory = false; // Must match at least one availability filter
-        
         for (const filterType of selectedAvailabilityFilters) {
           let matchesThisAvailability = false;
-          
           switch (filterType) {
             case 'with-phone':
               matchesThisAvailability = !!(company.phone || phoneData[company.id]);
               break;
-            
             case 'with-linkedin':
               matchesThisAvailability = !!(company.linkedinProfile);
               break;
-            
             case 'with-website':
               matchesThisAvailability = !!(company.website);
               break;
-            
             case 'with-summary':
               // Check if company has a sales summary with actual travel content
               const companyId = company.id || company.company_id || company.apollo_organization_id;
               const summary = companySummaries[companyId] || companySummaries[String(companyId)];
-              
               // First check: Summary must exist and not be null/empty
               if (!summary || summary === null || typeof summary !== 'string' || summary.trim().length === 0) {
                 matchesThisAvailability = false;
               } else {
                 const summaryLower = summary.toLowerCase().trim();
-                
                 // Second check: Exclude "not related" and "no business trip" messages
                 const noSummaryPhrases = [
                   'not related',
@@ -1041,12 +884,10 @@ if (!id) return null;
                   'no business trip.*travel-related posts',
                   'company may not have posted'
                 ];
-                
                 const isNoSummaryMessage = noSummaryPhrases.some(phrase => {
                   const regex = new RegExp(phrase.replace(/\*/g, '.*'), 'i');
                   return regex.test(summaryLower);
                 });
-                
                 if (isNoSummaryMessage) {
                   matchesThisAvailability = false;
                 } else {
@@ -1059,52 +900,41 @@ if (!id) return null;
                     'international travel', 'domestic travel', 'corporate travel',
                     'travel activity', 'travel summary', 'travel insights'
                   ];
-                  
                   matchesThisAvailability = travelKeywords.some(keyword => summaryLower.includes(keyword));
                 }
               }
               break;
           }
-          
           if (matchesThisAvailability) {
             matchesAvailabilityCategory = true; // Matches at least one availability filter
             break;
           }
         }
       }
-      
       // AND logic between categories: must match both size AND availability (if both are selected)
       return matchesSizeCategory && matchesAvailabilityCategory;
     });
   };
-
   const getFilteredEmployeeData = () => {
     if (selectedFilters.size === 0) {
       return employeeData;
     }
-
     // Employee-specific availability filters
     const employeeAvailabilityFilters = ['with-linkedin', 'with-phone', 'with-email', 'with-summary'];
-    
     const selectedEmployeeFilters = Array.from(selectedFilters).filter(f => employeeAvailabilityFilters.includes(f));
-    
     // If no employee filters selected, return all employee data
     if (selectedEmployeeFilters.length === 0) {
       return employeeData;
     }
-
     return employeeData.filter((employee) => {
       // Check Employee Data Availability filters (AND logic - must match ALL selected filters)
       let matchesAllFilters = true;
-      
       for (const filterType of selectedEmployeeFilters) {
         let matchesThisFilter = false;
-        
         switch (filterType) {
           case 'with-linkedin':
             matchesThisFilter = !!(employee.linkedin_url || employee.linkedin_profile || employee.linkedinProfile);
             break;
-          
           case 'with-phone':
             // Only check company's phone number (NOT employee personal phone)
             let hasCompanyPhone = false;
@@ -1115,9 +945,7 @@ if (!id) return null;
                   ? JSON.parse(employee.employee_data) 
                   : employee.employee_data;
               }
-              
               const org = fullEmployeeData?.organization || employee.organization || {};
-              
               // Check company phone from organization data
               let companyPhone = org.phone || org.phone_number || employee.company_phone || '';
               if (!companyPhone) {
@@ -1129,9 +957,7 @@ if (!id) return null;
                               org.phone_numbers?.[0]?.sanitized_number ||
                               '';
               }
-              
               hasCompanyPhone = !!(companyPhone && companyPhone.trim());
-              
               // Also check if company exists in data array and has phone
               if (!hasCompanyPhone) {
                 const empCompanyId = normalizeCompanyId(org.id || employee.organization_id || employee.company_id);
@@ -1143,7 +969,6 @@ if (!id) return null;
                   hasCompanyPhone = !!(company.phone && company.phone.trim());
                 }
               }
-              
               // Also check phoneData state (for fetched/revealed company phone numbers)
               if (!hasCompanyPhone) {
                 const empCompanyId = normalizeCompanyId(org.id || employee.organization_id || employee.company_id);
@@ -1154,15 +979,12 @@ if (!id) return null;
             } catch (e) {
               // Ignore parse errors and other errors
             }
-            
             matchesThisFilter = hasCompanyPhone;
             break;
-          
           case 'with-email':
             // Only show employees whose emails have been REVEALED in the UI
             const empId = getEmployeeId(employee);
             let hasRevealedEmail = false;
-            
             if (empId) {
               const revealedEmail = revealedContacts[empId]?.email;
               // Check if email has been revealed (and is not 'not_found')
@@ -1170,10 +992,8 @@ if (!id) return null;
                 hasRevealedEmail = true;
               }
             }
-            
             matchesThisFilter = hasRevealedEmail;
             break;
-          
           case 'with-summary':
             // Check if employee's company has a sales summary with actual travel content
             let fullEmployeeData = null;
@@ -1186,18 +1006,14 @@ if (!id) return null;
                 // Ignore parse errors
               }
             }
-            
             const org = fullEmployeeData?.organization || employee.organization || {};
             const companyId = normalizeCompanyId(org.id || employee.company_id || employee.organization_id);
-            
             // Check summary from multiple sources
             let summary = null;
-            
             // First, check companySummaries prop
             if (companyId) {
               summary = companySummaries[companyId] || companySummaries[String(companyId)];
             }
-            
             // If not found, check if company exists in data array and has summary
             if (!summary && companyId) {
               const company = data.find(c => {
@@ -1208,24 +1024,20 @@ if (!id) return null;
                 summary = company.summary;
               }
             }
-            
             // If still not found, check nested organization data
             if (!summary && org.summary) {
               summary = org.summary;
             }
-            
             // First check: Summary must exist, be a string, and have meaningful content
             if (!summary || summary === null || typeof summary !== 'string') {
               matchesThisFilter = false;
             } else {
               const summaryTrimmed = summary.trim();
-              
               // Check if summary is empty or just whitespace
               if (summaryTrimmed.length === 0) {
                 matchesThisFilter = false;
               } else {
                 const summaryLower = summaryTrimmed.toLowerCase();
-                
                 // CRITICAL: Early exit - If summary contains ANY indication of "no posts found" or "no activity"
                 // This must be checked FIRST before any other validation
                 const hasNoPostsIndicators = 
@@ -1238,7 +1050,6 @@ if (!id) return null;
                   summaryLower.startsWith('not ') ||
                   summaryLower.includes('company\'s linkedin page may not have') ||
                   summaryLower.includes('companys linkedin page may not have');
-                
                 if (hasNoPostsIndicators) {
                   matchesThisFilter = false;
                 } else {
@@ -1251,9 +1062,7 @@ if (!id) return null;
                     /may not have recent activity/i,
                     /not related/i
                   ];
-                  
                   const hasExactNoSummaryPattern = exactNoSummaryPatterns.some(pattern => pattern.test(summaryLower));
-                  
                   // Also check phrase patterns
                   const noSummaryPhrases = [
                     'not related',
@@ -1285,12 +1094,10 @@ if (!id) return null;
                     'no posts found for',
                     'company.*linkedin.*may not'
                   ];
-                  
                   const isNoSummaryMessage = hasExactNoSummaryPattern || noSummaryPhrases.some(phrase => {
                     const regex = new RegExp(phrase.replace(/\*/g, '.*'), 'i');
                     return regex.test(summaryLower);
                   });
-                  
                   if (isNoSummaryMessage) {
                     matchesThisFilter = false;
                   } else {
@@ -1303,9 +1110,7 @@ if (!id) return null;
                       'international travel', 'domestic travel', 'corporate travel',
                       'travel activity', 'travel summary', 'travel insights'
                     ];
-                    
                     const hasTravelKeywords = travelKeywords.some(keyword => summaryLower.includes(keyword));
-                    
                     // STRICT: Only match if summary has travel keywords (meaningful travel content)
                     // If no travel keywords found, it's not a valid sales summary
                     // This is the FINAL check - if no travel keywords, definitely exclude
@@ -1314,7 +1119,6 @@ if (!id) return null;
                 }
               }
             }
-            
             // FINAL SAFETY CHECK: If matchesThisFilter is still true but summary doesn't have travel content, set to false
             // This ensures we never accidentally include summaries that shouldn't be shown
             if (matchesThisFilter && summary) {
@@ -1327,20 +1131,16 @@ if (!id) return null;
             }
             break;
         }
-        
         if (!matchesThisFilter) {
           matchesAllFilters = false; // If any filter doesn't match, exclude this employee
           break;
         }
       }
-      
       return matchesAllFilters;
     });
   };
-
   const handleFilterSelect = (filterType) => {
     let filteredCompanies = new Set();
-
     switch (filterType) {
       case 'enterprise':
         data.forEach((company, index) => {
@@ -1350,7 +1150,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'large':
         data.forEach((company, index) => {
           const count = parseInt(company.employeeCount);
@@ -1359,7 +1158,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'medium':
         data.forEach((company, index) => {
           const count = parseInt(company.employeeCount);
@@ -1368,7 +1166,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'small':
         data.forEach((company, index) => {
           const count = parseInt(company.employeeCount);
@@ -1377,7 +1174,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'with-phone':
         data.forEach((company, index) => {
           if (company.phone || phoneData[company.id]) {
@@ -1385,7 +1181,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'with-linkedin':
         data.forEach((company, index) => {
           if (company.linkedinProfile) {
@@ -1393,7 +1188,6 @@ if (!id) return null;
           }
         });
         break;
-      
       case 'with-website':
         data.forEach((company, index) => {
           if (company.website) {
@@ -1401,17 +1195,14 @@ if (!id) return null;
           }
         });
         break;
-
       default:
         break;
     }
-
     setSelectedCompanies(filteredCompanies);
     setShowAITrigger(filteredCompanies.size > 0);
     setSelectAll(filteredCompanies.size === data.length);
     handleFilterClose();
   };
-
   // Phone number handler
   const handleGetContact = async (company) => {
     // Extract domain from website URL or use direct domain field
@@ -1427,21 +1218,10 @@ if (!id) return null;
         return null;
       }
     };
-
     const companyDomain = company.domain || extractDomain(company.website) || extractDomain(company.linkedinProfile);
     const companyName = company.companyName || company.username || company.name;
     const companyId = company.id || companyDomain;
-
-    console.log('🔍 Company data:', {
-      name: companyName,
-      companyName: company.companyName,
-      username: company.username,
-      domain: companyDomain,
-      website: company.website,
-      linkedinProfile: company.linkedinProfile
-    });
-
-      // Validate required fields
+    // Validate required fields
       if (!companyDomain || !companyName) {
         console.error(`❌ Cannot get phone number: Missing ${!companyName ? 'company name' : 'company domain/website'}`);
         setPhoneError(prev => ({ 
@@ -1450,37 +1230,26 @@ if (!id) return null;
         }));
         return;
       }
-    
     // Check if we already have phone data
     if (phoneData[companyId]) {
-      console.log(`ℹ️ Phone already displayed on card: ${phoneData[companyId].phone}`);
       return;
     }
-
     // Set loading state
     setPhoneLoading(prev => ({ ...prev, [companyId]: true }));
     setPhoneError(prev => ({ ...prev, [companyId]: null }));
-
     try {
-      console.log('📞 Getting decision maker phone for:', companyName, '(', companyDomain, ')');
-      
+      ');
       const phoneResult = await getDecisionMakerPhone(
         companyDomain,
         companyName,
         (update) => {
-          console.log('📞 Phone reveal status:', update);
           if (update.status === 'processing') {
             // Could show a toast or update UI with progress
-            console.log('⏳', update.message);
-          }
+            }
         }
       );
-
-      console.log('✅ Phone data received:', phoneResult);
-
       // Handle multiple possible data formats from Cloud Run service
       let phoneInfo = null;
-
       // Format 1: Data inside 'data' object (current Cloud Run format)
       if (phoneResult.data && (phoneResult.data.phoneNumber || phoneResult.data.phone)) {
         // Normalize phone number - remove all spaces but preserve dashes before storing
@@ -1511,7 +1280,6 @@ if (!id) return null;
       else if (phoneResult.people && phoneResult.people.length > 0) {
         const firstPerson = phoneResult.people[0];
         const firstPhone = firstPerson.phone_numbers?.[0];
-        
         if (firstPhone) {
           // Normalize phone number - remove all spaces but preserve dashes before storing
           const rawPhone = firstPhone.sanitized_number || firstPhone.raw_number || '';
@@ -1525,13 +1293,10 @@ if (!id) return null;
           };
         }
       }
-
       if (phoneInfo && phoneInfo.phone) {
         setPhoneData(prev => ({ ...prev, [companyId]: phoneInfo }));
-        
         // Success - phone is now displayed on the card (no alert needed)
-        console.log(`✅ Phone number added to card: ${phoneInfo.phone}`);
-      } else {
+        } else {
         console.error('❌ Phone data structure:', phoneResult);
         throw new Error('No phone number found for decision maker');
       }
@@ -1546,27 +1311,17 @@ if (!id) return null;
       setPhoneLoading(prev => ({ ...prev, [companyId]: false }));
     }
   };
-
   // Employee fetching handler
   const handleGetEmployees = async (company) => {
     const companyId = company.id || company.domain;
     const companyName = company.companyName || company.username || company.name;
-    
     // IMPORTANT: Use Apollo organization ID (NOT domain) for employee search
     // Apollo's people search works with organization_ids, not domains
     let companyIdentifier = company.id;
-    
     // Fallback to domain only if ID looks invalid (generated random string)
     if (!companyIdentifier || companyIdentifier.includes('apollo_unknown') || companyIdentifier.includes('_0.')) {
       companyIdentifier = company.domain;
-      console.log('⚠️ Company has invalid ID, using domain:', companyIdentifier);
-    }
-
-    console.log('👥 Getting employees for:', companyName);
-    console.log('   Company ID:', company.id);
-    console.log('   Company Domain:', company.domain);
-    console.log('   Using identifier:', companyIdentifier);
-
+      }
     // Validate identifier
     if (!companyIdentifier || companyIdentifier.includes('apollo_unknown')) {
       console.error('❌ Invalid company identifier:', companyIdentifier);
@@ -1576,20 +1331,17 @@ if (!id) return null;
       }));
       return;
     }
-
     // Check if we already have employee data
     if (fetchedEmployeeData[companyId] && fetchedEmployeeData[companyId].length > 0) {
-      // console.log(`ℹ️ Employees already fetched: ${fetchedEmployeeData[companyId].length} employees`); // Disabled for performance
+      // // Disabled for performance
       // Just open the dialog with existing data
       setSelectedEmployeeCompany(company);
       setEmployeeDialogOpen(true);
       return;
     }
-
     // Set loading state
     setEmployeeLoading(prev => ({ ...prev, [companyId]: true }));
     setEmployeeError(prev => ({ ...prev, [companyId]: null }));
-
     try {
       // Call backend to fetch employees
       // Backend will check database first, then call Apollo if no results
@@ -1618,7 +1370,6 @@ if (!id) return null;
         setEmployeeLoading(prev => ({ ...prev, [companyId]: false }));
         return;
       }
-
       if (!response.ok) {
         // If response is not ok, try to get error message
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -1630,7 +1381,6 @@ if (!id) return null;
         }
         throw new Error(errorMessage);
       }
-
       let data;
       try {
         data = await response.json();
@@ -1647,15 +1397,11 @@ if (!id) return null;
         setEmployeeLoading(prev => ({ ...prev, [companyId]: false }));
         return;
       }
-
       if (data.success && data.employees && data.employees.length > 0) {
         const cacheMsg = data.from_cache 
           ? `✅ Found ${data.employees.length} employees (from cache, ${data.cache_age_days} days old)` 
           : `✅ Found ${data.employees.length} employees (from Apollo API)`;
-        console.log(cacheMsg, data.employees);
-        
         setFetchedEmployeeData(prev => ({ ...prev, [companyId]: data.employees }));
-        
         // Store cache info
         if (data.from_cache !== undefined) {
           setEmployeeCacheInfo(prev => ({ 
@@ -1666,29 +1412,23 @@ if (!id) return null;
             } 
           }));
         }
-        
         // Also update the company's cLevelExecutives in the selected company if dialog is open
         if (selectedCompany && (selectedCompany.id === company.id || selectedCompany.domain === company.domain)) {
           setSelectedCompany(prev => ({ ...prev, cLevelExecutives: data.employees }));
         }
-
         // Open employee dialog to show results
         setSelectedEmployeeCompany(company);
         setEmployeeDialogOpen(true);
       } else {
-        console.log('ℹ️ No employees found in database, backend should call Apollo API');
         setFetchedEmployeeData(prev => ({ ...prev, [companyId]: [] }));
-        
         // Check if backend indicated it will try Apollo or if it already tried
         if (data.trying_apollo || data.from_apollo === false) {
           // Backend is trying Apollo or already tried - wait a bit and show loading
-          console.log('⏳ Backend is fetching from Apollo API...');
           setEmployeeError(prev => ({ ...prev, [companyId]: null }));
         } else {
           // No employees found after database and Apollo check - don't set error, just show empty state
           setEmployeeError(prev => ({ ...prev, [companyId]: null }));
         }
-        
         // Always open dialog to show status (loading, error, or empty)
         setSelectedEmployeeCompany(company);
         setEmployeeDialogOpen(true);
@@ -1699,18 +1439,15 @@ if (!id) return null;
         ...prev, 
         [companyId]: error.message || 'Failed to get employees. Please try again.' 
       }));
-      
       // Open dialog even on error so user can see the error message
       setSelectedEmployeeCompany(company);
       setEmployeeDialogOpen(true);
-      
       // Set empty array so dialog can render
       setFetchedEmployeeData(prev => ({ ...prev, [companyId]: [] }));
     } finally {
       setEmployeeLoading(prev => ({ ...prev, [companyId]: false }));
     }
   };
-
   // Handler to reveal employee phone number
   const handleRevealPhone = async (employee) => {
     const employeeId = getEmployeeId(employee);
@@ -1718,21 +1455,17 @@ if (!id) return null;
       console.warn('Cannot reveal phone: No employee ID available');
       return;
     }
-    
     // Check if already revealed (but allow retry if not_found)
     const currentPhone = revealedContacts[employeeId]?.phone;
     if (currentPhone && currentPhone !== 'not_found') {
-      console.log('📞 Phone already revealed for:', employee.name);
       return;
     }
-
     // Show confirmation dialog
     setPhoneConfirmDialog({
       open: true,
       employee: employee
     });
   };
-
   // Process phone reveal after confirmation
   const processPhoneReveal = async (employee) => {
     const employeeId = getEmployeeId(employee);
@@ -1741,19 +1474,16 @@ if (!id) return null;
       return;
     }
     const personId = employee.id || employee.apollo_id;
-
     // Set loading state
     setRevealingContacts(prev => ({
       ...prev,
       [employeeId]: { ...prev[employeeId], phone: true }
     }));
-
     try {
       // First check if phone is already available in employee data
       if (employee.phone && employee.phone.trim() !== '') {
         // Normalize phone number - remove all spaces but preserve dashes before storing
         const normalizedPhone = (employee.phone || '').replace(/\s+/g, ""); // Remove spaces only, preserve dashes (-)
-        console.log('✅ Phone already available in employee data:', normalizedPhone);
         setRevealedContacts(prev => ({
           ...prev,
           [employeeId]: { ...prev[employeeId], phone: normalizedPhone }
@@ -1765,14 +1495,7 @@ if (!id) return null;
         }));
         return;
       }
-      
-      console.log('📞 ============================================');
-      console.log('📞 PHONE REVEAL REQUEST');
-      console.log('📞 ============================================');
-      console.log('🔍 Step 1: Checking database cache...');
-      // console.log('   Employee:', employee.name); // Disabled for performance
-      console.log('   Person ID:', personId);
-      
+      // // Disabled for performance
       const response = await fetch(`${API_BASE_URL}/apollo-leads/reveal-phone`, {
         method: 'POST',
         headers: {
@@ -1783,116 +1506,78 @@ if (!id) return null;
           employee_name: employee.name
         }),
       });
-
       const data = await response.json();
-      
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
-      
       // Handle ANY immediate success with phone number (cached OR instant reveal)
       if (data.success && data.phone) {
         if (data.from_cache) {
-          console.log('✅ Phone found in database cache!');
-          console.log('   Phone:', data.phone);
-          console.log('   💰 Credits used: 0 (from cache)');
+          ');
         } else {
-          console.log('✅ Phone revealed immediately!');
-          console.log('   Phone:', data.phone);
-          console.log('   💰 Credits used:', data.credits_used || 0);
-        }
-        
+          }
         // Normalize phone number - remove all spaces but preserve dashes before storing
         const normalizedPhone = (data.phone || '').replace(/\s+/g, ""); // Remove spaces only, preserve dashes (-)
         setRevealedContacts(prev => ({
           ...prev,
           [employeeId]: { ...prev[employeeId], phone: normalizedPhone }
         }));
-        
         // Clear loading state
         setRevealingContacts(prev => ({
           ...prev,
           [employeeId]: { ...prev[employeeId], phone: false }
         }));
-        
         // Phone number revealed - no alert needed (displayed in UI)
-        
         return;
       }
-      
       // Handle "processing" status (webhook-based reveal)
       if (data.status === 'processing') {
-        console.log('🔄 Phone NOT in database cache');
-        console.log('📤 Request sent to Apollo API (8 credits charged)');
-        console.log('⏰ Webhook delivery: 2-5 minutes');
-        console.log('🔍 Starting polling to check for webhook result...');
-        
+        ');
         // Start polling for phone reveal status
         let pollAttempts = 0;
         const maxPollAttempts = 60; // Poll for up to 5 minutes (60 * 5 seconds)
-        
         const pollInterval = setInterval(async () => {
           pollAttempts++;
-          console.log(`🔄 Polling attempt ${pollAttempts}/${maxPollAttempts}...`);
-          
           try {
             const statusResponse = await fetch(`${API_BASE_URL}/apollo-leads/check-phone-status/${personId}`);
             const statusData = await statusResponse.json();
-            
             if (statusData.success && statusData.phone) {
               // Phone received from webhook!
               clearInterval(pollInterval);
-              console.log('✅ ============================================');
-              console.log('✅ PHONE NUMBER RECEIVED FROM WEBHOOK!');
-              console.log('✅ ============================================');
-              console.log('   Phone:', statusData.phone);
-              console.log('   💰 Credits used:', statusData.credits_used);
-              console.log('   📦 Now cached in database for future use');
-              
               // Normalize phone number - remove all spaces before storing
               const normalizedPhone = (statusData.phone || '').replace(/\s+/g, "");
               setRevealedContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: normalizedPhone }
               }));
-              
               // Phone number revealed - no alert needed (displayed in UI)
-              
               setRevealingContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: false }
               }));
             } else if (statusData.status === 'processing') {
               // Still processing, continue polling
-              console.log('   Still processing...');
-            } else {
+              } else {
               // Failed or not found
               clearInterval(pollInterval);
-              console.log('❌ Phone reveal failed:', statusData.message);
-              
               // Phone number not available - set not_found flag
               setRevealedContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: 'not_found' }
               }));
-              
               setRevealingContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: false }
               }));
             }
-            
             // Timeout after max attempts
             if (pollAttempts >= maxPollAttempts) {
               clearInterval(pollInterval);
-              console.log('⏰ Phone reveal timed out');
-              
               // Timeout - set not_found flag
               setRevealedContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: 'not_found' }
               }));
-              
               setRevealingContacts(prev => ({
                 ...prev,
                 [employeeId]: { ...prev[employeeId], phone: false }
@@ -1902,15 +1587,12 @@ if (!id) return null;
             console.error('❌ Polling error:', pollError);
           }
         }, 5000); // Poll every 5 seconds
-        
         // Don't clear loading state yet - keep it while polling
         // The polling interval will clear it when done
         return;
       }
-      
       // Handle immediate success (shouldn't happen with webhook, but just in case)
       if (data.success && data.phone) {
-        console.log(`✅ Phone revealed immediately: ${data.phone}`);
         // Normalize phone number - remove all spaces before storing
         const normalizedPhone = (data.phone || '').replace(/\s+/g, "");
         setRevealedContacts(prev => ({
@@ -1927,11 +1609,9 @@ if (!id) return null;
       }
     } catch (error) {
       console.error('❌ Error revealing phone:', error);
-      
       // Handle specific error messages
       let errorMsg = error.message;
       const isNotFound = error.message.includes('404') || error.message.includes('not found') || error.message.includes('not available') || error.message.includes('No phone number found');
-      
       if (isNotFound) {
         // Set not_found flag when phone is not available
         setRevealedContacts(prev => ({
@@ -1949,16 +1629,13 @@ if (!id) return null;
         }));
         errorMsg = `❌ Cannot Reveal Phone\n\nApollo person ID is not available for this employee.\n\n💡 This usually means the employee data is incomplete.`;
       }
-      
       // Error - no alert needed (UI shows loading stopped and user can see lock button is available again)
-      
       setRevealingContacts(prev => ({
         ...prev,
         [employeeId]: { ...prev[employeeId], phone: false }
       }));
     }
   };
-
   // Handler to reveal employee email (1 credit - INSTANT response, no webhook)
   const handleRevealEmail = async (employee) => {
     const employeeId = getEmployeeId(employee);
@@ -1967,35 +1644,23 @@ if (!id) return null;
       return;
     }
     const personId = employee.id || employee.apollo_id;
-    
     // Check if already revealed (but allow retry if not_found)
     const currentEmail = revealedContacts[employeeId]?.email;
     if (currentEmail && currentEmail !== 'not_found') {
-      console.log('📧 Email already revealed for:', employee.name);
       return;
     }
-
     // Email reveals cost 1 credit (8x cheaper than phone - 8 credits)
     // Note: No confirmation needed for emails (only 1 credit vs 8 for phone)
-    
     // Set loading state
     setRevealingContacts(prev => ({
       ...prev,
       [employeeId]: { ...prev[employeeId], email: true }
     }));
-
     try {
-      console.log('📧 ============================================');
-      console.log('📧 EMAIL REVEAL REQUEST');
-      console.log('📧 ============================================');
-      console.log('🔍 Step 1: Checking database cache...');
-      // console.log('   Employee:', employee.name); // Disabled for performance
-      console.log('   Person ID:', personId);
-      
+      // // Disabled for performance
       if (!personId) {
         throw new Error('Apollo person ID not available for this employee. Cannot reveal email without person ID.');
       }
-
       const response = await fetch(`${API_BASE_URL}/apollo-leads/reveal-email`, {
         method: 'POST',
         headers: {
@@ -2006,40 +1671,28 @@ if (!id) return null;
           employee_name: employee.name
         }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
-
       if (data.success && data.email) {
         if (data.from_cache) {
-          console.log('✅ Email found in database cache!');
-          console.log('   Email:', data.email);
-          console.log('   💰 Credits used: 0 (from cache)');
+          ');
         } else {
-          console.log('✅ Email revealed from Apollo API');
-          console.log('   Email:', data.email);
-          console.log('   💰 Credits used:', data.credits_used);
-        }
-        
+          }
         setRevealedContacts(prev => ({
           ...prev,
           [employeeId]: { ...prev[employeeId], email: data.email }
         }));
-        
         // Email revealed - no alert needed (displayed in UI)
       } else {
         throw new Error(data.error || 'Email not found');
       }
     } catch (error) {
       console.error('❌ Error revealing email:', error);
-      
       // Handle specific error messages
       let errorMsg = error.message;
       const isNotFound = error.message.includes('404') || error.message.includes('not found') || error.message.includes('not available') || error.message.includes('Email not found');
-      
       if (isNotFound) {
         // Set not_found flag when email is not available
         setRevealedContacts(prev => ({
@@ -2057,7 +1710,6 @@ if (!id) return null;
         }));
         errorMsg = `❌ Cannot Reveal Email\n\nApollo person ID is not available for this employee.`;
       }
-      
       // Error - no alert needed (UI shows loading stopped and user can see lock button is available again)
     } finally {
       // Clear loading state
@@ -2067,7 +1719,6 @@ if (!id) return null;
       }));
     }
   };
-
   // Handler to send LinkedIn connection requests for selected employees in dialog
   const handleSendLinkedInConnectionsFromDialog = async () => {
     if (selectedDialogEmployees.size === 0) {
@@ -2078,22 +1729,17 @@ if (!id) return null;
       });
       return;
     }
-
     const companyId = selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain;
     const employees = fetchedEmployeeData[companyId] || [];
     const filteredEmployees = filterEmployeesByRole(employees, employeeRoleFilter);
-    
     const employeesToConnect = Array.from(selectedDialogEmployees)
       .map(index => {
         const employee = filteredEmployees[index];
         if (!employee) return null;
-        
         const linkedinUrl = employee.linkedin_url || 
                            employee.organization?.linkedin_url || 
                            employee.company_linkedin_url;
-        
         if (!linkedinUrl) return null;
-        
         return {
           name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
           linkedin_url: linkedinUrl,
@@ -2102,7 +1748,6 @@ if (!id) return null;
         };
       })
       .filter(Boolean);
-
     if (employeesToConnect.length === 0) {
       push({ 
         variant: 'error', 
@@ -2111,15 +1756,9 @@ if (!id) return null;
       });
       return;
     }
-
     try {
       const userId = getUserId();
       const url = `${API_BASE_URL}/linkedin/send-connections?userId=${userId}`;
-      console.log('[LinkedIn] Sending connection requests to:', url);
-      console.log('[LinkedIn] API_BASE_URL:', API_BASE_URL);
-      console.log('[LinkedIn] userId:', userId);
-      console.log('[LinkedIn] Employees:', employeesToConnect);
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2128,9 +1767,7 @@ if (!id) return null;
           userId: userId
         })
       });
-
       const data = await response.json();
-      
       // Check HTTP status code first
       if (!response.ok) {
         const errorMessage = data.detail || data.error || data.message || `HTTP ${response.status} error`;
@@ -2141,19 +1778,16 @@ if (!id) return null;
         });
         return;
       }
-      
       // Check the actual connection request results
       const connectionResults = data.results?.connection_requests || {};
       const successful = connectionResults.successful || 0;
       const failed = connectionResults.failed || 0;
       const total = connectionResults.total || employeesToConnect.length;
-      
       // Check details array for error messages
       const failedDetails = data.details?.filter(d => !d.success) || [];
       const errorMessages = failedDetails
         .map(d => d.error || d.message || d.detail)
         .filter(Boolean);
-      
       // If all failed or no successful requests
       if (failed > 0 && successful === 0) {
         const errorMessage = errorMessages[0] || data.error || data.detail || 'All connection requests failed';
@@ -2199,20 +1833,12 @@ if (!id) return null;
       });
     }
   };
-
   const renderCLevelExecutives = (executives) => {
-    console.log('🔍 renderCLevelExecutives called with:', executives);
-    console.log('📊 Executives type:', typeof executives);
-    console.log('📊 Executives length:', executives?.length);
-    console.log('📊 Executives JSON:', JSON.stringify(executives, null, 2));
-    
+    );
     if (!executives || executives.length === 0) {
-      console.log('⚠️ No executives data available');
       return <Typography variant="body2" color="text.secondary">No executive data available</Typography>;
     }
-
-    // console.log('✅ Rendering executives:', executives); // Disabled for performance
-    console.log('✅ First executive:', executives[0]);
+    // // Disabled for performance
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {executives.map((exec, index) => (
@@ -2251,7 +1877,6 @@ if (!id) return null;
       </Box>
     );
   };
-
   const getIndustryColor = (industry) => {
     const colors = {
       'oil and gas': '#9c27b0',
@@ -2267,7 +1892,6 @@ if (!id) return null;
     };
     return colors[industry?.toLowerCase()] || '#757575';
   };
-
   const getCompanySizeColor = (size) => {
     if (size?.includes('Enterprise') || size?.includes('200+')) return '#d32f2f'; // 🔴 Deep Red
     if (size?.includes('Large')) return '#4caf50';
@@ -2275,7 +1899,6 @@ if (!id) return null;
     if (size?.includes('Small')) return '#2196f3';
     return '#757575';
   };
-
   // Helper function to get employee button color based on count
   const getEmployeeButtonColor = (count) => {
     if (!count) return '#2196f3'; // Default blue
@@ -2291,7 +1914,6 @@ if (!id) return null;
     }
     return '#f44336'; // Red for 1-10
   };
-
   return (
     <Box sx={{ width: '100%', p: 2 }}>
       {/* Header - Matching Image Design */}
@@ -2304,19 +1926,16 @@ if (!id) return null;
           border: '1px solid rgba(148, 163, 184, 0.2)',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
         }}>
-          
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
             <Business sx={{ fontSize: 28, color: '#64b5f6' }} />
             <Typography variant="h5" fontWeight="600" sx={{ color: '#ffffff' }}>
               {searchQuery.industry || 'Company Search Results'}
             </Typography>
           </Box>
-          
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
             Found {data.length} leads • {searchQuery.date || new Date().toLocaleString()} 
             {searchQuery.location && ` • Location: ${searchQuery.location}`}
           </Typography>
-          
           <Chip 
             label={`${data.length} results`}
             size="small"
@@ -2329,9 +1948,7 @@ if (!id) return null;
             }}
           />
         </Box>
-
       )}
-      
       {/* Fallback Header if no search query */}
       {!searchQuery && !employeeSearchQuery && (
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2341,7 +1958,6 @@ if (!id) return null;
           </Typography>
         </Box>
       )}
-      
       {/* Header for employee search */}
       {employeeSearchQuery && (
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2351,13 +1967,11 @@ if (!id) return null;
           </Typography>
         </Box>
       )}
-
       {/* Tabs for Companies and Employees - Always show */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Tabs 
             value={activeTab} 
             onChange={(e, newValue) => {
-              console.log('Tab clicked, switching to:', newValue === 0 ? 'Companies' : 'Employees');
               userManuallyChangedTabRef.current = true; // Mark as manual change
               updateActiveTab(newValue);
               // Reset the flag after a short delay to allow auto-switch for new searches
@@ -2408,7 +2022,6 @@ if (!id) return null;
               disabled={false}
             />
           </Tabs>
-          
           {/* Buttons on the right side of tabs line */}
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
             {/* Employees Tab Buttons */}
@@ -2500,7 +2113,6 @@ if (!id) return null;
                 )}
               </Box>
             )}
-            
             {/* Companies Tab Button */}
             {activeTab === 0 && showAITrigger && (
               <Button
@@ -2531,7 +2143,6 @@ if (!id) return null;
             )}
           </Box>
         </Box>
-
       {/* Selection Controls - Show for both tabs */}
       <Box sx={{ p: 2, mb: 3, position: 'relative' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', position: 'relative', justifyContent: 'space-between' }}>
@@ -2561,7 +2172,6 @@ if (!id) return null;
                 Filter & Select
               </Button>
             </Box>
-            
             <FormControlLabel
               control={
                 <Checkbox
@@ -2580,7 +2190,6 @@ if (!id) return null;
               label="Select All"
               sx={{ color: '#0b1957' }}
             />
-            
             <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>
               {activeTab === 0 
                 ? `${selectedCompanies.size} of ${getFilteredData().length} companies selected`
@@ -2588,7 +2197,6 @@ if (!id) return null;
               }
             </Typography>
           </Box>
-          
           {/* Right side: Send Connection Button and Pagination controls */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* Send Connection Button - Only on Employees tab and when employees are selected */}
@@ -2598,7 +2206,6 @@ if (!id) return null;
                 size="small"
                 startIcon={<LinkedInIcon />}
                 onClick={() => {
-                  console.log('Send Connection clicked', { hasHandler: !!onSendLinkedInConnections, selected: selectedEmployees.size });
                   if (onSendLinkedInConnections) {
                     onSendLinkedInConnections();
                   } else {
@@ -2631,20 +2238,9 @@ if (!id) return null;
                 Send Connection {selectedEmployees.size > 0 ? `(${selectedEmployees.size})` : ''}
               </Button>
             )}
-            
             {/* Pagination controls */}
             {(() => {
               const controls = activeTab === 0 ? paginationControls : employeePaginationControls;
-              console.log('🔍 Pagination Debug:', {
-                activeTab,
-                hasPaginationControls: !!paginationControls,
-                hasEmployeePaginationControls: !!employeePaginationControls,
-                selectedControls: controls ? 'yes' : 'no',
-                paginationControlsType: typeof paginationControls,
-                employeePaginationControlsType: typeof employeePaginationControls,
-                isReactElement: controls && typeof controls === 'object',
-                controlsValue: controls
-              });
               return controls && (
                 <Box>
                   {controls}
@@ -2654,7 +2250,6 @@ if (!id) return null;
           </Box>
         </Box>
       </Box>
-
       {/* Filter Menu - Always render for proper positioning */}
       <Menu
         anchorEl={filterAnchorEl}
@@ -2780,7 +2375,6 @@ if (!id) return null;
             </Typography>
           </Box>
         </MenuItem>,
-        
         <MenuItem disabled key="data-availability-header" sx={{ fontWeight: 700, color: '#0b1957', fontSize: '0.875rem', opacity: 1, bgcolor: 'oklch(0.97 0 0)', mt: 1 }}>
           Select by Data Availability
         </MenuItem>,
@@ -2859,7 +2453,6 @@ if (!id) return null;
             </Typography>
           </Box>
         </MenuItem>]}
-
         {/* Employee Filters */}
         {activeTab === 1 && [<MenuItem disabled key="employee-header" sx={{ fontWeight: 700, color: '#0b1957', fontSize: '0.875rem', opacity: 1, bgcolor: 'oklch(0.97 0 0)' }}>
               Filter Employees
@@ -2940,10 +2533,8 @@ if (!id) return null;
               </Box>
             </MenuItem>]}
       </Menu>
-
       {/* Companies Tab Content */}
       {(() => {
-        console.log('🔍 Companies tab check - activeTab:', activeTab, 'should render:', activeTab === 0);
         return activeTab === 0;
       })() && (
       <>
@@ -2983,7 +2574,6 @@ if (!id) return null;
         </Box>
       ) : (
       (() => {
-        console.log('🔍 Companies tab rendering - activeTab:', activeTab, 'data.length:', data.length);
         const filteredCompanies = [...getFilteredData()]
           // Additional safety check: ensure we're only rendering company objects, not employee objects
           .filter(item => {
@@ -3006,8 +2596,6 @@ if (!id) return null;
             if (!aHasPhone && bHasPhone) return 1;
             return 0;
           });
-
-        console.log('📊 Filtered companies count:', filteredCompanies.length);
         return filteredCompanies.length > 0 ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
             {filteredCompanies.map((company, index) => (
@@ -3132,16 +2720,13 @@ if (!id) return null;
                     </Box>
                   </Box>
                 </Box>
-
                 {/* Card Body */}
                 <Box sx={{ 
                   p: 2.5, 
                   pt: 0
                 }}>
-
                 {/* All Variable Content - Each section has fixed height */}
                 <Box sx={{ mb: 0 }}>
-                
                 {/* Industry - Fixed 24px */}
                 <Box sx={{ minHeight: '24px', mb: 0.5 }}>
                   {company.industry && (
@@ -3153,7 +2738,6 @@ if (!id) return null;
                     />
                   )}
                 </Box>
-                  
                 {/* Decision Maker Contact - Fixed 60px */}
                 <Box sx={{ minHeight: '60px', mb: 0 }}>
                 {phoneData[company.id] && (
@@ -3175,7 +2759,6 @@ if (!id) return null;
                     }}>
                       ✓ DECISION MAKER CONTACT
                     </Typography>
-                    
                     {/* Phone Number */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                         <Phone sx={{ fontSize: 16, color: '#28a745' }} />
@@ -3195,7 +2778,6 @@ if (!id) return null;
                         }} 
                       />
                 </Box>
-
                     {/* Contact Name (if available) */}
                     {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -3205,7 +2787,6 @@ if (!id) return null;
                         </Typography>
                       </Box>
                     )}
-                    
                     {/* Phone Type (if available) */}
                     {phoneData[company.id].type && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -3217,7 +2798,6 @@ if (!id) return null;
                     </Box>
                   )}
                 </Box>
-                
                 {/* Phone Number - Fixed 28px */}
                 <Box sx={{ minHeight: '40px', mb: 1 }}>
                   {company.phone && !phoneData[company.id] && (
@@ -3255,7 +2835,6 @@ if (!id) return null;
                   }}>
                     Company Scale
                   </Typography>
-                  
                   {/* Circle and Button Row */}
                   <Box sx={{ 
                     display: 'flex', 
@@ -3340,7 +2919,6 @@ if (!id) return null;
                         </Box>
                       </Box>
                     )}
-                    
                     {/* View All Employees Button - Blue if has employees, Grey if no employees */}
                     <Button
                       variant="contained"
@@ -3417,9 +2995,7 @@ if (!id) return null;
                 <Box sx={{ 
                   display: 'flex', 
                   gap: 1, 
-                  
                   flexWrap: 'wrap'
-                  
                 }}>
                   {company.website && (
                     <Tooltip title="Website" arrow>
@@ -3583,7 +3159,6 @@ if (!id) return null;
                   )}
                   </Box>
                 </Box>
-                
                 {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
                 {company.employeeCount !== undefined && company.employeeCount !== null ? (
                   <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -3662,13 +3237,9 @@ if (!id) return null;
                   </Box>
                     ) : null}
                   </Box>
-
                 </CardContent>
-
-
             </Card>
         </Box>
-
             ))}
           </Box>
         ) : (
@@ -3684,14 +3255,11 @@ if (!id) return null;
         );
       })()
       )}
-  
-  
       </>
     )}
       {/* Employees Tab Content */}
       {activeTab === 1 && (
         <Box sx={{ p: 2 }}>
-          
           {/* Employee Cards Grid - Only render employee cards from employeeData prop (never company data) */}
           {employeeSearchLoading ? (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(280px, 1fr))' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
@@ -3733,10 +3301,9 @@ if (!id) return null;
                 const isEmployee = item.first_name || item.last_name || item.title || (item.name && !item.companyName && !item.username);
                 return isEmployee;
               });
-            
             return filteredEmployees.length > 0 ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
-              {/* {console.log('👥 Rendering employee cards, count:', employeeData.length)} */}
+              {/* {} */}
             {filteredEmployees
               // Sort employees by company phone number - show companies with phone numbers first
               .sort((a, b) => {
@@ -3747,7 +3314,6 @@ if (!id) return null;
                   const aOrg = aFullData?.organization || a.organization || {};
                   aPhone = aOrg.phone || aOrg.phone_number || a.company_phone || 
                           aOrg.primary_phone?.number || aOrg.sanitized_phone || '';
-                  
                   // Also check if company exists in data array
                   const aCompanyId = normalizeCompanyId(aOrg.id || a.organization_id || a.company_id);
                   const aCompany = data.find(c => {
@@ -3756,7 +3322,6 @@ if (!id) return null;
                   });
                   if (aCompany?.phone) aPhone = aCompany.phone;
                 } catch (e) {}
-                
                 // Extract company phone for employee b
                 let bPhone = '';
                 try {
@@ -3764,7 +3329,6 @@ if (!id) return null;
                   const bOrg = bFullData?.organization || b.organization || {};
                   bPhone = bOrg.phone || bOrg.phone_number || b.company_phone || 
                           bOrg.primary_phone?.number || bOrg.sanitized_phone || '';
-                  
                   // Also check if company exists in data array
                   const bCompanyId = normalizeCompanyId(bOrg.id || b.organization_id || b.company_id);
                   const bCompany = data.find(c => {
@@ -3773,7 +3337,6 @@ if (!id) return null;
                   });
                   if (bCompany?.phone) bPhone = bCompany.phone;
                 } catch (e) {}
-                
                 const aHasPhone = Boolean(aPhone && aPhone.trim());
                 const bHasPhone = Boolean(bPhone && bPhone.trim());
                 if (aHasPhone && !bHasPhone) return -1;
@@ -3785,7 +3348,6 @@ if (!id) return null;
               const employeeId = employee.id || employee.linkedin_url || index;
               const revealed = revealedEmployeeContacts[employeeId] || {};
               const revealing = unlockingEmployeeContacts[employeeId] || {};
-              
               // Extract company info from employee data - check multiple possible fields
               let fullEmployeeData = null;
               if (employee.employee_data) {
@@ -3797,28 +3359,17 @@ if (!id) return null;
                   // Ignore parse errors
                 }
               }
-              
               // Extract from employee_data.organization first, then fallback to employee.organization
               const org = fullEmployeeData?.organization || employee.organization || {};
               const companyName = org.name || employee.company_name || employee.organization_name || org.company_name || 'Unknown Company';
-              
               // Debug logging
               if (companyName === 'Unknown Company') {
-                console.log('⚠️ Company name not found for employee:', {
-                  employeeName: employee.name,
-                  employeeId: employeeId,
-                  org: org,
-                  employeeCompanyName: employee.company_name,
-                  employeeOrganizationName: employee.organization_name,
-                  fullEmployeeData: fullEmployeeData
-                });
-              }
+                }
               const companyLogo = org.logo_url || org.logo || employee.organization_logo_url || '';
               const companyWebsite = org.website_url || org.website || employee.organization_website_url || '';
               const companyLinkedIn = org.linkedin_url || org.linkedin || employee.organization_linkedin_url || '';
               const companyDomain = org.domain || employee.company_domain || '';
               const companyIndustry = org.industry || employee.company_industry || '';
-              
               // Extract company location - check multiple possible fields
               let companyLocation = org.location || 
                                    org.primary_location ||
@@ -3827,7 +3378,6 @@ if (!id) return null;
                                    employee.organization?.location ||
                                    employee.organization?.primary_location ||
                                    '';
-              
               // If no direct location, try to build from address components
               if (!companyLocation || companyLocation.trim() === '') {
                 const orgAddress = org.raw_address || org.address || employee.organization?.raw_address || employee.organization?.address || {};
@@ -3838,7 +3388,6 @@ if (!id) return null;
                   companyLocation = [orgCity, orgState, orgCountry].filter(Boolean).join(', ');
                 }
               }
-              
               // Final fallback - try employee's own location fields
               if (!companyLocation || companyLocation.trim() === '') {
                 const locationParts = [
@@ -3850,7 +3399,6 @@ if (!id) return null;
                   companyLocation = locationParts.join(', ');
                 }
               }
-              
               // Extract company phone - check multiple possible fields
               let companyPhone = org.phone || org.phone_number || employee.company_phone || '';
               if (!companyPhone) {
@@ -3862,21 +3410,17 @@ if (!id) return null;
                               org.phone_numbers?.[0]?.sanitized_number ||
                               '';
               }
-              
               const companyEmployeeCount = org.employee_count || org.employees || employee.company_employee_count || '';
-              
               // Find company data for this employee from data array (company search results)
               const empCompanyId = normalizeCompanyId(org.id || employee.organization_id || employee.company_id);
               let company = data.find(c => {
                 const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
                 return cId && empCompanyId && cId === empCompanyId;
               });
-              
               // If company not found in data array, build company object from employee data
               if (!company && companyName !== 'Unknown Company') {
                 // Look up summary from companySummaries prop
                 const companySummary = empCompanyId ? (companySummaries[empCompanyId] || companySummaries[String(empCompanyId)]) : null;
-                
                 company = {
                   id: empCompanyId,
                   company_id: empCompanyId,
@@ -3915,7 +3459,6 @@ if (!id) return null;
                   }
                 }
               }
-              
               return (
                 <Box key={employeeId} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', height: '100%' }}>
                   <Card 
@@ -4048,7 +3591,6 @@ if (!id) return null;
                           </Box>
                         </Box>
                       </Box>
-
                       {/* Card Body */}
                       <Box sx={{ 
                         p: 2.5, 
@@ -4057,9 +3599,6 @@ if (!id) return null;
                       }}>
                         {/* All Variable Content - Each section has fixed height */}
                         <Box sx={{ mb: 0 }}>
-                        
-
-                          
                         {/* Decision Maker Contact - Fixed 60px */}
                         <Box sx={{ minHeight: '60px', mb: 0 }}>
                           {company && phoneData[company.id] && (
@@ -4081,7 +3620,6 @@ if (!id) return null;
                               }}>
                                 ✓ DECISION MAKER CONTACT
                               </Typography>
-                              
                               {/* Phone Number */}
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                 <Phone sx={{ fontSize: 16, color: '#28a745' }} />
@@ -4101,7 +3639,6 @@ if (!id) return null;
                                   }} 
                                 />
                               </Box>
-
                               {/* Contact Name (if available) */}
                               {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -4114,7 +3651,6 @@ if (!id) return null;
                           </Box>
                           )}
                         </Box>
-
                         {/* Phone Number - Fixed 28px */}
                         <Box sx={{ minHeight: '40px', mb: 1 }}>
                           {(() => {
@@ -4158,7 +3694,6 @@ if (!id) return null;
                           }}>
                             Company Scale
                           </Typography>
-                          
                           {/* Circle and Button Row */}
                           <Box sx={{ 
                             display: 'flex', 
@@ -4217,7 +3752,6 @@ if (!id) return null;
                                 </Box>
                               );
                             })()}
-                            
                             {/* View Employee Button - Blue gradient */}
                             <Button
                               variant="contained"
@@ -4332,7 +3866,6 @@ if (!id) return null;
                             )}
                           </Box>
                         </Box>
-
                         {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
                         {company?.employeeCount !== undefined && company?.employeeCount !== null ? (
                           <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -4431,7 +3964,6 @@ if (!id) return null;
         })()}
         </Box>
       )}
-
       {/* Phone Reveal Confirmation Dialog */}
       <Dialog
         open={phoneConfirmDialog.open}
@@ -4458,7 +3990,6 @@ if (!id) return null;
                 Cost: 8 CREDITS
               </Typography>
             </Box>
-
             {/* Employee Details */}
             {phoneConfirmDialog.employee && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -4470,7 +4001,6 @@ if (!id) return null;
                 </Typography>
               </Box>
             )}
-
             {/* Process Info */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -4486,7 +4016,6 @@ if (!id) return null;
                 </Typography>
               </Box>
             </Box>
-
             {/* Confirmation */}
             <Typography variant="body2" fontWeight="600" sx={{ mt: 1 }}>
               Continue?
@@ -4513,7 +4042,6 @@ if (!id) return null;
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Detail Dialog */}
       <Dialog 
         open={dialogOpen} 
@@ -4548,11 +4076,7 @@ if (!id) return null;
           {selectedCompany && (
             <Box>
               {/* Debug: Log selectedCompany summary status */}
-              {console.log('🔍 Dialog rendering - selectedCompany summary check:', {
-                hasSummary: !!selectedCompany.summary,
-                summaryType: typeof selectedCompany.summary,
-                summaryLength: selectedCompany.summary?.length || 0,
-                summaryPreview: selectedCompany.summary?.substring(0, 50) || 'none',
+              {|| 'none',
                 companyId: selectedCompany.id || selectedCompany.company_id,
                 allKeys: Object.keys(selectedCompany)
               })}
@@ -4594,7 +4118,6 @@ if (!id) return null;
                   )}
                 </Box>
               </Box>
-
               {/* Company Scale Metrics */}
               {selectedCompany.employeeCount && (
                 <Box sx={{ mb: 4 }}>
@@ -4653,7 +4176,6 @@ if (!id) return null;
                         {selectedCompany.employeeCount} Employees
                       </Typography>
                     </Box>
-
                     {/* View Employees Button - Circular Design */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 150 }}>
                       <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
@@ -4719,7 +4241,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* Company Links - Always show if available */}
               {(selectedCompany.linkedinProfile || selectedCompany.website || selectedCompany.twitterUrl || selectedCompany.facebookUrl || selectedCompany.blogUrl) && (
                 <Box sx={{ mb: 4 }}>
@@ -4825,7 +4346,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* Full Address */}
               {selectedCompany.rawAddress && (
                 <Box sx={{ mb: 4, p: 2, bgcolor: 'oklch(0.97 0 0)', borderRadius: 2, borderLeft: '4px solid #0b1957', border: '1px solid oklch(0.922 0 0)' }}>
@@ -4837,7 +4357,6 @@ if (!id) return null;
                   </Typography>
                 </Box>
               )}
-
               {/* Company Details - Founded Year & Industry Codes */}
               {(selectedCompany.foundingYear || (selectedCompany.naicsCodes && selectedCompany.naicsCodes.length > 0) || (selectedCompany.sicCodes && selectedCompany.sicCodes.length > 0)) && (
                 <Box sx={{ mb: 4 }}>
@@ -4903,7 +4422,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* Sales Summary (from topic filtering) */}
               {selectedCompany.summary && typeof selectedCompany.summary === 'string' && selectedCompany.summary.trim().length > 0 && (
                 <Box sx={{ 
@@ -4988,7 +4506,6 @@ if (!id) return null;
                   </Typography>
                 </Box>
               )}
-              
               {/* Company Description */}
               {selectedCompany.companyDescription && (
                 <Box sx={{ mb: 4, p: 2, bgcolor: 'oklch(0.97 0 0)', borderRadius: 2, borderLeft: '4px solid #0b1957', border: '1px solid oklch(0.922 0 0)' }}>
@@ -5000,7 +4517,6 @@ if (!id) return null;
                   </Typography>
                 </Box>
               )}
-
               {/* Growth Metrics - Circular Progress */}
               {(selectedCompany.growth6M || selectedCompany.growth12M || selectedCompany.growth24M) && (
                 <Box sx={{ mb: 4 }}>
@@ -5122,7 +4638,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* Revenue & Financial Metrics */}
               {(selectedCompany.revenue || selectedCompany.stockInfo || selectedCompany.foundingYear) && (
                 <Box sx={{ mb: 4 }}>
@@ -5196,7 +4711,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* NAICS & SIC Codes */}
               {(selectedCompany.naicsCodes?.length > 0 || selectedCompany.sicCodes?.length > 0) && (
                 <Box sx={{ mb: 3 }}>
@@ -5219,7 +4733,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
               {/* Top Employees / Executive Team */}
               {selectedCompany.cLevelExecutives && selectedCompany.cLevelExecutives.length > 0 && (
                 <Box sx={{ mb: 4 }}>
@@ -5256,7 +4769,6 @@ if (!id) return null;
                           >
                             {employee.name ? employee.name.charAt(0).toUpperCase() : '👤'}
                           </Avatar>
-
                           {/* Employee Details */}
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#ffffff', mb: 0.5, fontSize: '1rem' }}>
@@ -5267,7 +4779,6 @@ if (!id) return null;
                                 {employee.title}
                               </Typography>
                             )}
-                            
                             {/* Contact Info */}
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
                               {employee.email && (
@@ -5295,7 +4806,6 @@ if (!id) return null;
                                 </Box>
                               )}
                             </Box>
-
                             {/* LinkedIn Link */}
                             {employee.linkedin_url && (
                               <Box sx={{ mt: 1 }}>
@@ -5322,7 +4832,6 @@ if (!id) return null;
                       </Box>
                     ))}
                   </Box>
-                  
                   {/* Show count if more than 10 employees */}
                   {selectedCompany.cLevelExecutives.length > 10 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
@@ -5331,7 +4840,6 @@ if (!id) return null;
                   )}
                 </Box>
               )}
-
               {/* Services Offered */}
               {selectedCompany.servicesOffered && selectedCompany.servicesOffered.length > 0 && (
                 <Box sx={{ mb: 3 }}>
@@ -5345,7 +4853,6 @@ if (!id) return null;
                   </Box>
                 </Box>
               )}
-
             </Box>
           )}
         </DialogContent>
@@ -5366,7 +4873,6 @@ if (!id) return null;
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Employee List Dialog */}
       <Dialog 
         open={employeeDialogOpen} 
@@ -5425,7 +4931,6 @@ if (!id) return null;
                   </Box>
                 </Box>
             </Box>
-
             {/* Select All on left, Filter/Button/View Toggle on right */}
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', width: '100%' }}>
               {/* Select All Checkbox - Left side */}
@@ -5435,7 +4940,6 @@ if (!id) return null;
                 const filteredEmployees = filterEmployeesByRole(employees, employeeRoleFilter);
                 const allSelected = filteredEmployees.length > 0 && selectedDialogEmployees.size === filteredEmployees.length;
                 const someSelected = selectedDialogEmployees.size > 0 && selectedDialogEmployees.size < filteredEmployees.length;
-                
                 return (
                   <FormControlLabel
                     control={
@@ -5465,7 +4969,6 @@ if (!id) return null;
                   />
                 );
               })()}
-              
               {/* Right side: Filter, Send Connection Button, and View Toggle */}
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Role Filter Dropdown */}
@@ -5537,7 +5040,6 @@ if (!id) return null;
                   <MenuItem value="finance">Finance & Accounting</MenuItem>
                 </Select>
                 </FormControl>
-                
                 {/* Send Connection Button - Always visible */}
                 <Button
                   variant="contained"
@@ -5569,7 +5071,6 @@ if (!id) return null;
                 >
                   Send Connection {selectedDialogEmployees.size > 0 ? `(${selectedDialogEmployees.size})` : ''}
                 </Button>
-              
                 {/* View Toggle Button */}
                 <Box sx={{ display: 'flex', gap: 0.5, bgcolor: 'oklch(0.97 0 0)', borderRadius: '8px', p: 0.5, border: '1px solid oklch(0.922 0 0)' }}>
                 <Tooltip title="Grid View" arrow>
@@ -5705,7 +5206,6 @@ if (!id) return null;
                             <Person sx={{ fontSize: 50 }} />
                           </Avatar>
                         </Box>
-                        
                         {/* Employee Details Wrapper - Fills remaining space */}
                         <Box sx={{ 
                           display: 'flex',
@@ -5743,7 +5243,6 @@ if (!id) return null;
                             }}>
                               {employee.name || 'Unknown'}
                             </Typography>
-                            
                             {/* Employee Title/Role */}
                             <Chip 
                               label={employee.title || 'No Title'} 
@@ -5763,7 +5262,6 @@ if (!id) return null;
                                 }
                               }}
                             />
-
                             {/* Company Name */}
                             {employee.company_name && (
                               <Box sx={{ 
@@ -5798,11 +5296,9 @@ if (!id) return null;
                                 </Typography>
                               </Box>
                             )}
-
                             {/* Divider */}
                             <Box sx={{ width: '100%', height: '1px', bgcolor: '#e0e0e0', my: 1.5 }} />
                           </Box>
-                          
                           {/* Contact Details List - Bottom */}
                           <Box sx={{ 
                             width: '100%', 
@@ -5835,7 +5331,6 @@ if (!id) return null;
                             </Typography>
                           </Box>
                         )}
-                        
                         {/* LinkedIn */}
                         {employee.linkedin_url && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -5859,7 +5354,6 @@ if (!id) return null;
                             </Link>
                           </Box>
                         )}
-                        
                         {/* Phone Number (Blurred) */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                           <Box sx={{ 
@@ -5883,7 +5377,6 @@ if (!id) return null;
                               : phoneNotFound 
                                 ? 'Number not found' 
                                 : '+971 50 123 4567';
-                            
                             return (
                               <>
                                 <Typography variant="caption" sx={{ 
@@ -5926,7 +5419,6 @@ if (!id) return null;
                             );
                           })()}
                         </Box>
-                        
                         {/* Email (Blurred) */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                           <Box sx={{ 
@@ -5950,7 +5442,6 @@ if (!id) return null;
                               : emailNotFound 
                                 ? 'Email not found' 
                                 : 'name@company.com';
-                            
                             return (
                               <>
                                 <Typography variant="caption" sx={{ 
@@ -6033,7 +5524,6 @@ if (!id) return null;
                             >
                               <Person sx={{ fontSize: 40 }} />
                             </Avatar>
-                            
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, minWidth: 200, maxWidth: 300 }}>
                               <Typography variant="h6" sx={{ 
                                 fontWeight: 700, 
@@ -6071,7 +5561,6 @@ if (!id) return null;
                               )}
                             </Box>
                           </Box>
-                          
                           {/* Middle Section: Contact Details (List View) */}
                           {employeeViewMode === 'list' && (
                         <Box sx={{ 
@@ -6098,7 +5587,6 @@ if (!id) return null;
                               </Typography>
                             </Box>
                           )}
-                          
                           {/* LinkedIn */}
                           {employee.linkedin_url && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
@@ -6125,7 +5613,6 @@ if (!id) return null;
                               </Link>
                             </Box>
                           )}
-                          
                           {/* Phone with Lock */}
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
                             <Phone sx={{ fontSize: 22, color: '#0b1957' }} />
@@ -6136,7 +5623,6 @@ if (!id) return null;
                                 const phoneNotFound = empRevealed.phone === 'not_found';
                                 const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
                                 const displayPhone = hasPhone ? empRevealed.phone : (phoneNotFound ? 'Number not found' : '+971 50 123 4567');
-                                
                                 return (
                                   <>
                                     <Typography variant="caption" sx={{ 
@@ -6181,7 +5667,6 @@ if (!id) return null;
                                 );
                               })()}
                           </Box>
-                          
                           {/* Email with Lock */}
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
                             <Email sx={{ fontSize: 22, color: '#0b1957' }} />
@@ -6192,7 +5677,6 @@ if (!id) return null;
                               const emailNotFound = empRevealed.email === 'not_found';
                               const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
                               const displayEmail = hasEmail ? empRevealed.email : (emailNotFound ? 'Email not found' : 'name@company.com');
-                              
                               return (
                                 <>
                                   <Typography variant="caption" sx={{ 
@@ -6248,7 +5732,6 @@ if (!id) return null;
               </Box>
             ))}
           </Box>
-          
           {/* Error Message (shows even when loading if it's an Apollo fetching message) */}
           {selectedEmployeeCompany && 
            employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
@@ -6268,7 +5751,6 @@ if (!id) return null;
               </Typography>
             </Box>
           )}
-          
           {/* Loading State (only show if no error message or error is not Apollo fetching) */}
           {selectedEmployeeCompany && 
            employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
@@ -6280,7 +5762,6 @@ if (!id) return null;
               </Typography>
             </Box>
           )}
-          
           {/* No Employees Message */}
           {selectedEmployeeCompany && 
            !employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
@@ -6320,7 +5801,6 @@ if (!id) return null;
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Employee Detail Dialog */}
       <Dialog
         open={employeeDetailDialogOpen}
@@ -6372,7 +5852,6 @@ if (!id) return null;
                   >
                     <Person sx={{ fontSize: 50 }} />
                   </Avatar>
-                  
                   {/* Employee Name */}
                   <Typography variant="h6" align="center" sx={{ 
                     fontWeight: 'bold', 
@@ -6382,7 +5861,6 @@ if (!id) return null;
                   }}>
                     {selectedEmployee.name || 'Unknown'}
                   </Typography>
-                  
                   {/* Employee Title/Role */}
                   <Chip 
                     label={selectedEmployee.title || 'No Title'} 
@@ -6395,7 +5873,6 @@ if (!id) return null;
                       color: '#ffffff'
                     }}
                   />
-
                   {/* Company Name with Logo - Clickable */}
                   {(() => {
                     const org = selectedEmployee.organization || {};
@@ -6406,7 +5883,6 @@ if (!id) return null;
                       const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
                       return cId && empCompanyId && cId === empCompanyId;
                     });
-                    
                     return empCompanyName && (
                       <Box 
                         onClick={(e) => {
@@ -6451,10 +5927,8 @@ if (!id) return null;
                       </Box>
                     );
                   })()}
-
                   {/* Divider */}
                   <Box sx={{ width: '100%', height: '1px', bgcolor: 'oklch(0.922 0 0)', my: 1.5 }} />
-                  
                   {/* Contact Details List */}
                   <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {/* Location */}
@@ -6473,7 +5947,6 @@ if (!id) return null;
                         </Typography>
                       </Box>
                     )}
-                    
                     {/* LinkedIn */}
                     {selectedEmployee.linkedin_url && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -6498,13 +5971,11 @@ if (!id) return null;
                         </Link>
                       </Box>
                     )}
-                    
                     {/* Phone Number (Blurred) */}
                     {(() => {
                       const empId = getEmployeeId(selectedEmployee);
                       const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
                       const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
-                      
                       // Check if phone was attempted but not found
                       const phoneNotFound = empRevealed.phone === 'not_found';
                       const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
@@ -6513,7 +5984,6 @@ if (!id) return null;
                         : phoneNotFound 
                           ? 'Number not found' 
                           : (selectedEmployee.phone_number || '+971 50 123 4567');
-                      
                       return (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box sx={{ 
@@ -6565,13 +6035,11 @@ if (!id) return null;
                         </Box>
                       );
                     })()}
-                    
                     {/* Email (Blurred) */}
                     {(() => {
                       const empId = selectedEmployee.id || selectedEmployee.linkedin_url || selectedEmployee.name;
                       const empRevealed = revealedContacts[empId] || {};
                       const empRevealing = revealingContacts[empId] || {};
-                      
                       // Check if email was attempted but not found
                       const emailNotFound = empRevealed.email === 'not_found';
                       const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
@@ -6580,7 +6048,6 @@ if (!id) return null;
                         : emailNotFound 
                           ? 'Email not found' 
                           : (selectedEmployee.email || 'name@company.com');
-                      
                       return (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box sx={{ 
@@ -6663,4 +6130,4 @@ if (!id) return null;
       </Dialog>
     </Box>
   );
-}
+}

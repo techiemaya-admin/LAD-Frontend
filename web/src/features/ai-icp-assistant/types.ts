@@ -4,7 +4,6 @@
  * Shared TypeScript types for the AI ICP Assistant feature.
  * NO business logic - types only.
  */
-
 export interface ICPQuestion {
   id: string;
   stepIndex: number;
@@ -29,14 +28,12 @@ export interface ICPQuestion {
   platformIndex?: number; // For platform actions
   totalPlatforms?: number; // For platform actions
 }
-
 export interface ICPQuestionsResponse {
   success: boolean;
   questions: ICPQuestion[];
   totalSteps: number;
   error?: string;
 }
-
 export interface ICPAnswerRequest {
   sessionId?: string;
   currentStepIndex: number;
@@ -45,7 +42,6 @@ export interface ICPAnswerRequest {
   collectedAnswers?: Record<string, any>;
   currentIntentKey?: string;
 }
-
 export interface ICPAnswerResponse {
   success: boolean;
   nextStepIndex: number | null;
@@ -58,6 +54,6 @@ export interface ICPAnswerResponse {
   updatedCollectedAnswers?: Record<string, any>;
   correctedAnswer?: string | null;
   error?: string;
-}
-
-
+  totalSteps?: number;
+  options?: { label: string; value: string; disabled?: boolean }[];
+}

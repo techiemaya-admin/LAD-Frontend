@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
 import { WidgetLibrary } from '@/components/dashboard/WidgetLibrary';
-
 const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -15,7 +14,6 @@ const Index: React.FC = () => {
         >
           <DashboardHeader />
         </motion.div>
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -23,12 +21,10 @@ const Index: React.FC = () => {
         >
           <DashboardGrid />
         </motion.div>
-
         {/* Widget Library Drawer */}
         <WidgetLibrary />
       </main>
     </div>
   );
 };
-
-export default Index;
+export default Index;

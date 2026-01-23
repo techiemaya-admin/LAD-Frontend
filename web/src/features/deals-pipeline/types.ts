@@ -2,7 +2,6 @@
  * Deals Pipeline Types
  * Type definitions for leads and pipeline management
  */
-
 export interface Lead {
   id: string | number;
   name?: string | null;
@@ -52,7 +51,6 @@ export interface Lead {
   // Index signature for flexible field access
   [key: string]: any;
 }
-
 export interface Note {
   id: string | number;
   lead_id: string | number;
@@ -61,7 +59,6 @@ export interface Note {
   created_at: string;
   updated_at?: string;
 }
-
 export interface Comment {
   id: string | number;
   lead_id: string | number;
@@ -70,7 +67,6 @@ export interface Comment {
   created_at: string;
   updated_at?: string;
 }
-
 export interface Attachment {
   id: string | number;
   lead_id: string | number;
@@ -81,7 +77,6 @@ export interface Attachment {
   created_by?: string | number | null;
   created_at: string;
 }
-
 export interface Activity {
   id: string | number;
   lead_id: string | number;
@@ -90,4 +85,4 @@ export interface Activity {
   created_by?: string | number | null;
   created_at: string;
   metadata?: Record<string, any>;
-}
+}

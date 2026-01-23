@@ -1,11 +1,9 @@
 'use client';
-
 import React, { useState, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiUpload } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { Upload, FileText, X, ArrowLeft, ArrowRight, Check } from 'lucide-react';
-
 export default function Screen2InboundUpload() {
   const { setInboundFile, setCurrentScreen } = useOnboardingStore();
   const [file, setFile] = useState<File | null>(null);
@@ -21,43 +19,35 @@ export default function Screen2InboundUpload() {
     title: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleFileSelect = async (selectedFile: File) => {
     if (!selectedFile) return;
-
     // Validate file type
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
       'application/vnd.ms-excel', // .xls
       'text/csv', // .csv
     ];
-
     if (!validTypes.includes(selectedFile.type) && !selectedFile.name.endsWith('.csv')) {
       alert('Please upload a valid Excel (.xlsx, .xls) or CSV file');
       return;
     }
-
     setFile(selectedFile);
     setIsUploading(true);
-
     try {
       // Upload file to backend
       const formData = new FormData();
       formData.append('file', selectedFile);
-
       const response = await apiUpload<{
         success: boolean;
         preview: any[];
         headers: string[];
       }>('/api/onboarding/inbound/upload', formData);
-
       if (response.success && response.preview) {
         setPreview(response.preview);
         // Auto-map common fields
         if (response.headers) {
           const headers = response.headers.map((h: string) => h.toLowerCase());
           const autoMapping: any = {};
-          
           headers.forEach((header: string) => {
             if (header.includes('name') || header.includes('full name')) autoMapping.name = header;
             if (header.includes('email') || header.includes('e-mail')) autoMapping.email = header;
@@ -66,7 +56,6 @@ export default function Screen2InboundUpload() {
             if (header.includes('phone') || header.includes('mobile')) autoMapping.phone = header;
             if (header.includes('title') || header.includes('position') || header.includes('job')) autoMapping.title = header;
           });
-          
           setFieldMapping(autoMapping);
         }
       }
@@ -77,26 +66,21 @@ export default function Screen2InboundUpload() {
       setIsUploading(false);
     }
   };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = () => {
     setIsDragging(false);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) handleFileSelect(droppedFile);
   };
-
   const handleContinue = () => {
     if (!file) return;
-
     const inboundFileData = {
       file,
       fileName: file.name,
@@ -105,15 +89,12 @@ export default function Screen2InboundUpload() {
       mappedFields: fieldMapping,
       preview,
     };
-
     setInboundFile(inboundFileData);
     setCurrentScreen(5); // Move to workflow setup
   };
-
   const availableFields = preview.length > 0 
     ? Object.keys(preview[0] || {})
     : [];
-
   return (
     <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-8">
@@ -126,7 +107,6 @@ export default function Screen2InboundUpload() {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Upload Your Leads
@@ -135,7 +115,6 @@ export default function Screen2InboundUpload() {
               Upload your Excel or CSV file with your leads
             </p>
           </div>
-
           {/* File Upload Area */}
           <div className="bg-white rounded-2xl p-8 mb-8 shadow-lg">
             {!file ? (
@@ -202,14 +181,12 @@ export default function Screen2InboundUpload() {
                     <X className="w-5 h-5 text-red-600" />
                   </button>
                 </div>
-
                 {isUploading && (
                   <div className="text-center py-4">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <p className="mt-2 text-gray-600">Processing file...</p>
                   </div>
                 )}
-
                 {preview.length > 0 && (
                   <>
                     {/* Field Mapping */}
@@ -220,7 +197,6 @@ export default function Screen2InboundUpload() {
                       <p className="text-sm text-gray-600">
                         Match your file columns to our standard fields
                       </p>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(fieldMapping).map(([key, value]) => (
                           <div key={key}>
@@ -245,7 +221,6 @@ export default function Screen2InboundUpload() {
                         ))}
                       </div>
                     </div>
-
                     {/* Preview Table */}
                     <div className="mt-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -287,7 +262,6 @@ export default function Screen2InboundUpload() {
               </div>
             )}
           </div>
-
           {/* Continue Button */}
           {file && preview.length > 0 && (
             <div className="flex justify-end">
@@ -304,5 +278,4 @@ export default function Screen2InboundUpload() {
       </div>
     </div>
   );
-}
-
+}

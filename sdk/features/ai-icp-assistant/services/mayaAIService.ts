@@ -1,12 +1,10 @@
 import { apiPost } from '@/lib/api';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
-
 export interface MayaMessage {
   role: 'user' | 'ai';
   content: string;
   timestamp: Date;
 }
-
 export interface MayaResponse {
   text: string;
   options?: { label: string; value: string }[] | null;
@@ -22,7 +20,6 @@ export interface MayaResponse {
   schedule?: string;
   searchResults?: any[];
 }
-
 export interface OnboardingContext {
   selectedPath: 'automation' | 'leads' | null;
   selectedPlatforms: string[];
@@ -34,7 +31,6 @@ export interface OnboardingContext {
   workflowNodes: any[];
   currentState?: 'STATE_1' | 'STATE_2' | 'STATE_3' | 'STATE_4' | 'STATE_5';
 }
-
 /**
  * Maya AI Service - AI-powered ICP Assistant
  * Handles conversation flow for onboarding and workflow generation
@@ -69,7 +65,6 @@ class MayaAIService {
       };
     }
   }
-
   /**
    * Ask about platform features
    */
@@ -82,9 +77,7 @@ class MayaAIService {
       label: f.label,
       value: f.id,
     }));
-
     const prompt = `The user selected ${platform} platform. Present these features as selectable options: ${platformFeatures.map(f => f.label).join(', ')}. Ask: "Which ${platform} features do you want? (You can select multiple)"`;
-
     try {
       const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
         message: prompt,
@@ -98,7 +91,6 @@ class MayaAIService {
           workflowNodes: [],
         },
       });
-
       return {
         ...response,
         options: featureOptions,
@@ -115,7 +107,6 @@ class MayaAIService {
       };
     }
   }
-
   /**
    * Ask about feature utilities
    */
@@ -130,9 +121,7 @@ class MayaAIService {
       'Add condition? (No condition, If connected, If opened, If replied, If clicked)',
       'Personalization variables needed? (first_name, company_name, title, email)',
     ];
-
     const prompt = `Ask utility questions for ${platform} feature: ${feature}. Questions: ${utilityQuestions.join('; ')}. Ask one question at a time.`;
-
     try {
       const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
         message: prompt,
@@ -146,7 +135,6 @@ class MayaAIService {
           workflowNodes: [],
         },
       });
-
       return {
         ...response,
         nextAction: 'ask_feature_utilities',
@@ -163,7 +151,6 @@ class MayaAIService {
       };
     }
   }
-
   /**
    * Build a workflow node from platform, feature, and utilities
    */
@@ -178,7 +165,6 @@ class MayaAIService {
     }
   ): any {
     const nodeId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
     // Map feature IDs to step types
     const featureTypeMap: Record<string, string> = {
       linkedin_profile_visit: 'linkedin_visit',
@@ -204,11 +190,9 @@ class MayaAIService {
       voice_agent_call: 'voice_agent_call',
       voice_agent_script: 'voice_agent_call',
     };
-
     const stepType = featureTypeMap[feature] || feature;
     const featureLabel = PLATFORM_FEATURES[platform as keyof typeof PLATFORM_FEATURES]
       ?.find(f => f.id === feature)?.label || feature;
-
     return {
       id: nodeId,
       type: stepType,
@@ -227,6 +211,5 @@ class MayaAIService {
     };
   }
 }
-
 export const mayaAI = new MayaAIService();
-export default mayaAI;
+export default mayaAI;

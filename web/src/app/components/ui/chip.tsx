@@ -1,13 +1,10 @@
 import * as React from 'react';
-
 function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
-
 export interface ChipProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
 }
-
 const Chip = React.forwardRef<HTMLSpanElement, ChipProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const variantClasses = {
@@ -16,7 +13,6 @@ const Chip = React.forwardRef<HTMLSpanElement, ChipProps>(
       destructive: 'bg-destructive text-destructive-foreground',
       outline: 'border border-input bg-background',
     };
-
     return (
       <span
         ref={ref}
@@ -31,6 +27,4 @@ const Chip = React.forwardRef<HTMLSpanElement, ChipProps>(
   }
 );
 Chip.displayName = 'Chip';
-
-export { Chip };
-
+export { Chip };

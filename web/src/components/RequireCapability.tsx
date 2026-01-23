@@ -1,16 +1,13 @@
 'use client';
-
 import React, { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Shield } from 'lucide-react';
-
 interface RequireCapabilityProps {
   capability: string;
   children: ReactNode;
   fallback?: ReactNode;
   showMessage?: boolean;
 }
-
 /**
  * RequireCapability - Guard component for capability-based access control
  * 
@@ -29,19 +26,15 @@ export const RequireCapability: React.FC<RequireCapabilityProps> = ({
   showMessage = true,
 }) => {
   const { hasCapability } = useAuth();
-
   if (hasCapability(capability)) {
     return <>{children}</>;
   }
-
   if (fallback) {
     return <>{fallback}</>;
   }
-
   if (!showMessage) {
     return null;
   }
-
   return (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
       <Shield className="h-12 w-12 mx-auto text-yellow-600 mb-4" />
@@ -53,4 +46,4 @@ export const RequireCapability: React.FC<RequireCapabilityProps> = ({
       </p>
     </div>
   );
-};
+};

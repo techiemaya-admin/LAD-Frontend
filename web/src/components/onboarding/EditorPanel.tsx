@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import OnboardingStepLibrary from '@/components/onboarding/OnboardingStepLibrary';
@@ -7,7 +6,6 @@ import StepSettings from '../../features/campaigns/components/StepSettings';
 import { Save, BookOpen, Settings, Undo2, Redo2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-
 export default function EditorPanel() {
   const [activeTab, setActiveTab] = useState<'library' | 'settings'>('library');
   const router = useRouter();
@@ -24,7 +22,6 @@ export default function EditorPanel() {
     canUndo,
     canRedo,
   } = useOnboardingStore();
-
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,23 +37,19 @@ export default function EditorPanel() {
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRedo]);
-
   const handleUndo = () => {
     if (canUndo()) {
       undo();
     }
   };
-
   const handleRedo = () => {
     if (canRedo()) {
       redo();
     }
   };
-
   const handleSave = async () => {
     try {
       const { apiPost } = await import('@/lib/api');
@@ -68,11 +61,9 @@ export default function EditorPanel() {
         })),
         edges: [],
       };
-      
       await apiPost('/api/workflow/save', {
         workflow: workflowToSave,
       });
-
       completeOnboarding();
       router.push('/campaigns');
     } catch (error) {
@@ -80,11 +71,9 @@ export default function EditorPanel() {
       alert('Failed to save workflow. Please try again.');
     }
   };
-
   const handleClose = () => {
     setIsEditorPanelCollapsed(true);
   };
-
   return (
     <div className="h-full flex flex-col bg-white shadow-xl rounded-tl-xl">
       {/* Header with Tabs - Sticky */}
@@ -126,7 +115,6 @@ export default function EditorPanel() {
             </button>
           </div>
         </div>
-
         {/* Tab Navigation - Sticky */}
         <div className="flex border-b border-gray-200 bg-white">
           <button
@@ -153,7 +141,6 @@ export default function EditorPanel() {
           </button>
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'library' ? (
@@ -184,5 +171,4 @@ export default function EditorPanel() {
       </div>
     </div>
   );
-}
-
+}

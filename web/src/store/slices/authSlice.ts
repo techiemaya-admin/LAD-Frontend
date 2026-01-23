@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { safeStorage } from '../../utils/storage';
-
 export type AuthUser = {
   id?: string;
   name?: string;
@@ -9,7 +8,6 @@ export type AuthUser = {
   avatar?: string;
   [key: string]: unknown;
 } | null;
-
 export type AuthState = {
   user: AuthUser;
   isAuthenticated: boolean;
@@ -17,7 +15,6 @@ export type AuthState = {
   error: string | null;
   theme: 'light' | 'dark';
 };
-
 const getInitialState = (): AuthState => {
   try {
     if (typeof window !== 'undefined') {
@@ -44,7 +41,6 @@ const getInitialState = (): AuthState => {
     theme: 'light',
   };
 };
-
 const authSlice = createSlice({
   name: 'auth',
   initialState: getInitialState(),
@@ -107,11 +103,7 @@ const authSlice = createSlice({
     },
   },
 });
-
 export const { loginStart, loginSuccess, loginFailure, logout, clearError, toggleTheme, updateUserProfile } = authSlice.actions;
-
 export const selectUser = (state: any) => state.auth.user;
 export const selectIsAuthenticated = (state: any) => state.auth.isAuthenticated;
-
-export default authSlice.reducer;
-
+export default authSlice.reducer;

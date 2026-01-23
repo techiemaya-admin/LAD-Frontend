@@ -2,10 +2,8 @@
  * Billing Feature - React Hooks
  * Custom hooks for billing operations with automatic refetching and state management
  */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as billingApi from '../api';
-
 /**
  * Hook to get credits balance
  * Auto-refetches on window focus
@@ -18,10 +16,8 @@ export function useCreditsBalance() {
     refetchOnWindowFocus: true,
   });
 }
-
 // Backward compatibility alias
 export const useWalletBalance = useCreditsBalance;
-
 /**
  * Hook to get pricing for a component
  */
@@ -37,7 +33,6 @@ export function usePricing(params: {
     staleTime: 300000, // Pricing is stable, cache for 5 minutes
   });
 }
-
 /**
  * Hook to get cost quote
  */
@@ -49,14 +44,12 @@ export function useQuote(items: billingApi.QuoteItem[] | null) {
     staleTime: 60000, // Cache for 1 minute
   });
 }
-
 /**
  * Hook to charge usage
  * Automatically refetches wallet and usage lists after success
  */
 export function useChargeUsage() {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: billingApi.chargeUsage,
     onSuccess: () => {
@@ -67,14 +60,12 @@ export function useChargeUsage() {
     },
   });
 }
-
 /**
  * Hook to top up credits (admin only)
  * Automatically refetches credits balance after success
  */
 export function useTopUp() {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: billingApi.topUpCredits,
     onSuccess: () => {
@@ -83,7 +74,6 @@ export function useTopUp() {
     },
   });
 }
-
 /**
  * Hook to list usage events
  */
@@ -101,7 +91,6 @@ export function useUsage(params?: {
     staleTime: 60000, // Cache for 1 minute
   });
 }
-
 /**
  * Hook to get usage aggregation
  */
@@ -116,7 +105,6 @@ export function useUsageAggregation(params?: {
     staleTime: 60000,
   });
 }
-
 /**
  * Hook to list ledger transactions
  */
@@ -132,7 +120,6 @@ export function useTransactions(params?: {
     staleTime: 60000,
   });
 }
-
 /**
  * LEGACY COMPATIBILITY
  * Hook for existing BillingDashboard component
@@ -145,10 +132,8 @@ export function useCreditsBalanceLegacy() {
     refetchOnWindowFocus: true,
   });
 }
-
 // Backward compatibility alias
 export const useWalletBalanceLegacy = useCreditsBalanceLegacy;
-
 /**
  * LEGACY COMPATIBILITY
  * Hook for credit packages
@@ -159,4 +144,4 @@ export function useCreditPackages() {
     queryFn: billingApi.getCreditPackages,
     staleTime: 3600000, // Cache for 1 hour
   });
-}
+}

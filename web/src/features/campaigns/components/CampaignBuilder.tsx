@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import ReactFlow, {
@@ -23,7 +22,6 @@ import { Save, Play, ArrowLeft, Loader2 } from 'lucide-react';
 import { campaignService, type Campaign, type CampaignStep, type StepType, type StepConfig } from '@/services/campaignService';
 import StepLibrary from './StepLibrary';
 import StepSettings from './StepSettings';
-
 interface FlowNodeData {
   label: string;
   stepType: StepType;
@@ -31,41 +29,32 @@ interface FlowNodeData {
   order: number;
   title?: string;
 }
-
 type FlowNode = Node<FlowNodeData>;
-
 export default function CampaignBuilder() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  
   const campaignId = params?.id as string;
   const isNew = campaignId === 'new';
-
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [campaignName, setCampaignName] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
-
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
   useEffect(() => {
     if (!isNew) {
       loadCampaign();
     }
   }, [campaignId, isNew]);
-
   const loadCampaign = async () => {
     if (isNew) return;
-
     try {
       setLoading(true);
       const data = await campaignService.getCampaignById(campaignId);
       setCampaign(data);
       setCampaignName(data.name);
-
       // Convert steps to nodes
       if (data.steps && data.steps.length > 0) {
         const flowNodes: FlowNode[] = data.steps.map((step, index) => ({
@@ -79,9 +68,7 @@ export default function CampaignBuilder() {
             order: step.order
           }
         }));
-
         setNodes(flowNodes);
-
         // Create edges connecting sequential steps
         const flowEdges: Edge[] = [];
         for (let i = 0; i < flowNodes.length - 1; i++) {
@@ -104,16 +91,13 @@ export default function CampaignBuilder() {
       setLoading(false);
     }
   };
-
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds)),
     [setEdges]
   );
-
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node as FlowNode);
   }, []);
-
   const onAddStep = useCallback((stepType: StepType) => {
     const newNode: FlowNode = {
       id: `step-${Date.now()}`,
@@ -126,9 +110,7 @@ export default function CampaignBuilder() {
         order: nodes.length
       }
     };
-
     setNodes((nds) => [...nds, newNode]);
-
     // Auto-connect to previous node
     if (nodes.length > 0) {
       const lastNode = nodes[nodes.length - 1];
@@ -142,13 +124,11 @@ export default function CampaignBuilder() {
         }
       ]);
     }
-
     toast({
       title: 'Step Added',
       description: `${stepType.replace(/_/g, ' ')} step added to workflow`
     });
   }, [nodes, setNodes, setEdges, toast]);
-
   const onUpdateStep = useCallback((nodeId: string, data: any) => {
     setNodes((nds) =>
       nds.map((node) =>
@@ -158,20 +138,16 @@ export default function CampaignBuilder() {
       )
     );
   }, [setNodes]);
-
   const onDeleteStep = useCallback(() => {
     if (!selectedNode) return;
-
     setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
     setEdges((eds) => eds.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
     setSelectedNode(null);
-
     toast({
       title: 'Step Deleted',
       description: 'Step removed from workflow'
     });
   }, [selectedNode, setNodes, setEdges, toast]);
-
   const handleSave = async () => {
     if (!campaignName.trim()) {
       toast({
@@ -181,7 +157,6 @@ export default function CampaignBuilder() {
       });
       return;
     }
-
     if (nodes.length === 0) {
       toast({
         title: 'Validation Error',
@@ -190,10 +165,8 @@ export default function CampaignBuilder() {
       });
       return;
     }
-
     try {
       setSaving(true);
-
       // Convert nodes to steps
       const steps: Array<{
         type: StepType;
@@ -208,30 +181,25 @@ export default function CampaignBuilder() {
         description: node.data.stepData?.description || '',
         config: node.data.stepData
       }));
-
       if (isNew) {
         // Create new campaign
         const newCampaign = await campaignService.createCampaign({
           name: campaignName,
           steps
         });
-
         toast({
           title: 'Success',
           description: 'Campaign created successfully'
         });
-
         router.push(`/campaigns/${newCampaign.id}`);
       } else {
         // Update existing campaign
         await campaignService.updateCampaign(campaignId, { name: campaignName });
         await campaignService.updateCampaignSteps(campaignId, steps);
-
         toast({
           title: 'Success',
           description: 'Campaign updated successfully'
         });
-
         loadCampaign();
       }
     } catch (error: any) {
@@ -244,7 +212,6 @@ export default function CampaignBuilder() {
       setSaving(false);
     }
   };
-
   const handleStart = async () => {
     if (isNew || !campaignId) {
       toast({
@@ -254,7 +221,6 @@ export default function CampaignBuilder() {
       });
       return;
     }
-
     try {
       await campaignService.startCampaign(campaignId);
       toast({
@@ -270,7 +236,6 @@ export default function CampaignBuilder() {
       });
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -278,7 +243,6 @@ export default function CampaignBuilder() {
       </div>
     );
   }
-
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -295,7 +259,6 @@ export default function CampaignBuilder() {
               className="max-w-md"
             />
           </div>
-
           <div className="flex items-center gap-2">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? (
@@ -316,14 +279,12 @@ export default function CampaignBuilder() {
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="flex-1 flex">
         {/* Step Library */}
         <div className="w-64 border-r bg-gray-50 overflow-y-auto">
           <StepLibrary onAddStep={onAddStep} />
         </div>
-
         {/* Workflow Canvas */}
         <div className="flex-1 relative">
           <ReactFlow
@@ -339,7 +300,6 @@ export default function CampaignBuilder() {
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           </ReactFlow>
         </div>
-
         {/* Step Settings */}
         {selectedNode && (
           <div className="w-80 border-l bg-white overflow-y-auto">
@@ -354,4 +314,4 @@ export default function CampaignBuilder() {
       </div>
     </div>
   );
-}
+}

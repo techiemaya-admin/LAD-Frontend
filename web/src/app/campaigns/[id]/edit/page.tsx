@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Box, Button, TextField, Stack, Paper, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
@@ -10,7 +9,6 @@ import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { logger } from '@/lib/logger';
 import type { StepType, FlowNode, FlowEdge, StepData } from '@/types/campaign';
-
 export default function CampaignEditPage() {
   const params = useParams();
   const router = useRouter();
@@ -20,7 +18,6 @@ export default function CampaignEditPage() {
   const [saving, setSaving] = useState(false);
   const [campaignName, setCampaignName] = useState('');
   const [showStartDialog, setShowStartDialog] = useState(false);
-  
   // Get workflow data from onboarding store
   const {
     manualFlow,
@@ -28,17 +25,14 @@ export default function CampaignEditPage() {
     setIsEditMode,
     workflowPreview,
   } = useOnboardingStore();
-
   // Use SDK hook for campaign data
   const { data: campaign, isPending: campaignLoading, error: campaignError } = useCampaign(
     campaignId && campaignId !== 'new' ? campaignId : null
   );
-
   // Load campaign into workflow editor when it loads
   useEffect(() => {
     if (campaign) {
       setCampaignName(campaign.name || '');
-      
       // Convert campaign steps to workflow format for the editor
       if (campaign.steps && Array.isArray(campaign.steps)) {
         const nodes: FlowNode[] = [
@@ -49,10 +43,8 @@ export default function CampaignEditPage() {
             position: { x: 250, y: 50 },
           },
         ];
-
         const edges: FlowEdge[] = [];
         let lastNodeId = 'start';
-
         // Add step nodes
         campaign.steps.forEach((step: any, index: number) => {
           const nodeId = `step_${step.id || index}`;
@@ -67,17 +59,14 @@ export default function CampaignEditPage() {
             } as StepData,
             position: { x: 250, y: 150 + index * 100 },
           });
-
           // Create edge from previous node
           edges.push({
             id: `edge_${lastNodeId}_${nodeId}`,
             source: lastNodeId,
             target: nodeId,
           });
-
           lastNodeId = nodeId;
         });
-
         // Add end node
         nodes.push({
           id: 'end',
@@ -85,20 +74,17 @@ export default function CampaignEditPage() {
           data: { title: 'End' },
           position: { x: 250, y: 150 + campaign.steps.length * 100 },
         });
-
         edges.push({
           id: `edge_${lastNodeId}_end`,
           source: lastNodeId,
           target: 'end',
         });
-
         // Set manual flow in store
         setManualFlow({
           nodes,
           edges,
         });
       }
-
       setLoading(false);
     } else if (campaignError) {
       push({
@@ -111,7 +97,6 @@ export default function CampaignEditPage() {
       setLoading(false);
     }
   }, [campaign, campaignLoading, campaignError, setManualFlow, push, router]);
-
   // Set edit mode on mount
   useEffect(() => {
     setIsEditMode(true);
@@ -119,7 +104,6 @@ export default function CampaignEditPage() {
       setIsEditMode(false);
     };
   }, [setIsEditMode]);
-
   const handleSave = async (startAfterSave = false) => {
     if (!campaignName.trim()) {
       push({
@@ -129,7 +113,6 @@ export default function CampaignEditPage() {
       });
       return;
     }
-
     if (!manualFlow || manualFlow.nodes.length === 0) {
       push({
         variant: 'error',
@@ -138,15 +121,12 @@ export default function CampaignEditPage() {
       });
       return;
     }
-
     try {
       setSaving(true);
-
       // Convert workflow nodes/edges back to campaign steps format
       const stepNodes = manualFlow.nodes.filter(
         (n: any) => n.type !== 'start' && n.type !== 'end'
       );
-
       const steps = stepNodes.map((node: any, index: number) => ({
         id: node.id,
         type: node.data.stepType || node.type,
@@ -155,20 +135,17 @@ export default function CampaignEditPage() {
         order: index,
         config: node.data.stepData || {},
       }));
-
       // Update campaign with new name and steps
       await updateCampaign(campaignId, {
         name: campaignName,
         status: startAfterSave ? 'running' : 'draft',
         steps,
       });
-
       push({
         variant: 'success',
         title: 'Success',
         description: startAfterSave ? 'Campaign saved and started!' : 'Campaign saved successfully',
       });
-
       if (startAfterSave) {
         // Redirect to campaigns list
         router.push('/campaigns');
@@ -187,7 +164,6 @@ export default function CampaignEditPage() {
       setSaving(false);
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -195,7 +171,6 @@ export default function CampaignEditPage() {
       </div>
     );
   }
-
   return (
     <Box className="h-full flex flex-col bg-gray-50">
       {/* Header */}
@@ -209,7 +184,6 @@ export default function CampaignEditPage() {
           >
             Back
           </Button>
-          
           <TextField
             size="small"
             value={campaignName}
@@ -218,7 +192,6 @@ export default function CampaignEditPage() {
             variant="outlined"
             sx={{ flex: 1, maxWidth: 400 }}
           />
-
           <Stack direction="row" spacing={1}>
             <Button
               variant="contained"
@@ -230,7 +203,6 @@ export default function CampaignEditPage() {
             >
               {saving ? 'Saving...' : 'Save'}
             </Button>
-            
             <Button
               variant="contained"
               color="success"
@@ -246,12 +218,10 @@ export default function CampaignEditPage() {
           </Stack>
         </Stack>
       </Paper>
-
       {/* Workflow Editor - using AI Assistant workflow editor */}
       <Box className="flex-1 overflow-auto">
         <Screen3ManualEditor />
       </Box>
-
       {/* Start Confirmation Dialog */}
       <Dialog open={showStartDialog} onClose={() => setShowStartDialog(false)}>
         <DialogTitle>Start Campaign</DialogTitle>
@@ -276,4 +246,4 @@ export default function CampaignEditPage() {
       </Dialog>
     </Box>
   );
-}
+}

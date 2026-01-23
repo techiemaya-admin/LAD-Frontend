@@ -2,10 +2,8 @@ import React from 'react';
 import { Box, Tooltip, Chip, Typography } from '@mui/material';
 import { LinkedIn as LinkedInIcon, Email, Phone, Visibility, PersonAdd, Message, Send } from '@mui/icons-material';
 import type { Campaign, CampaignStatus } from '@/features/campaigns';
-
 // Re-export types from SDK for convenience
 export type { Campaign, CampaignStatus } from '@/features/campaigns';
-
 // Channel/Platform configuration with icons and colors
 export const PLATFORM_CONFIG = {
   linkedin: {
@@ -34,7 +32,6 @@ export const PLATFORM_CONFIG = {
     bgColor: '#EDE9FE',
   },
 };
-
 // LinkedIn action types with details
 export const LINKEDIN_ACTIONS = {
   linkedin_visit: { name: 'Visit', icon: 'visibility' },
@@ -42,7 +39,6 @@ export const LINKEDIN_ACTIONS = {
   linkedin_message: { name: 'Message', icon: 'message' },
   linkedin_follow: { name: 'Follow', icon: 'person_add' },
 };
-
 // Detect channels AND specific actions used in campaign based on steps
 export const getChannelsUsed = (campaign: Campaign) => {
   const channels = {
@@ -52,7 +48,6 @@ export const getChannelsUsed = (campaign: Campaign) => {
     instagram: false,
     voice: false,
   };
-
   if (campaign.steps && Array.isArray(campaign.steps) && campaign.steps.length > 0) {
     campaign.steps.forEach((step: { type?: string; step_type?: string; [key: string]: any }) => {
       const stepType = String(step.type || step.step_type || '').toLowerCase();
@@ -63,15 +58,12 @@ export const getChannelsUsed = (campaign: Campaign) => {
       if (stepType.startsWith('voice_') || stepType === 'voice_agent_call' || stepType.includes('voice')) channels.voice = true;
     });
   }
-
   return channels;
 };
-
 // Get detailed actions breakdown for a campaign
 export const getDetailedActions = (campaign: Campaign) => {
   const actions: { type: string; name: string; platform: string; count: number }[] = [];
   const actionCounts: Record<string, number> = {};
-
   if (campaign.steps && Array.isArray(campaign.steps) && campaign.steps.length > 0) {
     campaign.steps.forEach((step: { type?: string; step_type?: string; [key: string]: any }) => {
       const stepType = String(step.type || step.step_type || '').toLowerCase();
@@ -80,11 +72,9 @@ export const getDetailedActions = (campaign: Campaign) => {
       }
     });
   }
-
   Object.entries(actionCounts).forEach(([type, count]) => {
     let platform = 'other';
     let name = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    
     if (type.startsWith('linkedin_')) {
       platform = 'linkedin';
       name = type.replace('linkedin_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -101,32 +91,25 @@ export const getDetailedActions = (campaign: Campaign) => {
       platform = 'voice';
       name = type.replace('voice_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
-    
     actions.push({ type, name, platform, count });
   });
-
   return actions;
 };
-
 // Get all channel badges for display
 export const getChannelBadges = (campaign: Campaign) => {
   const channels = getChannelsUsed(campaign);
   const badges: { key: string; name: string; color: string; bgColor: string }[] = [];
-  
   if (channels.linkedin) badges.push({ key: 'linkedin', ...PLATFORM_CONFIG.linkedin });
   if (channels.email) badges.push({ key: 'email', ...PLATFORM_CONFIG.email });
   if (channels.whatsapp) badges.push({ key: 'whatsapp', ...PLATFORM_CONFIG.whatsapp });
   if (channels.instagram) badges.push({ key: 'instagram', ...PLATFORM_CONFIG.instagram });
   if (channels.voice) badges.push({ key: 'voice', ...PLATFORM_CONFIG.voice });
-  
   return badges;
 };
-
 // Render channel icons with all platforms shown
 export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
   const channels = getChannelsUsed(campaign);
   const icons: React.ReactElement[] = [];
-  
   if (channels.linkedin) {
     icons.push(
       <Tooltip key="linkedin" title="LinkedIn" arrow>
@@ -145,7 +128,6 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   if (channels.email) {
     icons.push(
       <Tooltip key="email" title="Email" arrow>
@@ -164,7 +146,6 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   if (channels.whatsapp) {
     icons.push(
       <Tooltip key="whatsapp" title="WhatsApp" arrow>
@@ -189,7 +170,6 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   if (channels.instagram) {
     icons.push(
       <Tooltip key="instagram" title="Instagram" arrow>
@@ -214,7 +194,6 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   if (channels.voice) {
     icons.push(
       <Tooltip key="voice" title="Voice Agent" arrow>
@@ -233,7 +212,6 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   if (icons.length === 0) {
     // Default to LinkedIn if no channels detected
     icons.push(
@@ -253,18 +231,14 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
       </Tooltip>
     );
   }
-  
   return <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.25 }}>{icons}</Box>;
 };
-
 // Render action chips showing what the campaign does
 export const renderActionChips = (campaign: Campaign) => {
   const actions = getDetailedActions(campaign);
-  
   if (actions.length === 0) {
     return <Chip label="No actions" size="small" variant="outlined" sx={{ fontSize: '11px' }} />;
   }
-  
   // Group actions by platform
   const platformActions: Record<string, string[]> = {};
   actions.forEach(action => {
@@ -273,13 +247,10 @@ export const renderActionChips = (campaign: Campaign) => {
     }
     platformActions[action.platform].push(action.name);
   });
-  
   const chips: React.ReactElement[] = [];
-  
   Object.entries(platformActions).forEach(([platform, actionNames]) => {
     const config = PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] || { name: platform, color: '#64748B', bgColor: '#F1F5F9' };
     const actionText = actionNames.join(', ');
-    
     chips.push(
       <Tooltip key={platform} title={`${config.name}: ${actionText}`} arrow>
         <Chip
@@ -298,14 +269,11 @@ export const renderActionChips = (campaign: Campaign) => {
       </Tooltip>
     );
   });
-  
   return <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{chips}</Box>;
 };
-
 // Get icon for Connected column - shows primary connection channel
 export const getConnectedIcon = (campaign: Campaign) => {
   const channels = getChannelsUsed(campaign);
-  
   // Priority: LinkedIn > Instagram > WhatsApp > Voice > Email
   if (channels.linkedin) {
     return <LinkedInIcon sx={{ fontSize: 18, color: '#0077B5' }} />;
@@ -338,15 +306,12 @@ export const getConnectedIcon = (campaign: Campaign) => {
   if (channels.email) {
     return <Email sx={{ fontSize: 18, color: '#F59E0B' }} />;
   }
-  
   // Default to LinkedIn if no channels detected
   return <LinkedInIcon sx={{ fontSize: 18, color: '#0077B5' }} />;
 };
-
 // Get icon for Replied column - shows primary reply channel
 export const getRepliedIcon = (campaign: Campaign) => {
   const channels = getChannelsUsed(campaign);
-  
   // Priority: WhatsApp > Instagram > Voice > Email > LinkedIn Message
   if (channels.whatsapp) {
     return (
@@ -380,11 +345,9 @@ export const getRepliedIcon = (campaign: Campaign) => {
   if (channels.linkedin) {
     return <LinkedInIcon sx={{ fontSize: 18, color: '#0077B5' }} />;
   }
-  
   // Default to Email if no channels detected
   return <Email sx={{ fontSize: 18, color: '#F59E0B' }} />;
 };
-
 export const getStatusColor = (status: CampaignStatus): 'success' | 'warning' | 'info' | 'error' | 'default' => {
   switch (status) {
     case 'running': return 'success';
@@ -394,24 +357,19 @@ export const getStatusColor = (status: CampaignStatus): 'success' | 'warning' | 
     default: return 'default';
   }
 };
-
 // Render platform-specific metrics for Connected/Replied/Sent columns
 export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected' | 'replied' | 'sent'): React.ReactElement => {
   const channels = getChannelsUsed(campaign);
   const metrics: React.ReactElement[] = [];
-  
   // Get platform-specific counts from campaign data (if available)
   // These would come from the backend with per-platform breakdown
   const platformData = (campaign as any).platform_metrics || {};
-  
   // Calculate estimated per-platform distribution based on total count
   const totalCount = metricType === 'connected' ? campaign.connected_count :
                      metricType === 'replied' ? campaign.replied_count :
                      campaign.sent_count;
-  
   const activeChannels = Object.entries(channels).filter(([_, isActive]) => isActive);
   const channelCount = activeChannels.length || 1;
-  
   // LinkedIn metrics
   if (channels.linkedin) {
     const count = platformData.linkedin?.[metricType] ?? Math.floor(totalCount / channelCount);
@@ -435,7 +393,6 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Tooltip>
     );
   }
-  
   // WhatsApp metrics
   if (channels.whatsapp) {
     const count = platformData.whatsapp?.[metricType] ?? Math.floor(totalCount / channelCount);
@@ -465,7 +422,6 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Tooltip>
     );
   }
-  
   // Email metrics
   if (channels.email) {
     const count = platformData.email?.[metricType] ?? Math.floor(totalCount / channelCount);
@@ -489,7 +445,6 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Tooltip>
     );
   }
-  
   // Voice metrics
   if (channels.voice) {
     const count = platformData.voice?.[metricType] ?? Math.floor(totalCount / channelCount);
@@ -513,7 +468,6 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Tooltip>
     );
   }
-  
   // Instagram metrics
   if (channels.instagram) {
     const count = platformData.instagram?.[metricType] ?? Math.floor(totalCount / channelCount);
@@ -543,7 +497,6 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Tooltip>
     );
   }
-  
   // If no channels detected, show total with default styling
   if (metrics.length === 0) {
     return (
@@ -552,10 +505,8 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
       </Typography>
     );
   }
-  
   return <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>{metrics}</Box>;
 };
-
 export const getStatusIcon = (status: CampaignStatus) => {
   // This function should return React components, but since this is a utils file,
   // we'll return the icon name and let the component handle rendering
@@ -566,5 +517,4 @@ export const getStatusIcon = (status: CampaignStatus) => {
     case 'completed': return 'check';
     default: return null;
   }
-};
-
+};

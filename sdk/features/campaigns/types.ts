@@ -4,9 +4,7 @@
  * All type definitions for the campaigns feature.
  * These types are shared between SDK and web layers.
  */
-
 export type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'stopped';
-
 export interface Campaign {
   id: string;
   name: string;
@@ -23,7 +21,6 @@ export interface Campaign {
   created_by: string;
   steps?: Array<{ type: string; [key: string]: any }>;
 }
-
 export interface CampaignStats {
   total_campaigns: number;
   active_campaigns: number;
@@ -38,24 +35,20 @@ export interface CampaignStats {
   whatsapp_connection_rate?: number;
   voice_agent_connection_rate?: number;
 }
-
 export interface CampaignFilters {
   search?: string;
   status?: CampaignStatus | 'all';
 }
-
 export interface CreateCampaignRequest {
   name: string;
   status?: CampaignStatus;
   steps?: Array<{ type: string; [key: string]: any }>;
 }
-
 export interface UpdateCampaignRequest {
   name?: string;
   status?: CampaignStatus;
   steps?: Array<{ type: string; [key: string]: any }>;
 }
-
 export interface CampaignAnalytics {
   campaign: {
     id: string;
@@ -117,7 +110,6 @@ export interface CampaignAnalytics {
     errors: number;
   }>;
 }
-
 export interface CampaignLead {
   id: string;
   campaign_id: string;
@@ -130,5 +122,11 @@ export interface CampaignLead {
   replied: boolean;
   created_at: string;
   updated_at: string;
-}
-
+  is_inbound?: boolean; // Flag to identify inbound leads
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  company?: string;
+  photo_url?: string;
+  profile_summary?: string;
+}

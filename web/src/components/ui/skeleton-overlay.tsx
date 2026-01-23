@@ -2,11 +2,9 @@
 import React from "react";
 import { LoadingContext } from "@/components/providers/loading-provider";
 import { Skeleton } from "@/components/ui/skeleton";
-
 export default function SkeletonOverlay() {
   const { activeCount, nextHideAt } = React.useContext(LoadingContext);
   const [visible, setVisible] = React.useState(false);
-
   React.useEffect(() => {
     let raf: number | null = null;
     const tick = () => {
@@ -21,9 +19,7 @@ export default function SkeletonOverlay() {
       if (raf) cancelAnimationFrame(raf);
     };
   }, [activeCount, nextHideAt]);
-
   if (!visible) return null;
-
   return (
     <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm flex items-center justify-center p-6">
       <div className="w-full max-w-xl space-y-4">
@@ -40,4 +36,4 @@ export default function SkeletonOverlay() {
       </div>
     </div>
   );
-}
+}

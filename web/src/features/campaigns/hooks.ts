@@ -4,8 +4,8 @@
  * React Query hooks for campaigns feature.
  * LAD Architecture Compliant - Hooks only, no direct API calls
  */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { 
   getProfileSummary, 
   generateProfileSummary,
@@ -21,7 +21,6 @@ import {
   getCampaignLeads,
 } from './api';
 import type { Campaign, CampaignStats, CampaignLead } from './types';
-
 /**
  * Hook to get profile summary for a lead
  */
@@ -35,13 +34,11 @@ export function useProfileSummary(leadId: string | null, campaignId: string | nu
     enabled: enabled && !!leadId && !!campaignId
   });
 }
-
 /**
  * Hook to generate profile summary for a lead
  */
 export function useGenerateProfileSummary() {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: ({ leadId, campaignId, profileData }: { leadId: string; campaignId: string; profileData: any }) => {
       return generateProfileSummary(leadId, campaignId, profileData);
@@ -52,13 +49,11 @@ export function useGenerateProfileSummary() {
     }
   });
 }
-
 /**
  * Hook to get campaigns with filters
  */
 export function useCampaigns(filters?: { search?: string; status?: string }) {
   const queryClient = useQueryClient();
-  
   const query = useQuery({
     queryKey: ['campaigns', filters],
     queryFn: async () => {
@@ -69,7 +64,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
       return response.data || [];
     },
   });
-
   const startMutation = useMutation({
     mutationFn: (campaignId: string) => startCampaign(campaignId),
     onSuccess: () => {
@@ -77,7 +71,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
       queryClient.invalidateQueries({ queryKey: ['campaign-stats'] });
     },
   });
-
   const pauseMutation = useMutation({
     mutationFn: (campaignId: string) => pauseCampaign(campaignId),
     onSuccess: () => {
@@ -85,7 +78,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
       queryClient.invalidateQueries({ queryKey: ['campaign-stats'] });
     },
   });
-
   const stopMutation = useMutation({
     mutationFn: (campaignId: string) => stopCampaign(campaignId),
     onSuccess: () => {
@@ -93,7 +85,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
       queryClient.invalidateQueries({ queryKey: ['campaign-stats'] });
     },
   });
-
   const removeMutation = useMutation({
     mutationFn: (campaignId: string) => deleteCampaign(campaignId),
     onSuccess: () => {
@@ -101,7 +92,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
       queryClient.invalidateQueries({ queryKey: ['campaign-stats'] });
     },
   });
-
   return {
     campaigns: query.data || [],
     loading: query.isLoading,
@@ -113,7 +103,6 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
     remove: removeMutation.mutateAsync,
   };
 }
-
 /**
  * Hook to get a single campaign by ID
  */
@@ -131,7 +120,6 @@ export function useCampaign(campaignId: string | null, enabled: boolean = true) 
     enabled: enabled && !!campaignId,
   });
 }
-
 /**
  * Hook to get campaign statistics
  */
@@ -146,7 +134,6 @@ export function useCampaignStats() {
       return response.data || {};
     },
   });
-
   return {
     stats: query.data as CampaignStats | undefined,
     loading: query.isLoading,
@@ -154,7 +141,6 @@ export function useCampaignStats() {
     refetch: query.refetch,
   };
 }
-
 /**
  * Hook to get leads for a campaign
  */
@@ -170,7 +156,6 @@ export function useCampaignLeads(campaignId: string, filters?: { search?: string
     },
     enabled: !!campaignId,
   });
-
   return {
     leads: query.data as CampaignLead[] | undefined,
     loading: query.isLoading,
@@ -178,5 +163,37 @@ export function useCampaignLeads(campaignId: string, filters?: { search?: string
     refetch: query.refetch,
   };
 }
-
-
+/**
+ * Hook to subscribe to live campaign updates via SSE
+ * Updates all campaigns in the cache when any campaign stats change
+ */
+export function useCampaignLiveUpdates() {
+  const queryClient = useQueryClient();
+  const eventSourceRef = useRef<EventSource | null>(null);
+  useEffect(() => {
+    // Connect to SSE endpoint for all campaigns updates
+    const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    const eventSource = new EventSource(`${baseUrl}/api/campaigns/stream`);
+    eventSourceRef.current = eventSource;
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        // Handle different event types
+        if (data.type === 'INITIAL_DATA') {
+          // Initial data received
+        } else if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'campaign-update') {
+          // Invalidate campaigns list to trigger refetch with new stats
+          queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+        }
+      } catch (error) {
+        console.error('[SSE] Failed to parse campaign update:', error);
+      }
+    };
+    eventSource.onerror = (error) => {
+      console.error('[SSE] Campaign updates connection error:', error);
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, [queryClient]);
+}

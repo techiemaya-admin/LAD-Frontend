@@ -16,7 +16,6 @@ import {
 } from '@/store/slices/uiSlice';
 import type { Lead } from '../types';
 import { Stage } from '../store/slices/pipelineSlice';
-
 interface EditLeadDialogProps {
   open: boolean;
   onClose: () => void;
@@ -24,7 +23,6 @@ interface EditLeadDialogProps {
   onSave: (lead: Lead) => void;
   stages: Stage[];
 }
-
 const EditLeadDialog: React.FC<EditLeadDialogProps> = ({ 
   open, 
   onClose, 
@@ -33,19 +31,15 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
   stages 
 }) => {
   const dispatch = useDispatch();
-  
   // Get master data options
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const teamMembers = useSelector(selectUsers);
-  
   // Get form data from Redux global state
   const editingLead = useSelector(selectEditingLead);
-  
   // Local states that should remain local (component-specific)
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   useEffect(() => {
     if (lead) {
       dispatch(setEditingLead({
@@ -65,27 +59,22 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
       }));
     }
   }, [lead, dispatch]);
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!editingLead.name?.trim()) newErrors.name = 'Name is required';
     if (!editingLead.email?.trim()) newErrors.email = 'Email is required';
     if (!editingLead.stage) newErrors.stage = 'Stage is required';
     if (!editingLead.status) newErrors.status = 'Status is required';
-    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (editingLead.email && !emailRegex.test(editingLead.email)) {
       newErrors.email = 'Invalid email format';
     }
-
     if (editingLead.amount && isNaN(Number(editingLead.amount))) {
       newErrors.amount = 'Amount must be a number';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = () => {
     if (validateForm() && lead) {
       onSave({
@@ -106,7 +95,6 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
       } as Lead);
     }
   };
-
   const handleChange = (field: keyof typeof editingLead) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     dispatch(setEditingLead({
       ...editingLead,
@@ -120,13 +108,11 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
       });
     }
   };
-
   const handleSelectChange = (field: keyof typeof editingLead) => (value: string) => {
     dispatch(setEditingLead({
       ...editingLead,
       [field]: value,
     }));
-
     if (errors[field]) {
       setErrors({
         ...errors,
@@ -134,21 +120,18 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
       });
     }
   };
-
   const handleGoalsChange = (newGoals: string[]) => {
     dispatch(setEditingLead({
       ...editingLead,
       goals: newGoals,
     }));
   };
-
   const handleLabelsChange = (newLabels: string[]) => {
     dispatch(setEditingLead({
       ...editingLead,
       labels: newLabels,
     }));
   };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogTitle>Edit Lead</DialogTitle>
@@ -201,7 +184,6 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 </div>
               </div>
             </div>
-
             {/* Pipeline & Deal Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-gray-500">Pipeline & Deal Information</h3>
@@ -321,7 +303,6 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 </div>
               </div>
             </div>
-
             {/* Description */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-gray-500">Additional Information</h3>
@@ -335,7 +316,6 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 />
               </div>
             </div>
-
             {/* Goals and Labels */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -407,6 +387,4 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
     </Dialog>
   );
 };
-
-export default EditLeadDialog;
-
+export default EditLeadDialog;

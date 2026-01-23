@@ -1,5 +1,4 @@
 import { keyframes } from '@mui/material/styles';
-
 // Common theme-aligned animations
 export const fadeIn = keyframes`
   from { 
@@ -11,13 +10,11 @@ export const fadeIn = keyframes`
     transform: translateY(0); 
   }
 `;
-
 export const pulseAnimation = keyframes`
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 `;
-
 export const rippleKeyframes = keyframes`
   0% { 
     transform: scale(.8); 
@@ -28,7 +25,6 @@ export const rippleKeyframes = keyframes`
     opacity: 0; 
   }
 `;
-
 // Common theme values consistent with dashboard
 export const commonTheme = {
   colors: {
@@ -75,7 +71,6 @@ export const commonTheme = {
     slow: '0.4s ease-in-out',
   }
 };
-
 // Common styled system utilities following dashboard pattern
 export const commonStyles = {
   // Card styles matching dashboard components
@@ -89,7 +84,6 @@ export const commonStyles = {
       boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1)',
     },
   },
-
   // Status chip styles
   statusChip: (status, theme) => ({
     height: '20px',
@@ -111,7 +105,6 @@ export const commonStyles = {
       lineHeight: 1
     }
   }),
-
   // Badge styles with ripple effect
   priorityBadge: (priority, theme) => ({
     '& .MuiBadge-badge': {
@@ -130,7 +123,6 @@ export const commonStyles = {
       },
     },
   }),
-
   // Progress circle styles
   progressCircle: {
     position: 'relative',
@@ -138,7 +130,6 @@ export const commonStyles = {
       strokeLinecap: 'round',
     },
   },
-
   // Dialog styles matching theme
   dialog: {
     '& .MuiDialog-paper': {
@@ -155,12 +146,10 @@ export const commonStyles = {
       padding: '16px 24px',
     },
   },
-
   // Animation styles
   animated: {
     animation: `${fadeIn} 0.3s ease-out`,
   },
-
   // Hover styles
   hoverable: (isHovered) => ({
     transition: 'all 0.3s ease-in-out',
@@ -169,7 +158,6 @@ export const commonStyles = {
     },
     animation: isHovered ? `${pulseAnimation} 2s infinite` : 'none',
   }),
-
   // Scrollbar styles
   customScrollbar: {
     '&::-webkit-scrollbar': {
@@ -187,7 +175,6 @@ export const commonStyles = {
     },
   },
 };
-
 // Utility functions for consistent styling
 export const getStatusColor = (status, theme) => {
   const statusColors = {
@@ -200,7 +187,6 @@ export const getStatusColor = (status, theme) => {
   };
   return statusColors[status?.toLowerCase()] || theme.palette.grey[500];
 };
-
 export const getPriorityColor = (priority, theme) => {
   const priorityColors = {
     high: theme.palette.error.main,
@@ -209,9 +195,8 @@ export const getPriorityColor = (priority, theme) => {
   };
   return priorityColors[priority?.toLowerCase()] || theme.palette.success.main;
 };
-
 export const getProbabilityColor = (probability, theme) => {
   if (probability >= 70) return theme.palette.success.main;
   if (probability >= 40) return theme.palette.warning.main;
   return theme.palette.error.main;
-};
+};

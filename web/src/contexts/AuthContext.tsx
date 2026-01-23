@@ -1,10 +1,8 @@
 'use client';
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../utils/storage';
 import { logger } from '@/lib/logger';
-
 interface User {
   id: string;
   email: string;
@@ -15,7 +13,6 @@ interface User {
   capabilities?: string[];
   tenantFeatures?: string[];
 }
-
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -26,20 +23,16 @@ interface AuthContextType {
   getToken: () => Promise<string | null>;
   hasFeature: (featureKey: string) => boolean;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
   // Load token from localStorage on mount
   useEffect(() => {
-    logger.debug('[AuthContext] Loading token from storage...');
-    const storedToken = safeStorage.getItem('auth_token') || safeStorage.getItem('token');
-    
+    logger.debug('[AuthContext] Loading token from localStorage...');
+    const storedToken = safeStorage.getItem('auth_token');
     if (storedToken) {
       logger.debug('[AuthContext] Stored token found');
       setToken(storedToken);
@@ -49,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, []);
-
   const fetchCurrentUser = async (authToken: string) => {
     try {
       if (!authToken) {
@@ -57,9 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
         return;
       }
-      
       logger.debug('[AuthContext] Fetching current user');
-      
       // Call the Next.js API route instead of directly calling the backend
       // This avoids CORS issues with Safari stripping Authorization headers
       const response = await fetch('/api/auth/me', {
@@ -69,9 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
       });
-
       logger.debug('[AuthContext] Auth response received', { status: response.status });
-
       if (response.ok) {
         const userData = await response.json();
         logger.debug('[AuthContext] User data received');
@@ -84,23 +72,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     } catch (error) {
-      logger.error('[AuthContext] Failed to fetch current user', { error: error instanceof Error ? error.message : String(error) });
+      console.error('Failed to fetch current user:', error);
       safeStorage.removeItem('auth_token');
-      safeStorage.removeItem('token');
       setToken(null);
       setUser(null);
     } finally {
       setIsLoading(false);
     }
   };
-
   const login = async (email: string, password: string) => {
     try {
       // Use Next.js API route for local dev, direct backend call for production
       const apiUrl = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' 
         ? '/api/auth/login' 
         : `${process.env.NEXT_PUBLIC_API_BASE || 'https://lad-backend-develop-741719885039.us-central1.run.app'}/api/auth/login`;
-      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -108,57 +93,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({ email, password }),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Login failed');
       }
-
       const data = await response.json();
       const authToken = data.token;
-
-      // Store token using existing pattern (both keys for compatibility)
+      // Store token
       safeStorage.setItem('auth_token', authToken);
-      safeStorage.setItem('token', authToken);
       setToken(authToken);
-
       // Fetch user data
       await fetchCurrentUser(authToken);
-
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error) {
-      logger.error('[AuthContext] Login error', { error: error instanceof Error ? error.message : String(error) });
+      console.error('Login error:', error);
       throw error;
     }
   };
-
   const logout = () => {
     safeStorage.removeItem('auth_token');
-    safeStorage.removeItem('token');
     setToken(null);
     setUser(null);
     router.push('/login');
   };
-
   const getToken = async (): Promise<string | null> => {
     return token;
   };
-
   // Feature checking based on user capabilities and tenant features
   const hasFeature = (featureKey: string): boolean => {
     if (!user || !token) {
       return false;
     }
-
     // Check both capabilities and tenant features
     const userCapabilities = user.capabilities || [];
     const userTenantFeatures = user.tenantFeatures || [];
-    
     // Feature can be enabled via either capabilities or tenant features
     return userCapabilities.includes(featureKey) || userTenantFeatures.includes(featureKey);
   };
-
   const value = {
     user,
     token,
@@ -169,14 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getToken,
     hasFeature,
   };
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+}

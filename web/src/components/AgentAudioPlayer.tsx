@@ -1,5 +1,4 @@
 "use client";
-
 import { Play, Pause, Volume2 } from "lucide-react";
 import {
   useState,
@@ -8,7 +7,6 @@ import {
   useCallback,
   useMemo,
 } from "react";
-
 interface AgentAudioPlayerProps {
   src?: string;
   height?: number;
@@ -18,9 +16,7 @@ interface AgentAudioPlayerProps {
    */
   width?: number;
 }
-
 type Peaks = number[];
-
 interface WaveformProps {
   peaks: Peaks;
   height: number;
@@ -34,7 +30,6 @@ interface WaveformProps {
   duration: number;
   onSeek?: (time: number) => void;
 }
-
 const Waveform = ({
   peaks,
   height,
@@ -50,7 +45,6 @@ const Waveform = ({
 }: WaveformProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const totalBars = peaks.length;
-
   // HiDPI scaling
   const dpr =
     typeof window !== "undefined"
@@ -58,21 +52,17 @@ const Waveform = ({
       : 1;
   const drawWidth = Math.max(1, Math.floor(width * dpr));
   const drawHeight = Math.max(1, Math.floor(height * dpr));
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     canvas.width = drawWidth;
     canvas.height = drawHeight;
     canvas.style.width = "100%";
     canvas.style.height = `${height}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
     ctx.clearRect(0, 0, width, height);
-
     const playheadBar =
       duration > 0
         ? Math.min(
@@ -80,18 +70,15 @@ const Waveform = ({
             Math.floor((currentTime / duration) * totalBars)
           )
         : -1;
-
     // bars
     for (let i = 0; i < totalBars; i++) {
       const peak = peaks[i]; // 0..1
       const barH = Math.max(1, Math.floor(peak * height));
       const x = i * (barWidth + gap);
       const y = Math.floor((height - barH) / 2);
-
       ctx.fillStyle = i <= playheadBar ? playedColor : unplayedColor;
       ctx.fillRect(x, y, barWidth, barH);
     }
-
     // playhead line
     if (playheadBar >= 0) {
       const playheadX = playheadBar * (barWidth + gap) + barWidth / 2;
@@ -118,11 +105,9 @@ const Waveform = ({
     drawHeight,
     totalBars,
   ]);
-
   useEffect(() => {
     draw();
   }, [draw]);
-
   // Seek on click/drag
   const handlePointer = (clientX: number) => {
     if (!onSeek || duration <= 0) return;
@@ -132,13 +117,10 @@ const Waveform = ({
     const ratio = Math.min(1, Math.max(0, x / rect.width));
     onSeek(ratio * duration);
   };
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     let dragging = false;
-
     const onPointerDown = (e: PointerEvent) => {
       dragging = true;
       handlePointer(e.clientX);
@@ -149,18 +131,15 @@ const Waveform = ({
     const onPointerUp = () => {
       dragging = false;
     };
-
     canvas.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
-
     return () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
     };
   }, [onSeek, duration]);
-
   return (
     <canvas
       ref={canvasRef}
@@ -168,7 +147,6 @@ const Waveform = ({
     />
   );
 };
-
 export const AgentAudioPlayer = ({
   src,
   height = 50,
@@ -181,14 +159,11 @@ export const AgentAudioPlayer = ({
   const [peaks, setPeaks] = useState<Peaks>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-
   // Proxy Google Cloud Storage URLs to avoid CORS issues
   const proxiedSrc = useMemo(() => {
     if (!src) return '';
@@ -197,18 +172,14 @@ export const AgentAudioPlayer = ({
     }
     return src;
   }, [src]);
-
   // measure container width
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     const updateWidth = () => {
       setContainerWidth(el.offsetWidth);
     };
-
     updateWidth();
-
     if (typeof ResizeObserver !== "undefined") {
       const observer = new ResizeObserver(updateWidth);
       observer.observe(el);
@@ -218,26 +189,21 @@ export const AgentAudioPlayer = ({
       return () => window.removeEventListener("resize", updateWidth);
     }
   }, []);
-
   const barWidth = 2;
   const gap = 1;
-
   const effectiveWidth = useMemo(() => {
     if (containerWidth > 0) return containerWidth;
     if (width && width > 0) return width;
     return 600; // fallback
   }, [containerWidth, width]);
-
   const barCount = useMemo(
     () =>
       Math.max(1, Math.floor(effectiveWidth / (barWidth + gap))),
     [effectiveWidth, barWidth, gap]
   );
-
   // load audioBuffer (once per src)
   useEffect(() => {
     const controller = new AbortController();
-
     const load = async () => {
       if (!src) {
         setAudioBuffer(null);
@@ -246,26 +212,22 @@ export const AgentAudioPlayer = ({
         setDuration(0);
         return;
       }
-
       setLoading(true);
       setError(null);
       setPeaks([]);
       setCurrentTime(0);
       setDuration(0);
-
       try {
         // Use proxy for Google Cloud Storage URLs to avoid CORS issues
         const res = await fetch(proxiedSrc, { signal: controller.signal });
         if (!res.ok)
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-
         const ab = await res.arrayBuffer();
         const AudioCtx =
           window.AudioContext ||
           (window as any).webkitAudioContext;
         const ctx = new AudioCtx();
         audioCtxRef.current = ctx;
-
         const decoded = await ctx.decodeAudioData(ab);
         setAudioBuffer(decoded);
         if (decoded.duration && !Number.isNaN(decoded.duration)) {
@@ -279,9 +241,7 @@ export const AgentAudioPlayer = ({
         setLoading(false);
       }
     };
-
     load();
-
     return () => {
       controller.abort();
       if (audioCtxRef.current) {
@@ -290,21 +250,18 @@ export const AgentAudioPlayer = ({
       }
     };
   }, [src]);
-
   // compute peaks whenever we have audioBuffer + barCount
   useEffect(() => {
     if (!audioBuffer || barCount <= 0) {
       setPeaks([]);
       return;
     }
-
     const data = audioBuffer.getChannelData(0);
     const samplesPerBar = Math.max(
       1,
       Math.floor(data.length / barCount)
     );
     const nextPeaks: number[] = new Array(barCount).fill(0);
-
     for (let i = 0; i < barCount; i++) {
       const start = i * samplesPerBar;
       const end = Math.min(start + samplesPerBar, data.length);
@@ -315,16 +272,13 @@ export const AgentAudioPlayer = ({
       }
       nextPeaks[i] = peak;
     }
-
     setPeaks(nextPeaks);
   }, [audioBuffer, barCount]);
-
   // rAF time sync
   const tick = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
     setCurrentTime(audio.currentTime);
-
     if (!audio.paused && !audio.ended) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
@@ -333,7 +287,6 @@ export const AgentAudioPlayer = ({
       if (audio.ended) setPlaying(false);
     }
   }, []);
-
   useEffect(() => {
     if (playing) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -342,17 +295,14 @@ export const AgentAudioPlayer = ({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [playing, tick]);
-
   // sync play/pause to element
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (playing) {
       audio
         .play()
@@ -361,7 +311,6 @@ export const AgentAudioPlayer = ({
       audio.pause();
     }
   }, [playing]);
-
   const handleSeek = useCallback(
     (time: number) => {
       const audio = audioRef.current;
@@ -369,7 +318,6 @@ export const AgentAudioPlayer = ({
       const clamped = Math.min(duration, Math.max(0, time));
       audio.currentTime = clamped;
       setCurrentTime(clamped);
-
       if (playing && !audio.paused) {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(tick);
@@ -377,7 +325,6 @@ export const AgentAudioPlayer = ({
     },
     [duration, playing, tick]
   );
-
   const timeFmt = (t: number) => {
     if (!Number.isFinite(t)) return "0:00";
     const m = Math.floor(t / 60);
@@ -386,7 +333,6 @@ export const AgentAudioPlayer = ({
       .padStart(2, "0");
     return `${m}:${s}`;
   };
-
   // Empty state
   if (!src) {
     return (
@@ -400,7 +346,6 @@ export const AgentAudioPlayer = ({
       </div>
     );
   }
-
   // Loading / error states
   if (loading) {
     return (
@@ -420,7 +365,6 @@ export const AgentAudioPlayer = ({
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 font-[Segoe UI]">
@@ -438,7 +382,6 @@ export const AgentAudioPlayer = ({
       </div>
     );
   }
-
   return (
     <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 transition-all duration-300 hover:shadow-soft font-[Segoe UI]">
       {/* Play / Pause */}
@@ -453,7 +396,6 @@ export const AgentAudioPlayer = ({
           <Play className="w-5 h-5 ml-0.5" />
         )}
       </button>
-
       {/* Waveform + labels */}
       <div
         ref={containerRef}
@@ -465,7 +407,6 @@ export const AgentAudioPlayer = ({
             {timeFmt(currentTime)} / {timeFmt(duration)}
           </span>
         </div>
-
         {peaks.length > 0 && effectiveWidth > 0 ? (
           <Waveform
             peaks={peaks}
@@ -484,7 +425,6 @@ export const AgentAudioPlayer = ({
           <div className="h-[50px] rounded bg-muted/60" />
         )}
       </div>
-
       {/* Hidden audio element */}
       <audio
         ref={audioRef}
@@ -505,21 +445,15 @@ export const AgentAudioPlayer = ({
     </div>
   );
 };
-
-
 // "use client";
-
 // import { Play, Pause, Volume2 } from "lucide-react";
 // import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-
 // interface AgentAudioPlayerProps {
 //   src?: string;
 //   height?: number;
 //   width?: number;
 // }
-
 // type Peaks = number[];
-
 // interface WaveformProps {
 //   peaks: Peaks;
 //   height: number;
@@ -533,7 +467,6 @@ export const AgentAudioPlayer = ({
 //   duration: number;
 //   onSeek?: (time: number) => void;
 // }
-
 // const Waveform = ({
 //   peaks,
 //   height,
@@ -549,41 +482,33 @@ export const AgentAudioPlayer = ({
 // }: WaveformProps) => {
 //   const canvasRef = useRef<HTMLCanvasElement>(null);
 //   const totalBars = peaks.length;
-
 //   // DPI scaling so it looks crisp on HiDPI screens
 //   const dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
 //   const drawWidth = Math.floor(width * dpr);
 //   const drawHeight = Math.floor(height * dpr);
-
 //   const draw = useCallback(() => {
 //     const canvas = canvasRef.current;
 //     if (!canvas) return;
 //     const ctx = canvas.getContext("2d");
 //     if (!ctx) return;
-
 //     // scale to DPR
 //     canvas.width = drawWidth;
 //     canvas.height = drawHeight;
 //     canvas.style.width = `${width}px`;
 //     canvas.style.height = `${height}px`;
 //     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
 //     ctx.clearRect(0, 0, width, height);
-
 //     const playheadBar =
 //       duration > 0 ? Math.min(totalBars - 1, Math.floor((currentTime / duration) * totalBars)) : -1;
-
 //     // draw bars
 //     for (let i = 0; i < totalBars; i++) {
 //       const peak = peaks[i]; // 0..1
 //       const barH = Math.max(1, Math.floor(peak * height));
 //       const x = i * (barWidth + gap);
 //       const y = Math.floor((height - barH) / 2);
-
 //       ctx.fillStyle = i <= playheadBar ? playedColor : unplayedColor;
 //       ctx.fillRect(x, y, barWidth, barH);
 //     }
-
 //     // playhead
 //     if (playheadBar >= 0) {
 //       const playheadX = playheadBar * (barWidth + gap) + barWidth / 2;
@@ -610,11 +535,9 @@ export const AgentAudioPlayer = ({
 //     drawHeight,
 //     totalBars,
 //   ]);
-
 //   useEffect(() => {
 //     draw();
 //   }, [draw]);
-
 //   // Seeking (click + drag)
 //   const handlePointer = (clientX: number) => {
 //     if (!onSeek || duration <= 0) return;
@@ -624,13 +547,10 @@ export const AgentAudioPlayer = ({
 //     const ratio = Math.min(1, Math.max(0, x / rect.width));
 //     onSeek(ratio * duration);
 //   };
-
 //   useEffect(() => {
 //     const canvas = canvasRef.current;
 //     if (!canvas) return;
-
 //     let dragging = false;
-
 //     const onPointerDown = (e: PointerEvent) => {
 //       dragging = true;
 //       handlePointer(e.clientX);
@@ -641,21 +561,17 @@ export const AgentAudioPlayer = ({
 //     const onPointerUp = () => {
 //       dragging = false;
 //     };
-
 //     canvas.addEventListener("pointerdown", onPointerDown);
 //     window.addEventListener("pointermove", onPointerMove);
 //     window.addEventListener("pointerup", onPointerUp);
-
 //     return () => {
 //       canvas.removeEventListener("pointerdown", onPointerDown);
 //       window.removeEventListener("pointermove", onPointerMove);
 //       window.removeEventListener("pointerup", onPointerUp);
 //     };
 //   }, [onSeek, duration]);
-
 //   return <canvas ref={canvasRef} className="block w-full h-[50px]" />;
 // };
-
 // export const AgentAudioPlayer = ({
 //   src,
 //   height = 50,
@@ -668,26 +584,19 @@ export const AgentAudioPlayer = ({
 //   const [peaks, setPeaks] = useState<Peaks>([]);
 //   const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState<string | null>(null);
-
 //   const audioRef = useRef<HTMLAudioElement>(null);
 //   const audioCtxRef = useRef<AudioContext | null>(null);
 //   const rafRef = useRef<number | null>(null);
 //   const containerRef = useRef<HTMLDivElement>(null);
 // const [containerWidth, setContainerWidth] = useState(0);
-
 // useEffect(() => {
 //   if (!containerRef.current) return;
-
 //   const observer = new ResizeObserver(() => {
 //     setContainerWidth(containerRef.current!.offsetWidth);
 //   });
-
 //   observer.observe(containerRef.current);
-
 //   return () => observer.disconnect();
 // }, []);
-
-
 //   // Precompute peaks for a fixed number of bars (based on pixel width)
 //   const barWidth = 2;
 //   const gap = 1;
@@ -698,11 +607,8 @@ export const AgentAudioPlayer = ({
 //   }
 //   return 1;
 // }, [containerWidth]);
-
-
 //   useEffect(() => {
 //     const controller = new AbortController();
-
 //     const load = async () => {
 //       if (!src) return;
 //       setLoading(true);
@@ -713,15 +619,12 @@ export const AgentAudioPlayer = ({
 //         const ab = await res.arrayBuffer();
 //         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
 //         audioCtxRef.current = ctx;
-
 //         const decoded = await ctx.decodeAudioData(ab);
 //         setAudioBuffer(decoded);
-
 //         // compute peaks
 //         const data = decoded.getChannelData(0);
 //         const samplesPerBar = Math.max(1, Math.floor(data.length / totalBars));
 //         const p: number[] = new Array(totalBars).fill(0);
-
 //         for (let i = 0; i < totalBars; i++) {
 //           const start = i * samplesPerBar;
 //           const end = Math.min(start + samplesPerBar, data.length);
@@ -741,9 +644,7 @@ export const AgentAudioPlayer = ({
 //         setLoading(false);
 //       }
 //     };
-
 //     load();
-
 //     return () => {
 //       controller.abort();
 //       if (audioCtxRef.current) {
@@ -752,17 +653,14 @@ export const AgentAudioPlayer = ({
 //       }
 //     };
 //   }, [src, totalBars]);
-
 //   // Keep duration from the <audio> element (so time is exact to what plays)
 //   useEffect(() => {
 //     const audio = audioRef.current;
 //     if (!audio) return;
-
 //     const onLoadedMeta = () => setDuration(audio.duration || 0);
 //     audio.addEventListener("loadedmetadata", onLoadedMeta);
 //     return () => audio.removeEventListener("loadedmetadata", onLoadedMeta);
 //   }, []);
-
 //   // Smooth time updates with rAF (instead of relying only on 'timeupdate')
 //   const tick = useCallback(() => {
 //     const audio = audioRef.current;
@@ -776,7 +674,6 @@ export const AgentAudioPlayer = ({
 //       if (audio.ended) setPlaying(false);
 //     }
 //   }, []);
-
 //   useEffect(() => {
 //     if (playing) {
 //       rafRef.current && cancelAnimationFrame(rafRef.current);
@@ -789,7 +686,6 @@ export const AgentAudioPlayer = ({
 //       if (rafRef.current) cancelAnimationFrame(rafRef.current);
 //     };
 //   }, [playing, tick]);
-
 //   // Sync play/pause to element
 //   useEffect(() => {
 //     const audio = audioRef.current;
@@ -800,7 +696,6 @@ export const AgentAudioPlayer = ({
 //       audio.pause();
 //     }
 //   }, [playing]);
-
 //   const handleSeek = useCallback((time: number) => {
 //     const audio = audioRef.current;
 //     if (!audio || !Number.isFinite(time)) return;
@@ -812,7 +707,6 @@ export const AgentAudioPlayer = ({
 //       rafRef.current = requestAnimationFrame(tick);
 //     }
 //   }, [duration, playing, tick]);
-
 //   // Empty state
 //   if (!src) {
 //     return (
@@ -824,7 +718,6 @@ export const AgentAudioPlayer = ({
 //       </div>
 //     );
 //   }
-
 //   // Loading / error
 //   if (loading) {
 //     return (
@@ -842,7 +735,6 @@ export const AgentAudioPlayer = ({
 //       </div>
 //     );
 //   }
-
 //   if (error) {
 //     return (
 //       <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 font-[Segoe UI]">
@@ -856,14 +748,12 @@ export const AgentAudioPlayer = ({
 //       </div>
 //     );
 //   }
-
 //   const timeFmt = (t: number) => {
 //     if (!Number.isFinite(t)) return "0:00";
 //     const m = Math.floor(t / 60);
 //     const s = Math.floor(t % 60).toString().padStart(2, "0");
 //     return `${m}:${s}`;
 //     };
-
 //   return (
 //     <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 transition-all duration-300 hover:shadow-soft font-[Segoe UI]">
 //       {/* Play / Pause */}
@@ -874,7 +764,6 @@ export const AgentAudioPlayer = ({
 //       >
 //         {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
 //       </button>
-
 //       {/* Waveform */}
 //       <div className="flex-1 min-w-0">
 //         <div className="flex items-center justify-between text-sm font-medium text-foreground mb-2">
@@ -883,7 +772,6 @@ export const AgentAudioPlayer = ({
 //             {timeFmt(currentTime)} / {timeFmt(duration)}
 //           </span>
 //         </div>
-
 //         {peaks.length > 0 && containerWidth > 0 ? (
 //           <Waveform
 //             peaks={peaks}
@@ -901,9 +789,7 @@ export const AgentAudioPlayer = ({
 //         ) : (
 //           <div className="h-[50px] animate-pulse bg-muted rounded" />
 //         )}
-
 //       </div>
-
 //       {/* Hidden audio element */}
 //       <audio
 //         ref={audioRef}
@@ -916,4 +802,4 @@ export const AgentAudioPlayer = ({
 //       />
 //     </div>
 //   );
-// };
+// };

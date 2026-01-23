@@ -1,8 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
-
 export type TimePeriod = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
-
 export type DashboardState = {
   analytics: any;
   leadStats: any;
@@ -12,7 +10,6 @@ export type DashboardState = {
   timePeriod: TimePeriod;
   customRange: { from: string; to: string };
 };
-
 const initialState: DashboardState = {
   analytics: null,
   leadStats: null,
@@ -22,7 +19,6 @@ const initialState: DashboardState = {
   timePeriod: 'month',
   customRange: { from: '', to: '' },
 };
-
 const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState,
@@ -57,7 +53,6 @@ const dashboardSlice = createSlice({
     },
   },
 });
-
 export const {
   setAnalytics,
   setLeadStats,
@@ -68,9 +63,5 @@ export const {
   setTimePeriod,
   setCustomRange,
 } = dashboardSlice.actions;
-
 export const selectDashboard = (state: RootState): DashboardState => state.dashboard;
-
-export default dashboardSlice.reducer;
-
-
+export default dashboardSlice.reducer;

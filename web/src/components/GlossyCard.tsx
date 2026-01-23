@@ -1,15 +1,12 @@
 'use client';
-
 import React from 'react';
 import { Box, BoxProps } from '@mui/material';
 import { styled } from '@mui/material/styles';
-
 interface GlossyCardProps extends BoxProps {
   children: React.ReactNode;
   animated?: boolean;
   glowIntensity?: 'low' | 'medium' | 'high';
 }
-
 const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: string }>(({ animated = true, glowIntensity = 'medium' }) => ({
   position: 'relative',
   background: 'rgba(255, 255, 255, 0.05)',
@@ -25,7 +22,6 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
   padding: '24px',
   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   overflow: 'hidden',
-  
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -38,7 +34,6 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
     animation: animated ? 'gradient-border 3s ease infinite' : 'none',
     zIndex: 1,
   },
-  
   '&::after': {
     content: '""',
     position: 'absolute',
@@ -57,7 +52,6 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
     animation: animated ? 'gradient-rotate 4s linear infinite' : 'none',
     pointerEvents: 'none',
   },
-  
   '&:hover': {
     transform: 'translateY(-8px) scale(1.02)',
     boxShadow: `
@@ -67,17 +61,14 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
       inset 0 -1px 1px 0 rgba(255, 255, 255, 0.2)
     `,
     borderColor: 'rgba(0, 234, 255, 0.5)',
-    
     '&::after': {
       opacity: 1,
     },
-    
     '&::before': {
       opacity: 1,
       height: '3px',
     },
   },
-  
   '@keyframes gradient-border': {
     '0%': {
       backgroundPosition: '0% 50%',
@@ -89,7 +80,6 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
       backgroundPosition: '0% 50%',
     },
   },
-  
   '@keyframes gradient-rotate': {
     '0%': {
       backgroundPosition: '0% 50%',
@@ -102,14 +92,12 @@ const GlossyCardContainer = styled(Box)<{ animated?: boolean; glowIntensity?: st
     },
   },
 }));
-
 const GlossyContent = styled(Box)({
   position: 'relative',
   zIndex: 2,
   width: '100%',
   height: '100%',
 });
-
 export const GlossyCard: React.FC<GlossyCardProps> = ({ 
   children, 
   animated = true, 
@@ -123,5 +111,4 @@ export const GlossyCard: React.FC<GlossyCardProps> = ({
       </GlossyContent>
     </GlossyCardContainer>
   );
-};
-
+};

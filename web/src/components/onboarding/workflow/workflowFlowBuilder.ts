@@ -1,5 +1,4 @@
 import { Node, Edge, MarkerType } from 'reactflow';
-
 export interface WorkflowPreviewStep {
   id: string;
   channel?: string;
@@ -7,10 +6,8 @@ export interface WorkflowPreviewStep {
   title: string;
   description?: string;
 }
-
 export function createReactFlowNodes(workflowPreview: WorkflowPreviewStep[] | null): Node[] {
   const nodes: Node[] = [];
-  
   // Always add Start node
   nodes.push({
     id: 'start',
@@ -23,7 +20,6 @@ export function createReactFlowNodes(workflowPreview: WorkflowPreviewStep[] | nu
       description: 'Start',
     },
   });
-  
   // Add workflow step nodes (if any)
   if (workflowPreview && workflowPreview.length > 0) {
     workflowPreview.forEach((step, idx) => {
@@ -38,12 +34,10 @@ export function createReactFlowNodes(workflowPreview: WorkflowPreviewStep[] | nu
       });
     });
   }
-  
   // Always add End node
   const endY = workflowPreview && workflowPreview.length > 0 
     ? 170 + workflowPreview.length * 160 
     : 170;
-  
   nodes.push({
     id: 'end',
     type: 'custom',
@@ -55,13 +49,10 @@ export function createReactFlowNodes(workflowPreview: WorkflowPreviewStep[] | nu
       description: 'End',
     },
   });
-  
   return nodes;
 }
-
 export function createReactFlowEdges(workflowPreview: WorkflowPreviewStep[] | null): Edge[] {
   const edges: Edge[] = [];
-  
   // If we have workflow steps, connect them
   if (workflowPreview && workflowPreview.length > 0) {
     // Connect Start to first step
@@ -81,7 +72,6 @@ export function createReactFlowEdges(workflowPreview: WorkflowPreviewStep[] | nu
         color: '#10B981',
       },
     });
-    
     // Connect workflow steps
     for (let i = 0; i < workflowPreview.length - 1; i++) {
       edges.push({
@@ -100,7 +90,6 @@ export function createReactFlowEdges(workflowPreview: WorkflowPreviewStep[] | nu
         },
       });
     }
-    
     // Connect last step to End
     edges.push({
       id: `e-${workflowPreview[workflowPreview.length - 1].id}-end`,
@@ -128,6 +117,5 @@ export function createReactFlowEdges(workflowPreview: WorkflowPreviewStep[] | nu
       style: { stroke: '#E5E7EB', strokeWidth: 2, strokeDasharray: '5,5' },
     });
   }
-  
   return edges;
-}
+}

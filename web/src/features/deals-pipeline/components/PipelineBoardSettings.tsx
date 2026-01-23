@@ -14,16 +14,13 @@ import {
   selectPipelineSettings,
   setPipelineSettings
 } from '@/store/slices/uiSlice';
-
 type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
 interface ViewModeOptionProps extends Omit<React.ComponentProps<typeof RadioGroupItem>, 'checked'> {
   title: string;
   description: string;
   icon: IconComponent;
   checked?: boolean; // Optional: can be passed from parent to indicate active state
 }
-
 const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(({
   title,
   description,
@@ -37,7 +34,6 @@ const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(
   const optionId = id || `view-mode-${value}`;
   // RadioGroupItem is controlled by RadioGroup's value, but we use checked prop for visual state
   const isActive = Boolean(checked);
-
   return (
     <label
       htmlFor={optionId}
@@ -77,9 +73,7 @@ const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(
     </label>
   );
 });
-
 ViewModeOption.displayName = 'ViewModeOption';
-
 interface VisibleColumns {
   name: boolean;
   stage: boolean;
@@ -95,7 +89,6 @@ interface VisibleColumns {
   updatedAt: boolean;
   lastActivity: boolean;
 }
-
 interface PipelineSettings {
   viewMode: 'kanban' | 'list';
   visibleColumns: VisibleColumns;
@@ -109,13 +102,11 @@ interface PipelineSettings {
   businessHoursEnd: string;
   timezone: string;
 }
-
 interface PipelineBoardSettingsProps {
   open: boolean;
   onClose: () => void;
   onSettingsChange: (settings: PipelineSettings) => void;
 }
-
 const DEFAULT_VISIBLE_COLUMNS: VisibleColumns = {
   name: true,
   stage: true,
@@ -131,7 +122,6 @@ const DEFAULT_VISIBLE_COLUMNS: VisibleColumns = {
   updatedAt: false,
   lastActivity: false
 };
-
 const COLUMN_LABELS: Record<keyof VisibleColumns, string> = {
   name: 'Lead Name',
   stage: 'Stage',
@@ -147,7 +137,6 @@ const COLUMN_LABELS: Record<keyof VisibleColumns, string> = {
   updatedAt: 'Last Updated',
   lastActivity: 'Last Activity'
 };
-
 const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   open,
   onClose,
@@ -155,7 +144,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
 }) => {
   const dispatch = useDispatch();
   const settings = useSelector(selectPipelineSettings);
-  
   // Local state for settings - only save to Redux when Save is clicked
   const [localSettings, setLocalSettings] = useState<PipelineSettings>({
     ...settings,
@@ -163,7 +151,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     businessHoursEnd: settings.businessHoursEnd || '18:00',
     timezone: settings.timezone || 'GST'
   });
-  
   // Update local settings when dialog opens or settings change
   useEffect(() => {
     if (open) {
@@ -175,11 +162,9 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       });
     }
   }, [open, settings]);
-
   const handleViewModeChange = (value: string): void => {
     setLocalSettings({ ...localSettings, viewMode: value as 'kanban' | 'list' });
   };
-
   const handleColumnVisibilityChange = (columnKey: keyof VisibleColumns): void => {
     setLocalSettings({
       ...localSettings,
@@ -189,20 +174,15 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       }
     });
   };
-
   const handleSettingChange = (key: keyof PipelineSettings, value: unknown): void => {
-    console.log('[PipelineBoardSettings] Setting change:', key, '=', value);
     setLocalSettings({ ...localSettings, [key]: value });
   };
-
   const handleSave = (): void => {
-    console.log('[PipelineBoardSettings] Saving settings:', localSettings);
     // Only now update Redux store
     dispatch(setPipelineSettings(localSettings));
     onSettingsChange(localSettings);
     onClose();
   };
-
   const handleCancel = (): void => {
     // Reset local settings to original values
     setLocalSettings({
@@ -213,7 +193,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     });
     onClose();
   };
-
   const handleReset = (): void => {
     const defaultSettings: PipelineSettings = {
       viewMode: 'kanban',
@@ -230,9 +209,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     };
     setLocalSettings(defaultSettings);
   };
-
   const visibleColumnCount = Object.values(localSettings.visibleColumns || {}).filter(Boolean).length;
-
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -281,7 +258,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </RadioGroup>
             </fieldset>
           </div>
-
           {/* Column Visibility Section - Only show for List View */}
           {localSettings.viewMode === 'list' && (
             <div className="p-6 mb-6 bg-gray-50 rounded-lg">
@@ -304,13 +280,11 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </div>
             </div>
           )}
-
           {/* Display Options */}
           <div className="p-6 mb-6 bg-gray-50 rounded-lg">
             <h3 className="text-base font-semibold mb-4">
               Display Options
             </h3>
-            
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="compact-view" className="cursor-pointer">
@@ -322,7 +296,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                   onCheckedChange={(checked) => handleSettingChange('compactView', checked)}
                 />
               </div>
-              
               <div className="flex items-center justify-between">
                 <Label htmlFor="show-card-count" className="cursor-pointer">
                   Show Card Count in Stage Headers
@@ -333,7 +306,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                   onCheckedChange={(checked) => handleSettingChange('showCardCount', checked)}
                 />
               </div>
-              
               <div className="flex items-center justify-between">
                 <Label htmlFor="show-stage-value" className="cursor-pointer">
                   Show Total Value in Stage Headers
@@ -344,7 +316,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                   onCheckedChange={(checked) => handleSettingChange('showStageValue', checked)}
                 />
               </div>
-              
               <div className="flex items-center justify-between">
                 <Label htmlFor="enable-drag-drop" className="cursor-pointer">
                   Enable Drag & Drop
@@ -357,13 +328,11 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </div>
             </div>
           </div>
-
           {/* Auto Refresh Settings */}
           <div className="p-6 bg-gray-50 rounded-lg">
             <h3 className="text-base font-semibold mb-4">
               Auto Refresh
             </h3>
-            
             <div className="flex items-center justify-between mb-4">
               <Label htmlFor="auto-refresh" className="cursor-pointer">
                 Enable Auto Refresh
@@ -374,7 +343,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                 onCheckedChange={(checked) => handleSettingChange('autoRefresh', checked)}
               />
             </div>
-            
             {localSettings.autoRefresh && (
               <div className="px-4">
                 <div className="text-sm mb-2">
@@ -397,13 +365,11 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </div>
             )}
           </div>
-
           {/* Business Hours Settings */}
           <div className="p-6 bg-gray-50 rounded-lg">
             <h3 className="text-base font-semibold mb-4">
               Business Hours
             </h3>
-            
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <Label htmlFor="business-start" className="text-sm font-medium mb-2 block">
@@ -417,7 +383,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                   className="w-full"
                 />
               </div>
-              
               <div>
                 <Label htmlFor="business-end" className="text-sm font-medium mb-2 block">
                   End Time
@@ -431,7 +396,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                 />
               </div>
             </div>
-            
             <div>
               <Label htmlFor="timezone" className="text-sm font-medium mb-2 block">
                 Timezone
@@ -455,7 +419,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </Select>
             </div>
           </div>
-
           <div className="flex gap-2 mt-6 pt-6 border-t">
             <Button 
               onClick={handleCancel} 
@@ -479,5 +442,4 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       </Dialog>
     );
 };
-
-export default PipelineBoardSettings;
+export default PipelineBoardSettings;

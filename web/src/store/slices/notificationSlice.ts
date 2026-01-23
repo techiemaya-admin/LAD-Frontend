@@ -1,6 +1,5 @@
 // Redux slice for global notifications (in-app, not system snackbar)
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
 interface Notification {
   id: string | number;
   type?: string;
@@ -13,19 +12,16 @@ interface Notification {
   timestamp?: string | number;
   [key: string]: unknown;
 }
-
 interface NotificationState {
   notifications: Notification[];
   unreadCounts: Record<string | number, number>;
   totalUnread: number;
 }
-
 const initialState: NotificationState = {
   notifications: [], // { id, type, message, data, read }
   unreadCounts: {}, // { conversationId: count } for per-lead unread counts
   totalUnread: 0,   // Total unread notifications
 };
-
 const notificationSlice = createSlice({
   name: 'notification',
   initialState,
@@ -33,7 +29,6 @@ const notificationSlice = createSlice({
     addNotification(state, action: PayloadAction<Notification>) {
       const notification: Notification = { ...action.payload, read: false };
       state.notifications.push(notification);
-      
       // Update unread counts
       if (notification.conversationId) {
         state.unreadCounts[notification.conversationId] = 
@@ -43,7 +38,6 @@ const notificationSlice = createSlice({
     },
     setNotifications(state, action: PayloadAction<Notification[]>) {
       state.notifications = action.payload;
-      
       // Recalculate unread counts
       state.unreadCounts = {};
       state.totalUnread = 0;
@@ -59,7 +53,6 @@ const notificationSlice = createSlice({
       const notif = state.notifications.find(n => n.id === action.payload);
       if (notif && !notif.read) {
         notif.read = true;
-        
         // Update unread counts
         if (notif.conversationId) {
           state.unreadCounts[notif.conversationId] = 
@@ -83,7 +76,6 @@ const notificationSlice = createSlice({
           state.totalUnread = Math.max(0, state.totalUnread - 1);
         }
       }
-      
       state.notifications = state.notifications.filter(n => n.id !== action.payload);
     },
     // New: Mark all notifications for a conversation as read
@@ -94,7 +86,6 @@ const notificationSlice = createSlice({
           notif.read = true;
         }
       });
-      
       // Update unread counts
       if (state.unreadCounts[conversationId]) {
         state.totalUnread = Math.max(0, state.totalUnread - state.unreadCounts[conversationId]);
@@ -103,7 +94,6 @@ const notificationSlice = createSlice({
     }
   }
 });
-
 export const { 
   addNotification, 
   setNotifications, 
@@ -112,10 +102,7 @@ export const {
   removeNotification,
   markConversationAsRead
 } = notificationSlice.actions;
-
 export const selectNotifications = (state: { notification: NotificationState }): Notification[] => state.notification.notifications;
 export const selectUnreadCounts = (state: { notification: NotificationState }): Record<string | number, number> => state.notification.unreadCounts;
 export const selectTotalUnread = (state: { notification: NotificationState }): number => state.notification.totalUnread;
-
-export default notificationSlice.reducer;
-
+export default notificationSlice.reducer;

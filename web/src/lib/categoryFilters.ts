@@ -1,13 +1,11 @@
 // Category-based feature filtering
 // Ensures strict category isolation (RULE 2, RULE 3, RULE 6)
-
 export type WorkflowCategory = 
   | 'leadops' 
   | 'socialops' 
   | 'crm_sync' 
   | 'whatsapp_automation' 
   | 'analytics';
-
 // Features allowed per category
 const LEADOPS_ALLOWED_FEATURES = [
   'linkedin_profile_visit',
@@ -28,7 +26,6 @@ const LEADOPS_ALLOWED_FEATURES = [
   'voice_agent_call',
   'voice_agent_script',
 ];
-
 const SOCIALOPS_ALLOWED_FEATURES = [
   'linkedin_autopost',
   'linkedin_comment_reply',
@@ -36,14 +33,12 @@ const SOCIALOPS_ALLOWED_FEATURES = [
   'instagram_comment_reply',
   'instagram_comment_monitor',
 ];
-
 const WHATSAPP_AUTOMATION_ALLOWED_FEATURES = [
   'whatsapp_broadcast',
   'whatsapp_send',
   'whatsapp_followup',
   'whatsapp_template',
 ];
-
 // Features FORBIDDEN per category
 const LEADOPS_FORBIDDEN_FEATURES = [
   'linkedin_autopost',
@@ -52,7 +47,6 @@ const LEADOPS_FORBIDDEN_FEATURES = [
   'instagram_comment_reply',
   'instagram_comment_monitor',
 ];
-
 const SOCIALOPS_FORBIDDEN_FEATURES = [
   'linkedin_profile_visit',
   'linkedin_follow',
@@ -63,13 +57,11 @@ const SOCIALOPS_FORBIDDEN_FEATURES = [
   'email_send',
   'email_followup',
 ];
-
 // LinkedIn platform restrictions (RULE 3)
 const LINKEDIN_FORBIDDEN_FEATURES = [
   'linkedin_autopost', // No posting on LinkedIn
   'linkedin_comment_reply', // No auto-commenting (unless SocialOps)
 ];
-
 /**
  * Filter features based on category and platform restrictions
  */
@@ -81,10 +73,8 @@ export function filterFeaturesByCategory(
   if (!category) {
     return features; // No filtering if no category selected
   }
-
   let allowedFeatures: string[] = [];
   let forbiddenFeatures: string[] = [];
-
   // Apply category-based filtering
   switch (category) {
     case 'leadops':
@@ -104,7 +94,6 @@ export function filterFeaturesByCategory(
       // These categories don't use platform features
       return [];
   }
-
   // Apply LinkedIn platform restrictions (RULE 3)
   if (platform === 'linkedin') {
     // If LeadOps, forbid posting features
@@ -112,23 +101,19 @@ export function filterFeaturesByCategory(
       forbiddenFeatures = [...forbiddenFeatures, ...LINKEDIN_FORBIDDEN_FEATURES];
     }
   }
-
   // Filter features
   return features.filter(feature => {
     // If category has allowed list, only show those
     if (allowedFeatures.length > 0 && !allowedFeatures.includes(feature.id)) {
       return false;
     }
-    
     // Never show forbidden features
     if (forbiddenFeatures.includes(feature.id)) {
       return false;
     }
-    
     return true;
   });
 }
-
 /**
  * Check if a feature is allowed for the given category and platform
  */
@@ -138,17 +123,13 @@ export function isFeatureAllowed(
   platform: string
 ): boolean {
   if (!category) return true;
-  
   const allFeatures = [
     ...LEADOPS_ALLOWED_FEATURES,
     ...SOCIALOPS_ALLOWED_FEATURES,
     ...WHATSAPP_AUTOMATION_ALLOWED_FEATURES,
   ];
-  
   // Get feature from all features
   const feature = { id: featureId, label: '', description: '' };
   const filtered = filterFeaturesByCategory([feature], category, platform);
-  
   return filtered.length > 0;
-}
-
+}

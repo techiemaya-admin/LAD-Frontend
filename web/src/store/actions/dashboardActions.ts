@@ -1,12 +1,9 @@
 import { AppDispatch, RootState } from '../store';
 import { setDashboardLoading, setAnalytics, setLeadStats, setDashboardError, setLastFetchParams } from '../slices/dashboardSlice';
 import { fetchAnalytics, fetchLeadStats } from '../../services/dashboardService';
-
 type FetchParams = Record<string, string | number>;
-
 // In-flight request cache to deduplicate API calls even across double-mounts
 const inflightRequests: Record<string, Promise<void>> = {};
-
 export const fetchDashboardData = (params: FetchParams) => async (dispatch: AppDispatch, getState: () => RootState) => {
   const paramsString = JSON.stringify(params);
   const lastParams = getState().dashboard.lastFetchParams;
@@ -40,5 +37,4 @@ export const fetchDashboardData = (params: FetchParams) => async (dispatch: AppD
     delete inflightRequests[paramsString];
     dispatch(setDashboardLoading(false));
   }
-};
-
+};

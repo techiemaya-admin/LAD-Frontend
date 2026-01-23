@@ -7,14 +7,12 @@ import PipelineLeadCard from './PipelineLeadCard';
 import { Stage } from '../store/slices/pipelineSlice';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
-
 interface LeadsByStage {
   [stageKey: string]: {
     stage: Stage & { name?: string; label?: string; order?: number; display_order?: number; totalStages?: number };
     leads: Lead[];
   };
 }
-
 interface PipelineKanbanViewHandlers {
   onStageUpdate?: () => void;
   onStageDelete?: () => void;
@@ -24,7 +22,6 @@ interface PipelineKanbanViewHandlers {
   onUpdateStage?: (stageKey: string, updates: Record<string, unknown>) => Promise<void>;
   onDeleteStageAction?: (stageKey: string) => Promise<void>;
 }
-
 interface PipelineKanbanViewProps {
   stages: Array<Stage & { name?: string; label?: string; order?: number; display_order?: number; totalStages?: number; key?: string; id?: string }>;
   leadsByStage: LeadsByStage;
@@ -40,7 +37,6 @@ interface PipelineKanbanViewProps {
   showCardCount?: boolean;
   showTotalValue?: boolean;
 }
-
 const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
   stages,
   leadsByStage,
@@ -54,43 +50,33 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
   showTotalValue = true
 }) => {
   // Debug log to check props
-  console.log('[PipelineKanbanView] Received props:', { compactView, showCardCount, showTotalValue, enableDragAndDrop });
-  
   // Memoize sortable stage IDs array
   const sortableStageIds = useMemo(
     () => stages.map(s => s.key || String(s.id)),
     [stages]
   );
-
   // Memoize individual handler callbacks to prevent reference changes
   const onStageUpdate = useCallback(() => {
     handlers?.onStageUpdate?.();
   }, [handlers?.onStageUpdate]);
-
   const onStageDelete = useCallback(() => {
     handlers?.onStageDelete?.();
   }, [handlers?.onStageDelete]);
-
   const onEdit = useCallback((lead: Lead) => {
     handlers?.onEdit?.(lead);
   }, [handlers?.onEdit]);
-
   const onDelete = useCallback((leadId: string | number) => {
     handlers?.onDelete?.(leadId);
   }, [handlers?.onDelete]);
-
   const onStatusChange = useCallback((leadId: string | number, newStatus: string) => {
     handlers?.onStatusChange?.(leadId, newStatus);
   }, [handlers?.onStatusChange]);
-
   const onUpdateStage = useCallback(async (stageKey: string, updates: Record<string, unknown>) => {
     await handlers?.onUpdateStage?.(stageKey, updates);
   }, [handlers?.onUpdateStage]);
-
   const onDeleteStageAction = useCallback(async (stageKey: string) => {
     await handlers?.onDeleteStageAction?.(stageKey);
   }, [handlers?.onDeleteStageAction]);
-
   return (
     <>
       <div
@@ -103,7 +89,6 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
             const uniqueKey = `${stageKey}-${index}`;
             const stageData = leadsByStage[stageKey] || { stage, leads: [] };
             const { leads = [] } = stageData;
-
             return (
               <div
                 key={uniqueKey}
@@ -138,7 +123,6 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
           })}
         </SortableContext>
       </div>
-
       <DragOverlay>
         {activeCard ? (
           <PipelineLeadCard lead={activeCard} isPreview={true} />
@@ -147,7 +131,6 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
     </>
   );
 };
-
 // Wrap in React.memo to prevent unnecessary re-renders
 export default React.memo(PipelineKanbanView, (prevProps, nextProps) => {
   // Only re-render if these specific props change
@@ -167,5 +150,4 @@ export default React.memo(PipelineKanbanView, (prevProps, nextProps) => {
       prevProps.leadsByStage[key]?.leads?.length === nextProps.leadsByStage[key]?.leads?.length
     )
   );
-});
-
+});

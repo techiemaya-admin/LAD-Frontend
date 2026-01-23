@@ -1,15 +1,12 @@
 'use client';
-
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-
 interface TemplateInputProps {
   onSubmit: (template: string) => void;
   placeholder?: string;
   label?: string;
   onSkip?: () => void;
 }
-
 export default function TemplateInput({
   onSubmit,
   placeholder = 'Paste your message template here...',
@@ -17,14 +14,12 @@ export default function TemplateInput({
 }: TemplateInputProps) {
   const [template, setTemplate] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-
   const handleSubmit = () => {
     if (template.trim()) {
       onSubmit(template.trim());
       setTemplate('');
     }
   };
-
   return (
     <div className="mt-4 space-y-3">
       {label && (
@@ -32,7 +27,6 @@ export default function TemplateInput({
           {label}
         </label>
       )}
-      
       <div className="relative">
         <textarea
           value={template}
@@ -62,7 +56,6 @@ export default function TemplateInput({
           Press Enter to submit, Shift+Enter for new line
         </div>
       </div>
-
       <div className="flex gap-2">
         <button
           type="button"
@@ -84,5 +77,4 @@ export default function TemplateInput({
       </div>
     </div>
   );
-}
-
+}

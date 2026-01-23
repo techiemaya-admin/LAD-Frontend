@@ -6,12 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Chip } from '@/components/ui/chip';
 import { X } from 'lucide-react';
 import { Stage } from '../store/slices/pipelineSlice';
-
 interface StageColor {
   value: string;
   label: string;
 }
-
 interface AddStageDialogProps {
   open: boolean;
   onClose: () => void;
@@ -19,14 +17,12 @@ interface AddStageDialogProps {
   stage?: Stage | null;
   stages?: Stage[];
 }
-
 const defaultStage = {
   name: '',
   description: '',
   color: '#6B75CA',
   position: 0
 };
-
 const stageColors: StageColor[] = [
   { value: '#6B75CA', label: 'Purple' },
   { value: '#4CAF50', label: 'Green' },
@@ -37,7 +33,6 @@ const stageColors: StageColor[] = [
   { value: '#00BCD4', label: 'Cyan' },
   { value: '#FFEB3B', label: 'Yellow' }
 ];
-
 const AddStageDialog: React.FC<AddStageDialogProps> = ({ 
   open, 
   onClose, 
@@ -48,7 +43,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
   const [localStage, setLocalStage] = useState<typeof defaultStage>(defaultStage);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     if (stage) {
       setLocalStage({ ...defaultStage, ...stage });
@@ -61,7 +55,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
     }
     setErrors({});
   }, [stage, stages.length, open]);
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!localStage.name.trim()) {
@@ -72,7 +65,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async () => {
     if (validateForm()) {
       setLoading(true);
@@ -86,7 +78,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
       }
     }
   };
-
   return (
     <Dialog open={open}>
       <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
@@ -101,7 +92,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
             <X className="h-4 w-4" />
           </button>
         </DialogTitle>
-
         <div className="flex flex-col gap-6">
             <div className="space-y-2">
               <Label htmlFor="stage-name">Stage Name *</Label>
@@ -119,7 +109,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
                 <p className="text-sm text-red-500">{errors.name}</p>
               )}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="stage-description">Description</Label>
               <textarea
@@ -130,7 +119,6 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
-
             <div className="space-y-2">
               <Label>Stage Color</Label>
               <div className="flex flex-wrap gap-2">
@@ -153,12 +141,10 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
                 ))}
               </div>
             </div>
-
             {errors.submit && (
               <p className="text-sm text-red-500">{errors.submit}</p>
             )}
           </div>
-
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
             <Button
@@ -181,6 +167,4 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
       </Dialog>
   );
 };
-
-export default AddStageDialog;
-
+export default AddStageDialog;

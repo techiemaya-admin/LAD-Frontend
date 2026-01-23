@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { 
   Box, 
@@ -23,7 +22,6 @@ import { InfoOutlined, CheckCircle, ErrorOutline } from '@mui/icons-material';
 import { useCampaignStore } from '../store/campaignStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { StepType } from '@/types/campaign';
-
 // Helper function to get required fields for each step type
 const getRequiredFields = (stepType: StepType): string[] => {
   const required: Record<StepType, string[]> = {
@@ -54,7 +52,6 @@ const getRequiredFields = (stepType: StepType): string[] => {
   };
   return required[stepType] || [];
 };
-
 // Special validation for delay step - at least one time unit must be > 0
 const isDelayValid = (data: any): boolean => {
   const days = parseInt(data.delayDays) || 0;
@@ -62,7 +59,6 @@ const isDelayValid = (data: any): boolean => {
   const minutes = parseInt(data.delayMinutes) || 0;
   return days > 0 || hours > 0 || minutes > 0;
 };
-
 // Helper to check if field is valid
 const isFieldValid = (field: string, value: any): boolean => {
   if (value === undefined || value === null) return false;
@@ -71,26 +67,21 @@ const isFieldValid = (field: string, value: any): boolean => {
   if (typeof value === 'number' && isNaN(value)) return false;
   return true;
 };
-
 export default function StepSettings() {
   // Try onboarding store first (for workflow builder)
   const onboardingStore = useOnboardingStore();
   const onboardingNodes = onboardingStore.workflowNodes;
   const onboardingEdges = onboardingStore.workflowEdges || (onboardingStore.manualFlow?.edges) || [];
   const onboardingSelectedNodeId = onboardingStore.selectedNodeId;
-  
   // Fallback to campaign store (for campaign editor)
   const campaignStore = useCampaignStore();
   const campaignNodes = campaignStore.nodes;
   const campaignSelectedNodeId = campaignStore.selectedNodeId;
-  
   // Determine which store to use based on which has selected node
   const useOnboarding = onboardingSelectedNodeId !== null && onboardingSelectedNodeId !== undefined;
   const selectedNodeId = useOnboarding ? onboardingSelectedNodeId : campaignSelectedNodeId;
-  
   // Get nodes from appropriate store
   const nodes = useOnboarding ? onboardingNodes : campaignNodes;
-  
   // Find selected node - need to check both workflowNodes structure and regular nodes
   let selectedNode: any = null;
   if (useOnboarding && onboardingNodes.length > 0) {
@@ -98,7 +89,6 @@ export default function StepSettings() {
   } else if (!useOnboarding && campaignNodes.length > 0) {
     selectedNode = campaignNodes.find((n: any) => n.id === selectedNodeId);
   }
-
   if (!selectedNode || selectedNode.type === 'start' || selectedNode.type === 'end') {
     return (
       <Box
@@ -117,7 +107,6 @@ export default function StepSettings() {
       </Box>
     );
   }
-
   const stepType = selectedNode.type as StepType;
   // Handle both data structure (campaign store) and direct properties (onboarding store)
   // For onboarding store, data might be nested in node.data or be direct properties
@@ -128,12 +117,10 @@ export default function StepSettings() {
     // Ensure we have the latest values by prioritizing nested data over direct
   };
   const requiredFields = getRequiredFields(stepType);
-  
   // Special validation for delay step
   const isValid = stepType === 'delay' 
     ? isDelayValid(data)
     : requiredFields.every(field => isFieldValid(field, data[field as keyof typeof data]));
-
   const handleUpdate = (field: string, value: any) => {
     if (useOnboarding) {
       // Update onboarding store workflowNodes
@@ -157,7 +144,6 @@ export default function StepSettings() {
       campaignStore.updateStep(selectedNodeId!, { [field]: value });
     }
   };
-
   const renderRequiredIndicator = (field: string) => {
     if (!requiredFields.includes(field)) return null;
     const isValidField = isFieldValid(field, data[field as keyof typeof data]);
@@ -171,7 +157,6 @@ export default function StepSettings() {
       />
     );
   };
-
   return (
     <Box
       sx={{
@@ -186,16 +171,13 @@ export default function StepSettings() {
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1E293B' }}>
         Step Settings
       </Typography>
-
       <Divider sx={{ mb: 2 }} />
-
       {/* Validation Status */}
       {!isValid && (
         <Alert severity="warning" sx={{ mb: 2, fontSize: '12px' }}>
           Please fill in all required fields marked with <ErrorOutline sx={{ fontSize: 14, verticalAlign: 'middle' }} />
         </Alert>
       )}
-
       {/* Title */}
       <TextField
         fullWidth
@@ -207,9 +189,7 @@ export default function StepSettings() {
         sx={{ mb: 2 }}
         size="small"
       />
-
       <Divider sx={{ my: 2 }} />
-
       {/* LinkedIn Steps */}
       {(stepType === 'linkedin_connect' || stepType === 'linkedin_message') && (
         <>
@@ -276,7 +256,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* Email Steps */}
       {(stepType === 'email_send' || stepType === 'email_followup') && (
         <>
@@ -362,7 +341,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* Delay Step */}
       {stepType === 'delay' && (
         <>
@@ -430,7 +408,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* Condition Step */}
       {stepType === 'condition' && (
         <>
@@ -463,24 +440,20 @@ export default function StepSettings() {
               <MenuItem value="connected">✅ If Connected on LinkedIn</MenuItem>
               <MenuItem value="linkedin_replied">💬 If Replied to LinkedIn Message</MenuItem>
               <MenuItem value="linkedin_followed">👥 If Followed Back on LinkedIn</MenuItem>
-              
               <ListSubheader sx={{ bgcolor: '#F8FAFC', fontWeight: 600, color: '#F59E0B', mt: 1 }}>📧 EMAIL</ListSubheader>
               <MenuItem value="replied">✉️ If Replied to Email</MenuItem>
               <MenuItem value="opened">👁️ If Opened Email</MenuItem>
               <MenuItem value="clicked">🔗 If Clicked Email Link</MenuItem>
-              
               <ListSubheader sx={{ bgcolor: '#F8FAFC', fontWeight: 600, color: '#25D366', mt: 1 }}>💬 WHATSAPP</ListSubheader>
               <MenuItem value="whatsapp_delivered">✓ If WhatsApp Message Delivered</MenuItem>
               <MenuItem value="whatsapp_read">✓✓ If WhatsApp Message Read</MenuItem>
               <MenuItem value="whatsapp_replied">💬 If Replied to WhatsApp</MenuItem>
-              
               <ListSubheader sx={{ bgcolor: '#F8FAFC', fontWeight: 600, color: '#8B5CF6', mt: 1 }}>📞 VOICE AGENT</ListSubheader>
               <MenuItem value="voice_answered">📞 If Call Answered</MenuItem>
               <MenuItem value="voice_not_answered">❌ If Call Not Answered</MenuItem>
               <MenuItem value="voice_completed">✅ If Call Completed</MenuItem>
               <MenuItem value="voice_busy">📵 If Line Busy</MenuItem>
               <MenuItem value="voice_failed">⚠️ If Call Failed</MenuItem>
-              
               <ListSubheader sx={{ bgcolor: '#F8FAFC', fontWeight: 600, color: '#E4405F', mt: 1 }}>📷 INSTAGRAM</ListSubheader>
               <MenuItem value="instagram_followed">👥 If Followed Back</MenuItem>
               <MenuItem value="instagram_liked">❤️ If Liked Post</MenuItem>
@@ -510,7 +483,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* WhatsApp Steps */}
       {stepType === 'whatsapp_send' && (
         <>
@@ -586,7 +558,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* Voice Agent Steps */}
       {stepType === 'voice_agent_call' && (
         <>
@@ -650,7 +621,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {/* Additional LinkedIn Steps */}
       {stepType === 'linkedin_scrape_profile' && (
         <>
@@ -692,7 +662,6 @@ export default function StepSettings() {
           </FormControl>
         </>
       )}
-
       {stepType === 'linkedin_company_search' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -718,7 +687,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'linkedin_employee_list' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -744,7 +712,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'linkedin_autopost' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -781,7 +748,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'linkedin_comment_reply' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -809,7 +775,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {/* Instagram Steps */}
       {stepType === 'instagram_follow' && (
         <>
@@ -836,7 +801,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'instagram_like' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -862,7 +826,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'instagram_dm' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -937,7 +900,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {stepType === 'instagram_autopost' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -1004,7 +966,6 @@ export default function StepSettings() {
           )}
         </>
       )}
-
       {stepType === 'instagram_comment_reply' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -1032,7 +993,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {stepType === 'instagram_story_view' && (
         <>
           <Box sx={{ mb: 2 }}>
@@ -1058,7 +1018,6 @@ export default function StepSettings() {
           />
         </>
       )}
-
       {/* Lead Generation Step */}
       {stepType === 'lead_generation' && (
         <>
@@ -1116,7 +1075,6 @@ export default function StepSettings() {
           </Box>
         </>
       )}
-
       {/* Other LinkedIn Steps */}
       {(stepType === 'linkedin_visit' || stepType === 'linkedin_follow') && (
         <Typography variant="body2" sx={{ color: '#64748B' }}>
@@ -1125,5 +1083,4 @@ export default function StepSettings() {
       )}
     </Box>
   );
-}
-
+}

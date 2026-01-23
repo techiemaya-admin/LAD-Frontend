@@ -4,9 +4,6 @@
  * Fetches ICP questions from backend API (database-driven).
  * NO hardcoded ICP text in frontend.
  */
-
-import { logger } from './logger';
-
 export interface ICPQuestion {
   id: string;
   stepIndex: number;
@@ -26,20 +23,17 @@ export interface ICPQuestion {
   isActive: boolean;
   displayOrder?: number;
 }
-
 export interface ICPQuestionsResponse {
   success: boolean;
   questions: ICPQuestion[];
   totalSteps: number;
 }
-
 export interface ICPAnswerRequest {
   sessionId?: string;
   currentStepIndex: number;
   userAnswer: string;
   category?: string;
 }
-
 export interface ICPAnswerResponse {
   success: boolean;
   nextStepIndex: number | null;
@@ -51,7 +45,6 @@ export interface ICPAnswerResponse {
   extractedData?: Record<string, any>;
   error?: string;
 }
-
 /**
  * Fetch all ICP questions for a category
  */
@@ -63,13 +56,10 @@ export async function fetchICPQuestions(
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
                   process.env.NEXT_PUBLIC_API_URL || 
                   (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
-  
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
-  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions?category=${category}`;
-
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -78,19 +68,16 @@ export async function fetchICPQuestions(
       },
       credentials: 'include',
     });
-
     if (!response.ok) {
       throw new Error(`Failed to fetch ICP questions: ${response.statusText}`);
     }
-
     const data = await response.json();
     return data;
   } catch (error: any) {
-    logger.error('[ICPQuestionsAPI] Error fetching questions:', error);
+    console.error('[ICPQuestionsAPI] Error fetching questions:', error);
     throw error;
   }
 }
-
 /**
  * Fetch a specific question by step index
  */
@@ -103,13 +90,10 @@ export async function fetchICPQuestionByStep(
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
                   process.env.NEXT_PUBLIC_API_URL || 
                   (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
-  
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
-  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-questions/${stepIndex}?category=${category}`;
-
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -118,22 +102,19 @@ export async function fetchICPQuestionByStep(
       },
       credentials: 'include',
     });
-
     if (!response.ok) {
       if (response.status === 404) {
         return null;
       }
       throw new Error(`Failed to fetch question: ${response.statusText}`);
     }
-
     const data = await response.json();
     return data.question || null;
   } catch (error: any) {
-    logger.error('[ICPQuestionsAPI] Error fetching question:', error);
+    console.error('[ICPQuestionsAPI] Error fetching question:', error);
     throw error;
   }
 }
-
 /**
  * Process user answer and get next step
  */
@@ -145,13 +126,10 @@ export async function processICPAnswer(
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
                   process.env.NEXT_PUBLIC_API_URL || 
                   (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
-  
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
-  
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-answer`;
-
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -166,16 +144,14 @@ export async function processICPAnswer(
         category: request.category || 'lead_generation',
       }),
     });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Failed to process answer: ${response.statusText}`);
     }
-
     const data = await response.json();
     return data;
   } catch (error: any) {
-    logger.error('[ICPQuestionsAPI] Error processing answer:', error);
+    console.error('[ICPQuestionsAPI] Error processing answer:', error);
     return {
       success: false,
       nextStepIndex: null,
@@ -183,6 +159,4 @@ export async function processICPAnswer(
       error: error.message || 'Failed to process answer',
     };
   }
-}
-
-
+}

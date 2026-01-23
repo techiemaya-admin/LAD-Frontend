@@ -1,14 +1,11 @@
 'use client';
-
 import React from 'react';
 import { Box, styled } from '@mui/material';
 import { SmartToy } from '@mui/icons-material';
-
 interface FloatingAIIconProps {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   onClick?: () => void;
 }
-
 const FloatingContainer = styled(Box)<{ position?: string }>(({ position = 'bottom-right' }) => {
   const positions = {
     'bottom-right': {
@@ -28,7 +25,6 @@ const FloatingContainer = styled(Box)<{ position?: string }>(({ position = 'bott
       left: '24px',
     },
   };
-  
   return {
     position: 'fixed',
     ...positions[position as keyof typeof positions],
@@ -39,7 +35,6 @@ const FloatingContainer = styled(Box)<{ position?: string }>(({ position = 'bott
     justifyContent: 'center',
   };
 });
-
 const IconWrapper = styled(Box)({
   position: 'relative',
   width: '64px',
@@ -48,7 +43,6 @@ const IconWrapper = styled(Box)({
   alignItems: 'center',
   justifyContent: 'center',
   animation: 'float 3s ease-in-out infinite',
-  
   '@keyframes float': {
     '0%, 100%': {
       transform: 'translateY(0px)',
@@ -58,7 +52,6 @@ const IconWrapper = styled(Box)({
     },
   },
 });
-
 const IconCircle = styled(Box)({
   position: 'relative',
   width: '64px',
@@ -71,25 +64,21 @@ const IconCircle = styled(Box)({
   alignItems: 'center',
   justifyContent: 'center',
   transition: 'all 0.3s ease',
-  
   '&:hover': {
     transform: 'scale(1.05)',
     boxShadow: '0 4px 12px rgba(11, 25, 87, 0.2)',
     borderColor: '#1a2d7a',
   },
 });
-
 const IconContent = styled(Box)({
   position: 'relative',
   zIndex: 2,
   color: '#0b1957',
   transition: 'all 0.3s ease',
-  
   [`${IconCircle}:hover &`]: {
     color: '#1a2d7a',
   },
 });
-
 export const FloatingAIIcon: React.FC<FloatingAIIconProps> = ({ 
   position = 'bottom-right',
   onClick 
@@ -105,5 +94,4 @@ export const FloatingAIIcon: React.FC<FloatingAIIconProps> = ({
       </IconWrapper>
     </FloatingContainer>
   );
-};
-
+};

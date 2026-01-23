@@ -9,7 +9,6 @@ interface FeatureFlag {
   user_groups: string[];
   rollout_percentage: number;
 }
-
 interface FeatureFlags {
   features: Record<string, FeatureFlag>;
   metadata: {
@@ -17,24 +16,19 @@ interface FeatureFlags {
     version: string;
   };
 }
-
 type Environment = 'development' | 'staging' | 'production';
 type UserGroup = 'admin' | 'sales' | 'premium' | 'basic';
-
 class FeatureFlagsService {
   private flags: Record<string, FeatureFlag> = {};
   private environment: Environment;
-
   constructor() {
     this.environment = this.getEnvironment();
     this.loadFlags();
   }
-
   private getEnvironment(): Environment {
     const env = process.env.NODE_ENV || 'development';
     return env as Environment;
   }
-
   private async loadFlags(): Promise<void> {
     try {
       // In a real app, this would fetch from your backend API
@@ -47,7 +41,6 @@ class FeatureFlagsService {
       this.loadLocalFlags();
     }
   }
-
   private loadLocalFlags(): void {
     // Fallback local configuration
     this.flags = {
@@ -88,36 +81,30 @@ class FeatureFlagsService {
       }
     };
   }
-
   public isFeatureEnabled(
     featureName: string,
     userGroup?: UserGroup,
     userId?: string
   ): boolean {
     const feature = this.flags[featureName];
-    
     if (!feature) {
       console.warn(`Feature flag '${featureName}' not found`);
       return false;
     }
-
     // Check if feature is globally enabled
     if (!feature.enabled) {
       return false;
     }
-
     // Check environment
     if (!feature.environments[this.environment]) {
       return false;
     }
-
     // Check user group access
     if (userGroup && feature.user_groups.length > 0) {
       if (!feature.user_groups.includes(userGroup)) {
         return false;
       }
     }
-
     // Check rollout percentage
     if (feature.rollout_percentage < 100 && userId) {
       const userHash = this.hashCode(userId) % 100;
@@ -125,24 +112,19 @@ class FeatureFlagsService {
         return false;
       }
     }
-
     return true;
   }
-
   public getEnabledFeatures(userGroup?: UserGroup, userId?: string): string[] {
     return Object.keys(this.flags).filter(featureName =>
       this.isFeatureEnabled(featureName, userGroup, userId)
     );
   }
-
   public getFeatureConfig(featureName: string): FeatureFlag | null {
     return this.flags[featureName] || null;
   }
-
   public async reloadFlags(): Promise<void> {
     await this.loadFlags();
   }
-
   private hashCode(str: string): number {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -153,10 +135,8 @@ class FeatureFlagsService {
     return Math.abs(hash);
   }
 }
-
 // Global instance
 export const featureFlags = new FeatureFlagsService();
-
 // Convenience functions
 export const isFeatureEnabled = (
   featureName: string,
@@ -165,21 +145,17 @@ export const isFeatureEnabled = (
 ): boolean => {
   return featureFlags.isFeatureEnabled(featureName, userGroup, userId);
 };
-
 export const getEnabledFeatures = (
   userGroup?: UserGroup,
   userId?: string
 ): string[] => {
   return featureFlags.getEnabledFeatures(userGroup, userId);
 };
-
 // React hook for feature flags
 import { useState, useEffect } from 'react';
-
 export const useFeatureFlag = (featureName: string, userGroup?: UserGroup, userId?: string) => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const checkFeature = async () => {
       try {
@@ -192,13 +168,10 @@ export const useFeatureFlag = (featureName: string, userGroup?: UserGroup, userI
         setLoading(false);
       }
     };
-
     checkFeature();
   }, [featureName, userGroup, userId]);
-
   return { isEnabled, loading };
 };
-
 // React component wrapper for feature flags
 interface FeatureGateProps {
   feature: string;
@@ -207,7 +180,6 @@ interface FeatureGateProps {
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
-
 export const FeatureGate: React.FC<FeatureGateProps> = ({
   feature,
   userGroup,
@@ -216,12 +188,9 @@ export const FeatureGate: React.FC<FeatureGateProps> = ({
   children
 }) => {
   const { isEnabled, loading } = useFeatureFlag(feature, userGroup, userId);
-
   if (loading) {
     return <div>Loading...</div>;
   }
-
   return isEnabled ? <>{children}</> : <>{fallback}</>;
 };
-
 export default featureFlags;

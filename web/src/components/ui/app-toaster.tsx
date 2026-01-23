@@ -1,7 +1,6 @@
 "use client";
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { X } from "lucide-react";
-
 export type Toast = {
   id: string;
   title?: string;
@@ -9,22 +8,17 @@ export type Toast = {
   variant?: "default" | "success" | "error" | "warning";
   duration?: number; // ms
 };
-
 type ToastContextValue = {
   push: (t: Omit<Toast, "id">) => void;
 };
-
 const ToastContext = createContext<ToastContextValue | null>(null);
-
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within <AppToasterProvider/>");
   return ctx;
 }
-
 export function AppToasterProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
-
   const push = useCallback((t: Omit<Toast, "id">) => {
     const id = Math.random().toString(36).slice(2);
     const toast: Toast = { id, duration: 3500, ...t };
@@ -36,9 +30,7 @@ export function AppToasterProvider({ children }: { children: React.ReactNode }) 
       }, ttl);
     }
   }, []);
-
   const value = useMemo(() => ({ push }), [push]);
-
   return (
     <ToastContext.Provider value={value}>
       {children}
@@ -78,4 +70,4 @@ export function AppToasterProvider({ children }: { children: React.ReactNode }) 
       </div>
     </ToastContext.Provider>
   );
-}
+}

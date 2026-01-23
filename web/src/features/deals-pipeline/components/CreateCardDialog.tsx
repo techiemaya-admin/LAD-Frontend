@@ -16,7 +16,6 @@ import {
   setNewLead, 
   resetNewLead
 } from '@/store/slices/uiSlice';
-
 interface CreateCardDialogProps {
   open: boolean;
   onClose: () => void;
@@ -24,7 +23,6 @@ interface CreateCardDialogProps {
   stages?: Stage[];
   leads?: Lead[];
 }
-
 const CreateCardDialog: React.FC<CreateCardDialogProps> = ({ 
   open, 
   onClose, 
@@ -34,10 +32,8 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
 }) => {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
-  
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
-  
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -45,36 +41,28 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     createTitle: isEducation ? 'Create New Student' : 'Create New Lead',
     createButton: isEducation ? 'Create Student' : 'Create Lead'
   };
-  
   // Get master data from Redux
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
-  
   // Get team members from Redux for assignee dropdown
   const teamMembers = useSelector(selectUsers);
-  
   // Get form data from Redux global state
   const newLead = useSelector(selectNewLead);
-  
   // Local state for creation loading
   const [isCreatingCard, setIsCreatingCard] = React.useState(false);
-
   // Get default values from master data
   const getDefaultStatus = (): string => {
     return statusOptions.length > 0 ? (statusOptions[0].key || '') : '';
   };
-  
   const getDefaultSource = (): string => {
     const manualSource = sourceOptions.find(s => s.key === 'manual');
     return manualSource ? manualSource.key : (sourceOptions[0]?.key || '');
   };
-  
   const getDefaultPriority = (): string => {
     const mediumPriority = priorityOptions.find(p => p.key === 'medium');
     return mediumPriority ? mediumPriority.key : (priorityOptions[0]?.key || '');
   };
-
   // Set default values when master data loads or component opens
   useEffect(() => {
     if (open && (!newLead.status || !newLead.source || !newLead.priority)) {
@@ -86,14 +74,12 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       }));
     }
   }, [open, statusOptions, sourceOptions, priorityOptions, dispatch]);
-
   const handleCancel = () => {
     // Reset form data explicitly
     dispatch(resetNewLead());
     // Close dialog
     onClose();
   };
-
   const handleCreateCard = async () => {
     if (!newLead.name.trim()) {
       return;
@@ -101,7 +87,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     if (!newLead.stage) {
       return;
     }
-
     setIsCreatingCard(true);
     try {
       // Only send fields that have values - filter out empty strings and undefined
@@ -111,7 +96,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
           (leadData as Record<string, unknown>)[key] = value;
         }
       });
-      
       await onCreate(leadData);
       dispatch(resetNewLead());
       onClose();
@@ -121,7 +105,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       setIsCreatingCard(false);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
@@ -141,7 +124,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 <p className="text-sm text-red-500">Name is required</p>
               )}
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lead-email">Email</Label>
               <Input
@@ -151,7 +133,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, email: e.target.value }))}
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lead-phone">Phone</Label>
               <Input
@@ -160,7 +141,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, phone: e.target.value }))}
               />
             </div>
-            
             {/* Education-specific fields */}
             {isEducation && (
               <>
@@ -174,7 +154,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, program: e.target.value }))}
                   />
                 </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="intake-year">Intake Year</Label>
@@ -193,7 +172,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
-                  
                   <div className="space-y-2">
                     <Label htmlFor="gpa">GPA</Label>
                     <Input
@@ -208,7 +186,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                     />
                   </div>
                 </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="previous-education">Previous Education</Label>
                   <Input
@@ -219,7 +196,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, previousEducation: e.target.value }))}
                   />
                 </div>
-                
                 <div className="border-t pt-4">
                   <h4 className="font-semibold text-sm mb-3">Counselling Session</h4>
                   <div className="space-y-3">
@@ -241,7 +217,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="preferred-time">Preferred Session Time</Label>
                       <Select
@@ -258,7 +233,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="session-notes">Session Notes</Label>
                       <Textarea
@@ -273,7 +247,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 </div>
               </>
             )}
-            
             <div className="space-y-2">
               <Label htmlFor="lead-stage">Stage *</Label>
               <Select
@@ -297,7 +270,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 <p className="text-sm text-red-500">Stage is required</p>
               )}
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lead-status">Status</Label>
               <Select
@@ -318,7 +290,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lead-priority">Priority</Label>
               <Select
@@ -339,7 +310,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lead-source">Source</Label>
               <Select
@@ -360,7 +330,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
             {teamMembers && teamMembers.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="lead-assignee">Assignee</Label>
@@ -393,7 +362,6 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, description: e.target.value }))}
               />
             </div>
-
             {/* Action Buttons */}
             <div className="flex gap-2 pt-4 border-t">
               <Button 
@@ -417,6 +385,4 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       </Dialog>
   );
 };
-
-export default CreateCardDialog;
-
+export default CreateCardDialog;

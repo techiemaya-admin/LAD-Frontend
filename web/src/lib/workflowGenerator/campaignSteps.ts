@@ -3,10 +3,8 @@
  * 
  * Generates full campaign steps with complete configs for backend processing
  */
-
 import { logger } from '@/lib/logger';
 import { buildLeadGenerationFilters } from './utils';
-
 /**
  * Generate full campaign steps from mapped ICP answers
  * This includes complete step configs with all required properties for backend processing
@@ -14,10 +12,8 @@ import { buildLeadGenerationFilters } from './utils';
  */
 export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array<{ type: string; order: number; title: string; description: string; config: Record<string, any> }> {
   logger.debug('Generating campaign steps from answers', { mappedAnswers });
-
   const steps: Array<{ type: string; order: number; title: string; description: string; config: Record<string, any> }> = [];
   let order = 0;
-
   // Extract platforms and actions
   const platforms = mappedAnswers.platforms || [];
   // Convert single string to array if needed
@@ -27,13 +23,10 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
   } else if (Array.isArray(platforms)) {
     platformArray = platforms.map(p => String(p).toLowerCase());
   }
-  
   const hasIndustries = mappedAnswers.industries && mappedAnswers.industries.length > 0;
   const hasRoles = mappedAnswers.roles && mappedAnswers.roles.length > 0;
   const hasLocation = mappedAnswers.location;
-
   logger.debug('Platforms and targeting criteria', { platforms, platformArray, hasIndustries, hasRoles, hasLocation });
-
   // Step 1: Lead Generation (if targeting criteria provided)
   if (hasIndustries || hasRoles || hasLocation) {
     const leadGenerationFilters = buildLeadGenerationFilters(mappedAnswers);
@@ -42,7 +35,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       hasIndustries ? `Industries: ${mappedAnswers.industries.join(', ')}` : '',
       hasLocation ? `Location: ${mappedAnswers.location}` : '',
     ].filter(Boolean).join(' | ');
-
     steps.push({
       type: 'lead_generation',
       order: order++,
@@ -54,7 +46,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       },
     });
   }
-
   // Process platforms in the order they were selected
   for (const platform of platformArray) {
     if (platform === 'linkedin') {
@@ -64,7 +55,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       ? rawActions
       : (typeof rawActions === 'string' ? rawActions.split(',').map(s => s.trim()) : []);
     const delayConfig = mappedAnswers.workflow_delays || mappedAnswers.delays;
-    
     // Check if user actually wants delays (not "No delay" or empty)
     const hasDelay = delayConfig && 
                     delayConfig !== 'No delay' && 
@@ -77,10 +67,8 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
                     delayConfig !== undefined &&
                     !String(delayConfig).toLowerCase().includes('no delay') &&
                     !String(delayConfig).toLowerCase().includes('skip');
-    
     logger.debug('LinkedIn actions', { rawActions, linkedinActions, isArray: Array.isArray(rawActions) });
     logger.debug('Delay config', { delayConfig, hasDelay });
-
     // Always add visit profile first when LinkedIn is selected
     steps.push({
       type: 'linkedin_visit',
@@ -89,7 +77,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       description: 'View target profile',
       config: {},
     });
-
     // Add delay after visit if configured
     if (hasDelay) {
       const delayStep = parseDelayConfig(delayConfig);
@@ -97,13 +84,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         steps.push(delayStep);
       }
     }
-
     // Check for follow actions
     const hasFollowAction = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow') || actionStr === 'follow';
     });
-
     if (hasFollowAction) {
       steps.push({
         type: 'linkedin_follow',
@@ -112,7 +97,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         description: 'Follow the profile',
         config: {},
       });
-
       // Add delay after follow if configured
       if (hasDelay) {
         const delayStep = parseDelayConfig(delayConfig);
@@ -121,7 +105,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         }
       }
     }
-
     // Check for connection actions (handle various formats)
     const hasConnectionAction = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
@@ -129,7 +112,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
              actionStr.includes('connect') ||
              actionStr === 'send_connection';
     });
-
     if (hasConnectionAction) {
       steps.push({
         type: 'linkedin_connect',
@@ -140,7 +122,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
           message: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message,
         },
       });
-
       // Add delay after connection if configured
       if (hasDelay) {
         const delayStep = parseDelayConfig(delayConfig);
@@ -149,7 +130,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         }
       }
     }
-
     // Check for message actions (handle various formats)
     const hasMessageAction = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
@@ -157,13 +137,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
              actionStr.includes('send message') ||
              actionStr === 'send_message_after_accepted';
     });
-
     if (hasMessageAction) {
       const messageTemplate = mappedAnswers.linkedinMessage || 
                             mappedAnswers.linkedin_message || 
                             mappedAnswers.linkedinTemplate || 
                             mappedAnswers.linkedin_template;
-      
       steps.push({
         type: 'linkedin_message',
         order: order++,
@@ -180,13 +158,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       ? rawWhatsappActions
       : (typeof rawWhatsappActions === 'string' ? rawWhatsappActions.split(',').map(s => s.trim()) : []);
     logger.debug('WhatsApp actions', { rawWhatsappActions, whatsappActions, isArray: Array.isArray(rawWhatsappActions) });
-
     // Check for broadcast action
     const hasBroadcast = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('broadcast');
     });
-
     if (hasBroadcast) {
       steps.push({
         type: 'whatsapp_broadcast',
@@ -198,13 +174,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         },
       });
     }
-
     // Check for 1:1 message action
     const hasOneToOneMessage = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('1:1') || actionStr.includes('message');
     });
-
     if (hasOneToOneMessage) {
       steps.push({
         type: 'whatsapp_message',
@@ -216,13 +190,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         },
       });
     }
-
     // Check for follow-up action
     const hasFollowUp = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow');
     });
-
     if (hasFollowUp) {
       steps.push({
         type: 'whatsapp_followup',
@@ -234,13 +206,11 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         },
       });
     }
-
     // Check for template message
     const hasTemplate = whatsappActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('template');
     });
-
     if (hasTemplate) {
       steps.push({
         type: 'whatsapp_template',
@@ -258,12 +228,10 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       ? rawEmailActions
       : (typeof rawEmailActions === 'string' ? rawEmailActions.split(',').map(s => s.trim()) : []);
     logger.debug('Email actions', { rawEmailActions, emailActions, isArray: Array.isArray(rawEmailActions) });
-
     const hasSendEmail = emailActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('send') && actionStr.includes('email');
     });
-
     if (hasSendEmail) {
       steps.push({
         type: 'email_send',
@@ -273,12 +241,10 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         config: {},
       });
     }
-
     const hasFollowUpEmail = emailActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('follow');
     });
-
     if (hasFollowUpEmail) {
       steps.push({
         type: 'email_followup',
@@ -294,12 +260,10 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       ? rawVoiceActions
       : (typeof rawVoiceActions === 'string' ? rawVoiceActions.split(',').map(s => s.trim()) : []);
     logger.debug('Voice actions', { rawVoiceActions, voiceActions, isArray: Array.isArray(rawVoiceActions) });
-
     const hasTriggerCall = voiceActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('trigger') || actionStr.includes('call');
     });
-
     if (hasTriggerCall || voiceActions.length > 0) {
       steps.push({
         type: 'voice_call',
@@ -309,12 +273,10 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
         config: {},
       });
     }
-
     const hasCallScript = voiceActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('script');
     });
-
     if (hasCallScript) {
       steps.push({
         type: 'voice_script',
@@ -326,7 +288,6 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
     }
     }
   }
-
   // Add workflow conditions if specified (after all platform steps)
   const conditionsConfig = mappedAnswers.workflow_conditions || mappedAnswers.conditions;
   if (conditionsConfig && conditionsConfig !== 'No conditions' && conditionsConfig !== 'no conditions') {
@@ -340,11 +301,9 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       },
     });
   }
-
   logger.debug('Generated campaign steps with configs', { stepCount: steps.length });
   return steps;
 }
-
 /**
  * Parse delay configuration into a delay step
  */
@@ -353,7 +312,6 @@ function parseDelayConfig(delayConfig: any): { type: string; order: number; titl
   let delayHours = 0; 
   let delayMinutes = 0;
   let delayDescription = 'Wait period between actions';
-  
   if (typeof delayConfig === 'object') {
     if (delayConfig.days) delayDays = parseInt(delayConfig.days) || 0;
     if (delayConfig.hours) delayHours = parseInt(delayConfig.hours) || 0;
@@ -390,7 +348,6 @@ function parseDelayConfig(delayConfig: any): { type: string; order: number; titl
     delayHours = 1;
     delayDescription = 'Wait: 1 hour (default)';
   }
-  
   // Only return delay step if at least one time unit is > 0
   if (delayDays > 0 || delayHours > 0 || delayMinutes > 0) {
     return {
@@ -405,8 +362,5 @@ function parseDelayConfig(delayConfig: any): { type: string; order: number; titl
       },
     };
   }
-  
   return null;
-}
-
-
+}

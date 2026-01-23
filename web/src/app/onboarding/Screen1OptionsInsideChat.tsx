@@ -1,20 +1,16 @@
 'use client';
-
 import React from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import { Zap, Users } from 'lucide-react';
-
 export default function Screen1OptionsInsideChat() {
   const { setSelectedPath, setHasSelectedOption, setIsAIChatActive, setCurrentScreen } = useOnboardingStore();
-
   const handleOptionSelect = (option: 'automation' | 'leads') => {
     setSelectedPath(option);
     setHasSelectedOption(true);
     setIsAIChatActive(true);
     setCurrentScreen(1); // Move to AI Chat screen
   };
-
   return (
     <div className="flex flex-col w-full h-full bg-white items-center justify-center">
       {/* Options and Chat Bar - Centered in middle of screen */}
@@ -37,7 +33,6 @@ export default function Screen1OptionsInsideChat() {
               </div>
             </div>
           </button>
-
           <button
             onClick={() => handleOptionSelect('leads')}
             className="w-64 text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all group"
@@ -55,7 +50,6 @@ export default function Screen1OptionsInsideChat() {
             </div>
           </button>
         </div>
-
         {/* Chat Input Bar - Below options, wider */}
         <div className="w-full max-w-4xl mx-auto">
           <ChatInputClaude
@@ -67,5 +61,4 @@ export default function Screen1OptionsInsideChat() {
       </div>
     </div>
   );
-}
-
+}

@@ -1,9 +1,7 @@
 'use client';
-
 import React from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { ArrowLeft } from 'lucide-react';
-
 interface StepLayoutProps {
   currentStep: number;
   totalSteps: number;
@@ -13,7 +11,6 @@ interface StepLayoutProps {
   showProgress?: boolean;
   onStepClick?: (step: number) => void;
 }
-
 export default function StepLayout({
   currentStep,
   totalSteps,
@@ -57,7 +54,6 @@ export default function StepLayout({
         >
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </IconButton>
-        
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
           {showProgress && (
             <Typography
@@ -75,7 +71,6 @@ export default function StepLayout({
               Step {currentStep} of {totalSteps}
             </Typography>
           )}
-          
           <Typography
             variant="h6"
             sx={{
@@ -88,7 +83,6 @@ export default function StepLayout({
           </Typography>
         </Box>
       </Box>
-
       {/* Progress Dots */}
       {showProgress && (
         <Box
@@ -107,7 +101,6 @@ export default function StepLayout({
             const isActive = stepNum === currentStep;
             const isCompleted = stepNum < currentStep;
             const isClickable = onStepClick && (isCompleted || stepNum === currentStep);
-            
             return (
               <Box
                 key={stepNum}
@@ -145,7 +138,6 @@ export default function StepLayout({
           })}
         </Box>
       )}
-
       {/* Content Area */}
       <Box
         sx={{
@@ -176,5 +168,4 @@ export default function StepLayout({
       </Box>
     </Box>
   );
-}
-
+}

@@ -1,17 +1,15 @@
 'use client';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter } from 'next/navigation';
-import { useCampaigns, useCampaignStats, type Campaign } from '@/features/campaigns';
+import { useCampaigns, useCampaignStats, useCampaignLiveUpdates, type Campaign } from '@/features/campaigns';
 import CampaignStatsCards from './CampaignStatsCards';
 import CampaignFilters from './CampaignFilters';
 import CampaignsTable from './CampaignsTable';
 import CampaignActionsMenu from './CampaignActionsMenu';
 import CreateCampaignDialog from './CreateCampaignDialog';
-
 export default function CampaignsList() {
   const router = useRouter();
   const { push } = useToast();
@@ -21,7 +19,8 @@ export default function CampaignsList() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState('');
-
+  // Enable live updates via SSE
+  useCampaignLiveUpdates();
   // SDK Hooks
   const {
     campaigns,
@@ -41,32 +40,26 @@ export default function CampaignsList() {
       [searchQuery, statusFilter]
     )
   );
-
   const { stats, error: statsError } = useCampaignStats();
-
   // Handle errors from SDK hooks
   useEffect(() => {
     if (campaignsError) {
       push({ variant: 'error', title: 'Error', description: campaignsError });
     }
   }, [campaignsError, push]);
-
   useEffect(() => {
     if (statsError) {
       console.error('[campaigns] Stats error:', statsError);
     }
   }, [statsError]);
-
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, campaign: Campaign) => {
     setAnchorEl(event.currentTarget);
     setSelectedCampaign(campaign);
   };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedCampaign(null);
   };
-
   const handleStartCampaign = async (campaignId: string) => {
     try {
       await start(campaignId);
@@ -77,7 +70,6 @@ export default function CampaignsList() {
     }
     handleMenuClose();
   };
-
   const handlePauseCampaign = async (campaignId: string) => {
     try {
       await pause(campaignId);
@@ -88,7 +80,6 @@ export default function CampaignsList() {
     }
     handleMenuClose();
   };
-
   const handleStopCampaign = async (campaignId: string) => {
     try {
       await stop(campaignId);
@@ -99,10 +90,8 @@ export default function CampaignsList() {
     }
     handleMenuClose();
   };
-
   const handleDeleteCampaign = async (campaignId: string) => {
     if (!window.confirm('Are you sure you want to delete this campaign?')) return;
-
     try {
       await remove(campaignId);
       push({ variant: 'success', title: 'Success', description: 'Campaign deleted successfully' });
@@ -112,7 +101,6 @@ export default function CampaignsList() {
     }
     handleMenuClose();
   };
-
   const filteredCampaigns = useMemo(
     () =>
       campaigns.filter((campaign: Campaign) =>
@@ -120,7 +108,6 @@ export default function CampaignsList() {
       ),
     [campaigns, searchQuery]
   );
-
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#F8F9FE', height: '100%', overflow: 'auto' }}>
       {/* Header */}
@@ -163,10 +150,8 @@ export default function CampaignsList() {
           Create Campaign
         </Button>
       </Box>
-
       {/* Stats Cards */}
       {stats && <CampaignStatsCards stats={stats} />}
-
       {/* Filters */}
       <CampaignFilters
         searchQuery={searchQuery}
@@ -174,14 +159,12 @@ export default function CampaignsList() {
         onSearchChange={setSearchQuery}
         onStatusChange={setStatusFilter}
       />
-
       {/* Campaigns Table */}
       <CampaignsTable
         campaigns={filteredCampaigns}
         loading={loading}
         onMenuOpen={handleMenuOpen}
       />
-
       {/* Actions Menu */}
       <CampaignActionsMenu
         anchorEl={anchorEl}
@@ -192,7 +175,6 @@ export default function CampaignsList() {
         onStop={handleStopCampaign}
         onDelete={handleDeleteCampaign}
       />
-
       {/* Create Campaign Dialog */}
       <CreateCampaignDialog
         open={createDialogOpen}
@@ -205,4 +187,4 @@ export default function CampaignsList() {
       />
     </Box>
   );
-}
+}

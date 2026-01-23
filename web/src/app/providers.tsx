@@ -6,7 +6,6 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { StripeProvider } from '../contexts/StripeContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 // Suppress Chrome extension message passing errors
 if (typeof window !== 'undefined') {
   // Handle console errors
@@ -19,7 +18,6 @@ if (typeof window !== 'undefined') {
     }
     originalError.apply(console, args as Parameters<typeof originalError>);
   };
-
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     const reason = event.reason?.toString() || '';
@@ -28,9 +26,6 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
-
-
 const glossyAITheme = createTheme({
   palette: {
     mode: 'light',
@@ -201,7 +196,6 @@ const glossyAITheme = createTheme({
     },
   },
 })
-
 export default function Providers({ children }: { children: React.ReactNode }) {
   // Single QueryClient instance for the app
   const [queryClient] = React.useState(() => new QueryClient({
@@ -214,7 +208,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   }));
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -226,4 +219,4 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       </AuthProvider>
     </QueryClientProvider>
   );
-}
+}

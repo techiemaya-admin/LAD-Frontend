@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useCallback, useMemo } from 'react';
 import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
 import {
@@ -24,7 +23,6 @@ import {
 } from '@mui/icons-material';
 import { StepDefinition } from '@/types/campaign';
 import { useCampaignStore } from '../store/campaignStore';
-
 const STEP_DEFINITIONS: StepDefinition[] = [
   {
     type: 'linkedin_visit',
@@ -203,7 +201,6 @@ const STEP_DEFINITIONS: StepDefinition[] = [
     defaultData: { title: 'Condition', conditionType: 'connected' },
   },
 ];
-
 const getIcon = (iconName: string) => {
   switch (iconName) {
     case 'linkedin':
@@ -226,20 +223,16 @@ const getIcon = (iconName: string) => {
       return <Send sx={{ fontSize: 20 }} />;
   }
 };
-
 export default function StepLibrary() {
   const addStep = useCampaignStore((state) => state.addStep);
-
   const handleDragStart = useCallback((e: React.DragEvent, stepType: string) => {
     e.dataTransfer.setData('application/reactflow', stepType);
     e.dataTransfer.effectAllowed = 'move';
   }, []);
-
   const handleClick = useCallback((step: StepDefinition) => {
     // Add step at center of canvas (will be positioned by React Flow)
     addStep(step.type, { x: 400, y: 300 });
   }, [addStep]);
-
   const linkedinSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'linkedin'), []);
   const emailSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'email'), []);
   const whatsappSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'whatsapp'), []);
@@ -247,7 +240,6 @@ export default function StepLibrary() {
   const instagramSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'instagram'), []);
   const leadsSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'leads'), []);
   const utilitySteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'utility'), []);
-
   return (
     <Box
       sx={{
@@ -262,7 +254,6 @@ export default function StepLibrary() {
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1E293B' }}>
         Step Library
       </Typography>
-
       {/* Lead Generation Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -321,10 +312,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* LinkedIn Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -383,10 +372,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* Email Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -445,10 +432,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* WhatsApp Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -507,10 +492,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* Voice Agent Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -569,10 +552,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* Instagram Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -632,10 +613,8 @@ export default function StepLibrary() {
           ))}
         </Stack>
       </Box>
-
       {/* Divider */}
       <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-
       {/* Utility Steps */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -696,5 +675,4 @@ export default function StepLibrary() {
       </Box>
     </Box>
   );
-}
-
+}

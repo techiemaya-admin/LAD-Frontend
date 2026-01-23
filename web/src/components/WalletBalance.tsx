@@ -1,15 +1,12 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-
 interface WalletData {
   balance: number;
   currency: string;
   transactions: Transaction[];
 }
-
 interface Transaction {
   id: string;
   amount: number;
@@ -18,7 +15,6 @@ interface Transaction {
   timestamp: string;
   status: 'completed' | 'pending' | 'failed';
 }
-
 interface CreditPackage {
   id: string;
   name: string;
@@ -29,7 +25,6 @@ interface CreditPackage {
   popular?: boolean;
   description: string;
 }
-
 export const WalletBalance: React.FC = () => {
   const [wallet, setWallet] = useState<WalletData>({
     balance: 0,
@@ -41,12 +36,10 @@ export const WalletBalance: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-
   useEffect(() => {
     fetchWalletData();
     fetchCreditPackages();
   }, []);
-
   const fetchWalletData = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
@@ -54,11 +47,9 @@ export const WalletBalance: React.FC = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
       if (!response.ok) {
         throw new Error('Failed to fetch wallet data');
       }
-      
       const data = await response.json();
       // Transform backend response to wallet data
       setWallet({
@@ -78,15 +69,12 @@ export const WalletBalance: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchCreditPackages = async () => {
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/wallet/packages`);
-      
       if (!response.ok) {
         throw new Error('Failed to fetch credit packages');
       }
-      
       const data = await response.json();
       setPackages(data.packages || []);
     } catch (error) {
@@ -95,10 +83,8 @@ export const WalletBalance: React.FC = () => {
       setPackages([]);
     }
   };
-
   const handleRecharge = async (packageId: string) => {
     setProcessing(true);
-    
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/wallet/recharge`, {
         method: 'POST',
@@ -112,11 +98,9 @@ export const WalletBalance: React.FC = () => {
           cancelUrl: `${window.location.origin}/wallet/cancel`,
         }),
       });
-
       if (!response.ok) {
         throw new Error('Failed to create recharge session');
       }
-
       const { sessionUrl } = await response.json();
       window.location.href = sessionUrl;
     } catch (error) {
@@ -127,7 +111,6 @@ export const WalletBalance: React.FC = () => {
       setShowRechargeModal(false);
     }
   };
-
   const formatDate = (timestamp: string) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       month: 'short',
@@ -137,7 +120,6 @@ export const WalletBalance: React.FC = () => {
       minute: '2-digit'
     });
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -145,7 +127,6 @@ export const WalletBalance: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Wallet Balance Card */}
@@ -163,17 +144,14 @@ export const WalletBalance: React.FC = () => {
             Add Credits
           </button>
         </div>
-        
         <div className="flex items-baseline">
           <span className="text-5xl font-bold">{wallet.balance.toLocaleString()}</span>
           <span className="text-xl ml-3 opacity-80">{wallet.currency}</span>
         </div>
-        
         <p className="text-blue-100 mt-2">
           Available credits for voice calls, data scraping, and AI queries
         </p>
       </div>
-
       {/* Recharge Modal */}
       {showRechargeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -192,12 +170,10 @@ export const WalletBalance: React.FC = () => {
                 </svg>
               </button>
             </div>
-
             <div className="p-8">
               <p className="text-gray-600 mb-6">
                 Select a credit package to recharge your wallet
               </p>
-
               {/* Credit Packages */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {packages.map((pkg) => (
@@ -217,7 +193,6 @@ export const WalletBalance: React.FC = () => {
                         </span>
                       </div>
                     )}
-                    
                     <div>
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -225,7 +200,6 @@ export const WalletBalance: React.FC = () => {
                           <p className="text-sm text-gray-500 mt-1">{pkg.description}</p>
                         </div>
                       </div>
-                      
                       <div className="mb-4">
                         <div className="flex items-baseline">
                           <span className="text-4xl font-bold text-gray-900">${pkg.price}</span>
@@ -237,7 +211,6 @@ export const WalletBalance: React.FC = () => {
                           ${pkg.pricePerCredit.toFixed(3)} per credit
                         </div>
                       </div>
-                      
                       {pkg.savings > 0 && (
                         <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-center">
                           <span className="text-green-700 font-semibold text-sm">
@@ -249,7 +222,6 @@ export const WalletBalance: React.FC = () => {
                   </div>
                 ))}
               </div>
-
               {/* Selected Package Action */}
               {selectedPackage && (
                 <button
@@ -270,7 +242,6 @@ export const WalletBalance: React.FC = () => {
                   )}
                 </button>
               )}
-              
               <p className="text-xs text-gray-500 mt-4 text-center">
                 Secure payment powered by Stripe. Credits never expire.
               </p>
@@ -278,13 +249,11 @@ export const WalletBalance: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Transaction History */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Transaction History</h3>
         </div>
-        
         <div className="divide-y divide-gray-200">
           {wallet.transactions.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-500">
@@ -310,13 +279,11 @@ export const WalletBalance: React.FC = () => {
                         </svg>
                       )}
                     </div>
-                    
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{transaction.description}</p>
                       <p className="text-sm text-gray-500">{formatDate(transaction.timestamp)}</p>
                     </div>
                   </div>
-                  
                   <div className="text-right">
                     <p className={`text-lg font-semibold ${
                       transaction.type === 'credit' ? 'text-green-600' : 'text-orange-600'
@@ -333,4 +300,4 @@ export const WalletBalance: React.FC = () => {
       </div>
     </div>
   );
-};
+};

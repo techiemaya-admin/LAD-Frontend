@@ -1,11 +1,9 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import ChatMessageBubble from '@/components/onboarding/ChatMessageBubble';
 import { Loader2, Bot } from 'lucide-react';
-
 export default function Screen0Greeting() {
   const {
     chatHistory,
@@ -14,11 +12,9 @@ export default function Screen0Greeting() {
     setHasStartedGreeting,
     setCurrentScreen,
   } = useOnboardingStore();
-
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userName, setUserName] = useState('there');
-
   // Get user name on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,22 +30,18 @@ export default function Screen0Greeting() {
       }
     }
   }, []);
-
   // Scroll when messages exist
   useEffect(() => {
     if (chatHistory.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatHistory]);
-
   const handleSend = async (message: string) => {
     if (!message.trim() || isProcessing) return;
-
     // If this is the first message, start the greeting flow
     if (!hasStartedGreeting && chatHistory.length === 0) {
       addChatMessage('user', message);
       setHasStartedGreeting(true);
-      
       setIsProcessing(true);
       setTimeout(() => {
         addChatMessage('ai', `Hey ${userName}! 👋\n\nI'm here to help you set up your automation workflow. Let's get started!`);
@@ -62,14 +54,11 @@ export default function Screen0Greeting() {
       return;
     }
   };
-
   const handleGetStarted = () => {
     if (hasStartedGreeting) return;
     handleSend('Get Started');
   };
-
   const hasMessages = chatHistory.length > 0;
-
   return (
     <div className="relative w-full h-screen bg-white flex flex-col overflow-hidden">
       {!hasMessages && (
@@ -83,7 +72,6 @@ export default function Screen0Greeting() {
                   Hey there, {userName} 👋
                 </h1>
               </div>
-
               {/* Centered Input - Directly below greeting */}
               <div className="w-full max-w-3xl">
                 <ChatInputClaude
@@ -92,7 +80,6 @@ export default function Screen0Greeting() {
                   placeholder="How can I help you today?"
                 />
               </div>
-
               {/* Get Started Button */}
               <button
                 onClick={handleGetStarted}
@@ -104,7 +91,6 @@ export default function Screen0Greeting() {
           </div>
         </>
       )}
-
       {hasMessages && (
         <>
           {/* Chat Messages - Scrollable */}
@@ -118,7 +104,6 @@ export default function Screen0Greeting() {
                   timestamp={message.timestamp}
                 />
               ))}
-
               {isProcessing && (
                 <div className="flex gap-4 w-full px-4 py-6 bg-white">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -130,11 +115,9 @@ export default function Screen0Greeting() {
                   </div>
                 </div>
               )}
-
               <div ref={messagesEndRef} />
             </div>
           </div>
-
           {/* Bottom Input - Fixed at bottom */}
           <div className="absolute bottom-0 left-0 right-0 w-full px-6 pb-4 bg-white border-t border-gray-200 pt-4">
             <ChatInputClaude
@@ -147,5 +130,4 @@ export default function Screen0Greeting() {
       )}
     </div>
   );
-}
-
+}

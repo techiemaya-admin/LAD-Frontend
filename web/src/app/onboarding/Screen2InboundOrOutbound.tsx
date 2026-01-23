@@ -1,12 +1,9 @@
 'use client';
-
 import React from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { Upload, Search, ArrowLeft, ArrowRight } from 'lucide-react';
-
 export default function Screen2InboundOrOutbound() {
   const { setLeadType, setCurrentScreen } = useOnboardingStore();
-
   const handleSelect = (type: 'inbound' | 'outbound') => {
     setLeadType(type);
     if (type === 'inbound') {
@@ -15,7 +12,6 @@ export default function Screen2InboundOrOutbound() {
       setCurrentScreen(4); // Navigate to outbound questions
     }
   };
-
   return (
     <div className="relative w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex-1 flex items-center justify-center p-8">
@@ -28,7 +24,6 @@ export default function Screen2InboundOrOutbound() {
             <ArrowLeft className="w-4 h-4" />
             <span>Back to options</span>
           </button>
-
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               How do you want to get started?
@@ -37,7 +32,6 @@ export default function Screen2InboundOrOutbound() {
               Choose how you'd like to work with leads
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Inbound Leads */}
             <div
@@ -58,7 +52,6 @@ export default function Screen2InboundOrOutbound() {
                 </div>
               </div>
             </div>
-
             {/* Outbound Leads */}
             <div
               onClick={() => handleSelect('outbound')}
@@ -83,5 +76,4 @@ export default function Screen2InboundOrOutbound() {
       </div>
     </div>
   );
-}
-
+}

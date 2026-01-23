@@ -5,10 +5,8 @@
  * Usage:
  *   import { DealsPipelineAPI, usePipeline, useLeads } from '@maya/features/deals-pipeline';
  */
-
 // Export API client
 export { DealsPipelineAPI, dealsPipelineAPI } from './api';
-
 // Export React hooks
 export {
   usePipelineBoard,
@@ -23,7 +21,6 @@ export {
   useStudent,
   useStudentMutations,
 } from './hooks';
-
 // Export TypeScript types
 export type {
   Lead,
@@ -46,4 +43,4 @@ export type {
   StudentListFilter,
   CreateStudentPayload,
   UpdateStudentPayload,
-} from './types';
+} from './types';
