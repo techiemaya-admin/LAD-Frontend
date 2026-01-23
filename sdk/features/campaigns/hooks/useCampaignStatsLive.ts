@@ -3,7 +3,7 @@
  * Uses Server-Sent Events (SSE) for live updates with polling fallback
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiGet } from '../../../shared/apiClient';
+import { apiClient } from '../../../shared/apiClient';
 interface PlatformMetrics {
   linkedin: { sent: number; connected: number; replied: number };
   email: { sent: number; connected: number; replied: number };
@@ -50,11 +50,11 @@ export function useCampaignStatsLive({
   // Fetch stats from REST endpoint
   const fetchStats = useCallback(async () => {
     try {
-      const response = await apiGet<{ success: boolean; data: CampaignStats }>(
+      const response = await apiClient.get<{ success: boolean; data: CampaignStats }>(
         `/campaigns/${campaignId}/stats`
       );
-      if (response.success && response.data) {
-        setStats(response.data);
+      if (response.data.success && response.data.data) {
+        setStats(response.data.data);
         setError(null);
       }
     } catch (err) {
@@ -108,7 +108,7 @@ export function useCampaignStatsLive({
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
-          `);
+          
           reconnectTimeoutRef.current = setTimeout(() => {
             connectSSE();
           }, delay);
@@ -170,4 +170,4 @@ export function useCampaignStatsLive({
     error,
     refresh
   };
-}
+}
