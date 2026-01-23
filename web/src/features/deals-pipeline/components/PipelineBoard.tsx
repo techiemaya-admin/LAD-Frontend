@@ -8,6 +8,7 @@ import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePrefer
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
+import { logger } from '@/lib/logger';
 import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 // Pipeline component imports
 import PipelineBoardToolbar from './PipelineBoardToolbar';
@@ -214,7 +215,7 @@ const PipelineBoard: React.FC = () => {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
     if (!isLoading) return;
-    :', {
+    console.debug('[PipelineBoard] Loading state:', {
       reduxStagesLoading,
       reduxLeadsLoading,
       masterDataLoading,
@@ -751,7 +752,7 @@ const PipelineBoard: React.FC = () => {
   }, [USE_REDUX_PIPELINE, dispatch]);
   const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<void> => {
     try {
-      ));
+      console.debug('[PipelineBoard] Creating stage:', stageData);
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for creating stage
         await dispatch(createStageAction({
@@ -805,7 +806,9 @@ const PipelineBoard: React.FC = () => {
       const state = store.getState() as { leads?: { leads?: Lead[]; lastUpdated?: number } };
       const currentLeads = state.leads?.leads || [];
       const rawLeadsInStage = currentLeads.filter(lead => lead.stage === stageKey);
-      ),
+      logger.debug('[PipelineBoard] Stage leads count debug:', {
+        stageKey,
+        rawLeadsInStage: rawLeadsInStage.length,
         allLeadsCount: currentLeads.length,
         timestamp: Date.now(),
         storeTimestamp: state.leads?.lastUpdated || 'unknown',
@@ -1251,4 +1254,4 @@ const PipelineBoard: React.FC = () => {
     </div>
   );
 };
-export default PipelineBoard;
+export default PipelineBoard;
