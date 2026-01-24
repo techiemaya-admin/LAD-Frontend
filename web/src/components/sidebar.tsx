@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap, MessageSquare } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -93,6 +93,13 @@ export function Sidebar() {
       icon: Send,
       details: "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: 'view_campaigns'
+    },
+    {
+      href: "/conversations",
+      label: "Conversations",
+      icon: MessageSquare,
+      details: "View and manage your social media conversations.",
+      requiredCapability: 'view_conversations'
     },
     {
       href: "/make-call",
@@ -428,4 +435,4 @@ export function Sidebar() {
       </aside>
     </>
   );
-}
+}

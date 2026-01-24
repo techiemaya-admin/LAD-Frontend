@@ -4,8 +4,8 @@
     "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "moduleResolution": "bundler",
-    "strict": true,
+    "moduleResolution": "node",
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -15,8 +15,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": ".",
+    "noImplicitAny": false,
     "paths": {
-      "@maya/*": ["./features/*"]
+      "@maya/*": ["./features/*"],
+      "@/*": ["../web/src/*"],
+      "@sdk/*": ["./"]
     }
   },
   "include": ["features/**/*"],

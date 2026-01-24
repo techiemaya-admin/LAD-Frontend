@@ -176,11 +176,18 @@ export function useCampaignLiveUpdates() {
     // Get auth token from localStorage (EventSource doesn't support custom headers)
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      console.error('[SSE] No auth token found, skipping campaign live updates');
       return;
     }
-    const eventSource = new EventSource(`${baseUrl}/api/campaigns/stream?token=${encodeURIComponent(token)}`);
+    
+    const sseUrl = `${baseUrl}/api/campaigns/stream?token=${encodeURIComponent(token)}`;
+    
+    const eventSource = new EventSource(sseUrl);
     eventSourceRef.current = eventSource;
+    
+    eventSource.onopen = () => {
+      // Connection established successfully
+    };
+    
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -192,14 +199,19 @@ export function useCampaignLiveUpdates() {
           queryClient.invalidateQueries({ queryKey: ['campaigns'] });
         }
       } catch (error) {
-        console.error('[SSE] Failed to parse campaign update:', error);
+        // Silent parse error
       }
     };
-    eventSource.onerror = (error) => {
-      console.error('[SSE] Campaign updates connection error:', error);
-    };
-    return () => {
+    
+    eventSource.onerror = () => {
+      // Silent error - SSE connection issues are expected in some environments
       eventSource.close();
+    };
+    
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
     };
   }, [queryClient]);
 }

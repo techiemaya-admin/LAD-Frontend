@@ -102,13 +102,21 @@ export const deleteStageAction = (stageKey: string): AppThunk => async (dispatch
     dispatch(removeStage(stageKey));
     logger.debug('[Redux] removeStage dispatched, stage deleted successfully:', stageKey);
   } catch (error) {
-    const err = error as Error & { response?: { status?: number } };
-    logger.error('[Redux] Failed to delete stage:', error);
-    logger.error('[Redux] Error details:', { message: err.message, status: err.response?.status });
+    const err = error as any;
+    logger.error('[Redux] Failed to delete stage:', {
+      errorType: typeof err,
+      errorConstructor: err?.constructor?.name,
+      errorMessage: err?.message || err?.toString() || 'Unknown error',
+      errorStack: err?.stack,
+      errorResponse: err?.response?.data,
+      errorStatus: err?.response?.status,
+      errorKeys: err ? Object.keys(err) : [],
+      rawError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+    });
     // Don't set stages error for validation errors (400 status)
     // These are expected business logic errors that should only show in snackbar
     if (err.response?.status !== 400) {
-      dispatch(setStagesError(err.message || 'Failed to delete stage'));
+      dispatch(setStagesError(err?.message || 'Failed to delete stage'));
     }
     throw error;
   }
@@ -170,7 +178,7 @@ export const createLeadAction = (leadData: Partial<Lead>): AppThunk => async (di
 // Update existing lead
 export const updateLeadAction = (leadId: string | number, updates: Partial<Lead>): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Updating lead:', leadId, updates);
+    logger.debug('[Redux] Updating lead:', { leadId, updates });
     const updatedLead = await pipelineService.updateLead(leadId, updates);
     dispatch(updateLead({ id: leadId, data: updatedLead }));
     logger.debug('[Redux] Lead updated successfully:', leadId);
@@ -198,7 +206,7 @@ export const deleteLeadAction = (leadId: string | number): AppThunk => async (di
 // Move lead to different stage (drag and drop)
 export const moveLeadAction = (leadId: string | number, newStageKey: string): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Moving lead:', leadId, 'to stage:', newStageKey);
+    logger.debug('[Redux] Moving lead:', { leadId, newStageKey });
     // Optimistic update first - this makes the UI instantly responsive
     dispatch(updateLead({ id: leadId, data: { stage: newStageKey } }));
     logger.debug('[Redux] Optimistic update applied for lead:', leadId);
@@ -267,9 +275,18 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
       leads: leads.length
     });
   } catch (error) {
-    const err = error as Error;
-    logger.error('[Redux] Failed to load pipeline data:', error);
-    const errorMessage = err.message || 'Failed to load pipeline data';
+    const err = error as any;
+    logger.error('[Redux] Failed to load pipeline data:', {
+      errorType: typeof err,
+      errorConstructor: err?.constructor?.name,
+      errorMessage: err?.message || err?.toString() || 'Unknown error',
+      errorStack: err?.stack,
+      errorResponse: err?.response?.data,
+      errorStatus: err?.response?.status,
+      errorKeys: err ? Object.keys(err) : [],
+      rawError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+    });
+    const errorMessage = err?.message || 'Failed to load pipeline data';
     dispatch(setStagesError(errorMessage));
     dispatch(setLeadsError(errorMessage));
   } finally {
@@ -299,4 +316,4 @@ export const refreshPipelineDataAction = (): AppThunk => async (dispatch) => {
     dispatch(setStagesLoading(false));
     dispatch(setLeadsLoading(false));
   }
-};
+};

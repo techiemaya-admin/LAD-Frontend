@@ -13,6 +13,7 @@ import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFr
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { mayaAI } from '@/features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
+import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@sdk/features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
@@ -29,7 +30,8 @@ type FlowState =
   | 'requirements_collection' // For FastMode requirements
   | 'inbound_campaign_name' // Inbound: Ask campaign name
   | 'inbound_campaign_days' // Inbound: Ask campaign days
-  | 'inbound_leads_per_day'; // Inbound: Ask leads per day
+  | 'inbound_leads_per_day' // Inbound: Ask leads per day
+  | 'icp_discovery_mode'; // ICP: Conversational discovery mode
 interface ChatPanelProps {
   campaignId?: string | null;
 }
@@ -89,6 +91,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     isInboundFormVisible,
     setIsInboundFormVisible,
   } = useOnboardingStore();
+  
+  // State for duplicate lead detection
+  const [duplicateLeadsInfo, setDuplicateLeadsInfo] = useState<any>(null);
+  const [pendingLeadsData, setPendingLeadsData] = useState<any>(null);
+
   // Initialize workflow preview on mount ONLY if there's no existing workflow
   // This preserves workflow when navigating back
   useEffect(() => {
@@ -116,7 +123,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         const campaign = response.data;
         // Convert campaign steps to workflow preview format
         if (campaign.steps && campaign.steps.length > 0) {
-          const workflowSteps: WorkflowPreviewStep[] = campaign.steps.map((step, index) => ({
+          const workflowSteps: WorkflowPreviewStep[] = campaign.steps.map((step: any, index: number) => ({
             id: `step-${index + 1}`,
             type: step.type as any,
             title: step.title || `Step ${index + 1}`,
@@ -281,11 +288,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           timestamp: new Date(),
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error processing inbound answer', error);
       addAIMessage({
         role: 'ai',
-        content: `Error processing your answer: ${error.message}. Please try again.`,
+        content: `Error processing your answer: ${(error as Error).message}. Please try again.`,
         timestamp: new Date(),
       });
     } finally {
@@ -293,7 +300,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     }
   };
   // Handle inbound data submission and Gemini analysis
-  const handleInboundDataSubmit = async (data: InboundLeadData) => {
+  const handleInboundDataSubmit = async (data: InboundLeadData, skipDuplicates = false) => {
     setIsSubmittingInbound(true);
     setInboundLeadData(data);
     try {
@@ -328,48 +335,118 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           }
         }
         if (leadsToSave.length > 0) {
-          const saveResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api/inbound-leads`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
-            },
-            body: JSON.stringify({ leads: leadsToSave })
-          });
-          if (!saveResponse.ok) {
-            logger.warn('Failed to save leads to database, continuing with analysis', {
-              status: saveResponse.status
+          try {
+            const saveResult = await saveInboundLeads({ 
+              leads: leadsToSave, 
+              skipDuplicates 
             });
-          } else {
-            const saveResult = await saveResponse.json();
+            
+            if (!saveResult.success) {
+              logger.warn('Failed to save leads to database, continuing with analysis', {
+                error: saveResult.message
+              });
+            } else {
+            
+            // Check if duplicates were found
+            if (saveResult.duplicatesFound && saveResult.data?.duplicates) {
+              // Store duplicate info and pending data
+              setDuplicateLeadsInfo(saveResult.data);
+              setPendingLeadsData(data);
+              setIsSubmittingInbound(false);
+              
+              // Show duplicate leads information to user
+              const duplicates = saveResult.data.duplicates;
+              let duplicateMessage = `⚠️ **Found ${duplicates.length} Existing Lead(s)**\n\n`;
+              duplicateMessage += `I found the following leads already in your database:\n\n`;
+              
+              duplicates.forEach((dup: any, idx: number) => {
+                const existing = dup.existingLead;
+                const matched = dup.matchedOn.join(', ');
+                duplicateMessage += `**${idx + 1}. ${existing.first_name || ''} ${existing.last_name || ''}** (${existing.company_name || 'No company'})\n`;
+                duplicateMessage += `   • Matched on: ${matched}\n`;
+                
+                // Show booking information if available
+                if (dup.bookings && dup.bookings.length > 0) {
+                  const activeBookings = dup.bookings.filter((b: any) => b.status !== 'cancelled');
+                  if (activeBookings.length > 0) {
+                    duplicateMessage += `   • **Scheduled Follow-ups:** ${activeBookings.length}\n`;
+                    activeBookings.slice(0, 2).forEach((booking: any) => {
+                      const date = new Date(booking.scheduled_at).toLocaleString();
+                      duplicateMessage += `     - ${booking.booking_type || 'Follow-up'} on ${date} (${booking.status})\n`;
+                    });
+                    if (activeBookings.length > 2) {
+                      duplicateMessage += `     - ... and ${activeBookings.length - 2} more\n`;
+                    }
+                  }
+                } else {
+                  duplicateMessage += `   • No scheduled follow-ups\n`;
+                }
+                duplicateMessage += `\n`;
+              });
+              
+              duplicateMessage += `**What would you like to do?**\n\n`;
+              duplicateMessage += `• **Skip duplicates** - Only add the ${saveResult.data.newLeadsCount} new lead(s)\n`;
+              duplicateMessage += `• **Override & include all** - Add all ${leadsToSave.length} leads (may create duplicates)\n`;
+              duplicateMessage += `• **Trigger immediate follow-up** - Schedule follow-up actions for existing leads\n`;
+              
+              addAIMessage({
+                role: 'ai',
+                content: duplicateMessage,
+                timestamp: new Date(),
+                options: [
+                  { label: 'Skip Duplicates (Recommended)', value: 'skip_duplicates' },
+                  { label: 'Include All Leads', value: 'include_all' },
+                  { label: 'Trigger Immediate Follow-up', value: 'trigger_followup' }
+                ]
+              });
+              
+              return; // Stop here and wait for user decision
+            }
+            
             logger.info('Leads saved to database successfully', {
               saved: saveResult.data?.saved,
               total: saveResult.data?.total,
-              leadIds: saveResult.data?.leadIds
+              skipped: saveResult.data?.skippedDuplicates
             });
-            // Debug: Check the full response structure
-            logger.info('🔍 [Lead Save] Full saveResult:', saveResult);
-            logger.info('🔍 [Lead Save] saveResult.data:', saveResult.data);
-            logger.info('🔍 [Lead Save] saveResult.data?.leadIds:', saveResult.data?.leadIds);
-            logger.info('🔍 [Lead Save] Is array?', Array.isArray(saveResult.data?.leadIds));
-            logger.info('🔍 [Lead Save] Length:', saveResult.data?.leadIds?.length);
             // Store lead IDs in the inbound data for later use when creating campaign
             if (saveResult.data?.leadIds && saveResult.data.leadIds.length > 0) {
               data.leadIds = saveResult.data.leadIds;
               setInboundLeadData({ ...data, leadIds: saveResult.data.leadIds }); // Update store
-              logger.info('✅ Stored lead IDs in inbound data', { leadIds: data.leadIds });
+              logger.info('✅ Stored lead IDs in inbound data', { count: data.leadIds.length });
             } else {
-              logger.error('❌ No lead IDs found in response!', {
+              logger.warn('❌ No lead IDs returned from server', {
                 hasData: !!saveResult.data,
-                hasLeadIds: !!saveResult.data?.leadIds,
-                leadIdsType: typeof saveResult.data?.leadIds,
-                leadIdsValue: saveResult.data?.leadIds
+                hasLeadIds: !!saveResult.data?.leadIds
               });
             }
+            }
+          } catch (innerError) {
+            const err = innerError as any;
+            logger.error('[ChatPanel] Error saving leads to database:', {
+              errorType: typeof err,
+              errorConstructor: err?.constructor?.name,
+              errorMessage: err?.message || err?.toString() || 'Unknown error',
+              errorStack: err?.stack,
+              errorResponse: err?.response?.data,
+              errorStatus: err?.response?.status,
+              errorKeys: err ? Object.keys(err) : [],
+              rawError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+            });
+            // Continue with analysis even if save fails
           }
         }
       } catch (saveError) {
-        logger.error('Error saving leads to database', saveError);
+        const err = saveError as any;
+        logger.error('[ChatPanel] Error in lead save process:', {
+          errorType: typeof err,
+          errorConstructor: err?.constructor?.name,
+          errorMessage: err?.message || err?.toString() || 'Unknown error',
+          errorStack: err?.stack,
+          errorResponse: err?.response?.data,
+          errorStatus: err?.response?.status,
+          errorKeys: err ? Object.keys(err) : [],
+          rawError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+        });
         // Continue with analysis even if save fails
       }
       // Analyze inbound data with Gemini
@@ -428,11 +505,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           timestamp: new Date(),
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error processing inbound data', error);
       addAIMessage({
         role: 'ai',
-        content: `❌ Error processing inbound data: ${error.message || 'Unknown error'}. Please try again.`,
+        content: `❌ Error processing inbound data: ${(error as Error).message || 'Unknown error'}. Please try again.`,
         timestamp: new Date(),
       });
     } finally {
@@ -452,19 +529,16 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         timestamp: new Date(),
       });
     } else {
-      // Outbound: Continue with existing ICP flow
+      // Outbound: Show options for ICP discovery
       addAIMessage({
         role: 'ai',
-        content: `Excellent! You've selected **Outbound** lead generation.\n\nI'll help you define your Ideal Customer Profile (ICP) and set up a targeted outreach campaign. Let's start by understanding your target audience.`,
+        content: `Excellent! You've selected **Outbound** lead generation.\n\nI'll help you define your Ideal Customer Profile (ICP) and set up a targeted outreach campaign. Let's start by understanding your target audience.\n\nHow would you like to proceed?`,
         timestamp: new Date(),
+        options: [
+          { label: 'Yes, let\'s start', value: 'start_icp_discovery' },
+          { label: 'Skip to Specific Ask', value: 'skip_to_specific' }
+        ]
       });
-      // Start the existing ICP onboarding flow
-      setIsICPOnboardingActive(true);
-      setTimeout(() => {
-        if (!chatStepController.isComplete && chatStepController.currentStepIndex === 0) {
-          chatStepController.startFlow();
-        }
-      }, 100);
     }
   };
   // Chat step controller for ICP onboarding
@@ -519,38 +593,60 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         };
         // If inbound lead data exists, include the uploaded lead IDs
         if (inboundLeadData) {
-          logger.info('🔧 [Campaign Creation] Checking inbound lead data', { 
-            hasInboundData: true, 
-            leadIds: inboundLeadData.leadIds,
-            leadIdsLength: inboundLeadData.leadIds?.length 
-          });
-          // The lead IDs were returned when we saved leads earlier
-          // Extract them from the lead data stored in the onboarding store
           const leadIds = inboundLeadData.leadIds || [];
+          
+          // Check if we have lead IDs
           if (leadIds.length > 0) {
             campaignData.inbound_lead_ids = leadIds;
             campaignData.config.campaign_type = 'inbound'; // Store in config, not top-level
             logger.info('🔧 [Campaign Creation] ✅ Adding inbound lead IDs to campaign', { 
-              leadIdsCount: leadIds.length,
-              leadIds: leadIds 
+              leadIdsCount: leadIds.length
             });
           } else {
-            logger.error('🔧 [Campaign Creation] ❌ No lead IDs found in inbound data!', { inboundLeadData });
+            // No lead IDs found - this happens when leads are uploaded but IDs aren't returned from backend
+            const leadCount = 
+              (inboundLeadData.linkedinProfiles?.filter(Boolean).length || 0) +
+              (inboundLeadData.emailIds?.filter(Boolean).length || 0) +
+              (inboundLeadData.phoneNumbers?.filter(Boolean).length || 0);
+            
+            if (leadCount > 0) {
+              // We have lead data but no IDs - this means backend didn't save them properly
+              logger.warn('🔧 [Campaign Creation] ⚠️ Lead data exists but no IDs were returned', { 
+                leadCount,
+                companyName: inboundLeadData.companyName
+              });
+              // Create a temporary warning message but allow proceeding
+              addAIMessage({
+                role: 'ai',
+                content: "⚠️ Note: Your lead data is ready, but the system couldn't assign unique IDs to them. The campaign will proceed with your uploaded data.",
+                timestamp: new Date(),
+              });
+              // For now, we'll proceed without explicit IDs - the backend can handle this
+            } else {
+              // No lead data and no IDs - genuinely missing data
+              logger.error('🔧 [Campaign Creation] ❌ No lead data or IDs found in inbound data!', { 
+                campaignName: campaignData.name,
+                note: 'Please upload your leads again before creating the campaign.'
+              });
+              // Show error message to user with option to upload again
+              addAIMessage({
+                role: 'ai',
+                content: "⚠️ I notice you haven't uploaded any leads yet. Please upload your lead data before creating the campaign. Would you like to upload your leads now?",
+                timestamp: new Date(),
+              });
+              // Show the inbound form again
+              setIsInboundFormVisible(true);
+              return; // Stop campaign creation
+            }
           }
         } else {
           logger.info('🔧 [Campaign Creation] No inbound lead data - this is an outbound campaign');
         }
-        logger.info('🚀 [Campaign Creation] Final campaign payload (display)', { 
+        logger.info('🚀 [Campaign Creation] Final campaign payload', { 
           name: campaignData.name,
           hasInboundLeadIds: !!campaignData.inbound_lead_ids,
           inboundLeadIdsCount: campaignData.inbound_lead_ids?.length,
-          inboundLeadIds: campaignData.inbound_lead_ids,
           campaignType: campaignData.config?.campaign_type
-        });
-        logger.info('📤 [Campaign Creation] ACTUAL campaignData object keys:', {
-          keys: Object.keys(campaignData),
-          inbound_lead_ids: campaignData.inbound_lead_ids,
-          hasKey: 'inbound_lead_ids' in campaignData
         });
         const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
         if (createResponse.success) {
@@ -573,11 +669,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             }, 1500);
           }
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.error('Error creating/starting campaign', error);
         addAIMessage({
           role: 'ai',
-          content: `❌ Error creating campaign: ${error.message || 'Unknown error'}. Please try again from the campaigns page.`,
+          content: `❌ Error creating campaign: ${(error as Error).message || 'Unknown error'}. Please try again from the campaigns page.`,
           timestamp: new Date(),
         });
       }
@@ -695,13 +791,14 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       if (response.workflowUpdates && Array.isArray(response.workflowUpdates)) {
         processWorkflowUpdates(response.workflowUpdates);
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error sending workflow command', error);
+      const err = error as any;
       addAIMessage({
         role: 'ai',
-        content: error.response?.data?.text || error.message || 'I encountered an error. Please try again.',
+        content: err.response?.data?.text || err.message || 'I encountered an error. Please try again.',
         timestamp: new Date(),
-        searchResults: error.response?.data?.searchResults || undefined,
+        searchResults: err.response?.data?.searchResults || undefined,
       });
     } finally {
       setIsProcessingAI(false);
@@ -722,12 +819,20 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   // Auto-start ICP onboarding flow on page load if in CHAT mode with leads selected
   // IMPORTANT: Only start if campaignDataType is 'outbound' (inbound has its own form flow)
   useEffect(() => {
+    // Check if the last AI message has ICP mode selection options
+    const lastAIMessage = aiMessages.filter(m => m.role === 'ai').slice(-1)[0];
+    const hasICPChoiceOptions = lastAIMessage?.options?.some(
+      opt => opt.value === 'start_icp_discovery' || opt.value === 'skip_to_specific'
+    );
+    
     if (
       !campaignId && // Don't start if editing existing campaign
       hasSelectedOption &&
       selectedPath === 'leads' &&
       onboardingMode === 'CHAT' &&
       campaignDataType === 'outbound' && // Only auto-start for outbound flow
+      flowState !== 'icp_discovery_mode' && // Don't auto-start if in discovery mode
+      !hasICPChoiceOptions && // Don't auto-start if waiting for user to choose ICP mode
       !isICPOnboardingActive &&
       !isICPFlowStarted && // Check persisted flag to prevent restart on refresh
       !chatStepController.isComplete &&
@@ -738,6 +843,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         selectedPath,
         onboardingMode,
         campaignDataType,
+        flowState,
         isICPOnboardingActive,
         isICPFlowStarted,
         isComplete: chatStepController.isComplete,
@@ -749,7 +855,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         chatStepController.startFlow();
       }, 100);
     }
-  }, [hasSelectedOption, selectedPath, onboardingMode, aiMessages.length, isICPFlowStarted, campaignDataType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSelectedOption, selectedPath, onboardingMode, aiMessages.length, isICPFlowStarted, campaignDataType, flowState]); // eslint-disable-line react-hooks/exhaustive-deps
   const startAIConversation = async (path: 'automation' | 'leads') => {
     setIsProcessingAI(true);
     // Set state based on path
@@ -1168,6 +1274,287 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     });
     setUserAnswers((prev) => ({ ...prev, [questionKey]: answer }));
     try {
+      // Handle ICP discovery flow selection
+      if (answerText === 'start_icp_discovery') {
+        logger.info('[ICP Discovery] User selected "Yes, let\'s start" - activating discovery mode');
+        setIsProcessingAI(false);
+        addAIMessage({
+          role: 'ai',
+          content: `Great! Let's dive deep into understanding your ideal customer.\n\n**First, tell me about your company** - What do you do and what problems do you solve for your customers?\n\n_This helps me understand your business so I can identify who would be the best fit to buy from you._\n\n_Example: "We're a SaaS platform that helps e-commerce brands automate their customer support. We reduce response time from hours to minutes and help teams handle 3x more tickets with the same staff."_`,
+          timestamp: new Date(),
+        });
+        // Start ICP discovery mode
+        setFlowState('icp_discovery_mode');
+        logger.info('[ICP Discovery] Flow state set to icp_discovery_mode');
+        return;
+      } else if (answerText === 'skip_to_specific') {
+        logger.info('[ICP Discovery] User selected "Skip to Specific Ask" - starting structured discovery mode');
+        setIsProcessingAI(false);
+        
+        // Use ICP discovery mode but with a more structured approach
+        addAIMessage({
+          role: 'ai',
+          content: `Perfect! I'll ask you specific questions to build your ideal customer profile quickly.\n\n**What industry or type of business are you targeting?**\n\n_Examples: E-commerce, SaaS, Healthcare, Manufacturing, Retail, etc._`,
+          timestamp: new Date(),
+        });
+        // Start ICP discovery mode (same as conversational but with more direct questions)
+        setFlowState('icp_discovery_mode');
+        logger.info('[ICP Discovery] Flow state set to icp_discovery_mode (structured path)');
+        return;
+      }
+      
+      // Handle duplicate lead options
+      if (duplicateLeadsInfo && pendingLeadsData) {
+        if (answerText === 'skip_duplicates') {
+          // Re-submit with skipDuplicates flag
+          setDuplicateLeadsInfo(null);
+          setPendingLeadsData(null);
+          addAIMessage({
+            role: 'ai',
+            content: `✅ Skipping ${duplicateLeadsInfo.duplicateCount} duplicate lead(s). Processing ${duplicateLeadsInfo.newLeadsCount} new lead(s)...`,
+            timestamp: new Date(),
+          });
+          setIsProcessingAI(false);
+          setIsSubmittingInbound(true); // Set loading state
+          await handleInboundDataSubmit(pendingLeadsData, true); // skipDuplicates = true
+          return;
+        } else if (answerText === 'include_all') {
+          // Force include all leads by bypassing duplicate check
+          setDuplicateLeadsInfo(null);
+          setPendingLeadsData(null);
+          addAIMessage({
+            role: 'ai',
+            content: `⚠️ Including all leads. Note: This may create duplicate entries in your database.`,
+            timestamp: new Date(),
+          });
+          // Re-submit without duplicate checking (would need backend endpoint modification)
+          // For now, just proceed with skip_duplicates to avoid actual duplicates
+          setIsProcessingAI(false);
+          setIsSubmittingInbound(true); // Set loading state
+          await handleInboundDataSubmit(pendingLeadsData, true);
+          return;
+        } else if (answerText === 'trigger_followup') {
+          // Show follow-up action options
+          setDuplicateLeadsInfo(null);
+          setPendingLeadsData(null);
+          const duplicates = duplicateLeadsInfo.duplicates;
+          addAIMessage({
+            role: 'ai',
+            content: `📅 **Immediate Follow-up Actions**\n\nI'll schedule follow-up actions for the ${duplicates.length} existing lead(s).\n\nWhat type of follow-up would you like?\n\n• **Call** - Schedule a phone call\n• **Email** - Send a follow-up email\n• **LinkedIn Message** - Send a LinkedIn message\n• **Meeting** - Schedule a meeting\n• **Skip Follow-up** - Cancel existing bookings and re-nurture as new leads\n\n_Note: The new ${duplicateLeadsInfo.newLeadsCount} lead(s) will be added to your campaign as well._`,
+            timestamp: new Date(),
+            options: [
+              { label: 'Schedule Call', value: 'followup_call' },
+              { label: 'Send Email', value: 'followup_email' },
+              { label: 'LinkedIn Message', value: 'followup_linkedin' },
+              { label: 'Schedule Meeting', value: 'followup_meeting' },
+              { label: 'Skip Follow-up (Cancel & Re-nurture)', value: 'skip_followup' }
+            ]
+          });
+          setIsProcessingAI(false);
+          return;
+        } else if (answerText.startsWith('followup_')) {
+          // Handle follow-up action scheduling
+          const actionType = answerText.replace('followup_', '');
+          
+          if (actionType === 'skip_followup') {
+            // Show confirmation before cancelling bookings
+            const duplicateLeadIds = duplicateLeadsInfo?.duplicates?.map((dup: any) => dup.existingLead.id).filter(Boolean) || [];
+            const totalBookings = duplicateLeadsInfo?.duplicates?.reduce((sum: number, dup: any) => {
+              return sum + (dup.bookings?.filter((b: any) => b.status !== 'cancelled').length || 0);
+            }, 0) || 0;
+            
+            if (totalBookings > 0) {
+              addAIMessage({
+                role: 'ai',
+                content: `⚠️ **Confirmation Required**\n\n**Are you sure you want to skip follow-ups?**\n\nThis action will:\n• Cancel **${totalBookings} scheduled follow-up(s)** for ${duplicateLeadIds.length} existing lead(s)\n• Remove these leads from their current nurture sequences\n• Re-add them to your new campaign as fresh leads\n\n**This action cannot be undone.**\n\nDo you want to proceed?`,
+                timestamp: new Date(),
+                options: [
+                  { label: 'Yes, Cancel & Re-nurture', value: 'confirm_skip_followup' },
+                  { label: 'No, Keep Existing Follow-ups', value: 'cancel_skip_followup' }
+                ]
+              });
+              setIsProcessingAI(false);
+              return;
+            } else {
+              // No active bookings, proceed without confirmation
+              addAIMessage({
+                role: 'ai',
+                content: `No active follow-ups found. Proceeding with ${duplicateLeadsInfo?.newLeadsCount || 0} new lead(s)...`,
+                timestamp: new Date(),
+              });
+            }
+          } else {
+            // TODO: Implement actual booking creation for other types
+            addAIMessage({
+              role: 'ai',
+              content: `✅ Follow-up ${actionType} scheduled for existing leads. Processing ${duplicateLeadsInfo?.newLeadsCount || 0} new lead(s)...`,
+              timestamp: new Date(),
+            });
+          }
+          
+          setIsProcessingAI(false);
+          setIsSubmittingInbound(true); // Set loading state
+          if (pendingLeadsData) {
+            await handleInboundDataSubmit(pendingLeadsData, true);
+          }
+          return;
+        } else if (answerText === 'confirm_skip_followup') {
+          // User confirmed - proceed with cancellation
+          const duplicateLeadIds = duplicateLeadsInfo?.duplicates?.map((dup: any) => dup.existingLead.id).filter(Boolean) || [];
+          
+          if (duplicateLeadIds.length > 0) {
+            try {
+              addAIMessage({
+                role: 'ai',
+                content: `🔄 Cancelling existing follow-ups and re-nurturing ${duplicateLeadIds.length} lead(s)...`,
+                timestamp: new Date(),
+              });
+              
+              // Cancel bookings via API
+              const cancelResult = await cancelLeadBookingsForReNurturing(duplicateLeadIds);
+              
+              addAIMessage({
+                role: 'ai',
+                content: `✅ Cancelled ${cancelResult.data.cancelledBookings} scheduled follow-up(s). These leads will now be treated as new leads in your campaign.\n\nProcessing ${duplicateLeadsInfo?.newLeadsCount || 0} new lead(s)...`,
+                timestamp: new Date(),
+              });
+            } catch (error) {
+              logger.error('[ChatPanel] Failed to cancel bookings:', {
+                error: (error as Error).message
+              });
+              addAIMessage({
+                role: 'ai',
+                content: `⚠️ Failed to cancel existing bookings: ${(error as Error).message}. Proceeding with ${duplicateLeadsInfo?.newLeadsCount || 0} new lead(s)...`,
+                timestamp: new Date(),
+              });
+            }
+          }
+          
+          setIsProcessingAI(false);
+          setIsSubmittingInbound(true); // Set loading state
+          if (pendingLeadsData) {
+            await handleInboundDataSubmit(pendingLeadsData, true);
+          }
+          return;
+        } else if (answerText === 'cancel_skip_followup') {
+          // User cancelled - go back to duplicate options
+          addAIMessage({
+            role: 'ai',
+            content: `Keeping existing follow-ups intact. Please choose another option:`,
+            timestamp: new Date(),
+            options: [
+              { label: 'Skip Duplicates (Recommended)', value: 'skip_duplicates' },
+              { label: 'Include All Leads', value: 'include_all' },
+              { label: 'Trigger Immediate Follow-up', value: 'trigger_followup' }
+            ]
+          });
+          setIsProcessingAI(false);
+          return;
+        }
+      }
+      
+      // Handle ICP discovery mode - conversational ICP profiling
+      if (flowState === 'icp_discovery_mode') {
+        const historyWithTimestamp = aiMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        }));
+        
+        // Prepend ICP discovery context to the message
+        const icpContextPrefix = `[ICP Discovery Mode - You are an expert business consultant helping identify the user's IDEAL CUSTOMER PROFILE (who they want to SELL TO).
+
+CRITICAL INSTRUCTIONS:
+- When the user describes their company/business, you are learning about what THEY do and what they SELL
+- DO NOT confuse the user's own industry with their TARGET customer's industry
+- Example: If user says "We're a SaaS platform", their OWN industry is Software/SaaS, but their TARGET industry is the industry of companies they want to sell TO (e.g., E-commerce, Healthcare, Manufacturing, etc.)
+- Example: If user says "We manufacture glass and aluminum", their OWN industry is Manufacturing, but their TARGET should be who they sell to (e.g., Commercial Buildings, Construction Companies, etc.)
+
+YOUR GOAL: Understand the CUSTOMER they want to target, not categorize their own business.
+
+Conversation Flow:
+1. First, understand what the user's company does and what problems they solve
+2. Then ask about their BEST EXISTING CUSTOMERS - what industries/types of companies have bought from them
+3. Ask about patterns in these successful customers (size, industry, pain points, decision makers)
+4. Build a profile of their IDEAL CUSTOMER (not their own company)
+
+## Your Output:
+After gathering sufficient information (typically 8-12 questions), synthesize your findings into a structured ICP profile that includes:
+- **Profile Name**: A memorable name for this segment
+- **Company Profile**: Industry, size, growth stage, location
+- **Key Pain Points**: Top 3-4 problems they face
+- **Decision Criteria**: What matters most in their buying decision
+- **Success Metrics**: How they measure ROI/success
+- **Buying Process**: Typical sales cycle and decision-makers
+- **Recommended Go-to-Market**: Channels and messaging for reaching them
+
+## Conversation Guidelines:
+- Start with understanding their business (what they do, what they sell)
+- Then explore their current customer success stories (who are your best customers?)
+- Move toward defining market characteristics (industries, company sizes, locations)
+- End by identifying decision-making patterns (who decides, what matters, how long is sales cycle)
+- Stay conversational - avoid feeling like an interrogation
+- Ask questions naturally and conversationally, one or two at a time
+- Clarify any ambiguous answers
+- Make educated guesses and validate them with follow-up questions
+- Provide brief, relatable examples for each question to help users understand what you're looking for
+- Use the example answers as a reference for the depth and specificity you're looking for
+
+When complete, present the comprehensive ICP profile focused on the TARGET CUSTOMER and ask for confirmation before proceeding.]\n\nUser response: `;
+        
+        // Send to AI with ICP discovery context
+        const response = await sendGeminiPrompt(
+          icpContextPrefix + answer,
+          historyWithTimestamp,
+          questionKey,
+          selectedPath || 'automation',
+          {},
+          {
+            selectedPath: selectedPath || 'automation',
+            selectedCategory: selectedCategory || null,
+            selectedPlatforms,
+            platformsConfirmed: false,
+            platformFeatures: {},
+            workflowNodes: [],
+            currentState: 'STATE_1'
+          }
+        );
+        
+        // Check if ICP discovery is complete (AI signals readiness to move forward)
+        const completionKeywords = ['icp profile complete', 'ready to proceed', 'start setting up', 'begin campaign', 'icp_complete'];
+        const isComplete = completionKeywords.some(keyword => 
+          response.text.toLowerCase().includes(keyword)
+        );
+        
+        if (isComplete) {
+          // Show final ICP summary and transition to campaign setup
+          addAIMessage({
+            role: 'ai',
+            content: response.text + '\n\n✅ **Great! Now let\'s set up your targeted outreach campaign.**',
+            timestamp: new Date(),
+          });
+          
+          // Switch to regular ICP flow
+          setFlowState('initial');
+          setIsICPOnboardingActive(true);
+          setTimeout(() => {
+            if (!chatStepController.isComplete && chatStepController.currentStepIndex === 0) {
+              chatStepController.startFlow();
+            }
+          }, 500);
+        } else {
+          // Continue discovery conversation
+          addAIMessage({
+            role: 'ai',
+            content: response.text,
+            timestamp: new Date(),
+          });
+        }
+        
+        setIsProcessingAI(false);
+        return;
+      }
+      
       // STRICT WAITING RULE: Check for platform confirmation
       if (flowState === 'platform_confirmation' || workflowState === 'STATE_2') {
         const confirmationKeywords = ['continue', 'done', 'no more', 'that\'s all', 'finish', 'proceed', 'that\'s it', 'no'];
@@ -1610,18 +1997,19 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
                   if (response.workflowUpdates && Array.isArray(response.workflowUpdates)) {
                     processWorkflowUpdates(response.workflowUpdates);
                   }
-                } catch (error: any) {
-                  logger.error('Error sending message from initial screen', error);
+                } catch (error) {
+                  const err = error as any;
+                  logger.error('Error sending message from initial screen', err);
                   logger.error('Error details', {
-                    message: error.message,
-                    response: error.response?.data,
-                    status: error.response?.status,
+                    message: err.message,
+                    response: err.response?.data,
+                    status: err.response?.status,
                   });
                   addAIMessage({
                     role: 'ai',
-                    content: error.response?.data?.text || error.message || 'I encountered an error. Please try again.',
+                    content: err.response?.data?.text || err.message || 'I encountered an error. Please try again.',
                     timestamp: new Date(),
-                    searchResults: error.response?.data?.searchResults || undefined,
+                    searchResults: err.response?.data?.searchResults || undefined,
                   });
                 } finally {
                   setIsProcessingAI(false);
@@ -1900,16 +2288,18 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
                         onClick={() => {
                           // If ICP flow is active and we have the controller, use it
                           if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
-                            chatStepController.handleOptionSubmit(option.value);
+                            chatStepController.handleOptionSubmit([option.value]);
                           }
                           // For old inbound flow state (before platform selection), use handleInboundAnswer
                           else if (flowState === 'inbound_leads_per_day' || flowState === 'inbound_campaign_name' || flowState === 'inbound_campaign_days') {
                             handleInboundAnswer(option.value);
                           } else {
-                            handleAnswer(option.value,
+                            handleAnswer(
+                              option.value,
                               flowState === 'platform_selection' ? 'platforms' :
                                 flowState === 'platform_features' ? `features_${currentPlatform}` :
-                                  currentUtilityQuestion || 'unknown'
+                                  flowState === 'initial' ? 'icp_choice' :
+                                    currentUtilityQuestion || 'unknown'
                             );
                           }
                         }}
@@ -2228,18 +2618,19 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
               if (response.workflowUpdates && Array.isArray(response.workflowUpdates)) {
                 processWorkflowUpdates(response.workflowUpdates);
               }
-            } catch (error: any) {
-              logger.error('Error sending message', error);
+            } catch (error) {
+              const err = error as any;
+              logger.error('Error sending message', err);
               logger.error('Error details', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status,
               });
               addAIMessage({
                 role: 'ai',
-                content: error.response?.data?.text || error.message || 'I encountered an error. Please try again.',
+                content: err.response?.data?.text || err.message || 'I encountered an error. Please try again.',
                 timestamp: new Date(),
-                searchResults: error.response?.data?.searchResults || undefined,
+                searchResults: err.response?.data?.searchResults || undefined,
               });
             } finally {
               setIsProcessingAI(false);
@@ -2261,4 +2652,4 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       )}
     </div>
   );
-}
+}

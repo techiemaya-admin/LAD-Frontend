@@ -34,7 +34,11 @@ export {
   getCampaignLeads,
   getLeadProfileSummary,
   generateLeadProfileSummary,
+  saveInboundLeads,
+  getInboundLeads,
+  cancelLeadBookingsForReNurturing,
 } from './api';
+
 // ============================================================================
 // HOOKS
 // ============================================================================
@@ -43,6 +47,7 @@ export { useCampaign } from './hooks/useCampaign';
 export { useCampaignStats } from './hooks/useCampaignStats';
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 export { useCampaignLeads } from './hooks/useCampaignLeads';
+export { useSaveInboundLeads, useInboundLeads, useCancelLeadBookings } from './hooks/useInboundLeads';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -63,4 +68,4 @@ export type { UseCampaignsReturn } from './hooks/useCampaigns';
 export type { UseCampaignReturn } from './hooks/useCampaign';
 export type { UseCampaignStatsReturn } from './hooks/useCampaignStats';
 export type { UseCampaignAnalyticsReturn } from './hooks/useCampaignAnalytics';
-export type { UseCampaignLeadsReturn } from './hooks/useCampaignLeads';
+export type { UseCampaignLeadsReturn } from './hooks/useCampaignLeads';
