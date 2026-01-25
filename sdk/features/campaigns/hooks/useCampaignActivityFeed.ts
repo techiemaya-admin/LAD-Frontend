@@ -125,7 +125,16 @@ export function useCampaignActivityFeed(
           console.log('[ActivityFeed] SSE readyState:', eventSource.readyState);
           setIsConnected(false);
           eventSource.close();
-          // Reconnect after 5 seconds
+          
+          // Don't reconnect if it's an authentication error (readyState 2 = CLOSED)
+          // Authentication errors return JSON instead of SSE stream, causing MIME type errors
+          if (eventSource.readyState === 2) {
+            console.warn('[ActivityFeed] SSE connection closed (possible auth error). Not reconnecting.');
+            console.warn('[ActivityFeed] Please log out and log back in to refresh your session.');
+            return;
+          }
+          
+          // Reconnect after 5 seconds for other errors
           setTimeout(() => {
             if (eventSourceRef.current === eventSource) {
               console.log('[ActivityFeed] Attempting to reconnect...');
