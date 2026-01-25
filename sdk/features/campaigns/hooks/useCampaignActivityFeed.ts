@@ -96,7 +96,7 @@ export function useCampaignActivityFeed(
         // Ensure URL includes /api prefix
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
         const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
-        const sseUrl = `${baseUrl}/campaigns/${campaignId}/analytics?limit=${limit}&token=${encodeURIComponent(token)}`;
+        const sseUrl = `${baseUrl}/campaigns/${campaignId}/analytics?limit=${options.limit}&token=${encodeURIComponent(token)}`;
         console.log('[ActivityFeed] Connecting to SSE:', sseUrl.replace(token, 'TOKEN_HIDDEN'));
         
         const eventSource = new EventSource(sseUrl);
