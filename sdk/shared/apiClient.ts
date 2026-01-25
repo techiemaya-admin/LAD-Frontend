@@ -16,8 +16,11 @@ type RequestOptions = {
 class ApiClient {
   private baseURL: string;
   constructor() {
-    // Use environment variable or default to localhost
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    // Use environment variable (required in production)
+    if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_API_URL environment variable is required in production');
+    }
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004/api';
   }
   private async request<T>(
     method: string,
@@ -110,4 +113,4 @@ export const apiDelete = <T = any>(path: string, options?: RequestOptions) =>
 export const apiPatch = <T = any>(path: string, body?: any, options?: RequestOptions) => 
   apiClient.patch<T>(path, body, options);
 // Export type for use in tests
-export type { ApiClient, ApiResponse, RequestOptions };
+export type { ApiClient, ApiResponse, RequestOptions };
