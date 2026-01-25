@@ -73,7 +73,9 @@ export function useCampaignStatsLive({
         setError(new Error('Authentication required'));
         return;
       }
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+      // Ensure URL includes /api prefix
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
+      const baseUrl = backendUrl ? `${backendUrl}/api` : '/api';
       // Construct SSE URL with auth token
       const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
       const eventSource = new EventSource(sseUrl);

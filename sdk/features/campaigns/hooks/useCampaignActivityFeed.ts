@@ -93,8 +93,10 @@ export function useCampaignActivityFeed(
         if (!process.env.NEXT_PUBLIC_BACKEND_URL && !process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
           throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
         }
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
-        const sseUrl = `${baseUrl}/api/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
+        // Ensure URL includes /api prefix
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
+        const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
+        const sseUrl = `${baseUrl}/campaigns/${campaignId}/analytics?limit=${limit}&token=${encodeURIComponent(token)}`;
         console.log('[ActivityFeed] Connecting to SSE:', sseUrl.replace(token, 'TOKEN_HIDDEN'));
         
         const eventSource = new EventSource(sseUrl);

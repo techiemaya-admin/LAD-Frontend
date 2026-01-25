@@ -16,11 +16,20 @@ type RequestOptions = {
 class ApiClient {
   private baseURL: string;
   constructor() {
-    // Use environment variable (required in production)
-    if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
-      throw new Error('NEXT_PUBLIC_API_URL environment variable is required in production');
+    // Use NEXT_PUBLIC_BACKEND_URL (preferred) or NEXT_PUBLIC_API_URL (legacy fallback)
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+    
+    if (!backendUrl && process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
     }
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004/api';
+    
+    // If backend URL is provided, append /api; otherwise use local default
+    if (backendUrl) {
+      // Check if URL already contains /api suffix
+      this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
+    } else {
+      this.baseURL = 'http://localhost:3004/api';
+    }
   }
   private async request<T>(
     method: string,
@@ -43,7 +52,7 @@ class ApiClient {
     };
     // Add auth token from localStorage if available
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
