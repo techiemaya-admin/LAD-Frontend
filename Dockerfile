@@ -31,6 +31,7 @@ WORKDIR /app/web
 # Accept build arguments for API URL
 ARG VITE_BACKEND_URL
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_BASE
 ARG NEXT_PUBLIC_BACKEND_URL
 ARG NEXT_PUBLIC_ICP_BACKEND_URL
 ARG NEXT_PUBLIC_SOCKET_URL
@@ -48,7 +49,14 @@ ENV NODE_ENV=production
 # Generate Prisma client if prisma directory exists
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
 
-RUN npm run build
+# Build with environment variables explicitly set
+RUN NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
+    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-${NEXT_PUBLIC_BACKEND_URL}} \
+    NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL} \
+    NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL} \
+    NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI} \
+    npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner

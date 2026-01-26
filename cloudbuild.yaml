@@ -12,6 +12,8 @@ steps:
       - '--build-arg'
       - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
       - '--build-arg'
+      - 'NEXT_PUBLIC_API_BASE=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - '--build-arg'
       - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
       - '--build-arg'
       - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
