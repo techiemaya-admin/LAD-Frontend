@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 import { safeStorage } from '@/utils/storage';
@@ -86,9 +86,10 @@ export default function CampaignLeadsPage() {
       // Fetch summaries for all leads in parallel
       const summaryPromises = leads.map(async (lead) => {
         try {
-          // Use the correct campaigns endpoint for lead summary
-          const response = await fetch(`/api/campaigns/${campaignId}/leads/${lead.id}/summary`);
-          const data = await response.json();
+          // Use apiGet to ensure correct backend URL
+          const data = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
+            `/api/campaigns/${campaignId}/leads/${lead.id}/summary`
+          );
           if (data.success && data.summary) {
             return { leadId: lead.id, summary: data.summary };
           }
@@ -160,13 +161,9 @@ export default function CampaignLeadsPage() {
     try {
       // First, try to get existing summary
       try {
-        const token = safeStorage.getItem('token');
-        const response = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-        });
-        const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
+        const existingSummary = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
+          `/api/campaigns/${campaignId}/leads/${employee.id}/summary`
+        );
         if (existingSummary.success && existingSummary.summary) {
           setProfileSummary(existingSummary.summary);
           setSummaryLoading(false);
@@ -175,15 +172,10 @@ export default function CampaignLeadsPage() {
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
         }
-      // Generate new summary
-      const token = safeStorage.getItem('token');
-      const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+      // Generate new summary using apiPost
+      const response = await apiPost<{ success: boolean; summary: string; generated_at?: string }>(
+        `/api/campaigns/${campaignId}/leads/${employee.id}/summary`,
+        {
           leadId: employee.id,
           campaignId: campaignId,
           profileData: {
@@ -195,9 +187,8 @@ export default function CampaignLeadsPage() {
             phone: employee.phone,
             linkedin_url: employee.linkedin_url,
           },
-        }),
-      });
-      const response = await generateResponse.json() as { success: boolean; summary: string; generated_at?: string };
+        }
+      );
       if (response.success && response.summary) {
         setProfileSummary(response.summary);
       } else {
@@ -374,4 +365,4 @@ export default function CampaignLeadsPage() {
       />
     </Box>
   );
-}
+}

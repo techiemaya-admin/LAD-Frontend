@@ -174,7 +174,8 @@ export function useCampaignLiveUpdates() {
     // Connect to SSE endpoint for all campaigns updates
     const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
     // Get auth token from localStorage (EventSource doesn't support custom headers)
-    const token = localStorage.getItem('auth_token');
+    // Check both 'auth_token' and 'token' for compatibility
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (!token) {
       return;
     }
