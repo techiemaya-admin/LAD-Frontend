@@ -44,6 +44,14 @@ export default function CampaignLeadsPage() {
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;
+  
+  // Debug: Log first lead to check photo_url
+  useEffect(() => {
+    if (leads.length > 0) {
+      console.log('First lead data:', leads[0]);
+      console.log('Photo URL:', leads[0].photo_url);
+    }
+  }, [leads]);
   // Note: Pagination would ideally come from SDK
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -233,50 +241,56 @@ export default function CampaignLeadsPage() {
     );
   }
   return (
-    <Box sx={{ p: 3, bgcolor: '#F8F9FE', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-            sx={{ minWidth: 'auto' }}
-          >
-            Back to Analytics
-          </Button>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
-              Campaign Leads
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#64748B' }}>
-              {filteredLeads.length} leads
-            </Typography>
+    <Box sx={{ 
+      width: '100%',
+      height: '100vh',
+      overflow: 'auto',
+      bgcolor: '#F8F9FE'
+    }}>
+      <Box sx={{ p: 3, pb: 6 }}>
+        {/* Header */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              startIcon={<ArrowBack />}
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+              sx={{ minWidth: 'auto' }}
+            >
+              Back to Analytics
+            </Button>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
+                Campaign Leads
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B' }}>
+                {filteredLeads.length} leads
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
-      {/* Search */}
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          placeholder="Search leads by name, email, company, or title..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search sx={{ color: '#64748B' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            bgcolor: 'white',
-            borderRadius: '12px',
-            '& .MuiOutlinedInput-root': {
+        {/* Search */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="Search leads by name, email, company, or title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: '#64748B' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              bgcolor: 'white',
               borderRadius: '12px',
-            }
-          }}
-        />
-      </Box>
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+              }
+            }}
+          />
+        </Box>
       {/* Employee Cards Grid */}
       {filteredLeads.length === 0 ? (
         <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
@@ -363,6 +377,7 @@ export default function CampaignLeadsPage() {
         loading={summaryLoading}
         error={summaryError}
       />
+      </Box>
     </Box>
   );
 }
