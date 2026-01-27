@@ -28,12 +28,13 @@ function handleAuthError(status: number, path: string) {
     }
   }
 }
-export async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, { 
     cache: "no-store", 
     credentials: 'include',
-    headers: { ...authHeaders() } 
+    headers: { ...authHeaders() },
+    signal: options?.signal
   });
   if (!res.ok) {
     handleAuthError(res.status, p);

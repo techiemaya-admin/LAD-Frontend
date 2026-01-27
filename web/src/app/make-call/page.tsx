@@ -1,11 +1,17 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+
 import MakeCallContent from "./make-call-content";
+
 export default function MakeCallPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const router = useRouter();
+
+ 
+
   useEffect(() => {
     (async () => {
       try {
@@ -18,6 +24,7 @@ export default function MakeCallPage() {
       }
     })();
   }, [router]);
+
   if (authed === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -25,8 +32,12 @@ export default function MakeCallPage() {
       </div>
     );
   }
+
   if (!authed) return <></>;
+
   return (
+
       <MakeCallContent />
+
   );
-}
+}

@@ -44,7 +44,6 @@ export function Sidebar() {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
-  const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayName, setDisplayName] = useState('User');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -153,7 +152,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <img
-            src={isHydrated && companyLogo ? companyLogo : logo.src}
+            src="/logo.png"
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -175,7 +174,7 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <img
-              src={isHydrated && companyLogo ? companyLogo : logo.src}
+              src="/logo.png"
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
@@ -262,7 +261,7 @@ export function Sidebar() {
         )}
       >
         <img
-          src={isHydrated && companyLogo ? companyLogo : logo.src}
+          src="/logo.png"
           alt="Company Logo"
           loading="eager"
           fetchPriority="high"

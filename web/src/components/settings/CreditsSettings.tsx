@@ -11,9 +11,9 @@ export const CreditsSettings: React.FC = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('Just now');
   const presetAmounts = [
-    { value: 29, label: 'Starter Pack' },
-    { value: 129, label: 'Professional' },
-    { value: 349, label: 'Business' },
+    { value: 99, label: 'Starter' },
+    { value: 199, label: 'Professional' },
+    { value: 499, label: 'Business' },
     { value: 999, label: 'Enterprise' },
   ];
   // Fetch wallet balance on component mount
@@ -264,34 +264,62 @@ export const CreditsSettings: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-gray-900">Voice Calls</span>
-              <span className="text-blue-600 font-semibold">$0.015/min</span>
+              <span className="font-medium text-gray-900">Voice Calls (Cartesia)</span>
+              <span className="text-blue-600 font-semibold">3 cr/min</span>
             </div>
-            <p className="text-xs text-gray-600">Per minute of call time</p>
+            <p className="text-xs text-gray-600">Per minute (includes analytics)</p>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-gray-900">SMS Messages</span>
-              <span className="text-blue-600 font-semibold">$0.0075/msg</span>
+              <span className="font-medium text-gray-900">Premium Voice (ElevenLabs)</span>
+              <span className="text-blue-600 font-semibold">4 cr/min</span>
             </div>
-            <p className="text-xs text-gray-600">Per SMS message sent</p>
+            <p className="text-xs text-gray-600">Higher quality voice + analytics</p>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-gray-900">Lead Credits</span>
-              <span className="text-blue-600 font-semibold">$79/2,500</span>
+              <span className="font-medium text-gray-900">Lead + Email</span>
+              <span className="text-blue-600 font-semibold">5 credits</span>
             </div>
-            <p className="text-xs text-gray-600">Credits for lead generation</p>
+            <p className="text-xs text-gray-600">Per lead with email address</p>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-gray-900">Data Enrichment</span>
-              <span className="text-blue-600 font-semibold">Variable</span>
+              <span className="font-medium text-gray-900">Phone Reveal</span>
+              <span className="text-blue-600 font-semibold">10 credits</span>
             </div>
-            <p className="text-xs text-gray-600">Based on data type and volume</p>
+            <p className="text-xs text-gray-600">Per phone number revealed</p>
+          </div>
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Profile Summary</span>
+              <span className="text-blue-600 font-semibold">5 credits</span>
+            </div>
+            <p className="text-xs text-gray-600">AI-generated profile summary</p>
+          </div>
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">LinkedIn Connection</span>
+              <span className="text-blue-600 font-semibold">50 cr/mo</span>
+            </div>
+            <p className="text-xs text-gray-600">Monthly connection fee</p>
+          </div>
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Google Connection</span>
+              <span className="text-blue-600 font-semibold">20 cr/mo</span>
+            </div>
+            <p className="text-xs text-gray-600">Monthly connection fee</p>
+          </div>
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-gray-900">Outlook Connection</span>
+              <span className="text-blue-600 font-semibold">20 cr/mo</span>
+            </div>
+            <p className="text-xs text-gray-600">Monthly connection fee</p>
           </div>
         </div>
       </div>
     </div>
   );
-};
+};

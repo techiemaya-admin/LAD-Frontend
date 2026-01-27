@@ -33,14 +33,17 @@ export default function CampaignLeadsPage() {
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  
   // Fetch campaign to get campaign_type
-  const { campaign, loading: campaignLoading } = useCampaign(campaignId);
+  const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
+  
   // Use SDK hook for leads
   const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
     useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
   );
+  
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;

@@ -2,6 +2,7 @@
 // import { useEffect, useState } from "react";
 // import { apiGet } from "@/lib/api";
 // import { CreateNumberClient } from "@/components/create-number-client";
+
 // export type PhoneNumber = {
 //   id: string;
 //   e164: string;
@@ -10,10 +11,12 @@
 //   sid?: string;
 //   account?: string;
 // };
+
 // export default function PhoneNumbersPage() {
 //   const [items, setItems] = useState<PhoneNumber[]>([]);
 //   const [search, setSearch] = useState("");
 //   const [filterProvider, setFilterProvider] = useState("All");
+
 //   useEffect(() => {
 //     async function fetchData() {
 //       const { items } = await apiGet<{ items: PhoneNumber[] }>("/api/phoneNumbers");
@@ -21,6 +24,7 @@
 //     }
 //     fetchData();
 //   }, []);
+
 //   const filteredItems = items.filter((n) => {
 //     const matchesSearch =
 //       n.label?.toLowerCase().includes(search.toLowerCase()) ||
@@ -28,11 +32,15 @@
 //       n.provider?.toLowerCase().includes(search.toLowerCase()) ||
 //       n.account?.toLowerCase().includes(search.toLowerCase()) ||
 //       n.sid?.toLowerCase().includes(search.toLowerCase());
+
 //     const matchesProvider =
 //       filterProvider === "All" || n.provider === filterProvider;
+
 //     return matchesSearch && matchesProvider;
 //   });
+
 //   const uniqueProviders = Array.from(new Set(items.map((n) => n.provider))).filter(Boolean);
+
 //   return (
 //     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-[#0a0a0a] dark:via-[#111111] dark:to-[#1a1a1a] p-8 transition-all duration-500">
 //       <div className="max-w-7xl mx-auto space-y-8">
@@ -45,6 +53,7 @@
 //             <CreateNumberClient />
 //           </div>
 //         </div>
+
 //         {/* Filters */}
 //         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/60 dark:bg-white/10 p-4 rounded-2xl border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md">
 //           <input
@@ -54,6 +63,7 @@
 //             onChange={(e) => setSearch(e.target.value)}
 //             className="w-full sm:w-1/2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none bg-white/80 dark:bg-gray-900/50 text-gray-900 dark:text-gray-200"
 //           />
+
 //           <select
 //             value={filterProvider}
 //             onChange={(e) => setFilterProvider(e.target.value)}
@@ -67,6 +77,7 @@
 //             ))}
 //           </select>
 //         </div>
+
 //         {/* Table */}
 //         <div className="overflow-hidden rounded-2xl backdrop-blur-lg bg-white/70 dark:bg-white/5 border border-white/30 dark:border-white/10 shadow-2xl transition-all duration-500 hover:shadow-3xl">
 //           <table className="w-full text-base text-gray-800 dark:text-gray-200">
@@ -112,10 +123,13 @@
 //     </div>
 //   );
 // } 
+
+
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { CreateNumberClient } from "@/components/create-number-client";
+
 export type PhoneNumber = {
   id: string;
   phone_number: string;
@@ -127,19 +141,23 @@ export type PhoneNumber = {
   status?: string;
   created_at?: string;
 };
+
 export default function PhoneNumbersPage() {
   const [items, setItems] = useState<PhoneNumber[]>([]);
   const [search, setSearch] = useState("");
   const [filterProvider, setFilterProvider] = useState("All");
+
   const fetchData = useCallback(async () => {
     const response = await apiGet<{ success: boolean; numbers: PhoneNumber[] }>("/api/voice-agent/numbers");
     if (response.success) {
       setItems(response.numbers);
     }
   }, []);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
   const filteredItems = items.filter((n) => {
     const searchLower = search.toLowerCase();
     const matchesSearch =
@@ -150,11 +168,15 @@ export default function PhoneNumbersPage() {
       n.sid?.toLowerCase().includes(searchLower) ||
       n.type?.toLowerCase().includes(searchLower) ||
       n.status?.toLowerCase().includes(searchLower);
+
     const matchesProvider =
       filterProvider === "All" || n.provider === filterProvider;
+
     return matchesSearch && matchesProvider;
   });
+
   const uniqueProviders = Array.from(new Set(items.map((n) => n.provider))).filter(Boolean);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-[#0a0a0a] dark:via-[#111111] dark:to-[#1a1a1a] p-10 transition-all duration-500">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -167,6 +189,7 @@ export default function PhoneNumbersPage() {
             <CreateNumberClient onCreated={fetchData} />
           </div>
         </div> */}
+
          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 shadow-lg rounded-3xl px-8 py-6 border border-gray-200 dark:border-gray-700">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
             ✆ Phone Numbers
@@ -174,7 +197,9 @@ export default function PhoneNumbersPage() {
           <div className="transition-transform duration-300 hover:scale-110">
             <CreateNumberClient onCreated={fetchData} />
           </div>
+
         </div>
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-6 items-center justify-between bg-white/70 dark:bg-white/10 p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md">
           <input
@@ -184,6 +209,7 @@ export default function PhoneNumbersPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-2/3 px-5 py-3 text-lg rounded-xl border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none bg-white/80 dark:bg-gray-900/50 text-gray-900 dark:text-gray-200"
           />
+
           <select
             value={filterProvider}
             onChange={(e) => setFilterProvider(e.target.value)}
@@ -197,6 +223,7 @@ export default function PhoneNumbersPage() {
             ))}
           </select>
         </div>
+
         {/* Table */}
         <div className="overflow-hidden rounded-3xl backdrop-blur-xl bg-white/80 dark:bg-white/5 border border-white/30 dark:border-white/10 shadow-3xl transition-all duration-500 hover:shadow-4xl">
           <table className="w-full text-lg text-gray-800 dark:text-gray-200">
@@ -241,4 +268,4 @@ export default function PhoneNumbersPage() {
       </div>
     </div>
   );
-}
+}

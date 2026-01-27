@@ -7,6 +7,7 @@ export interface VoiceAgent {
   created_at: string;
   updated_at: string;
 }
+
 export interface CallLog {
   id: string;
   voice_agent_id: string;
@@ -18,6 +19,7 @@ export interface CallLog {
   created_at: string;
   updated_at: string;
 }
+
 export interface PhoneNumber {
   id: string;
   tenant_id: string;
@@ -31,6 +33,7 @@ export interface PhoneNumber {
   created_at?: string;
   updated_at?: string;
 }
+
 export interface BatchCallLogEntry {
   call_log_id: string | null;
   batch_id: string;
@@ -45,4 +48,4 @@ export interface BatchCallLogEntry {
   error: string | null;
   started_at: string | null;
   ended_at: string | null;
-}
+}
