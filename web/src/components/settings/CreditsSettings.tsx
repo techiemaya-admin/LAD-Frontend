@@ -11,10 +11,10 @@ export const CreditsSettings: React.FC = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('Just now');
   const presetAmounts = [
-    { value: 99, label: 'Starter' },
-    { value: 199, label: 'Professional' },
-    { value: 499, label: 'Business' },
-    { value: 999, label: 'Enterprise' },
+    { value: 99, credits: 1000, label: 'Starter' },
+    { value: 199, credits: 3000, label: 'Professional' },
+    { value: 499, credits: 12000, label: 'Business' },
+    { value: 999, credits: 12000, label: 'Enterprise' },
   ];
   // Fetch wallet balance on component mount
   useEffect(() => {
@@ -63,11 +63,18 @@ export const CreditsSettings: React.FC = () => {
     }
     setIsProcessing(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to proceed with payment');
+        setIsProcessing(false);
+        return;
+      }
       // Create Stripe checkout session for credit purchase
       const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-credits-checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount: amount,
@@ -124,7 +131,7 @@ export const CreditsSettings: React.FC = () => {
                 <Loader2 className="h-8 w-8 animate-spin text-white" />
               </div>
             ) : (
-              <p className="text-4xl font-bold">${balance.toFixed(2)}</p>
+              <p className="text-4xl font-bold">{balance.toLocaleString()}</p>
             )}
           </div>
           <div className="text-right">
@@ -158,8 +165,10 @@ export const CreditsSettings: React.FC = () => {
                         : 'border-gray-200 hover:border-blue-400'
                     }`}
                   >
-                    <p className="text-2xl font-bold text-gray-900">${preset.value}</p>
-                    <p className="text-sm text-gray-600 mt-1">{preset.label}</p>
+                    <p className="text-2xl font-bold text-blue-600">{preset.credits.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">credits</p>
+                    <p className="text-sm text-gray-700 mt-1 font-medium">${preset.value}</p>
+                    <p className="text-xs text-gray-500">{preset.label}</p>
                   </button>
                 ))}
               </div>
@@ -179,8 +188,13 @@ export const CreditsSettings: React.FC = () => {
               {(selectedAmount || customAmount) && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <span className="font-semibold">Total: </span>
-                    ${customAmount || selectedAmount}
+                    <span className="font-semibold">You'll receive: </span>
+                    {(() => {
+                      const amount = parseFloat(customAmount) || selectedAmount;
+                      const preset = presetAmounts.find(p => p.value === amount);
+                      const credits = preset ? preset.credits : Math.round(amount * 10.1); // Approximate for custom amounts
+                      return `${credits.toLocaleString()} credits for $${amount}`;
+                    })()}
                   </p>
                 </div>
               )}
@@ -278,10 +292,10 @@ export const CreditsSettings: React.FC = () => {
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-gray-900">Lead + Email</span>
-              <span className="text-blue-600 font-semibold">5 credits</span>
+              <span className="font-medium text-gray-900">Email + Linkedin URL</span>
+              <span className="text-blue-600 font-semibold">2 credits</span>
             </div>
-            <p className="text-xs text-gray-600">Per lead with email address</p>
+            <p className="text-xs text-gray-600">Per lead with email address and Linkedin Profile URL</p>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">

@@ -37,5 +37,18 @@ export interface CampaignLead {
   updated_at: string;
   lead_data?: any;
   custom_fields?: any;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  enriched_email?: string | null;
+  enriched_linkedin_url?: string | null;
+  photo_url?: string;
+  company?: string;
+  title?: string;
+  is_inbound?: boolean;
+  profile_summary?: string;
   [key: string]: any;
-}
+}

@@ -458,17 +458,17 @@ export default function PricingPage() {
             {/* Lead Enrichment Data */}
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Lead Search</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Lead Enrichment</h3>
                 <div className="text-2xl">🎯</div>
               </div>
               <div className="mb-4">
-                <div className="text-3xl font-bold text-orange-600">5-15</div>
+                <div className="text-3xl font-bold text-orange-600">2-17</div>
                 <div className="text-sm text-gray-600">credits per lead</div>
               </div>
               <div className="space-y-2 text-sm text-gray-700">
                 <div className="flex justify-between">
-                  <span>Lead + Email</span>
-                  <span className="font-medium">5 credits</span>
+                  <span>Email + LinkedIn URL</span>
+                  <span className="font-medium">2 credits</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Phone Reveal</span>
@@ -480,12 +480,12 @@ export default function PricingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Complete Data</span>
-                  <span className="font-medium">20 credits</span>
+                  <span className="font-medium">17 credits</span>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-orange-200">
                 <div className="text-xs text-gray-600">
-                  100 leads with phones ≈ 2,000 credits
+                  100 leads with phones ≈ 1,700 credits
                 </div>
               </div>
             </div>

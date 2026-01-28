@@ -59,14 +59,14 @@ export default function CampaignLeadsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   // Reveal state for employee contacts
-  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
-  const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
-  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string }>>({});
+  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
+  const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
+  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string; linkedin_url?: string }>>({});
   // Type-safe state setters
-  const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+  const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => {
     setRevealedContacts(updater);
   };
-  const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+  const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => {
     setRevealingContacts(updater);
   };
   // Profile summary dialog state
@@ -146,16 +146,29 @@ export default function CampaignLeadsPage() {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
     try {
-      const response = await apiPost<any>('/api/apollo-leads/reveal-email', {
-        person_id: employee.id
+      const response = await apiPost<any>(`/api/campaigns/${campaignId}/leads/${employee.id}/reveal-email`, {
+        apollo_person_id: employee.apollo_person_id || employee.id
       });
       if (response.success && response.email) {
         // Store the revealed email value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: response.email } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-        push({ title: 'Success', description: 'Email address revealed' });
+        
+        // Update the employee object with enriched email
+        employee.enriched_email = response.email;
+        employee.email = response.email;
+        
+        push({ 
+          title: 'Success', 
+          description: response.from_database 
+            ? 'Email retrieved (no credits used)' 
+            : `Email revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)` 
+        });
+        
+        // Trigger re-render
+        refetch();
       } else {
-        push({ title: 'Error', description: 'Failed to reveal email' });
+        push({ title: 'Error', description: response.error || 'Failed to reveal email' });
       }
     } catch (error) {
       push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal email' });
@@ -163,6 +176,34 @@ export default function CampaignLeadsPage() {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
     }
   };
+
+  const handleRevealLinkedIn = async (employee: ExtendedCampaignLead) => {
+    const idKey = employee.id || employee.name || '';
+    setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
+    try {
+      const response = await apiPost<any>(`/api/campaigns/${campaignId}/leads/${employee.id}/reveal-linkedin`, {});
+      if (response.success && response.linkedin_url) {
+        // Store the revealed LinkedIn URL value
+        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin_url: response.linkedin_url } }));
+        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
+        
+        // Update the employee object with the revealed LinkedIn URL
+        const updatedEmployee = { ...employee, linkedin_url: response.linkedin_url, enriched_linkedin_url: response.linkedin_url };
+        
+        push({ 
+          title: 'Success', 
+          description: response.from_database ? 'LinkedIn profile retrieved (no credits used)' : 'LinkedIn profile revealed' 
+        });
+      } else {
+        push({ title: 'Info', description: response.error || 'LinkedIn URL not available for this lead' });
+      }
+    } catch (error) {
+      push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal LinkedIn' });
+    } finally {
+      setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: false } }));
+    }
+  };
+
   const handleViewSummary = async (employee: ExtendedCampaignLead) => {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
@@ -332,6 +373,8 @@ export default function CampaignLeadsPage() {
                     email: lead.email,
                     phone: lead.phone,
                     linkedin_url: lead.linkedin_url,
+                    enriched_email: lead.enriched_email,
+                    enriched_linkedin_url: lead.enriched_linkedin_url,
                     photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
                     is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
                   }}
@@ -340,6 +383,7 @@ export default function CampaignLeadsPage() {
                   revealingContacts={revealingContacts}
                   handleRevealPhone={handleRevealPhone}
                   handleRevealEmail={handleRevealEmail}
+                  handleRevealLinkedIn={handleRevealLinkedIn}
                   onViewSummary={handleViewSummary}
                   profileSummary={lead.profile_summary || null}
                   hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns

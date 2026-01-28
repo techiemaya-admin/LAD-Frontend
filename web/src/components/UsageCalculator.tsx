@@ -116,8 +116,8 @@ export const UsageCalculator: React.FC = () => {
     const totalMinutes = voiceCalls * callLength;
     const voiceCredits = totalMinutes * (premiumVoice ? 4 : 3);
 
-    // Lead search (5 credits per lead with email)
-    const leadCredits = leads * 5;
+    // Lead enrichment (2 credits per lead with email + LinkedIn URL)
+    const leadCredits = leads * 2;
 
     // Phone reveals (10 credits per reveal)
     const phoneCredits = phoneReveals * 10;
@@ -234,15 +234,15 @@ export const UsageCalculator: React.FC = () => {
             </div>
 
             <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Search</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Enrichment</h3>
               <SliderRow
-                label="Leads with email"
+                label="Leads with email + LinkedIn"
                 value={leads}
                 min={0}
                 max={500}
                 step={10}
                 onChange={setLeads}
-                helperText="5 credits per lead"
+                helperText="2 credits per lead"
               />
               <SliderRow
                 label="Phone number reveals"
@@ -319,9 +319,9 @@ export const UsageCalculator: React.FC = () => {
               {credits.leadCredits > 0 && (
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Lead Search</p>
+                    <p className="text-sm font-medium text-gray-700">Lead Enrichment</p>
                     <p className="text-xs text-gray-500">
-                      {leads} leads × 5 cr
+                      {leads} leads × 2 cr
                     </p>
                   </div>
                   <span className="text-lg font-semibold text-gray-900">
