@@ -4,13 +4,18 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const onAuthPage = pathname === "/login";
+  // Public pages that should not show the sidebar or app layout
+  const isPublicPage = pathname === "/login" || 
+                       pathname === "/register" || 
+                       pathname === "/forgot-password" || 
+                       pathname === "/pricing";
   const onOnboardingPage = pathname === "/onboarding";
   const onCampaignsPage = pathname === "/campaigns" || pathname.startsWith("/campaigns/");
-  if (onAuthPage) {
+  // Render public pages without sidebar or app shell
+  if (isPublicPage) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center p-6">
-        <main className="w-full max-w-2xl">{children}</main>
+      <div className="min-h-screen w-full">
+        <main className="w-full">{children}</main>
       </div>
     );
   }
@@ -33,4 +38,4 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
     </div>
   );
-}
+}
