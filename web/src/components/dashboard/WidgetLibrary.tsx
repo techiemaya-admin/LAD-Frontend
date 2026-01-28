@@ -116,9 +116,10 @@ export const WidgetLibrary: React.FC = () => {
                       variant={isActive ? 'outline' : 'default'}
                       className="h-8 px-3 shrink-0"
                       onClick={() => handleAddWidget(widget.type)}
+                      disabled={isActive}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
-                      Add
+                      {isActive ? 'Added' : 'Add'}
                     </Button>
                   </motion.div>
                 );
@@ -135,4 +136,4 @@ export const WidgetLibrary: React.FC = () => {
       </SheetContent>
     </Sheet>
   );
-};
+};

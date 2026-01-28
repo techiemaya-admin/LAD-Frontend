@@ -73,10 +73,10 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
         const endDateISO = now.toISOString();
         const qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
 
-        const callsRes = await apiGet<{ success: boolean; logs: any[] }>(
+        const callsRes = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
           `/api/dashboard/calls${qs}`
         );
-        const logs = callsRes.logs || [];
+        const logs = Array.isArray(callsRes) ? callsRes : (callsRes.data || callsRes.logs || callsRes.calls || []);
 
         // Group call logs by agent
         const agentMetrics = new Map<string, {
@@ -165,14 +165,14 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
   return (
     <WidgetWrapper id={id} title="Voice Agents">
-      <div className="space-y-3 h-full flex flex-col">
+      <div className="space-y-3 h-full flex flex-col overflow-hidden">
         {agents.length === 0 ? (
           <div className="flex items-center justify-center h-40">
             <p className="text-sm text-muted-foreground">No agents found</p>
           </div>
         ) : (
           <>
-            <div className="space-y-3 flex-1">
+            <div className="space-y-3 flex-1 overflow-y-auto">
               {paginatedAgents.map((agent) => (
                 <div
                   key={agent.id}
@@ -221,7 +221,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+              <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
                 <span className="text-xs text-muted-foreground">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
                   {Math.min(currentPage * ITEMS_PER_PAGE, agents.length)} of {agents.length}

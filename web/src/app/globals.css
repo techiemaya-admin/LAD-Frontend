@@ -429,3 +429,29 @@ body {
   }
 }
 
+/* Dashboard Widget Styles */
+.widget-card {
+  @apply backdrop-blur-sm;
+}
+
+.widget-card:hover {
+  @apply border-border/70;
+}
+
+@media (min-width: 768px) {
+  .widget-card {
+    @apply shadow-sm;
+  }
+  
+  .widget-card:hover:not(.widget-card-edit) {
+    @apply shadow-md border-border/60;
+  }
+}
+
+/* Dashboard Grid Responsive */
+@media (max-width: 640px) {
+  .dashboard-grid {
+    @apply px-0;
+  }
+}
+

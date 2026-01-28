@@ -11,6 +11,8 @@ import { CallLogsTable } from "@/components/CallLogsTable";
 import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
+import { PageLoaderOverlay } from "@/components/PageLoaderOverlay";
+import { CallLogsHeaderSkeleton } from "@/components/skeletons/CallLogsHeaderSkeleton";
 interface CallLogResponse {
   call_log_id: string;
   id?: string;
@@ -59,6 +61,7 @@ export default function CallLogsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const [items, setItems] = useState<
     Array<{
       id: string;
@@ -130,12 +133,15 @@ const resolveDateRange = () => {
   // ----------------------
   useEffect(() => {
     (async () => {
+      setIsValidating(true);
       try {
         await getCurrentUser();
         setAuthed(true);
       } catch {
         setAuthed(false);
         router.replace("/login?redirect_url=/call-logs");
+      } finally {
+        setIsValidating(false);
       }
     })();
   }, [router]);
@@ -419,6 +425,23 @@ const resolveDateRange = () => {
   if (authed === null) {
     return (
       <div className="max-w-7xl mx-auto space-y-8 p-6">
+        {/* Show skeletons during auth validation */}
+        <CallLogsHeaderSkeleton />
+        <CallLogsTableSkeleton />
+      </div>
+    );
+  }
+  if (!authed) return <></>;
+  // Check if any selected calls have "failed" status and count them
+  const failedCallIds = Array.from(selected).filter(id => {
+    const call = items.find(i => i.id === id);
+    return call && call.status.toLowerCase() === "failed";
+  });
+  const hasFailedCalls = failedCallIds.length > 0;
+  return (
+    <>
+      <PageLoaderOverlay isVisible={isValidating} message="Verifying credentials..." />
+      <div className="max-w-7xl mx-auto space-y-8 p-6">
         {/* Header */}
         <CallLogsHeader
           search={search}
@@ -434,8 +457,8 @@ const resolveDateRange = () => {
           selectedCount={selected.size}
           onEndSelected={endSelectedCalls}
           onRetrySelected={retrySelectedCalls}
-          hasFailedCalls={false}
-          failedCount={0}
+          hasFailedCalls={hasFailedCalls}
+          failedCount={failedCallIds.length}
           dateFilter={dateFilter}
           onDateFilterChange={(f) => {
             setDateFilter(f);
@@ -451,80 +474,36 @@ const resolveDateRange = () => {
             setPage(1);
           }}
         />
-        <CallLogsTableSkeleton />
+        {/* Table */}
+        {initialLoading ? (
+          <CallLogsTableSkeleton />
+        ) : (
+          <CallLogsTable
+            items={paginated}
+            selectedCalls={selected}
+            onSelectCall={handleSelectCall}
+            onSelectAll={handleSelectAll}
+            onRowClick={handleRowClick}
+            onEndCall={endSingleCall}
+            batchGroups={batchGroups}
+            expandedBatches={expandedBatches}
+            onToggleBatch={toggleBatch}
+            totalFilteredCount={filtered.length}
+          />
+        )}
+        {/* Pagination */}
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+        {/* Modal */}
+        <CallLogModal
+          id={openId}
+          open={!!openId}
+          onOpenChange={(open) => !open && setOpenId(undefined)}
+        />
       </div>
-    );
-  }
-  if (!authed) return <></>;
-  // Check if any selected calls have "failed" status and count them
-  const failedCallIds = Array.from(selected).filter(id => {
-    const call = items.find(i => i.id === id);
-    return call && call.status.toLowerCase() === "failed";
-  });
-  const hasFailedCalls = failedCallIds.length > 0;
-  return (
-    <div className="max-w-7xl mx-auto space-y-8 p-6">
-      {/* Header */}
-      <CallLogsHeader
-        search={search}
-        onSearchChange={setSearch}
-        filterProvider={providerFilter}
-        onFilterProviderChange={setProviderFilter}
-        callFilter={timeFilter}
-        onCallFilterChange={(f) => {
-          setTimeFilter(f);
-          setPage(1);
-        }}
-        uniqueProviders={uniqueProviders}
-        selectedCount={selected.size}
-        onEndSelected={endSelectedCalls}
-        onRetrySelected={retrySelectedCalls}
-        hasFailedCalls={hasFailedCalls}
-        failedCount={failedCallIds.length}
-        dateFilter={dateFilter}
-        onDateFilterChange={(f) => {
-          setDateFilter(f);
-          setPage(1);
-        }}
-        fromDate={fromDate}
-        toDate={toDate}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
-        perPage={perPage}
-        onPerPageChange={(value) => {
-          setPerPage(value);
-          setPage(1);
-        }}
-      />
-     {/* Table */}
-{initialLoading ? (
-  <CallLogsTableSkeleton />
-) : (
-      <CallLogsTable
-        items={paginated}
-        selectedCalls={selected}
-        onSelectCall={handleSelectCall}
-        onSelectAll={handleSelectAll}
-        onRowClick={handleRowClick}
-        onEndCall={endSingleCall}
-        batchGroups={batchGroups}
-        expandedBatches={expandedBatches}
-        onToggleBatch={toggleBatch}
-        totalFilteredCount={filtered.length}
-      />
-)}
-      {/* Pagination */}
-      <Pagination
-        currentPage={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-      />
-      {/* Modal */}
-      <CallLogModal
-        id={openId}
-        open={!!openId}
-        onOpenChange={(open) => !open && setOpenId(undefined)}
-      />
-    </div>
+    </>
   );
-}
+}

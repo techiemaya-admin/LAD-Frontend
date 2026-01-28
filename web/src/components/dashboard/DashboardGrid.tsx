@@ -186,11 +186,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       const endDateISO = now.toISOString();
       let qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
 
-      const res = await apiGet<{ success: boolean; logs: any[] }>(
+      const res = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
         `/api/dashboard/calls${qs}`
       );
 
-      const rows: any[] = res.logs || [];
+      const rows: any[] = Array.isArray(res) ? res : (res.data || res.logs || res.calls || []);
       const mapped: BackendCallLog[] = rows.map((r: any) => {
         const leadFullName = [r.lead_first_name, r.lead_last_name]
           .filter(Boolean)
@@ -262,7 +262,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       const answerRateLastWeekValue = lastWeekCalls.length > 0 ? Math.round((answeredLastWeek / lastWeekCalls.length) * 100) : 0;
       setAnswerRateLastWeek(answerRateLastWeekValue);
     } catch (error) {
-      // Error already logged
+      console.error('[Dashboard] Error fetching call logs:', error);
+      setCalls([]);
     }
   }, [chartMode]);
 
@@ -324,10 +325,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
       const out: Array<{ dateKey: string; date: string; calls: number }> = [];
       const today = new Date();
-      const start = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(today);
       start.setDate(today.getDate() - (DAYS_RANGE - 1));
 
-      for (let dt = new Date(start); dt <= today; dt.setDate(dt.getDate() + 1)) {
+      for (let dt = new Date(start); dt <= today; ) {
         const key = dt.toISOString().slice(0, 10);
         out.push({
           dateKey: key,
@@ -337,7 +339,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           }),
           calls: counts.get(key) ?? 0,
         });
+        dt.setDate(dt.getDate() + 1);
       }
+      
       return out;
     }
 
@@ -477,6 +481,17 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       minHeight: `${item.h * 80}px`,
     };
   };
+  
+  // Get responsive grid style for mobile
+  const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
+    // On mobile (< 768px), ignore gridColumn span. On desktop, use it.
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return {
+        minHeight: `${item.h * 80}px`,
+      };
+    }
+    return getGridStyle(item);
+  };
 
   const sortableItems = layout.map(item => item.i);
 
@@ -489,13 +504,13 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-4 auto-rows-min">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 auto-rows-min">
             {layout.map((item) => (
               <div
                 key={item.i}
-                style={getGridStyle(item)}
+                style={getResponsiveGridStyle(item)}
                 className={cn(
-                  'transition-all duration-200',
+                  'transition-all duration-200 group',
                   activeId === item.i && 'opacity-50'
                 )}
               >

@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useDashboardStore } from '@/store/dashboardStore';
+import { useDashboardUsers, useBookings } from '@sdk/features/dashboard/hooks';
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
 
@@ -56,22 +57,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     selectedDate,
     setSelectedDate,
   } = useDashboardStore();
-  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   
   // Fetch users and bookings using SDK hooks
   const { data: users = [], isLoading: isLoadingUsers } = useDashboardUsers();
   const { data: bookings = [], isLoading: isLoadingBookings } = useBookings(selectedUserId || undefined);
-  
-  const [newEvent, setNewEvent] = useState({
-    title: '',
-    type: 'call' as CalendarEvent['type'],
-    startTime: '09:00',
-    endTime: '09:30',
-    description: '',
-    agentName: '',
-    leadName: '',
-  });
 
   // Calendar calculations
   const monthStart = startOfMonth(selectedDate);
@@ -92,19 +82,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const handleNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
   const handlePrevWeek = () => setSelectedDate(addDays(selectedDate, -7));
   const handleNextWeek = () => setSelectedDate(addDays(selectedDate, 7));
-  const handleAddEvent = () => {
-    // TODO: Implement add event via SDK when backend endpoint is ready
-    setIsAddEventOpen(false);
-    setNewEvent({
-      title: '',
-      type: 'call',
-      startTime: '09:00',
-      endTime: '09:30',
-      description: '',
-      agentName: '',
-      leadName: '',
-    });
-  };
 
   const calculateDuration = (start: string, end: string): number => {
     const [startHour, startMin] = start.split(':').map(Number);
@@ -150,108 +127,6 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
               Week
             </Button>
           </div>
-          
-          <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-7 px-3 text-xs gap-1">
-                <Plus className="h-3 w-3" />
-                Add
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Add Event</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="Event title..."
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Event Type</Label>
-                  <Select
-                    value={newEvent.type}
-                    onValueChange={(value: CalendarEvent['type']) => 
-                      setNewEvent({ ...newEvent, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="call">📞 Scheduled Call</SelectItem>
-                      <SelectItem value="ai-task">🤖 AI Task</SelectItem>
-                      <SelectItem value="followup">✅ Follow-up</SelectItem>
-                      <SelectItem value="meeting">📅 Meeting</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Start Time</Label>
-                    <Input
-                      type="time"
-                      value={newEvent.startTime}
-                      onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>End Time</Label>
-                    <Input
-                      type="time"
-                      value={newEvent.endTime}
-                      onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                    />
-                  </div>
-                </div>
-                {(newEvent.type === 'call' || newEvent.type === 'followup') && (
-                  <div className="grid gap-2">
-                    <Label>Lead Name</Label>
-                    <Input
-                      value={newEvent.leadName}
-                      onChange={(e) => setNewEvent({ ...newEvent, leadName: e.target.value })}
-                      placeholder="Contact name..."
-                    />
-                  </div>
-                )}
-                {newEvent.type === 'ai-task' && (
-                  <div className="grid gap-2">
-                    <Label>AI Agent</Label>
-                    <Select
-                      value={newEvent.agentName}
-                      onValueChange={(value) => setNewEvent({ ...newEvent, agentName: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select agent..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Sales Qualifier">Sales Qualifier</SelectItem>
-                        <SelectItem value="Appointment Setter">Appointment Setter</SelectItem>
-                        <SelectItem value="Follow-up Agent">Follow-up Agent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className="grid gap-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={newEvent.description}
-                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                    placeholder="Add notes..."
-                    rows={2}
-                  />
-                </div>
-                <Button onClick={handleAddEvent} className="mt-2">
-                  Add Event
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       }
     >
@@ -328,12 +203,12 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                             <div
                               key={booking.id}
                               className={cn(
-                                'text-[10px] px-1 py-0.5 rounded truncate border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
+                                'text-[10px] px-1 py-0.5 rounded border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                                 config.className
                               )}
-                              title={booking.task_name || `${type}: ${booking.status}`}
+                              title={`Type: ${booking.booking_type}\nSource: ${booking.booking_source}`}
                             >
-                              {booking.task_name || config.label}
+                              <div className="text-[9px] opacity-75 truncate">{booking.booking_type} · {booking.booking_source}</div>
                             </div>
                           );
                         })}
@@ -403,10 +278,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                                   'text-xs p-1.5 rounded border mb-1 flex items-center gap-1 transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                                   config.className
                                 )}
-                                title={`${booking.task_name || config.label} - ${booking.status}`}
+                                title={`Type: ${booking.booking_type}\nSource: ${booking.booking_source}\nStatus: ${booking.status}`}
                               >
                                 <Icon className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{booking.task_name || config.label}</span>
+                                <span className="truncate text-[9px]">{booking.booking_type} · {booking.booking_source}</span>
                               </div>
                             );
                           })}
@@ -443,19 +318,24 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                   <div
                     key={booking.id}
                     className={cn(
-                      'flex items-center gap-3 p-2 rounded-lg border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
+                      'flex items-start gap-3 p-2 rounded-lg border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                       config.className
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-4 w-4 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {booking.task_name || config.label}
-                      </p>
                       <p className="text-xs opacity-75">
                         {format(new Date(booking.scheduled_at), 'HH:mm')}
                         {booking.timezone && ` · ${booking.timezone}`}
                         {booking.status && ` · ${booking.status}`}
+                      </p>
+                      <p className="text-xs opacity-70 mt-1">
+                        <span className="inline-block bg-opacity-20 px-2 py-0.5 rounded text-[10px] mr-1">
+                          {booking.booking_type}
+                        </span>
+                        <span className="inline-block bg-opacity-20 px-2 py-0.5 rounded text-[10px]">
+                          {booking.booking_source}
+                        </span>
                       </p>
                     </div>
                   </div>

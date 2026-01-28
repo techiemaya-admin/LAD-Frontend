@@ -6,6 +6,8 @@ import { logger } from "@/lib/logger";
 import { CallConfiguration } from "../../components/CallConfiguration";
 import { CallOptions } from "../../components/CallOptions";
 import { getCurrentUser } from "@/lib/auth";
+import { CallConfigurationSkeleton } from "@/components/skeletons/CallConfigurationSkeleton";
+import { CallOptionsSkeleton } from "@/components/skeletons/CallOptionsSkeleton";
 import { 
   useUserAvailableNumbers, 
   useAvailableAgents, 
@@ -98,6 +100,7 @@ export default function MakeCallContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [additionalInstructions, setAdditionalInstructions] =
     useState<string>("");
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [initiatedBy, setInitiatedBy] = useState<string | undefined>(
     undefined
   );
@@ -109,6 +112,14 @@ export default function MakeCallContent() {
   // SDK Hooks for fetching numbers and agents
   const { data: availableNumbers = [], isLoading: numbersLoading, error: numbersError } = useUserAvailableNumbers();
   const { data: availableAgents = [], isLoading: agentsLoading, error: agentsError } = useAvailableAgents();
+
+  // Mark initialization complete when data is loaded
+  useEffect(() => {
+    if (!numbersLoading && !agentsLoading) {
+      setIsInitializing(false);
+    }
+  }, [numbersLoading, agentsLoading]);
+
   // Get user ID from /auth/me (architecture-compliant: core platform returns user.id)
   useEffect(() => {
     (async () => {
@@ -512,46 +523,55 @@ export default function MakeCallContent() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <CallConfiguration
-            numbers={numbers}
-            agents={agents}
-            selectedNumberId={selectedNumberId}
-            onSelectedNumberChange={setSelectedNumberId}
-            languages={[{ id: "en", label: "English", value: "en" }]}
-            selectedLanguageId={selectedLanguageId}
-            onSelectedLanguageChange={setSelectedLanguageId}
-            selectedAccentId={selectedAccentId}
-            onSelectedAccentChange={setSelectedAccentId}
-            agentId={agentId}
-            onAgentIdChange={setAgentId}
-            additionalInstructions={additionalInstructions}
-            onAdditionalInstructionsChange={setAdditionalInstructions}
-          />
-          <CallOptions
-            useCsv={useCsv}
-            onUseCsvChange={setUseCsv}
-            dial={dial}
-            onDialChange={setDial}
-            clientName={clientName}
-            onClientNameChange={setClientName}
-            bulkEntries={bulkEntries}
-            onBulkEntriesChange={setBulkEntriesSanitized}
-            loading={loading}
-            selectedNumberId={selectedNumberId}
-            agentId={agentId}
-            fromNumber={fromNumber}
-            onLoadingChange={setLoading}
-            additionalInstructions={additionalInstructions}
-            isPrefilled={qpPrefilled}
-            onAdditionalInstructionsChange={setAdditionalInstructions}
-            initiatedBy={initiatedBy}
-            dataSource={dataSource}
-            dataType={dataType}
-            onDataSourceChange={setDataSource}
-          />
-        </div>
+        {/* Show skeleton loaders during initialization */}
+        {isInitializing ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <CallConfigurationSkeleton />
+            <CallOptionsSkeleton />
+          </div>
+        ) : (
+          // Show actual content once data is loaded
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <CallConfiguration
+              numbers={numbers}
+              agents={agents}
+              selectedNumberId={selectedNumberId}
+              onSelectedNumberChange={setSelectedNumberId}
+              languages={[{ id: "en", label: "English", value: "en" }]}
+              selectedLanguageId={selectedLanguageId}
+              onSelectedLanguageChange={setSelectedLanguageId}
+              selectedAccentId={selectedAccentId}
+              onSelectedAccentChange={setSelectedAccentId}
+              agentId={agentId}
+              onAgentIdChange={setAgentId}
+              additionalInstructions={additionalInstructions}
+              onAdditionalInstructionsChange={setAdditionalInstructions}
+            />
+            <CallOptions
+              useCsv={useCsv}
+              onUseCsvChange={setUseCsv}
+              dial={dial}
+              onDialChange={setDial}
+              clientName={clientName}
+              onClientNameChange={setClientName}
+              bulkEntries={bulkEntries}
+              onBulkEntriesChange={setBulkEntriesSanitized}
+              loading={loading}
+              selectedNumberId={selectedNumberId}
+              agentId={agentId}
+              fromNumber={fromNumber}
+              onLoadingChange={setLoading}
+              additionalInstructions={additionalInstructions}
+              isPrefilled={qpPrefilled}
+              onAdditionalInstructionsChange={setAdditionalInstructions}
+              initiatedBy={initiatedBy}
+              dataSource={dataSource}
+              dataType={dataType}
+              onDataSourceChange={setDataSource}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
-}
+}
