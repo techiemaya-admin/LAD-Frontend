@@ -31,9 +31,8 @@ function deleteCookie(name: string) {
 }
 const authService = {
   login: async (credentials: Credentials): Promise<LoginResponse> => {
-    // Call backend directly so it can set cookies on its domain
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
-    const response = await fetch(`${backendUrl}/api/auth/login`, {
+    // Call frontend API route which will set httpOnly cookies
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
@@ -43,7 +42,7 @@ const authService = {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || 'Invalid credentials');
     }
-    // Backend sets httpOnly cookie and returns token + user data
+    // Frontend API sets httpOnly cookie and returns token + user data
     const data: LoginResponse = await response.json();
     if (typeof window !== 'undefined' && data.token) {
       safeStorage.setItem('token', data.token);
@@ -52,9 +51,8 @@ const authService = {
     return data;
   },
   logout: async (): Promise<unknown> => {
-    // Call backend directly to clear cookie
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
-    const response = await fetch(`${backendUrl}/api/auth/logout`, { 
+    // Call frontend API route to clear cookie
+    const response = await fetch('/api/auth/logout', { 
       method: 'POST',
       credentials: 'include' 
     });
@@ -68,9 +66,8 @@ const authService = {
     return await response.json();
   },
   getCurrentUser: async (): Promise<AuthUser> => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
     const token = safeStorage.getItem('auth_token');
-    const response = await fetch(`${backendUrl}/api/auth/me`, { 
+    const response = await fetch('/api/auth/me', { 
       cache: 'no-store',
       credentials: 'include',
       headers: token ? {
@@ -88,4 +85,4 @@ const authService = {
     return (data.user || data) as AuthUser;
   },
 };
-export default authService;
+export default authService;
