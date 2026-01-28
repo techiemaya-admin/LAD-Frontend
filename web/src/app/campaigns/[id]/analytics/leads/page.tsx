@@ -13,7 +13,7 @@ import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/cam
 import { apiGet, apiPost } from '@/lib/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
-import { safeStorage } from '@/utils/storage';
+// import { safeStorage } from '@/utils/storage';
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;
@@ -121,20 +121,58 @@ export default function CampaignLeadsPage() {
       });
     }
   }, [leads, campaignId]);
+  const pollForPhoneReveal = async (leadId: string, maxAttempts = 10, delayMs = 3000): Promise<string | null> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      try {
+        const data = await apiGet<{ success?: boolean; leads?: CampaignLead[] }>(
+          `/api/campaigns/${campaignId}/leads`
+        );
+        const lead = data?.leads?.find((item) => item.id === leadId);
+        if (lead?.phone) {
+          return lead.phone;
+        }
+      } catch (error) {
+        // keep polling on transient errors
+      }
+    }
+    return null;
+  };
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
     try {
-      const response = await apiPost<any>('/api/apollo-leads/reveal-phone', {
-        person_id: employee.id
-      });
+      const response = await apiPost<any>(
+        `/api/campaigns/${campaignId}/leads/${employee.id}/reveal-phone`,
+        {
+          apollo_person_id: employee.apollo_person_id || employee.id
+        }
+      );
+
       if (response.success && response.phone) {
-        // Store the revealed phone value
+        // Immediate reveal (if available)
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: response.phone } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+        employee.phone = response.phone;
         push({ title: 'Success', description: 'Phone number revealed' });
+        refetch();
+        return;
+      }
+
+      if (response.success || response.processing) {
+        push({ title: 'In progress', description: 'Phone reveal requested. Waiting for webhook...' });
+        const revealedPhone = await pollForPhoneReveal(employee.id);
+        if (revealedPhone) {
+          setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: revealedPhone } }));
+          setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
+          employee.phone = revealedPhone;
+          push({ title: 'Success', description: 'Phone number revealed' });
+          refetch();
+        } else {
+          push({ title: 'Pending', description: 'Phone reveal is still processing. Check back soon.' });
+        }
       } else {
-        push({ title: 'Error', description: 'Failed to reveal phone number' });
+        push({ title: 'Error', description: response.error || 'Failed to reveal phone number' });
       }
     } catch (error) {
       push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal phone' });
