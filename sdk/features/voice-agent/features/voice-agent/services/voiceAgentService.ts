@@ -1,5 +1,6 @@
 import api from './api';
 import { VoiceAgent, CallLog, PhoneNumber, BatchCallLogEntry } from '../types';
+
 /**
  * Centralized logger - LAD Architecture Compliance
  * Import from web lib when available, fallback to console in SDK context
@@ -19,7 +20,9 @@ const createLogger = () => {
     };
   }
 };
+
 const logger = createLogger();
+
 /**
  * Voice Agent Service
  */
@@ -33,13 +36,16 @@ class VoiceAgentService {
       logger.warn('VAPI disabled via localStorage override');
       return true;
     }
+
     // Always allow VAPI in development mode for testing
     if (process.env.NODE_ENV === 'development') {
       logger.debug('VAPI enabled for development mode');
       return false;
     }
+
     // Note: Removed NEXT_PUBLIC_DISABLE_VAPI check to allow VAPI in production
     // VAPI is now enabled by default for authenticated users
+
     // Check if user has voice agent features enabled based on email
     if (typeof window !== 'undefined') {
       // Try multiple sources for user email
@@ -47,6 +53,7 @@ class VoiceAgentService {
                       localStorage.getItem('email') ||
                       sessionStorage.getItem('user_email') ||
                       sessionStorage.getItem('email') || '';
+      
       // Also try to get email from auth object
       if (!userEmail) {
         try {
@@ -62,15 +69,19 @@ class VoiceAgentService {
           logger.debug('VAPI: Failed to parse auth object', { error: e?.message });
         }
       }
+      
       logger.info('VAPI: Checking user email for access', { hasEmail: !!userEmail, userEmail: userEmail?.split('@')[0] + '@...' });
+      
       // Allow specific domains that have voice agent features
       const allowedDomains = [
         'sasyaspaces.com',
         'techiemaya.com', 
         'plutotravels.ae'
       ];
+      
       const domain = userEmail.split('@')[1]?.toLowerCase();
       logger.info('VAPI: User domain check', { domain: domain || 'NO_DOMAIN', allowed: allowedDomains });
+      
       if (domain && allowedDomains.includes(domain)) {
         logger.info('✅ VAPI ENABLED for authorized domain', { domain });
         return false;
@@ -80,11 +91,13 @@ class VoiceAgentService {
         return false;
       }
     }
+    
     // Default: ALLOW VAPI for anyone (fallback to enabled state)
     // This ensures that if we can't determine auth status, we still try to fetch data
     logger.info('VAPI: Using default enabled state (no auth info found but proceeding)');
     return false;
   }
+
   /**
    * Safe API call wrapper that handles errors and disabled state
    */
@@ -93,6 +106,7 @@ class VoiceAgentService {
       logger.warn('VAPI disabled, skipping API call', { method: methodName });
       return fallback;
     }
+
     try {
       return await apiCall();
     } catch (error: any) {
@@ -103,6 +117,7 @@ class VoiceAgentService {
         message: error?.message || String(error) || 'Unknown error',
         errorType: error?.constructor?.name || typeof error,
       };
+
       // Add response details if available (avoid circular refs)
       if (error?.response) {
         errorDetails.status = error.response.status;
@@ -114,6 +129,7 @@ class VoiceAgentService {
           errorDetails.responseData = String(error.response.data);
         }
       }
+
       // Add request details if available
       if (error?.config) {
         errorDetails.url = error.config.url;
@@ -121,21 +137,25 @@ class VoiceAgentService {
         errorDetails.fullURL = `${error.config.baseURL || ''}${error.config.url || ''}`;
         errorDetails.method = error.config.method?.toUpperCase();
       }
+
       // Add network error details
       if (error?.code) {
         errorDetails.code = error.code;
       }
+
       // Check if it's a network error
       if (error?.request && !error?.response) {
         errorDetails.networkError = 'No response received from server';
         errorDetails.isNetworkError = true;
       }
+      
       // Safe logging with try-catch to prevent logger errors
       try {
         logger.error(`API call failed for ${methodName}`, errorDetails);
       } catch (logError) {
         console.error(`Failed to log error for ${methodName}:`, error?.message || error);
       }
+      
       // Log additional details for 500 errors
       if (error.response?.status === 500) {
         logger.error('Server error details', {
@@ -146,6 +166,7 @@ class VoiceAgentService {
           responseData: error.response?.data // Add backend error message
         });
       }
+      
       // Handle network errors (no response from server)
       if (error.request && !error.response) {
         logger.error('Network error - no response from server', {
@@ -156,16 +177,19 @@ class VoiceAgentService {
         });
         return fallback;
       }
+      
       // Handle 401 authentication errors specifically
       if (error.response?.status === 401) {
         logger.warn('Authentication failed, returning fallback', { method: methodName });
         return fallback;
       }
+      
       // Handle 403 forbidden (user doesn't have voice agent features)
       if (error.response?.status === 403) {
         logger.warn('Access forbidden, user may not have voice agent features', { method: methodName });
         return fallback;
       }
+      
       // Handle 404 not found (endpoint doesn't exist)
       if (error.response?.status === 404) {
         logger.warn('Endpoint not found, returning fallback', { 
@@ -174,6 +198,7 @@ class VoiceAgentService {
         });
         return fallback;
       }
+      
       // For other errors, log and return fallback instead of throwing
       logger.error(`Unexpected error in ${methodName}, returning fallback`, {
         message: error.message,
@@ -182,6 +207,7 @@ class VoiceAgentService {
       return fallback;
     }
   }
+
   /**
    * Get all voice agents for the current tenant
    */
@@ -195,6 +221,7 @@ class VoiceAgentService {
       'getVoiceAgents'
     );
   }
+
   /**
    * Get batch call logs for a specific batch
    */
@@ -209,6 +236,7 @@ class VoiceAgentService {
       'getBatchCallLogs'
     );
   }
+
   /**
    * Make a call with a voice agent (V2 API)
    */
@@ -221,21 +249,25 @@ class VoiceAgentService {
           // Default to US (+1) if no country code provided
           formattedPhone = phoneNumber.startsWith('1') ? `+${phoneNumber}` : `+1${phoneNumber}`;
         }
+        
         // Get user ID for initiated_by field (V2 requires valid UUID)
         let userId = null;
         try {
           // Try different possible keys for user data
           const possibleKeys = ['auth_user', 'user', 'currentUser', 'authUser'];
           let userData = null;
+          
           for (const key of possibleKeys) {
             userData = localStorage.getItem(key) || sessionStorage.getItem(key);
             if (userData) break;
           }
+          
           if (userData) {
             const user = JSON.parse(userData);
             userId = user.id || user.userId || user.uuid;
             logger.debug('Found user ID for initiated_by', { hasUserId: !!userId });
           }
+          
           // If still no userId, try to get it from JWT token
           if (!userId) {
             const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
@@ -252,11 +284,13 @@ class VoiceAgentService {
         } catch (e) {
           logger.warn('Could not get user ID for initiated_by field');
         }
+        
         // Fallback: generate a temporary UUID if we can't find real user ID
         if (!userId) {
           userId = '00000000-0000-4000-8000-000000000000'; // Fallback UUID
           logger.warn('Using fallback UUID for initiated_by field');
         }
+        
         // V2 single call format payload
         const payload = {
           voice_id: 'default',
@@ -267,20 +301,25 @@ class VoiceAgentService {
           lead_name: null,
           added_context: context || null
         };
+        
         logger.debug('Making single call via LAD backend proxy', { 
           payload: { ...payload, initiated_by: userId ? 'UUID_PROVIDED' : 'NULL' } 
         });
+        
         const response = await api.post('/api/voice-agent/calls/start-call', payload);
+        
         logger.debug('Voice call response received', { 
           status: response.status, 
           hasData: !!response.data 
         });
+        
         return response.data?.data ?? response.data;
       },
       { id: 'disabled', status: 'disabled', message: 'VAPI feature is temporarily disabled' } as any,
       'makeCall'
     );
   }
+
   /**
    * Get call logs for current tenant
    */
@@ -297,6 +336,7 @@ class VoiceAgentService {
       'getCallLogs'
     );
   }
+
   /**
    * Get a specific call log
    */
@@ -310,6 +350,7 @@ class VoiceAgentService {
       'getCallLog'
     );
   }
+
   /**
    * Get all phone numbers for the current tenant
    * Uses JWT-authenticated tenant context; no tenant_id query needed.
@@ -324,6 +365,7 @@ class VoiceAgentService {
       'getTenantPhoneNumbers'
     );
   }
+
   /**
    * Get available phone numbers for the authenticated user
    */
@@ -337,6 +379,7 @@ class VoiceAgentService {
       'getUserAvailableNumbers'
     );
   }
+
   /**
    * Get available voice agents for the authenticated user
    */
@@ -350,6 +393,7 @@ class VoiceAgentService {
       'getAvailableAgents'
     );
   }
+
   /**
    * Resolve phone numbers from a list of IDs (Apollo or CRM IDs)
    * @param ids - Array of IDs to resolve
@@ -368,4 +412,5 @@ class VoiceAgentService {
     );
   }
 }
-export default new VoiceAgentService();
+
+export default new VoiceAgentService();

@@ -12,6 +12,7 @@ function isPublicPath(pathname: string): boolean {
     '/login',
     '/register',
     '/forgot-password',
+    '/pricing',
     '/favicon.ico',
   ];
   return publicPaths.some(path => {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Briefcase, Plus, ChevronRight } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { apiGet } from "@/lib/api";
 
 interface Agent {
   id: string;
@@ -17,42 +18,37 @@ export function VoiceAgentsList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchAgents = async () => {
       try {
         setLoading(true);
         logger.debug("🔍 Fetching agents from /api/voice-agent/user/available-agents");
 
-        const response = await fetch("/api/voice-agent/user/available-agents", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+        const data = await apiGet<Agent[]>("/api/voice-agent/user/available-agents", {
+          signal: abortController.signal
         });
 
-        logger.debug("📡 Response status:", response.status, response.statusText);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.debug("❌ Response error:", errorText);
-          throw new Error(`Failed to fetch agents: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
         logger.debug("✅ Agents fetched successfully:", data);
         setAgents(Array.isArray(data) ? data : []);
         setError(null);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Failed to fetch agents";
-        logger.debug("❌ Error fetching agents:", errorMsg, err);
-        setError(errorMsg);
-        setAgents([]);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          const errorMsg = err instanceof Error ? err.message : "Failed to fetch agents";
+          logger.debug("❌ Error fetching agents:", { errorMsg, err });
+          setError(errorMsg);
+          setAgents([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchAgents();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   const normalizeStatus = (status: string) => {

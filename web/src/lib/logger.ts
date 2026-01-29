@@ -62,14 +62,27 @@ class Logger {
    * IMPORTANT: Never log sensitive data like tokens, passwords, card numbers
    */
   error(message: string, error?: Error | any): void {
-    const errorData = error instanceof Error 
-      ? { message: error.message, stack: this.isDevelopment ? error.stack : undefined }
-      : error;
-    if (errorData) {
-      console.error(this.formatMessage('error', message), errorData);
-    } else {
+    if (!error) {
       console.error(this.formatMessage('error', message));
+      return;
     }
+    
+    // If it's already a structured object (not an Error instance), log it as-is
+    if (error && typeof error === 'object' && !(error instanceof Error)) {
+      console.error(this.formatMessage('error', message), error);
+      return;
+    }
+    
+    // For Error instances, extract useful properties
+    const errorData = error instanceof Error 
+      ? { 
+          message: error.message, 
+          stack: this.isDevelopment ? error.stack : undefined,
+          name: error.name
+        }
+      : error;
+    
+    console.error(this.formatMessage('error', message), errorData);
   }
   /**
    * Create a child logger with a different prefix
@@ -86,4 +99,4 @@ export const logger = new Logger({
   isDevelopment: typeof window !== 'undefined' ? process.env.NODE_ENV === 'development' : true,
 });
 // Export class for testing or custom instances
-export { Logger };
+export { Logger };

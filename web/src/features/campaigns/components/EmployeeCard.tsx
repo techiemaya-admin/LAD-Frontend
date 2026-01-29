@@ -20,6 +20,7 @@ import {
   Description,
   ExpandMore,
   ExpandLess,
+  LinkedIn,
 } from '@mui/icons-material';
 import { Button, Collapse } from '@mui/material';
 interface EmployeeCardProps {
@@ -32,16 +33,19 @@ interface EmployeeCardProps {
     email?: string;
     phone?: string;
     linkedin_url?: string;
+    enriched_email?: string | null;
+    enriched_linkedin_url?: string | null;
     photo_url?: string;
     profile_image?: string;
     is_inbound?: boolean; // Flag to identify inbound leads
     [key: string]: any;
   };
   employeeViewMode?: 'grid' | 'list';
-  revealedContacts?: Record<string, { phone?: boolean; email?: boolean }>;
-  revealingContacts?: Record<string, { phone?: boolean; email?: boolean }>;
+  revealedContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>;
+  revealingContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>;
   handleRevealPhone?: (employee: any) => void;
   handleRevealEmail?: (employee: any) => void;
+  handleRevealLinkedIn?: (employee: any) => void;
   onViewSummary?: (employee: any) => void;
   profileSummary?: string | null;
   hideUnlockFeatures?: boolean; // New prop to hide unlock buttons for inbound campaigns
@@ -53,6 +57,7 @@ export default function EmployeeCard({
   revealingContacts = {},
   handleRevealPhone,
   handleRevealEmail,
+  handleRevealLinkedIn,
   onViewSummary,
   profileSummary,
   hideUnlockFeatures = false, // Default to false
@@ -64,9 +69,16 @@ export default function EmployeeCard({
     `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 
     'Unknown';
   const phoneRevealed = revealedContacts[idKey]?.phone;
-  const emailRevealed = revealedContacts[idKey]?.email;
+  const emailRevealed = revealedContacts[idKey]?.email || Boolean(employee.enriched_email);
+  const linkedinRevealed = revealedContacts[idKey]?.linkedin || Boolean(employee.enriched_linkedin_url || employee.linkedin_url);
   const phoneLoading = revealingContacts[idKey]?.phone;
   const emailLoading = revealingContacts[idKey]?.email;
+  const linkedinLoading = revealingContacts[idKey]?.linkedin;
+  
+  // Get actual values to display (prioritize enriched data)
+  const displayEmail = employee.enriched_email || employee.email;
+  const displayLinkedIn = employee.enriched_linkedin_url || employee.linkedin_url;
+  
   // Determine if unlock features should be shown
   // Hide if: hideUnlockFeatures is true OR employee is marked as inbound
   const shouldHideUnlock = hideUnlockFeatures || employee.is_inbound === true;
@@ -189,26 +201,6 @@ export default function EmployeeCard({
                   },
                 }}
               />
-            )}
-            {employee.linkedin_url && (
-              <Typography
-                variant="caption"
-                component="a"
-                href={employee.linkedin_url.startsWith('http') ? employee.linkedin_url : `https://${employee.linkedin_url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{
-                  color: '#0077b5',
-                  textDecoration: 'none',
-                  display: 'block',
-                  fontSize: '0.75rem',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                LinkedIn
-              </Typography>
             )}
           </Box>
           {/* Contact info - Below name/title for grid */}
@@ -358,7 +350,7 @@ export default function EmployeeCard({
                   fontWeight: shouldHideUnlock || emailRevealed ? 600 : 400,
                 }}
               >
-                {shouldHideUnlock ? (employee.email || 'Not provided') : (emailRevealed ? (employee.email || 'name@company.com') : 'name@company.com')}
+                {shouldHideUnlock ? (displayEmail || 'Not provided') : (emailRevealed ? (displayEmail || 'name@company.com') : 'name@company.com')}
               </Typography>
               {!shouldHideUnlock && handleRevealEmail && (
                 <Tooltip
@@ -405,6 +397,121 @@ export default function EmployeeCard({
                       ) : (
                         <Lock
                           sx={{ fontSize: 20, color: '#0b1957' }}
+                        />
+                      )}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+            </Box>
+
+            {/* LinkedIn */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                width: '100%',
+              }}
+            >
+              <Box
+                sx={{
+                  bgcolor: '#0077b5',
+                  borderRadius: '50%',
+                  p: 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <LinkedIn sx={{ fontSize: 16, color: 'white' }} />
+              </Box>
+              <Typography
+                variant="caption"
+                component={shouldHideUnlock || linkedinRevealed ? 'a' : 'span'}
+                href={
+                  shouldHideUnlock || linkedinRevealed
+                    ? ((displayLinkedIn || '').startsWith('http')
+                        ? displayLinkedIn
+                        : `https://${displayLinkedIn}`)
+                    : undefined
+                }
+                target={shouldHideUnlock || linkedinRevealed ? '_blank' : undefined}
+                rel={shouldHideUnlock || linkedinRevealed ? 'noopener noreferrer' : undefined}
+                sx={{
+                  color: shouldHideUnlock || linkedinRevealed
+                    ? '#0077b5'
+                    : 'oklch(0.556 0 0)',
+                  fontSize: '0.8rem',
+                  letterSpacing: shouldHideUnlock || linkedinRevealed
+                    ? 'normal'
+                    : '1px',
+                  filter: shouldHideUnlock || linkedinRevealed ? 'none' : 'blur(4px)',
+                  userSelect: shouldHideUnlock || linkedinRevealed ? 'text' : 'none',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  fontWeight: shouldHideUnlock || linkedinRevealed ? 600 : 400,
+                  textDecoration: shouldHideUnlock || linkedinRevealed ? 'none' : 'none',
+                  cursor: shouldHideUnlock || linkedinRevealed ? 'pointer' : 'default',
+                  '&:hover': {
+                    textDecoration: shouldHideUnlock || linkedinRevealed ? 'underline' : 'none',
+                  },
+                }}
+              >
+                {shouldHideUnlock 
+                  ? (displayLinkedIn ? 'LinkedIn Profile' : 'Not provided')
+                  : (linkedinRevealed 
+                      ? 'LinkedIn Profile'
+                      : 'linkedin.com/in/...')}
+              </Typography>
+              {!shouldHideUnlock && handleRevealLinkedIn && (
+                <Tooltip
+                  title={
+                    linkedinRevealed
+                      ? 'LinkedIn profile revealed'
+                      : 'Click to reveal LinkedIn profile'
+                  }
+                  arrow
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (handleRevealLinkedIn) {
+                          handleRevealLinkedIn(employee);
+                        }
+                      }}
+                      disabled={linkedinLoading || linkedinRevealed}
+                      sx={{
+                        bgcolor: 'oklch(0.97 0 0)',
+                        border: '1px solid oklch(0.922 0 0)',
+                        '&:hover': {
+                          bgcolor: 'oklch(0.97 0 0)',
+                          borderColor: '#0077b5',
+                        },
+                        p: 0.5,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {linkedinLoading ? (
+                        <CircularProgress
+                          size={20}
+                          sx={{ color: '#0077b5' }}
+                        />
+                      ) : linkedinRevealed ? (
+                        <CheckCircle
+                          sx={{
+                            fontSize: 20,
+                            color: '#0077b5',
+                          }}
+                        />
+                      ) : (
+                        <Lock
+                          sx={{ fontSize: 20, color: '#0077b5' }}
                         />
                       )}
                     </IconButton>
@@ -498,4 +605,4 @@ export default function EmployeeCard({
       </CardContent>
     </Card>
   );
-}
+}

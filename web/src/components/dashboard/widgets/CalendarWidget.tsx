@@ -24,6 +24,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import { useDashboardUsers, useBookings } from '@sdk/features/dashboard/hooks';
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+import { useDashboardUsers, useBookings } from '@sdk/features/dashboard/hooks';
 
 interface CalendarWidgetProps {
   id: string;
@@ -74,7 +75,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
   const getEventsForDate = (date: Date) => {
-    return bookings.filter(booking => 
+    return bookings.filter((booking: any) => 
       isSameDay(new Date(booking.scheduled_at), date)
     );
   };
@@ -101,7 +102,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
               <SelectValue placeholder="Select user..." />
             </SelectTrigger>
             <SelectContent>
-              {users.map((user) => (
+              {users.map((user: any) => (
                 <SelectItem key={user.id} value={user.id}>
                   {user.name}
                 </SelectItem>
@@ -196,7 +197,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     </span>
                     {events.length > 0 && (
                       <div className="mt-1 space-y-0.5">
-                        {events.slice(0, 2).map((booking) => {
+                        {events.slice(0, 2).map((booking: any) => {
                           const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
                           const config = eventTypeConfig[type];
                           return (
@@ -258,7 +259,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                       {hour}:00
                     </div>
                     {weekDays.map((day) => {
-                      const dayEvents = getEventsForDate(day).filter(e => {
+                      const dayEvents = getEventsForDate(day).filter((e: any) => {
                         const eventHour = parseInt(e.scheduled_at.split('T')[1].split(':')[0]);
                         return eventHour === hour;
                       });
@@ -267,7 +268,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                           key={day.toISOString()}
                           className="min-h-[50px] border-l border-border/50 p-1 relative"
                         >
-                          {dayEvents.map((booking) => {
+                          {dayEvents.map((booking: any) => {
                             const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
                             const config = eventTypeConfig[type];
                             const Icon = config.icon;
@@ -310,7 +311,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                 No bookings scheduled
               </p>
             ) : (
-              getEventsForDate(selectedDate).map((booking) => {
+              getEventsForDate(selectedDate).map((booking: any) => {
                 const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
                 const config = eventTypeConfig[type];
                 const Icon = config.icon;

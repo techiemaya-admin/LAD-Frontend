@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
 import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
 import { safeStorage } from '@/utils/storage';
@@ -33,29 +33,40 @@ export default function CampaignLeadsPage() {
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  
   // Fetch campaign to get campaign_type
-  const { campaign, loading: campaignLoading } = useCampaign(campaignId);
+  const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
+  
   // Use SDK hook for leads
   const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
     useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
   );
+  
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;
+  
+  // Debug: Log first lead to check photo_url
+  useEffect(() => {
+    if (leads.length > 0) {
+      console.log('First lead data:', leads[0]);
+      console.log('Photo URL:', leads[0].photo_url);
+    }
+  }, [leads]);
   // Note: Pagination would ideally come from SDK
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   // Reveal state for employee contacts
-  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
-  const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean }>>({});
-  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string }>>({});
+  const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
+  const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
+  const [revealedValues, setRevealedValues] = useState<Record<string, { phone?: string; email?: string; linkedin_url?: string }>>({});
   // Type-safe state setters
-  const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+  const setRevealedContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => {
     setRevealedContacts(updater);
   };
-  const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean }>) => Record<string, { phone?: boolean; email?: boolean }>) => {
+  const setRevealingContactsSafe = (updater: (prev: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>) => {
     setRevealingContacts(updater);
   };
   // Profile summary dialog state
@@ -86,9 +97,10 @@ export default function CampaignLeadsPage() {
       // Fetch summaries for all leads in parallel
       const summaryPromises = leads.map(async (lead) => {
         try {
-          // Use the correct campaigns endpoint for lead summary
-          const response = await fetch(`/api/campaigns/${campaignId}/leads/${lead.id}/summary`);
-          const data = await response.json();
+          // Use apiGet to ensure correct backend URL
+          const data = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
+            `/api/campaigns/${campaignId}/leads/${lead.id}/summary`
+          );
           if (data.success && data.summary) {
             return { leadId: lead.id, summary: data.summary };
           }
@@ -134,16 +146,29 @@ export default function CampaignLeadsPage() {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
     try {
-      const response = await apiPost<any>('/api/apollo-leads/reveal-email', {
-        person_id: employee.id
+      const response = await apiPost<any>(`/api/campaigns/${campaignId}/leads/${employee.id}/reveal-email`, {
+        apollo_person_id: employee.apollo_person_id || employee.id
       });
       if (response.success && response.email) {
         // Store the revealed email value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: response.email } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-        push({ title: 'Success', description: 'Email address revealed' });
+        
+        // Update the employee object with enriched email
+        employee.enriched_email = response.email;
+        employee.email = response.email;
+        
+        push({ 
+          title: 'Success', 
+          description: response.from_database 
+            ? 'Email retrieved (no credits used)' 
+            : `Email revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)` 
+        });
+        
+        // Trigger re-render
+        refetch();
       } else {
-        push({ title: 'Error', description: 'Failed to reveal email' });
+        push({ title: 'Error', description: response.error || 'Failed to reveal email' });
       }
     } catch (error) {
       push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal email' });
@@ -151,6 +176,34 @@ export default function CampaignLeadsPage() {
       setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: false } }));
     }
   };
+
+  const handleRevealLinkedIn = async (employee: ExtendedCampaignLead) => {
+    const idKey = employee.id || employee.name || '';
+    setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
+    try {
+      const response = await apiPost<any>(`/api/campaigns/${campaignId}/leads/${employee.id}/reveal-linkedin`, {});
+      if (response.success && response.linkedin_url) {
+        // Store the revealed LinkedIn URL value
+        setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin_url: response.linkedin_url } }));
+        setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
+        
+        // Update the employee object with the revealed LinkedIn URL
+        const updatedEmployee = { ...employee, linkedin_url: response.linkedin_url, enriched_linkedin_url: response.linkedin_url };
+        
+        push({ 
+          title: 'Success', 
+          description: response.from_database ? 'LinkedIn profile retrieved (no credits used)' : 'LinkedIn profile revealed' 
+        });
+      } else {
+        push({ title: 'Info', description: response.error || 'LinkedIn URL not available for this lead' });
+      }
+    } catch (error) {
+      push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal LinkedIn' });
+    } finally {
+      setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: false } }));
+    }
+  };
+
   const handleViewSummary = async (employee: ExtendedCampaignLead) => {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
@@ -160,13 +213,9 @@ export default function CampaignLeadsPage() {
     try {
       // First, try to get existing summary
       try {
-        const token = safeStorage.getItem('token');
-        const response = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-        });
-        const existingSummary = await response.json() as { success: boolean; summary: string | null; exists: boolean };
+        const existingSummary = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
+          `/api/campaigns/${campaignId}/leads/${employee.id}/summary`
+        );
         if (existingSummary.success && existingSummary.summary) {
           setProfileSummary(existingSummary.summary);
           setSummaryLoading(false);
@@ -175,15 +224,10 @@ export default function CampaignLeadsPage() {
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
         }
-      // Generate new summary
-      const token = safeStorage.getItem('token');
-      const generateResponse = await fetch(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+      // Generate new summary using apiPost
+      const response = await apiPost<{ success: boolean; summary: string; generated_at?: string }>(
+        `/api/campaigns/${campaignId}/leads/${employee.id}/summary`,
+        {
           leadId: employee.id,
           campaignId: campaignId,
           profileData: {
@@ -195,9 +239,8 @@ export default function CampaignLeadsPage() {
             phone: employee.phone,
             linkedin_url: employee.linkedin_url,
           },
-        }),
-      });
-      const response = await generateResponse.json() as { success: boolean; summary: string; generated_at?: string };
+        }
+      );
       if (response.success && response.summary) {
         setProfileSummary(response.summary);
       } else {
@@ -242,50 +285,56 @@ export default function CampaignLeadsPage() {
     );
   }
   return (
-    <Box sx={{ p: 3, bgcolor: '#F8F9FE', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-            sx={{ minWidth: 'auto' }}
-          >
-            Back to Analytics
-          </Button>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
-              Campaign Leads
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#64748B' }}>
-              {filteredLeads.length} leads
-            </Typography>
+    <Box sx={{ 
+      width: '100%',
+      height: '100vh',
+      overflow: 'auto',
+      bgcolor: '#F8F9FE'
+    }}>
+      <Box sx={{ p: 3, pb: 6 }}>
+        {/* Header */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              startIcon={<ArrowBack />}
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+              sx={{ minWidth: 'auto' }}
+            >
+              Back to Analytics
+            </Button>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
+                Campaign Leads
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B' }}>
+                {filteredLeads.length} leads
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
-      {/* Search */}
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          placeholder="Search leads by name, email, company, or title..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search sx={{ color: '#64748B' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            bgcolor: 'white',
-            borderRadius: '12px',
-            '& .MuiOutlinedInput-root': {
+        {/* Search */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="Search leads by name, email, company, or title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: '#64748B' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              bgcolor: 'white',
               borderRadius: '12px',
-            }
-          }}
-        />
-      </Box>
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+              }
+            }}
+          />
+        </Box>
       {/* Employee Cards Grid */}
       {filteredLeads.length === 0 ? (
         <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
@@ -324,6 +373,8 @@ export default function CampaignLeadsPage() {
                     email: lead.email,
                     phone: lead.phone,
                     linkedin_url: lead.linkedin_url,
+                    enriched_email: lead.enriched_email,
+                    enriched_linkedin_url: lead.enriched_linkedin_url,
                     photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
                     is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
                   }}
@@ -332,6 +383,7 @@ export default function CampaignLeadsPage() {
                   revealingContacts={revealingContacts}
                   handleRevealPhone={handleRevealPhone}
                   handleRevealEmail={handleRevealEmail}
+                  handleRevealLinkedIn={handleRevealLinkedIn}
                   onViewSummary={handleViewSummary}
                   profileSummary={lead.profile_summary || null}
                   hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
@@ -372,6 +424,7 @@ export default function CampaignLeadsPage() {
         loading={summaryLoading}
         error={summaryError}
       />
+      </Box>
     </Box>
   );
-}
+}

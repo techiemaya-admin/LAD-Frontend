@@ -30,14 +30,10 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
       '--cache-from', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
       '--build-arg', 'BUILDKIT_INLINE_CACHE=1',
-      '--build-arg', 'NEXT_PUBLIC_API_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
       '--build-arg', 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
       '--build-arg', 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
       '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app',
-<<<<<<< HEAD
       '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
-=======
->>>>>>> e4a1f3c (pipeline fixed with merge conflicts)
       '-f', 'web/Dockerfile',
       '.'
     ]
@@ -74,11 +70,7 @@ steps:
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-<<<<<<< HEAD
-          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL,NEXT_PUBLIC_DISABLE_VAPI=false \
-=======
-          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_API_URL=$_API_URL,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL \
->>>>>>> e4a1f3c (pipeline fixed with merge conflicts)
+          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL,NEXT_PUBLIC_DISABLE_VAPI=false \
           --update-labels branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
 
 # Images to be pushed to Container Registry

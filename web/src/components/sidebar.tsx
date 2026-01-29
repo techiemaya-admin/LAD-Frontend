@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap, MessageSquare } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -44,7 +44,6 @@ export function Sidebar() {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
-  const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayName, setDisplayName] = useState('User');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -93,6 +92,13 @@ export function Sidebar() {
       icon: Send,
       details: "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: 'view_campaigns'
+    },
+    {
+      href: "/conversations",
+      label: "Conversations",
+      icon: MessageSquare,
+      details: "View and manage your social media conversations.",
+      requiredCapability: 'view_conversations'
     },
     {
       href: "/make-call",
@@ -146,7 +152,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <img
-            src={isHydrated && companyLogo ? companyLogo : logo.src}
+            src="/logo.png"
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -168,7 +174,7 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <img
-              src={isHydrated && companyLogo ? companyLogo : logo.src}
+              src="/logo.png"
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
@@ -255,7 +261,7 @@ export function Sidebar() {
         )}
       >
         <img
-          src={isHydrated && companyLogo ? companyLogo : logo.src}
+          src="/logo.png"
           alt="Company Logo"
           loading="eager"
           fetchPriority="high"
@@ -428,4 +434,4 @@ export function Sidebar() {
       </aside>
     </>
   );
-}
+}

@@ -54,13 +54,16 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
   );
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchAgentMetrics = async () => {
       try {
         setLoading(true);
 
         // Fetch available agents
         const availableAgentsRes = await apiGet<{ success: boolean; data?: any[]; agents?: any[] }>(
-          '/api/voice-agent/user/available-agents'
+          '/api/voice-agent/user/available-agents',
+          { signal: abortController.signal }
         );
         const availableAgents = availableAgentsRes.data || availableAgentsRes.agents || [];
 
@@ -142,15 +145,21 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
           .sort((a, b) => b.callsToday - a.callsToday); // Sort by calls today descending
 
         setAgents(agentList.length > 0 ? agentList : []);
-      } catch (error) {
-        console.error('Error fetching agent metrics:', error);
-        setAgents([]);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error fetching agent metrics:', error);
+          setAgents([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchAgentMetrics();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   if (loading) {

@@ -271,7 +271,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   useEffect(() => {
     const loadNumbers = async () => {
       try {
-        const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/numbers');
+        const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/user/available-numbers');
         setNumbers(data?.numbers || data?.items || []);
       } catch {}
     };

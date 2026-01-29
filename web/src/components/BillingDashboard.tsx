@@ -152,7 +152,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
             <h3 className="text-lg font-semibold text-gray-900">Add Credits</h3>
             <Wallet className="h-6 w-6 text-blue-600" />
           </div>
-          <p className="text-sm text-gray-600">Purchase credit packages starting at $29</p>
+          <p className="text-sm text-gray-600">Purchase credit packages starting at $99</p>
         </Link>
         <Link
           href="/pricing"
@@ -193,7 +193,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
                   <h3 className="text-sm font-medium text-yellow-800">Low Credit Balance</h3>
                   <div className="mt-2 text-sm text-yellow-700">
                     <p>
-                      You're running low on credits. Consider purchasing the <strong>Starter Package</strong> (1,000 credits for $29) 
+                      You're running low on credits. Consider purchasing the <strong>Starter Plan</strong> (1,000 credits for $99) 
                       to continue using all features without interruption.
                     </p>
                   </div>
@@ -220,7 +220,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
                   <div className="mt-2 text-sm text-blue-700">
                     <p>
                       You're using an average of {balance.monthlyUsage.toLocaleString()} credits per month. 
-                      Consider the <strong>Professional Package</strong> (5,000 credits for $129) to save 11% per credit.
+                      Consider the <strong>Professional Plan</strong> (3,000 credits for $199) for better value.
                     </p>
                   </div>
                   <div className="mt-4">

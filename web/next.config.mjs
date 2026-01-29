@@ -65,16 +65,18 @@ const nextConfig = {
     ],
   },
 
-  env: {
-    NEXT_PUBLIC_API_BASE:
-      process.env.NEXT_PUBLIC_API_BASE || "https://lad-backend-develop-741719885039.us-central1.run.app",
-    NEXT_PUBLIC_BACKEND_URL:
-      process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-    NEXT_PUBLIC_SOCKET_URL:
-      process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  },
+  // Removed hardcoded env overrides - rely on .env.local instead
+  // This allows local development to use localhost URLs from .env.local
+  // env: {
+  //   NEXT_PUBLIC_API_BASE:
+  //     process.env.NEXT_PUBLIC_API_BASE || "https://lad-backend-develop-741719885039.us-central1.run.app",
+  //   NEXT_PUBLIC_BACKEND_URL:
+  //     process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
+  //   NEXT_PUBLIC_API_URL:
+  //     process.env.NEXT_PUBLIC_API_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
+  //   NEXT_PUBLIC_SOCKET_URL:
+  //     process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
+  // },
 };
 
 export default nextConfig;

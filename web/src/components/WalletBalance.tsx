@@ -71,7 +71,12 @@ export const WalletBalance: React.FC = () => {
   };
   const fetchCreditPackages = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/packages`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${getApiBaseUrl()}/api/wallet/packages`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch credit packages');
       }
@@ -300,4 +305,4 @@ export const WalletBalance: React.FC = () => {
       </div>
     </div>
   );
-};
+};

@@ -186,4 +186,79 @@ export async function revealLeadPhone(
     processing: response.data.processing,
     message: response.data.message
   };
-}
+}
+
+/**
+ * Save inbound leads
+ */
+export async function saveInboundLeads(data: {
+  leads: any[];
+  skipDuplicates?: boolean;
+}): Promise<{
+  success: boolean;
+  duplicatesFound: boolean;
+  data: {
+    saved?: number;
+    total?: number;
+    skippedDuplicates?: number;
+    leads?: any[];
+    leadIds?: string[];
+    errors?: any[];
+    duplicates?: any[];
+    duplicateCount?: number;
+    newLeadsCount?: number;
+    totalUploaded?: number;
+  };
+  message: string;
+}> {
+  const response = await apiClient.post<{
+    success: boolean;
+    duplicatesFound: boolean;
+    data: any;
+    message: string;
+  }>('/api/inbound-leads', data);
+  return response.data;
+}
+
+/**
+ * Get inbound leads
+ */
+export async function getInboundLeads(filters?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}): Promise<any[]> {
+  const params: Record<string, string> = {};
+  if (filters?.limit) params.limit = String(filters.limit);
+  if (filters?.offset) params.offset = String(filters.offset);
+  if (filters?.search) params.search = filters.search;
+  
+  const response = await apiClient.get<{ success: boolean; data: any[] }>(
+    '/api/inbound-leads',
+    { params }
+  );
+  return response.data.data || [];
+}
+
+/**
+ * Cancel bookings for leads to re-nurture them
+ */
+export async function cancelLeadBookingsForReNurturing(leadIds: string[]): Promise<{
+  success: boolean;
+  data: {
+    cancelledBookings: number;
+    leadIds: string[];
+  };
+  message: string;
+}> {
+  const response = await apiClient.post<{
+    success: boolean;
+    data: {
+      cancelledBookings: number;
+      leadIds: string[];
+    };
+    message: string;
+  }>('/api/inbound-leads/cancel-bookings', { leadIds });
+  return response.data;
+}
+

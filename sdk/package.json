@@ -1,5 +1,5 @@
 {
-  "name": "@LAD/frontend-features",
+  "name": "@lad/frontend-features",
   "version": "1.0.0",
   "description": "Frontend Feature SDK for LAD SaaS Platform",
   "type": "module",
@@ -36,6 +36,7 @@
     "test:sdk:campaigns": "vitest run features/campaigns/__tests__"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.90.16",
     "@testing-library/react": "^14.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",

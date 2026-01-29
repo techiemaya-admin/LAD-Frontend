@@ -1,5 +1,7 @@
 "use client";
+
 import { useMemo, useState, useEffect, useRef, ReactNode } from "react";
+
 interface ApiResponse<T = any> {
   success: boolean;
   [key: string]: any;
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Phone, Mic, Play, Pause, Bot } from "lucide-react"; // ⬅️ added Play/Pause
 import { apiGet } from "@/lib/api";
+
 type Agent = {
   id: string;
   name: string;
@@ -22,32 +25,41 @@ type Agent = {
   description?: ReactNode;
   voice_sample_url?: string | null;
 };
+
 type NumberItem = {
   id: string;
   phone_number: string;
   provider?: string;
   type?: string;
 };
+
 interface LanguageOption {
   id: string;
   label: string;
   value?: string;
 }
+
 interface CallConfigurationProps {
   numbers: NumberItem[];
   agents: Agent[];
+
   selectedNumberId: string | undefined;
   onSelectedNumberChange: (id: string) => void;
+
   languages: LanguageOption[];
   selectedLanguageId: string | undefined;
   onSelectedLanguageChange: (id: string) => void;
+
   selectedAccentId: string | undefined;
   onSelectedAccentChange: (id: string) => void;
+
   agentId: string | undefined;
   onAgentIdChange: (id: string) => void;
+
   additionalInstructions: string;
   onAdditionalInstructionsChange: (instructions: string) => void;
 }
+
 export function CallConfiguration({
   numbers,
   agents,
@@ -67,6 +79,7 @@ export function CallConfiguration({
     String(phone ?? "")
       .trim()
       .replace(/^\+{2,}/, "+");
+
   type SignedSampleResponse = {
     success?: boolean;
     signed_url?: string;
@@ -74,6 +87,7 @@ export function CallConfiguration({
     url?: string;
     [key: string]: any;
   };
+
   // ----- Agent selection -----
   const selectedAgent = useMemo<Agent | undefined>(
     () =>
@@ -81,11 +95,13 @@ export function CallConfiguration({
       agents[0],
     [agents, agentId]
   );
+
   // ----- Audio preview state -----
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [signedSampleUrl, setSignedSampleUrl] = useState<string | null>(null);
   const signedSampleUrlCache = useRef<Map<string, string>>(new Map());
+
   // Helper to get auth token
   const getAuthToken = () => {
     try {
@@ -94,11 +110,14 @@ export function CallConfiguration({
       return '';
     }
   };
+
   const getAgentSampleUrl = (agent: Agent | undefined): string | null => {
     if (!agent?.voice_sample_url) return null;
     if (signedSampleUrl) return signedSampleUrl;
+
     // Fallback for non-gs URLs when signing isn't available.
     if (!agent.voice_sample_url.startsWith('gs://')) return agent.voice_sample_url;
+
     // Last resort fallback for gs:// (will sign via server route). Keep token param
     // because <audio>/<Audio()> requests may not include auth headers.
     const token = getAuthToken();
@@ -106,6 +125,7 @@ export function CallConfiguration({
       agent.voice_sample_url
     )}&agentId=${encodeURIComponent(String(agent.id))}&token=${encodeURIComponent(token)}`;
   };
+
   // When agent changes, fetch a signed sample URL once (cached by agent id)
   useEffect(() => {
     const id = selectedAgent?.id;
@@ -113,12 +133,14 @@ export function CallConfiguration({
       setSignedSampleUrl(null);
       return;
     }
+
     const key = String(id);
     const cached = signedSampleUrlCache.current.get(key);
     if (cached) {
       setSignedSampleUrl(cached);
       return;
     }
+
     let cancelled = false;
     (async () => {
       try {
@@ -133,6 +155,7 @@ export function CallConfiguration({
         // } else if (!cancelled) {
         //   setSignedSampleUrl(null);
         // }
+        
         // VAPI DISABLED: Set null since voice agent is disabled
         if (!cancelled) {
           setSignedSampleUrl(null);
@@ -142,10 +165,12 @@ export function CallConfiguration({
         if (!cancelled) setSignedSampleUrl(null);
       }
     })();
+
     return () => {
       cancelled = true;
     };
   }, [selectedAgent?.id]);
+
   // When selected agent changes, setup audio
   useEffect(() => {
     setIsPlaying(false);
@@ -154,15 +179,19 @@ export function CallConfiguration({
       existingAudio.pause();
       audioRef.current = null;
     }
+
     const audioUrl = getAgentSampleUrl(selectedAgent);
     if (!audioUrl) return;
+
     const a = new Audio(audioUrl);
     a.onended = () => setIsPlaying(false);
     audioRef.current = a;
+
     return () => {
       a.pause();
     };
   }, [selectedAgent?.id, selectedAgent?.voice_sample_url, signedSampleUrl]);
+
   const togglePlay = async () => {
     if (!selectedAgent?.voice_sample_url) return;
     const audioUrl = getAgentSampleUrl(selectedAgent);
@@ -184,6 +213,7 @@ export function CallConfiguration({
       console.error("Audio play error:", e);
     }
   };
+
   // Auto-sync language & accent from selected agent
   useEffect(() => {
     if (!selectedAgent) return;
@@ -199,7 +229,9 @@ export function CallConfiguration({
       onSelectedAccentChange(selectedAgent.accent);
     }
   }, [selectedAgent, onSelectedLanguageChange, onSelectedAccentChange, languages]);
+
   const [isRephrasing, setIsRephrasing] = useState(false);
+
   return (
     <Card className="rounded-2xl transition-all p-6 bg-white border border-gray-100">
       <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-6 py-5 border border-white/30 dark:border-white/10 mb-6 -mx-6 mt-0">
@@ -210,6 +242,7 @@ export function CallConfiguration({
           Select number and voice agent
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-5">
         {/* Phone number */}
         <div className="w-full mx-0">
@@ -242,11 +275,13 @@ export function CallConfiguration({
             </SelectContent>
           </Select>
         </div>
+
         {/* Voice Agent + inline round play button */}
         <div className="w-full mx-0">
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Voice Agent
           </label>
+
           <div className="flex flex-col md:flex-row md:items-start items-center gap-3">
             {/* Select */}
             <div className="w-full md:flex-shrink-0 md:w-80">
@@ -300,6 +335,7 @@ export function CallConfiguration({
                 </SelectContent>
               </Select>
             </div>
+
             {/* Round play/pause icon button */}
             <button
               type="button"
@@ -323,10 +359,12 @@ export function CallConfiguration({
               )}
             </button>
           </div>
+
           <p className="text-xs text-muted-foreground mt-2">
             Choose a voice agent for the call
           </p>
         </div>
+
         {/* Language / Accent */}
         <div className="flex gap-4">
           <div className="flex-1">
@@ -377,6 +415,7 @@ export function CallConfiguration({
               </SelectContent>
             </Select>
           </div>
+
           <div className="flex-1">
             <label className="text-sm font-medium text-gray-700 mb-1 block">
               Accent
@@ -428,11 +467,13 @@ export function CallConfiguration({
             </Select>
           </div>
         </div>
+
         {/* Additional Instructions + Rephrase */}
         <div className="w-full mx-0 mt-4">
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Additional Instructions
           </label>
+
           <div className="relative">
             <textarea
               value={additionalInstructions}
@@ -440,17 +481,21 @@ export function CallConfiguration({
               className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Enter any additional instructions for the call..."
             />
+
             <button
               type="button"
               title="Maya-Rephrase"
               onClick={async () => {
                 if (!additionalInstructions.trim()) return;
+
                 try {
                   setIsRephrasing(true);
+
                   const apiBase =
                     process.env.NEXT_PUBLIC_USE_API_PROXY === "true"
                       ? ""
                       : process.env.NEXT_PUBLIC_API_BASE_URL;
+
                   const res = await fetch(
                     `${apiBase}/api/gemini/generate-phrase`,
                     {
@@ -461,6 +506,7 @@ export function CallConfiguration({
                       }),
                     }
                   );
+
                   const data = await res.json();
                   if (data.success) {
                     onAdditionalInstructionsChange(data.generatedText);
@@ -490,6 +536,7 @@ export function CallConfiguration({
               )}
             </button>
           </div>
+
           <p className="mt-1 text-xs text-gray-500">
             These instructions will be provided as context for the voice agent.
           </p>
@@ -497,4 +544,4 @@ export function CallConfiguration({
       </CardContent>
     </Card>
   );
-}
+}

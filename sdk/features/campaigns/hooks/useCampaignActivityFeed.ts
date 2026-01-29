@@ -90,8 +90,13 @@ export function useCampaignActivityFeed(
         }
         
         // Use backend URL for SSE connection
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
-        const sseUrl = `${baseUrl}/api/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
+        if (!process.env.NEXT_PUBLIC_BACKEND_URL && !process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
+          throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
+        }
+        // Ensure URL includes /api prefix
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
+        const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
+        const sseUrl = `${baseUrl}/campaigns/${campaignId}/analytics?limit=${options.limit}&token=${encodeURIComponent(token)}`;
         console.log('[ActivityFeed] Connecting to SSE:', sseUrl.replace(token, 'TOKEN_HIDDEN'));
         
         const eventSource = new EventSource(sseUrl);
@@ -120,7 +125,16 @@ export function useCampaignActivityFeed(
           console.log('[ActivityFeed] SSE readyState:', eventSource.readyState);
           setIsConnected(false);
           eventSource.close();
-          // Reconnect after 5 seconds
+          
+          // Don't reconnect if it's an authentication error (readyState 2 = CLOSED)
+          // Authentication errors return JSON instead of SSE stream, causing MIME type errors
+          if (eventSource.readyState === 2) {
+            console.warn('[ActivityFeed] SSE connection closed (possible auth error). Not reconnecting.');
+            console.warn('[ActivityFeed] Please log out and log back in to refresh your session.');
+            return;
+          }
+          
+          // Reconnect after 5 seconds for other errors
           setTimeout(() => {
             if (eventSourceRef.current === eventSource) {
               console.log('[ActivityFeed] Attempting to reconnect...');
