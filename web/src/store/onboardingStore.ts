@@ -1,6 +1,83 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, StorageValue } from 'zustand/middleware';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
+import { UserStorage } from '@/utils/userStorage';
+import { logger } from '@/lib/logger';
+
+// User-scoped storage adapter for Zustand persist middleware
+let userStorageInstance: UserStorage | null = null;
+
+const getUserStorageInstance = async (): Promise<UserStorage | null> => {
+  if (userStorageInstance) return userStorageInstance;
+  try {
+    const { getCurrentUser } = await import('@/lib/auth');
+    const user = await getCurrentUser();
+    if (user?.id) {
+      userStorageInstance = new UserStorage(user.id);
+      return userStorageInstance;
+    }
+  } catch (e) {
+    logger.debug('[OnboardingStore] Could not initialize user storage', { error: String(e) });
+  }
+  return null;
+};
+
+// Custom storage adapter for Zustand that uses user-scoped storage
+const createUserScopedStorage = () => {
+  return {
+    getItem: async (name: string): Promise<string | null> => {
+      try {
+        if (typeof window === 'undefined') return null;
+        
+        // Try user-scoped storage first
+        const userStorage = await getUserStorageInstance();
+        if (userStorage) {
+          const value = userStorage.getItem(name);
+          if (value) return value;
+        }
+        
+        // Fallback to regular localStorage
+        return localStorage.getItem(name);
+      } catch (e) {
+        logger.error('[UserScopedStorage] getItem failed', { error: String(e) });
+        return null;
+      }
+    },
+    setItem: async (name: string, value: string): Promise<void> => {
+      try {
+        if (typeof window === 'undefined') return;
+        
+        // Try user-scoped storage first
+        const userStorage = await getUserStorageInstance();
+        if (userStorage) {
+          userStorage.setItem(name, value);
+        } else {
+          // Fallback to regular localStorage
+          localStorage.setItem(name, value);
+        }
+      } catch (e) {
+        logger.error('[UserScopedStorage] setItem failed', { error: String(e) });
+      }
+    },
+    removeItem: async (name: string): Promise<void> => {
+      try {
+        if (typeof window === 'undefined') return;
+        
+        // Try user-scoped storage first
+        const userStorage = await getUserStorageInstance();
+        if (userStorage) {
+          userStorage.removeItem(name);
+        } else {
+          // Fallback to regular localStorage
+          localStorage.removeItem(name);
+        }
+      } catch (e) {
+        logger.error('[UserScopedStorage] removeItem failed', { error: String(e) });
+      }
+    },
+  };
+};
+
 // New onboarding state structure
 export type MainOption = 'automation' | 'leads' | null;
 export type LeadType = 'inbound' | 'outbound' | null;
@@ -467,7 +544,22 @@ export const useOnboardingStore = create<OnboardingState>()(
       },
       completeOnboarding: () => {
         if (typeof window !== 'undefined') {
-          localStorage.setItem('onboarding_completed', 'true');
+          // Save to user-scoped storage
+          let userStorage: UserStorage | null = null;
+          import('@/lib/auth').then(async ({ getCurrentUser }) => {
+            try {
+              const user = await getCurrentUser();
+              if (user?.id) {
+                userStorage = new UserStorage(user.id);
+                userStorage.setItem('onboarding_completed', 'true');
+              }
+            } catch (e) {
+              // Fallback to regular localStorage
+              localStorage.setItem('onboarding_completed', 'true');
+            }
+          }).catch(() => {
+            localStorage.setItem('onboarding_completed', 'true');
+          });
         }
         set({ currentScreen: 0 });
       },
@@ -480,6 +572,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'onboarding-storage',
+      storage: createUserScopedStorage() as any,
       partialize: (state) => ({
         hasSelectedOption: state.hasSelectedOption,
         selectedPath: state.selectedPath,

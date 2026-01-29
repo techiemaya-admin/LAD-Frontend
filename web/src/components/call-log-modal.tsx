@@ -1,4 +1,5 @@
 "use client";
+
 import * as React from "react";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -23,10 +24,14 @@ import {
   TrendingUp,
   MinusCircle,
   Clock,
+  Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
+import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
+import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
+
 // shadcn + recharts
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -38,6 +43,7 @@ import {
 } from "@/components/ui/chart";
 import { PieChart, Pie, Sector, Label } from "recharts";
 import type { PieSectorDataItem } from "recharts/types/polar/Pie";
+
 /* ----------------- Helpers ------------------ */
 function normalizeList(value: any): string[] {
   if (!value && value !== 0) return [];
@@ -56,6 +62,7 @@ function normalizeList(value: any): string[] {
   if (typeof value === "object") return Object.values(value).map(String).filter(Boolean);
   return [String(value)];
 }
+
 function formatTimestamp(input: any): string {
   if (input === null || input === undefined) return "";
   if (typeof input === "number") {
@@ -80,6 +87,7 @@ function formatTimestamp(input: any): string {
   }
   return String(input);
 }
+
 /* ----------------- Transcripts Tab ------------------ */
 const TranscriptsTab = ({
   segments,
@@ -124,12 +132,14 @@ const TranscriptsTab = ({
     </div>
   </ScrollArea>
 );
+
 /* ----------------- Analysis Tab ------------------ */
 const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
   const recoList = normalizeList(analysis?.recommendations);
   const summaryText = analysis?.summary ?? "";
   const sentimentText = analysis?.sentiment ?? "";
   const dispositionText = analysis?.disposition ?? "";
+
   const getSentimentVariant = (sentiment: string) => {
     const lower = sentiment.toLowerCase();
     if (lower.includes("positive"))
@@ -147,15 +157,18 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
       icon: MinusCircle,
     };
   };
+  
   // Color mapping derived from disposition
   const getDispositionVariant = (disposition: string) => {
     const lower = (disposition || "").toLowerCase();
     const compact = lower.replace(/[^a-z0-9]+/g, " ").trim();
     const noPunct = lower.replace(/[^a-z0-9]/g, "");
+
     // Green
     if (compact.includes("proceed immediately") || noPunct.includes("proceedimmediately")) {
       return { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle };
     }
+
     // Yellow (3-7 days)
     if (
       compact.includes("proceed in 3") ||
@@ -170,6 +183,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
     ) {
       return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
     }
+
     // Red (don't pursue)
     if (
       compact.includes("do not pursue") ||
@@ -184,10 +198,13 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
     ) {
       return { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle };
     }
+
     return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
   };
+
   const dispositionInfo = getDispositionVariant(dispositionText);
   const DispoIcon = dispositionInfo.icon;
+
   return (
     <ScrollArea className="h-full p-4">
       <Card className="border-orange-200 shadow-lg overflow-hidden">
@@ -201,6 +218,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
               {summaryText || "No summary available."}
             </p>
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-orange-500" />
@@ -218,6 +236,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
               </span>
             </Badge>
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-orange-500" />
@@ -227,6 +246,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
               {dispositionText || "Resolved successfully."}
             </p>
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Lightbulb className="h-5 w-5 text-orange-500" />
@@ -250,11 +270,13 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
     </ScrollArea>
   );
 };
+
 /* ----------------- Messages Tab ------------------ */
 const MessagesTab = ({ messages }: { messages: any | null }) => {
   const questions = normalizeList(messages?.prospect_questions);
   const concerns = normalizeList(messages?.prospect_concerns);
   const phrases = normalizeList(messages?.key_phrases);
+
   return (
     <ScrollArea className="h-full p-4">
       <Card className="border-orange-200 shadow-lg overflow-hidden">
@@ -277,6 +299,7 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               )}
             </div>
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-orange-500" />
@@ -295,6 +318,7 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               )}
             </div>
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Zap className="h-5 w-5 text-orange-500" />
@@ -321,6 +345,7 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
     </ScrollArea>
   );
 };
+
 /* ----------------- Cost Helpers ------------------ */
 function parseCurrency(input: unknown): number {
   if (input == null) return 0;
@@ -335,14 +360,18 @@ function parseCurrency(input: unknown): number {
 function formatUSD(n: number): string {
   return `$${n.toFixed(2)}`;
 }
+
 /* --------------- Cost Tab (Interactive Pie) --------------- */
 const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null }) => {
   const callCostRaw = log?.cost;
   const analysisCostRaw = analysis?.cost;
+
   const callCost = parseCurrency(callCostRaw);
   const analysisCost = parseCurrency(analysisCostRaw);
+
   const [includeCall, setIncludeCall] = useState(true);
   const [includeAnalysis, setIncludeAnalysis] = useState(true);
+
   const data = useMemo(() => {
     const rows: Array<{ key: "call" | "analysis"; label: string; value: number; fill: string }> =
       [];
@@ -359,16 +388,20 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
     }
     return rows;
   }, [includeCall, includeAnalysis, callCost, analysisCost]);
+
   const total = useMemo(
     () => (includeCall ? callCost : 0) + (includeAnalysis ? analysisCost : 0),
     [includeCall, includeAnalysis, callCost, analysisCost]
   );
+
   const chartConfig = {
     call: { label: "Call", color: "var(--chart-1)" },
     analysis: { label: "Analysis", color: "var(--chart-2)" },
   } satisfies ChartConfig;
+
   const pieId = "call-cost-pie";
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+
   return (
     <Card className="border-orange-200 shadow-lg">
       <ChartStyle id={pieId} config={chartConfig} />
@@ -383,6 +416,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
               {formatUSD(total)}
             </Badge>
           </div>
+
           <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -397,6 +431,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
               </div>
               <span className="text-sm font-semibold">{formatUSD(callCost)}</span>
             </div>
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -412,6 +447,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
             </div>
           </div>
         </div>
+
         <div className="flex-1 flex justify-center items-center">
           <ChartContainer id={pieId} config={chartConfig} className="mx-auto aspect-square w-full max-w-[240px]">
             <PieChart>
@@ -473,6 +509,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
               </Pie>
             </PieChart>
           </ChartContainer>
+
           <style jsx>{`
             .recharts-sector { transition: all 0.25s cubic-bezier(.25,.8,.25,1); }
             .recharts-sector:hover {
@@ -491,6 +528,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
     </Card>
   );
 };
+
 /* ----------------- Main Modal ------------------ */
 export function CallLogModal({
   id,
@@ -508,6 +546,8 @@ export function CallLogModal({
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<any | null>(null);
+  const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
+
   useEffect(() => {
     async function load() {
       if (!open || !id) {
@@ -518,11 +558,13 @@ export function CallLogModal({
         setSignedRecordingUrl(undefined);
         return;
       }
+
       try {
         // Call log - Using voice-agent API (get by call_log_id)
         const res = await apiGet<{ success: boolean; log?: any; data?: any }>(`/api/voice-agent/calllogs/${id}`);
         const l = res.data || res.log;
         setLog(l);
+
         // 2) Transcripts: accept string OR object, and several common keys
         try {
           const raw =
@@ -531,7 +573,9 @@ export function CallLogModal({
             l?.transcription ??
             l?.logs?.transcriptions ??
             l?.logs?.transcription;
+
           let segs: Array<{ time?: string; speaker?: string; text: string }> = [];
+
           if (typeof raw === "string") {
             const parsed = JSON.parse(raw);
             const arr =
@@ -562,10 +606,12 @@ export function CallLogModal({
         } catch {
           setSegments([]);
         }
+
         // 3) Audio: always try signed URL using a real call id, then fallback
         try {
           const callId = l?.call_id ?? l?.callId ?? l?.voice_call_id ?? l?.id;
           let audioUrl: string | undefined;
+
           if (callId) {
             try {
               // Using voice-agent API for recording URL (VAPI integration disabled in backend)
@@ -593,6 +639,7 @@ export function CallLogModal({
           // Fallback to direct URLs if signed URL fetch fails
           setSignedRecordingUrl(l?.signed_recording_url || l?.recording_url || l?.call_recording_url);
         }
+
         // 4) Analysis - included in the main call log response
         try {
           const a = l?.analysis ?? null;
@@ -614,12 +661,15 @@ export function CallLogModal({
         setSignedRecordingUrl(undefined);
       }
     }
+
     load();
   }, [open, id]);
+
   // Availability flags & default tab
   const hasTranscripts = segments && segments.length > 0;
   const hasAudio = Boolean(signedRecordingUrl);
   const hasAnalysis = analysis && typeof analysis === "object" && Object.keys(analysis).length > 0;
+
   const availableTabs: Array<"transcripts" | "analysis" | "messages" | "cost"> = [];
   if (hasTranscripts) availableTabs.push("transcripts");
   if (hasAnalysis) {
@@ -628,6 +678,34 @@ export function CallLogModal({
   }
   availableTabs.push("cost");
   const defaultTab = availableTabs[0] ?? "cost";
+
+  // Download handler
+  const handleDownloadRecording = async () => {
+    if (!signedRecordingUrl || !log) return;
+    setIsDownloadingRecording(true);
+    try {
+      const leadName = [log?.lead_first_name, log?.lead_last_name]
+        .filter(Boolean)
+        .join(' ') || '';
+      const filename = generateRecordingFilename(leadName, log?.started_at);
+      await downloadRecording(signedRecordingUrl, filename);
+    } catch (error) {
+      console.error("Failed to download recording:", error);
+    } finally {
+      setIsDownloadingRecording(false);
+    }
+  };
+
+  // Get lead category from API response or categorize
+  const leadCategory = (() => {
+    if (log?.lead_category) {
+      const normalized = normalizeLeadCategory(log.lead_category);
+      if (normalized) return normalized;
+    }
+    return categorizeLead(log || {});
+  })();
+  const tagConfig = getTagConfig(leadCategory);
+
   return (
     <>
       <div
@@ -639,23 +717,52 @@ export function CallLogModal({
       >
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <PhoneCall className="h-6 w-6 text-orange-500" />
-            <span>Call Details & Insights</span>
-          </h2>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
-            <X className="h-4 w-4" />
-          </Button>
+            <div className="flex flex-col space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
+              {leadCategory && (
+                <Badge className={cn(
+                  "w-fit text-xs font-semibold",
+                  tagConfig.bgColor,
+                  tagConfig.textColor
+                )}>
+                  {tagConfig.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasAudio && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadRecording}
+                disabled={isDownloadingRecording}
+                className="hover:bg-orange-100"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloadingRecording ? "Downloading..." : "Call Recording Download"}
+              </Button>
+            )}  
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+
         {/* Body */}
         <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
           {/* Audio (only if present) */}
           {/* {hasAudio && <AgentAudioPlayer src={signedRecordingUrl} />} */}
+
           {hasAudio && (
   <div className="w-full">
     <AgentAudioPlayer src={signedRecordingUrl} />
   </div>
 )}
+
+
           <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="grid grid-cols-4 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
               {hasTranscripts && (
@@ -666,6 +773,7 @@ export function CallLogModal({
                   <Mic className="h-4 w-4" /> Transcripts
                 </TabsTrigger>
               )}
+
               {hasAnalysis && (
                 <TabsTrigger
                   value="analysis"
@@ -674,6 +782,7 @@ export function CallLogModal({
                   <Info className="h-4 w-4" /> Analysis
                 </TabsTrigger>
               )}
+
               {hasAnalysis && (
                 <TabsTrigger
                   value="messages"
@@ -682,6 +791,7 @@ export function CallLogModal({
                   <MessageSquare className="h-4 w-4" /> Messages
                 </TabsTrigger>
               )}
+
               <TabsTrigger
                 value="cost"
                 className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
@@ -689,34 +799,41 @@ export function CallLogModal({
                 <DollarSign className="h-4 w-4" /> Cost
               </TabsTrigger>
             </TabsList>
+
             {hasTranscripts && (
               <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                 <TranscriptsTab segments={segments} />
               </TabsContent>
             )}
+
             {hasAnalysis && (
               <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                 <AnalysisTab analysis={analysis} />
               </TabsContent>
             )}
+
             {hasAnalysis && (
               <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                 <MessagesTab messages={messages} />
               </TabsContent>
             )}
+
             <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
               <CallCostTab log={log} analysis={analysis} />
             </TabsContent>
           </Tabs>
         </div>
       </div>
+
       {open && (
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
       )}
     </>
   );
 }
+
 // "use client";
+
 // import * as React from "react";
 // import { useState, useMemo, useEffect } from "react";
 // import { cn } from "@/lib/utils";
@@ -744,6 +861,7 @@ export function CallLogModal({
 // import { Card, CardContent } from "@/components/ui/card";
 // import { apiGet } from "@/lib/api";
 // import { AgentAudioPlayer } from "./AgentAudioPlayer";
+
 // // ⬇️ shadcn + recharts (correct imports)
 // import { Checkbox } from "@/components/ui/checkbox";
 // import {
@@ -755,6 +873,7 @@ export function CallLogModal({
 // } from "@/components/ui/chart";
 // import { PieChart, Pie, Sector, Label } from "recharts";
 // import type { PieSectorDataItem } from "recharts/types/polar/Pie";
+
 // // 🎵 Waveform Player
 // const Waveform = ({ url }: { url?: string }) => {
 //   const [playing, setPlaying] = useState(false);
@@ -820,6 +939,7 @@ export function CallLogModal({
 //     </div>
 //   );
 // };
+
 // // Helper for arrays
 // function normalizeList(value: any): string[] {
 //   if (!value && value !== 0) return [];
@@ -838,6 +958,7 @@ export function CallLogModal({
 //   if (typeof value === "object") return Object.values(value).map(String).filter(Boolean);
 //   return [String(value)];
 // }
+
 // function formatTimestamp(input: any): string {
 //   if (input === null || input === undefined) return "";
 //   if (typeof input === "number") {
@@ -862,6 +983,7 @@ export function CallLogModal({
 //   }
 //   return String(input);
 // }
+
 // // 💬 Transcripts Tab
 // const TranscriptsTab = ({
 //   segments,
@@ -906,12 +1028,14 @@ export function CallLogModal({
 //     </div>
 //   </ScrollArea>
 // );
+
 // // 🧠 Analysis Tab (scrollable)
 // const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
 //   const recoList = normalizeList(analysis?.recommendations);
 //   const summaryText = analysis?.summary ?? "";
 //   const sentimentText = analysis?.sentiment ?? "";
 //   const dispositionText = analysis?.disposition ?? "";
+
 //   const getSentimentVariant = (sentiment: string) => {
 //     const lower = sentiment.toLowerCase();
 //     if (lower.includes("positive"))
@@ -929,8 +1053,10 @@ export function CallLogModal({
 //       icon: MinusCircle,
 //     };
 //   };
+
 //   const sentimentInfo = getSentimentVariant(sentimentText);
 //   const SentIcon = sentimentInfo.icon; // ✅ fix dynamic icon render
+
 //   return (
 //     <ScrollArea className="h-full p-4">
 //       <Card className="border-orange-200 shadow-lg overflow-hidden">
@@ -945,6 +1071,7 @@ export function CallLogModal({
 //               {summaryText || "No summary available."}
 //             </p>
 //           </div>
+
 //           {/* Sentiment */}
 //           <div className="space-y-3">
 //             <div className="flex items-center space-x-2">
@@ -963,6 +1090,7 @@ export function CallLogModal({
 //               </span>
 //             </Badge>
 //           </div>
+
 //           {/* Disposition */}
 //           <div className="space-y-3">
 //             <div className="flex items-center space-x-2">
@@ -973,6 +1101,7 @@ export function CallLogModal({
 //               {dispositionText || "Resolved successfully."}
 //             </p>
 //           </div>
+
 //           {/* Recommendations */}
 //           <div className="space-y-3">
 //             <div className="flex items-center space-x-2">
@@ -997,11 +1126,13 @@ export function CallLogModal({
 //     </ScrollArea>
 //   );
 // };
+
 // // 💬 Messages Tab
 // const MessagesTab = ({ messages }: { messages: any | null }) => {
 //   const questions = normalizeList(messages?.prospect_questions);
 //   const concerns = normalizeList(messages?.prospect_concerns);
 //   const phrases = normalizeList(messages?.key_phrases);
+
 //   return (
 //     <ScrollArea className="h-full p-4">
 //       <Card className="border-orange-200 shadow-lg overflow-hidden">
@@ -1025,6 +1156,7 @@ export function CallLogModal({
 //               )}
 //             </div>
 //           </div>
+
 //           {/* Prospect Concerns */}
 //           <div className="space-y-3">
 //             <div className="flex items-center space-x-2">
@@ -1044,6 +1176,7 @@ export function CallLogModal({
 //               )}
 //             </div>
 //           </div>
+
 //           {/* Key Phrases */}
 //           <div className="space-y-3">
 //             <div className="flex items-center space-x-2">
@@ -1071,6 +1204,7 @@ export function CallLogModal({
 //     </ScrollArea>
 //   );
 // };
+
 // /* ----------------- Cost Helpers ------------------ */
 // function parseCurrency(input: unknown): number {
 //   if (input == null) return 0;
@@ -1085,15 +1219,19 @@ export function CallLogModal({
 // function formatUSD(n: number): string {
 //   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 // }
+
 // /* --------------- Cost Tab (Interactive Pie) --------------- */
 // const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null }) => {
 //   // Backend values
 //   const callCostRaw = log?.cost; // voice_agent.call_logs_voiceagent.cost
 //   const analysisCostRaw = analysis?.cost; // post_call_analysis_voiceagent.cost (string like "$0.000435")
+
 //   const callCost = parseCurrency(callCostRaw);
 //   const analysisCost = parseCurrency(analysisCostRaw);
+
 //   const [includeCall, setIncludeCall] = useState(true);
 //   const [includeAnalysis, setIncludeAnalysis] = useState(true);
+
 //   const data = useMemo(() => {
 //     const rows: Array<{ key: "call" | "analysis"; label: string; value: number; fill: string }> =
 //       [];
@@ -1110,16 +1248,20 @@ export function CallLogModal({
 //     }
 //     return rows;
 //   }, [includeCall, includeAnalysis, callCost, analysisCost]);
+
 //   const total = useMemo(
 //     () => (includeCall ? callCost : 0) + (includeAnalysis ? analysisCost : 0),
 //     [includeCall, includeAnalysis, callCost, analysisCost]
 //   );
+
 //   const chartConfig = {
 //     call: { label: "Call", color: "var(--chart-1)" },
 //     analysis: { label: "Analysis", color: "var(--chart-2)" },
 //   } satisfies ChartConfig;
+
 //   const pieId = "call-cost-pie";
 //   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+
 //   return (
 //     <Card className="border-orange-200 shadow-lg">
 //       <ChartStyle id={pieId} config={chartConfig} />
@@ -1135,6 +1277,7 @@ export function CallLogModal({
 //               {formatUSD(total)}
 //             </Badge>
 //           </div>
+
 //           <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
 //             <div className="flex items-center justify-between">
 //               <div className="flex items-center gap-3">
@@ -1149,6 +1292,7 @@ export function CallLogModal({
 //               </div>
 //               <span className="text-sm font-semibold">{formatUSD(callCost)}</span>
 //             </div>
+
 //             <div className="flex items-center justify-between">
 //               <div className="flex items-center gap-3">
 //                 <Checkbox
@@ -1164,6 +1308,7 @@ export function CallLogModal({
 //             </div>
 //           </div>
 //         </div>
+
 //         {/* Right: pie */}
 //         <div className="flex-1 flex justify-center items-center">
 //           {/* <ChartContainer id={pieId} config={chartConfig} className="mx-auto aspect-square w-full max-w-[320px]">
@@ -1218,6 +1363,8 @@ export function CallLogModal({
 //               </Pie>
 //             </PieChart>
 //           </ChartContainer> */}
+
+
 //           {/* <ChartContainer
 //   id={pieId}
 //   config={chartConfig}
@@ -1248,6 +1395,7 @@ export function CallLogModal({
 //     </g>
 //   )}
 // >
+
 //       <Label
 //         content={({ viewBox }) => {
 //           if (viewBox && "cx" in viewBox && "cy" in viewBox) {
@@ -1281,7 +1429,10 @@ export function CallLogModal({
 //     </Pie>
 //   </PieChart>
 // </ChartContainer>
+
 //  */}
+
+
 // {/* --- Pie (must be a single child inside ChartContainer) --- */}
 // <ChartContainer
 //   id={pieId}
@@ -1348,6 +1499,7 @@ export function CallLogModal({
 //     </Pie>
 //   </PieChart>
 // </ChartContainer>
+
 // {/* Put styles OUTSIDE ChartContainer so it's a single child */}
 // <style jsx>{`
 //   /* Smooth transitions for all sectors */
@@ -1367,11 +1519,14 @@ export function CallLogModal({
 //       drop-shadow(0 0 16px rgba(255, 140, 0, 0.6));
 //   }
 // `}</style>
+
+
 //         </div>
 //       </div>
 //     </Card>
 //   );
 // };
+
 // // 🧩 Main Modal
 // export function CallLogModal({
 //   id,
@@ -1389,6 +1544,7 @@ export function CallLogModal({
 //   const [analysis, setAnalysis] = useState<any | null>(null);
 //   const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
 //   const [messages, setMessages] = useState<any | null>(null);
+
 //   useEffect(() => {
 //     async function load() {
 //       if (!open || !id) {
@@ -1403,6 +1559,7 @@ export function CallLogModal({
 //         const res = await apiGet<{ success: boolean; log: any }>(`/api/calllogs/${id}`);
 //         const l = res.log;
 //         setLog(l);
+
 //         const t = typeof l?.transcriptions === "string" ? l.transcriptions : undefined;
 //         if (t) {
 //           try {
@@ -1419,6 +1576,7 @@ export function CallLogModal({
 //             setSegments([]);
 //           }
 //         }
+
 //         // Signed recording URL
 //         if (l?.call_recording_url) {
 //           try {
@@ -1435,6 +1593,7 @@ export function CallLogModal({
 //             setSignedRecordingUrl(l.call_recording_url);
 //           }
 //         }
+
 //         const ra = await apiGet<{ success: boolean; analysis: any }>(`/api/calllogs/${id}/analysis`);
 //         setAnalysis(ra.analysis || null);
 //         setMessages(ra.analysis || null);
@@ -1448,6 +1607,7 @@ export function CallLogModal({
 //     }
 //     load();
 //   }, [open, id]);
+
 //   return (
 //     <>
 //       <div
@@ -1467,9 +1627,11 @@ export function CallLogModal({
 //             <X className="h-4 w-4" />
 //           </Button>
 //         </div>
+
 //         {/* Body */}
 //         <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
 //           <AgentAudioPlayer src={signedRecordingUrl} />
+
 //           <Tabs defaultValue="analysis" className="flex-1 flex flex-col overflow-hidden">
 //             <TabsList className="grid grid-cols-4 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
 //               <TabsTrigger
@@ -1497,6 +1659,7 @@ export function CallLogModal({
 //                 <DollarSign className="h-4 w-4" /> Cost
 //               </TabsTrigger>
 //             </TabsList>
+
 //             <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
 //               <TranscriptsTab segments={segments} />
 //             </TabsContent>
@@ -1506,6 +1669,7 @@ export function CallLogModal({
 //             <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
 //               <MessagesTab messages={messages} />
 //             </TabsContent>
+
 //             {/* ✅ Pass log & analysis to cost tab */}
 //             <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
 //               <CallCostTab log={log} analysis={analysis} />
@@ -1513,9 +1677,10 @@ export function CallLogModal({
 //           </Tabs>
 //         </div>
 //       </div>
+
 //       {open && (
 //         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
 //       )}
 //     </>
 //   );
-// }
+// }

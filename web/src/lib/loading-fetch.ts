@@ -1,5 +1,5 @@
 import { loadingBus } from "@/lib/loading-bus";
-export async function loadingFetch(input: RequestInfo | URL, init?: RequestInit, minVisibleMs = 30000) {
+export async function loadingFetch(input: RequestInfo | URL, init?: RequestInit, minVisibleMs = 300) {
   const hideAt = loadingBus.requestStart(minVisibleMs);
   try {
     const res = await fetch(input as any, init as any);
@@ -7,4 +7,4 @@ export async function loadingFetch(input: RequestInfo | URL, init?: RequestInit,
   } finally {
     loadingBus.requestEnd(hideAt);
   }
-}
+}

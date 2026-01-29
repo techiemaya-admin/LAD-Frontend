@@ -8,6 +8,7 @@ import { CallOptions } from "../../components/CallOptions";
 import { getCurrentUser } from "@/lib/auth";
 import { CallConfigurationSkeleton } from "@/components/skeletons/CallConfigurationSkeleton";
 import { CallOptionsSkeleton } from "@/components/skeletons/CallOptionsSkeleton";
+import { UserStorage } from "@/utils/userStorage";
 import { 
   useUserAvailableNumbers, 
   useAvailableAgents, 
@@ -109,6 +110,7 @@ export default function MakeCallContent() {
   // Refs to track last processed data and prevent infinite loops
   const lastProcessedNumbersRef = useRef<string>("");
   const lastProcessedAgentsRef = useRef<string>("");
+  const userStorageRef = useRef<UserStorage | null>(null);
   // SDK Hooks for fetching numbers and agents
   const { data: availableNumbers = [], isLoading: numbersLoading, error: numbersError } = useUserAvailableNumbers();
   const { data: availableAgents = [], isLoading: agentsLoading, error: agentsError } = useAvailableAgents();
@@ -132,6 +134,8 @@ export default function MakeCallContent() {
           logger.debug("[make-call] Setting initiatedBy userId");
           setInitiatedBy(userId);
           setVoiceAgentUserId(userId);
+          // Initialize user-scoped storage
+          userStorageRef.current = new UserStorage(userId);
         }
       } catch (e) {
         logger.warn(
@@ -360,9 +364,18 @@ export default function MakeCallContent() {
   useEffect(() => {
     if (qpIds) return;
     try {
-      let raw =
-        localStorage.getItem("bulk_call_targets") ||
-        localStorage.getItem("make_call_targets");
+      let raw: string | null = null;
+      
+      // Try user-scoped storage first, then fallback to regular localStorage
+      if (userStorageRef.current) {
+        raw = userStorageRef.current.getItem("bulk_call_targets") ||
+              userStorageRef.current.getItem("make_call_targets");
+      }
+      if (!raw) {
+        raw = localStorage.getItem("bulk_call_targets") ||
+              localStorage.getItem("make_call_targets");
+      }
+      
       let arrayLike: any[] | undefined;
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -497,17 +510,21 @@ export default function MakeCallContent() {
       setAgentId(String(num.assignedAgentId));
     }
   }, [selectedNumberId, numbers, agentId]);
-  // Sync bulkEntries → localStorage
+  // Sync bulkEntries → user-scoped localStorage
   useEffect(() => {
     if (
       bulkEntries.length > 0 &&
       (dataSource === "file" || dataSource === "localStorage")
     ) {
       try {
-        localStorage.setItem(
-          "bulk_call_targets",
-          JSON.stringify({ data: bulkEntries })
-        );
+        const data = JSON.stringify({ data: bulkEntries });
+        // Try to save to user-scoped storage first
+        if (userStorageRef.current) {
+          userStorageRef.current.setItem("bulk_call_targets", data);
+        } else {
+          // Fallback to regular localStorage
+          localStorage.setItem("bulk_call_targets", data);
+        }
       } catch (e) {
         logger.warn("[make-call] Failed to sync to localStorage", { error: String(e) });
       }

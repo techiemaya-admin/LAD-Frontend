@@ -1084,16 +1084,6 @@ const PipelineBoard: React.FC = () => {
       </div>
     );
   }
-  if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-32">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-2 text-sm text-gray-500">
-          Loading pipeline data...
-        </p>
-      </div>
-    );
-  }
   return (
     <div 
       className="w-full flex flex-col"
