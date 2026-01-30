@@ -1,7 +1,22 @@
 'use client';
-import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
-import CampaignsList from '../../features/campaigns/components/CampaignsList';
+
+import React from 'react';
+import nextDynamic from 'next/dynamic';
+import { CampaignsSkeleton } from '@/components/skeletons/CampaignsSkeleton';
+import { PageLoadingSentry } from '@/components/loader/PageLoadingSentry';
+
+const CampaignsList = nextDynamic(
+  () => import('../../features/campaigns/components/CampaignsList'),
+  {
+    loading: () => (
+      <>
+        <PageLoadingSentry />
+        <CampaignsSkeleton />
+      </>
+    )
+  }
+);
+
 /**
  * Campaigns Page - follows LAD architecture pattern
  * 
@@ -9,19 +24,7 @@ import CampaignsList from '../../features/campaigns/components/CampaignsList';
  * - Authentication check
  * - Route-level concerns
  * - Imports feature component from features/campaigns/
- * 
- * All business logic, state management, and UI rendering
- * is in the CampaignsList feature component.
  */
 export default function CampaignsPage() {
-  // TODO: Add authentication check when auth system is available
-  // const session = await getServerSession();
-  // if (!session) {
-  //   redirect('/login');
-  // }
-  return (
-    <Suspense fallback={<div>Loading campaigns...</div>}>
-      <CampaignsList />
-    </Suspense>
-  );
-}
+  return <CampaignsList />;
+}

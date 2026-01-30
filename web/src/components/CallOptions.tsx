@@ -10,7 +10,6 @@ import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen } fro
 import { useToast } from "@/components/ui/app-toaster";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
-import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
 import { useMakeCall } from "@sdk/features/voice-agent/features/voice-agent";
 import { logger } from "@/lib/logger";
@@ -118,7 +117,7 @@ export function CallOptions(props: CallOptionsProps) {
           : (agentId && !Number.isNaN(Number(agentId)) ? Number(agentId) : undefined);
       if (useCsv) {
         if (!hasBulk) throw new Error("No numbers in the bulk list");
-// updated bulk payload - include per-row summary and top-level added_context
+        // updated bulk payload - include per-row summary and top-level added_context
         const payload = {
           voice_id: "default", // Required by V2 API
           agent_id: agentId,
@@ -164,10 +163,10 @@ export function CallOptions(props: CallOptionsProps) {
       const normalizedPhone = dial.replace(/\s+/g, ""); // Remove all spaces from phone number
       // LAD Architecture Compliance: Use SDK hook instead of direct API call
       if (!agentId) throw new Error("Please select a voice agent");
-      logger.debug("Initiating single call via SDK", { 
-        hasAgent: !!agentId, 
+      logger.debug("Initiating single call via SDK", {
+        hasAgent: !!agentId,
         hasPhone: !!normalizedPhone,
-        hasContext: !!additionalInstructions 
+        hasContext: !!additionalInstructions
       });
       // Use SDK hook which handles VAPI disable logic and error handling
       await makeCallMutation.mutateAsync({
@@ -226,8 +225,8 @@ export function CallOptions(props: CallOptionsProps) {
           const idFromRequested = editorValues.requested_id && String(editorValues.requested_id).trim();
           const identifier = idFromRequested
             ? (dataType === 'employee'
-                ? { employee_data_id: idFromRequested }
-                : { company_data_id: idFromRequested })
+              ? { employee_data_id: idFromRequested }
+              : { company_data_id: idFromRequested })
             : null;
           if (!identifier) {
             push({
@@ -251,10 +250,10 @@ export function CallOptions(props: CallOptionsProps) {
         } catch (apiError: any) {
           logger.error('Failed to update database', { error: apiError });
           // Non-blocking: UI is already updated, just log the error
-          push({ 
-            variant: 'warning', 
-            title: 'Partial save', 
-            description: 'UI updated but database sync failed. Changes may not persist on reload.' 
+          push({
+            variant: 'warning',
+            title: 'Partial save',
+            description: 'UI updated but database sync failed. Changes may not persist on reload.'
           });
         }
       }
@@ -325,7 +324,8 @@ export function CallOptions(props: CallOptionsProps) {
   //   a.click();
   //   URL.revokeObjectURL(url);
   // };
-    const downloadTemplate = async () => {
+  const downloadTemplate = async () => {
+    const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Template");
     // Force Text format for all template columns (prevents Excel from treating values as General/Number)
@@ -340,10 +340,10 @@ export function CallOptions(props: CallOptionsProps) {
       summary: "Optional summary for call context",
     });
     // Also explicitly apply to existing cells (header + sample row) for maximum compatibility.
-    ws.getRow(1).eachCell((cell) => {
+    ws.getRow(1).eachCell((cell: any) => {
       cell.numFmt = "@";
     });
-    ws.getRow(2).eachCell((cell) => {
+    ws.getRow(2).eachCell((cell: any) => {
       cell.numFmt = "@";
     });
     const buffer = await wb.xlsx.writeBuffer();
@@ -437,6 +437,7 @@ export function CallOptions(props: CallOptionsProps) {
         });
         return;
       }
+      const ExcelJS = (await import("exceljs")).default;
       const arrayBuffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
@@ -447,7 +448,7 @@ export function CallOptions(props: CallOptionsProps) {
       }
       // Read headers
       const headers: string[] = [];
-      worksheet.getRow(1).eachCell((cell, col) => {
+      worksheet.getRow(1).eachCell((cell: any, col: any) => {
         headers[col - 1] = String((cell.value as any) || "").toLowerCase().trim();
       });
       // Detect columns
@@ -464,7 +465,7 @@ export function CallOptions(props: CallOptionsProps) {
         return;
       }
       const parsed: BulkEntry[] = [];
-      worksheet.eachRow((row, rowNumber) => {
+      worksheet.eachRow((row: any, rowNumber: any) => {
         if (rowNumber === 1) return;
         const values = row.values as any[];
         const phone = String(values[phoneIdx + 1] || "")
@@ -490,7 +491,7 @@ export function CallOptions(props: CallOptionsProps) {
       onDataSourceChange?.("file");
       try {
         localStorage.setItem("bulk_call_targets", JSON.stringify({ data: parsed }));
-      } catch {}
+      } catch { }
       push({
         title: "Excel imported",
         description: `${parsed.length} rows loaded`,
@@ -518,52 +519,52 @@ export function CallOptions(props: CallOptionsProps) {
           <label className="text-sm font-medium text-gray-700 block">Bulk List</label>
           <div className="text-xs text-gray-500">{bulkEntries.length} numbers</div>
         </div>
-      {/* New UI row: Download template + Choose file */}
-      <div className="flex gap-3 mb-3">
-        <Button variant="outline" onClick={downloadTemplate} className="flex items-center gap-2">
-          <Download className="w-4 h-4" /> Download Template
-        </Button>
-        {/* File chooser */}
-        <label className="flex-1">
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              handleFile(f);
-              e.currentTarget.value = "";
-            }}
-            className="hidden"
-            id="bulk-file-input"
-          />
-          <div className="w-full h-10 flex items-center justify-center rounded-[10px] border border-dashed cursor-pointer text-sm text-gray-600">
-            Choose file (xlsx / csv)
-          </div>
-        </label>
-      </div>
-      <div className="max-h-64 overflow-auto border rounded-[10px]">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="p-2"></th>
-              <th className="text-left p-2 font-semibold">Phone</th>
-              <th className="text-left p-2 font-semibold">Name</th>
-              {/* Extra Excel columns */}
-              {extraColumns.map((col) => (
-                <th key={col} className="text-left p-2 font-semibold capitalize">
-                  {col.replace(/_/g, " ")}
-                </th>
-              ))}
-              <th className="p-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {bulkEntries.slice(0, visibleCount).map((row, idx) => (
-              <tr key={idx} className="border-t">
-                {/* --- radio + edit before phone --- */}
-                <td className="p-2 align-middle text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    {/* <label className="flex items-center gap-2">
+        {/* New UI row: Download template + Choose file */}
+        <div className="flex gap-3 mb-3">
+          <Button variant="outline" onClick={downloadTemplate} className="flex items-center gap-2">
+            <Download className="w-4 h-4" /> Download Template
+          </Button>
+          {/* File chooser */}
+          <label className="flex-1">
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                handleFile(f);
+                e.currentTarget.value = "";
+              }}
+              className="hidden"
+              id="bulk-file-input"
+            />
+            <div className="w-full h-10 flex items-center justify-center rounded-[10px] border border-dashed cursor-pointer text-sm text-gray-600">
+              Choose file (xlsx / csv)
+            </div>
+          </label>
+        </div>
+        <div className="max-h-64 overflow-auto border rounded-[10px]">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="p-2"></th>
+                <th className="text-left p-2 font-semibold">Phone</th>
+                <th className="text-left p-2 font-semibold">Name</th>
+                {/* Extra Excel columns */}
+                {extraColumns.map((col) => (
+                  <th key={col} className="text-left p-2 font-semibold capitalize">
+                    {col.replace(/_/g, " ")}
+                  </th>
+                ))}
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulkEntries.slice(0, visibleCount).map((row, idx) => (
+                <tr key={idx} className="border-t">
+                  {/* --- radio + edit before phone --- */}
+                  <td className="p-2 align-middle text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      {/* <label className="flex items-center gap-2">
                       <input
                         type="radio"
                         name="selectedSummary"
@@ -573,94 +574,94 @@ export function CallOptions(props: CallOptionsProps) {
                         aria-label={`Select summary from row ${idx}`}
                       />
                     </label> */}
-                    <button
-                      type="button"
-                      aria-label={`View summary for row ${idx}`}
-                      onClick={() => onRadioChange(idx)}
-                      className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50
+                      <button
+                        type="button"
+                        aria-label={`View summary for row ${idx}`}
+                        onClick={() => onRadioChange(idx)}
+                        className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50
                         ${selectedSummaryIndex === idx ? "bg-gray-100 border-gray-400" : ""}`}
-                    >
-                      {selectedSummaryIndex === idx ? (
-                        <Eye className="w-4 h-4" />
-                      ) : (
-                        <EyeOff className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Edit summary for row ${idx}`}
-                      onClick={() => openEditorFor(idx)}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50"
-                    >
-                      <SquarePen className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-                <td className="p-2">
-                  <Input
-                    disabled
-                    value={row.to_number}
-                    onChange={(e) => {
-                      const copy = [...bulkEntries];
-                      // Normalize phone number - remove spaces when editing
-                      copy[idx] = { ...copy[idx], to_number: e.target.value.replace(/\s+/g, "") };
-                      onBulkEntriesChange?.(copy);
-                    }}
-                    placeholder="+1..."
-                    className="bg-gray-100 cursor-not-allowed"
-                  />
-                </td>
-                <td className="p-2">
-                  <Input
-                  disabled
-                    value={row.name || (row as any).company_name || ""}
-                    onChange={(e) => {
-                      const copy = [...bulkEntries];
-                      copy[idx] = { ...copy[idx], name: e.target.value };
-                      onBulkEntriesChange?.(copy);
-                    }}
-                    placeholder="Lead name (optional)"
-                  />
-                </td>
-                {/* Extra Excel data */}
-                {extraColumns.map((col) => (
-                  <td key={col} className="p-2 text-gray-600 text-sm">
-                    {String((row._extra as any)?.[col] ?? "")}
+                      >
+                        {selectedSummaryIndex === idx ? (
+                          <Eye className="w-4 h-4" />
+                        ) : (
+                          <EyeOff className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Edit summary for row ${idx}`}
+                        onClick={() => openEditorFor(idx)}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50"
+                      >
+                        <SquarePen className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
-                ))}
-                <td className="p-2 text-right">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      removeRow(idx);
-                    }}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {bulkEntries.length === 0 && (
-              <tr>
-                <td colSpan={4 + extraColumns.length} className="p-4 text-center text-gray-500">
-                  No rows
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {bulkEntries.length > 5 && (
-        <div className="mt-3">
-          <Button
-            variant="outline"
-            className="w-full rounded-[10px]"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? "View less" : `View more (${bulkEntries.length - 5} more)`}
-          </Button>
+                  <td className="p-2">
+                    <Input
+                      disabled
+                      value={row.to_number}
+                      onChange={(e) => {
+                        const copy = [...bulkEntries];
+                        // Normalize phone number - remove spaces when editing
+                        copy[idx] = { ...copy[idx], to_number: e.target.value.replace(/\s+/g, "") };
+                        onBulkEntriesChange?.(copy);
+                      }}
+                      placeholder="+1..."
+                      className="bg-gray-100 cursor-not-allowed"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      disabled
+                      value={row.name || (row as any).company_name || ""}
+                      onChange={(e) => {
+                        const copy = [...bulkEntries];
+                        copy[idx] = { ...copy[idx], name: e.target.value };
+                        onBulkEntriesChange?.(copy);
+                      }}
+                      placeholder="Lead name (optional)"
+                    />
+                  </td>
+                  {/* Extra Excel data */}
+                  {extraColumns.map((col) => (
+                    <td key={col} className="p-2 text-gray-600 text-sm">
+                      {String((row._extra as any)?.[col] ?? "")}
+                    </td>
+                  ))}
+                  <td className="p-2 text-right">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        removeRow(idx);
+                      }}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {bulkEntries.length === 0 && (
+                <tr>
+                  <td colSpan={4 + extraColumns.length} className="p-4 text-center text-gray-500">
+                    No rows
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+        {bulkEntries.length > 5 && (
+          <div className="mt-3">
+            <Button
+              variant="outline"
+              className="w-full rounded-[10px]"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? "View less" : `View more (${bulkEntries.length - 5} more)`}
+            </Button>
+          </div>
+        )}
         <p className="text-xs text-gray-500 mt-2">These rows came from your “Resolve Phones” selection.</p>
       </div>
     );
@@ -803,4 +804,4 @@ export function CallOptions(props: CallOptionsProps) {
       </Dialog>
     </Card>
   );
-}
+}

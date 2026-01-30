@@ -1,17 +1,43 @@
 "use client";
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import {
+  X,
+  Plus,
+  Phone,
+  CheckCircle,
+  TrendingUp,
+  BarChart3,
+  CreditCard,
+  PhoneCall,
+  Calendar,
+  Brain,
+  Bot,
+  Zap,
+  Box
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { WIDGET_CATALOG, WIDGET_CATEGORIES, WidgetType, WidgetCategory } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+
+const ICON_MAP: Record<string, any> = {
+  Phone,
+  CheckCircle,
+  TrendingUp,
+  BarChart3,
+  CreditCard,
+  PhoneCall,
+  Calendar,
+  Brain,
+  Bot,
+  Zap
+};
+
 const getIcon = (iconName: string) => {
-  const IconComponent = (Icons as any)[iconName];
-  return IconComponent || Icons.Box;
+  return ICON_MAP[iconName] || Box;
 };
 export const WidgetLibrary: React.FC = () => {
   const { isWidgetLibraryOpen, setWidgetLibraryOpen, addWidget, layout } = useDashboardStore();

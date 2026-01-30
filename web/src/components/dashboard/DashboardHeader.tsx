@@ -1,25 +1,16 @@
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Pencil, 
-  Plus, 
-  RotateCcw, 
-  Save, 
-  X, 
-  Check,
-  Layout,
-  ChevronDown,
-  TvMinimalPlay
-} from 'lucide-react';
+import { Pencil, Plus, RotateCcw, Save, X } from 'lucide-react';
+import { Check, Layout, ChevronDown, TvMinimalPlay } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -31,9 +22,9 @@ import {
 import { useDashboardStore } from '@/store/dashboardStore';
 import { cn } from '@/lib/utils';
 export const DashboardHeader: React.FC = () => {
-  const { 
-    isEditMode, 
-    toggleEditMode, 
+  const {
+    isEditMode,
+    toggleEditMode,
     setEditMode,
     setWidgetLibraryOpen,
     savedLayouts,

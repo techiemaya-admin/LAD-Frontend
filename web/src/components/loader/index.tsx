@@ -11,4 +11,4 @@ export default function Loader() {
 }
 
 // Export the universal page loader
-export { PageLoader, type React } from './PageLoader';
+export { PageLoader } from './PageLoader';

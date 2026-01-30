@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Home, Phone, Video, Search, CircleDollarSign, GitFork, Cable, DollarSign, Settings, LogOut, User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined, Menu, X, Send, GraduationCap, MessageSquare } from "lucide-react";
+import { Home, Phone, Video, Search, CircleDollarSign } from "lucide-react";
+import { GitFork, Cable, DollarSign, Settings, LogOut } from "lucide-react";
+import { User as UserIcon, ChevronDown, SwatchBook, ChartNoAxesCombined } from "lucide-react";
+import { Menu, X, Send, GraduationCap, MessageSquare } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -253,184 +256,184 @@ export function Sidebar() {
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
-      {/* Logo */}
-      <div
-        className={cn(
-          "flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
-          isExpanded ? "my-6" : "my-4"
-        )}
-      >
-        <img
-          src="/logo.png"
-          alt="Company Logo"
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
+        {/* Logo */}
+        <div
           className={cn(
-            "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
-            isExpanded ? "w-24 h-24" : "w-10 h-10"
+            "flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
+            isExpanded ? "my-6" : "my-4"
           )}
-        />
-      </div>
-      {/* Navigation */}
-      <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
-        {nav.map((n) => {
-          const Icon = n.icon;
-          const isActive = pathname === n.href;
-          return (
-            <div key={n.href} className="relative group">
-              <NavLink
-                href={n.href}
-                className={cn(
-                  "relative flex items-center rounded-2xl overflow-visible",
-                  "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
-                  "hover:-translate-y-[2px] hover:scale-[1.01]",
-                  isExpanded
-                    ? "pl-3 pr-4 h-12 w-full"
-                    : "h-12 w-12 mx-auto justify-center"
-                )}
-              >
-                {/* Active / hover glass background */}
-                <div
+        >
+          <img
+            src="/logo.png"
+            alt="Company Logo"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className={cn(
+              "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
+              isExpanded ? "w-24 h-24" : "w-10 h-10"
+            )}
+          />
+        </div>
+        {/* Navigation */}
+        <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
+          {nav.map((n) => {
+            const Icon = n.icon;
+            const isActive = pathname === n.href;
+            return (
+              <div key={n.href} className="relative group">
+                <NavLink
+                  href={n.href}
                   className={cn(
-                    "absolute inset-0 z-0 rounded-2xl",
+                    "relative flex items-center rounded-2xl overflow-visible",
                     "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
-                    isActive
-                      ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-                      : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]"
-                  )}
-                />
-                {/* Icon wrapper */}
-                <div
-                  className={cn(
-                    "relative z-10 flex justify-center items-center flex-shrink-0",
-                    "w-10 h-10 rounded-xl",
-                    "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
-                    // isActive
-                    //   ? "bg-white/20"
-                    //   : "bg-primary-light/80 group-hover:bg-primary-light/90",
-                    // "group-hover:translate-x-[1px]"
+                    "hover:-translate-y-[2px] hover:scale-[1.01]",
+                    isExpanded
+                      ? "pl-3 pr-4 h-12 w-full"
+                      : "h-12 w-12 mx-auto justify-center"
                   )}
                 >
-                  <Icon
+                  {/* Active / hover glass background */}
+                  <div
                     className={cn(
-                      "h-5 w-5 transition-colors duration-300 relative z-10",
+                      "absolute inset-0 z-0 rounded-2xl",
+                      "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
                       isActive
-                        ? "text-white"
-                        : "text-gray-900 group-hover:text-black"
+                        ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+                        : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]"
                     )}
-                    style={!isActive ? { color: '#1a1a1a !important' } : undefined}
                   />
-                </div>
-                {/* Label */}
-                {isExpanded && (
-                  <span
+                  {/* Icon wrapper */}
+                  <div
                     className={cn(
-                      "relative z-10 text-sm font-medium whitespace-nowrap ml-3",
-                      "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
-                      isActive ? "text-white group-hover:text-white" : "text-gray-900 group-hover:text-black"
+                      "relative z-10 flex justify-center items-center flex-shrink-0",
+                      "w-10 h-10 rounded-xl",
+                      "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
+                      // isActive
+                      //   ? "bg-white/20"
+                      //   : "bg-primary-light/80 group-hover:bg-primary-light/90",
+                      // "group-hover:translate-x-[1px]"
                     )}
-                    style={!isActive ? { color: '#1a1a1a !important' } : undefined}
                   >
-                    {n.label}
-                  </span>
-                )}
-              </NavLink>
-              {/* Tooltip for collapsed state */}
-              {!isExpanded && (
-                <div
-                  className={cn(
-                    "absolute left-full ml-3 px-3 py-2 rounded-xl border border-white/10",
-                    "bg-sidebar/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
-                    "opacity-0 invisible scale-95 translate-y-[2px] pointer-events-none",
-                    "group-hover:opacity-100 group-hover:visible group-hover:scale-100 group-hover:translate-y-0",
-                    "transition-all duration-250 ease-[cubic-bezier(.19,1,.22,1)]",
-                    "whitespace-nowrap z-[100] top-0"
-                  )}
-                >
-                  <span className="block text-xs font-medium text-gray-900" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
-                    {n.label}
-                  </span>
-                  {n.details && (
-                    <span className="block mt-0.5 text-[11px] text-muted-foreground/80 max-w-[200px]">
-                      {n.details}
+                    <Icon
+                      className={cn(
+                        "h-5 w-5 transition-colors duration-300 relative z-10",
+                        isActive
+                          ? "text-white"
+                          : "text-gray-900 group-hover:text-black"
+                      )}
+                      style={!isActive ? { color: '#1a1a1a !important' } : undefined}
+                    />
+                  </div>
+                  {/* Label */}
+                  {isExpanded && (
+                    <span
+                      className={cn(
+                        "relative z-10 text-sm font-medium whitespace-nowrap ml-3",
+                        "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
+                        isActive ? "text-white group-hover:text-white" : "text-gray-900 group-hover:text-black"
+                      )}
+                      style={!isActive ? { color: '#1a1a1a !important' } : undefined}
+                    >
+                      {n.label}
                     </span>
                   )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
-      {/* User Profile Dropdown Section */}
-      <div className="border-t border-sidebar-border mt-auto">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div
-              className={cn(
-                "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5",
-                isExpanded ? "justify-start gap-3" : "justify-center"
-              )}
-            >
-              {/* Avatar */}
-              {isHydrated && user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                  alt="avatar"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              {/* User Info - shown when expanded */}
-              {isExpanded && (
-                <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
-                  <div className="flex flex-col items-start justify-center min-w-0 flex-1">
-                    <div className="text-sm text-gray-900 font-medium leading-tight truncate w-full" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
-                      {displayName}
-                    </div>
-                    <div className="text-xs text-muted-foreground/80 leading-tight">
-                      {user?.role || 'admin'}
-                    </div>
+                </NavLink>
+                {/* Tooltip for collapsed state */}
+                {!isExpanded && (
+                  <div
+                    className={cn(
+                      "absolute left-full ml-3 px-3 py-2 rounded-xl border border-white/10",
+                      "bg-sidebar/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
+                      "opacity-0 invisible scale-95 translate-y-[2px] pointer-events-none",
+                      "group-hover:opacity-100 group-hover:visible group-hover:scale-100 group-hover:translate-y-0",
+                      "transition-all duration-250 ease-[cubic-bezier(.19,1,.22,1)]",
+                      "whitespace-nowrap z-[100] top-0"
+                    )}
+                  >
+                    <span className="block text-xs font-medium text-gray-900" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
+                      {n.label}
+                    </span>
+                    {n.details && (
+                      <span className="block mt-0.5 text-[11px] text-muted-foreground/80 max-w-[200px]">
+                        {n.details}
+                      </span>
+                    )}
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
-                </div>
-              )}
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="w-56 mb-2 ml-2">
-            <DropdownMenuItem asChild>
-              <NavLink href="/pricing" className="flex items-center cursor-pointer">
-                <DollarSign className="mr-2 h-4 w-4" />
-                <span>Pricing</span>
-              </NavLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <NavLink href="/settings" className="flex items-center cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </NavLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {/* Version Number */}
-        <div className="h-10 flex items-center justify-center border-t border-sidebar-border/50">
-          {isExpanded && (
-            <span className="text-[11px] tracking-wide text-muted-foreground/80 transition-opacity duration-500">
-              v1.0.0
-            </span>
-          )}
+                )}
+              </div>
+            );
+          })}
+        </nav>
+        {/* User Profile Dropdown Section */}
+        <div className="border-t border-sidebar-border mt-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div
+                className={cn(
+                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5",
+                  isExpanded ? "justify-start gap-3" : "justify-center"
+                )}
+              >
+                {/* Avatar */}
+                {isHydrated && user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                    alt="avatar"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {/* User Info - shown when expanded */}
+                {isExpanded && (
+                  <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
+                    <div className="flex flex-col items-start justify-center min-w-0 flex-1">
+                      <div className="text-sm text-gray-900 font-medium leading-tight truncate w-full" style={{ color: 'oklch(0.145 0 0)', WebkitTextFillColor: 'oklch(0.145 0 0)' }}>
+                        {displayName}
+                      </div>
+                      <div className="text-xs text-muted-foreground/80 leading-tight">
+                        {user?.role || 'admin'}
+                      </div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                  </div>
+                )}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-56 mb-2 ml-2">
+              <DropdownMenuItem asChild>
+                <NavLink href="/pricing" className="flex items-center cursor-pointer">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  <span>Pricing</span>
+                </NavLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <NavLink href="/settings" className="flex items-center cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </NavLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* Version Number */}
+          <div className="h-10 flex items-center justify-center border-t border-sidebar-border/50">
+            {isExpanded && (
+              <span className="text-[11px] tracking-wide text-muted-foreground/80 transition-opacity duration-500">
+                v1.0.0
+              </span>
+            )}
+          </div>
         </div>
-      </div>
       </aside>
     </>
   );

@@ -1,33 +1,32 @@
 "use client";
-import React, { JSX } from 'react';
-import { PipelineBoard } from '@/features/deals-pipeline/components';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { useAuth } from '@/contexts/AuthContext';
-import { GraduationCap, TrendingUp } from 'lucide-react';
-import { PipelineSkeleton } from '@/components/skeletons';
+import nextDynamic from 'next/dynamic';
+import { PipelineSkeleton } from '@/components/skeletons/PipelineSkeleton';
+import { PageLoadingSentry } from '@/components/loader/PageLoadingSentry';
 
 // Force dynamic rendering for this page due to Redux usage
 export const dynamic = 'force-dynamic';
 
-export default function PipelinePage(): JSX.Element {
+const PipelineContent = nextDynamic(
+  () => import('./PipelineContent'),
+  {
+    loading: () => (
+      <>
+        <PageLoadingSentry />
+        <PipelineSkeleton />
+      </>
+    )
+  }
+);
+
+export default function PipelinePage() {
   const router = useRouter();
-  const { hasFeature, user, isAuthenticated } = useAuth();
   const [authed, setAuthed] = useState<boolean | null>(null);
 
-  // Determine if this is education vertical (only after user is loaded)
-  const isEducation = isAuthenticated && user ? hasFeature('education_vertical') : false;
-
-  // Dynamic labels based on vertical
-  const labels = {
-    title: isEducation ? 'Students Pipeline' : 'Deals Pipeline',
-    subtitle: isEducation ? 'Manage student admissions and counseling' : 'Manage your leads and deals',
-    icon: isEducation ? GraduationCap : TrendingUp
-  };
-
   useEffect(() => {
-    (async () => {    
+    (async () => {
       try {
         await getCurrentUser();
         setAuthed(true);
@@ -40,27 +39,15 @@ export default function PipelinePage(): JSX.Element {
   }, [router]);
 
   if (authed === null) {
-    return <PipelineSkeleton />;
+    return (
+      <>
+        <PageLoadingSentry />
+        <PipelineSkeleton />
+      </>
+    );
   }
 
   if (!authed) return <></>;
 
-  const IconComponent = labels.icon;
-
-  return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <IconComponent className="h-8 w-8 text-blue-600" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{labels.title}</h1>
-            <p className="text-gray-600">{labels.subtitle}</p>
-          </div>
-        </div>
-      </div>
-
-      <PipelineBoard />
-    </div>
-  );
+  return <PipelineContent />;
 }

@@ -1,6 +1,5 @@
 import { createSlice, createSelector, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { markConversationAsRead } from './notificationSlice';
-import { AppDispatch, RootState } from '../store';
 import { logger } from '@/lib/logger';
 interface Message {
   id?: string | number;
@@ -45,7 +44,7 @@ interface SetPaginationPayload {
 // Memoized selector for a single conversation by ID
 export const makeSelectConversationById = () =>
   createSelector(
-    [(state: RootState) => (state.conversation as ConversationState).conversations, (state: RootState, conversationId?: string | number) => conversationId],
+    [(state: any) => (state.conversation as ConversationState).conversations, (state: any, conversationId?: string | number) => conversationId],
     (conversations: Conversation[], conversationId?: string | number): Conversation | null => {
       if (!conversationId) return null;
       return conversations.find(c => String(c.id) === String(conversationId)) || null;
@@ -54,7 +53,7 @@ export const makeSelectConversationById = () =>
 // Memoized selector for messages by conversation ID
 export const makeSelectMessagesByConversation = () =>
   createSelector(
-    [(state: RootState) => (state.conversation as ConversationState).messages, (state: RootState, conversationId: string | number) => conversationId],
+    [(state: any) => (state.conversation as ConversationState).messages, (state: any, conversationId: string | number) => conversationId],
     (messages: Record<string | number, Message[]>, conversationId: string | number): Message[] => messages[conversationId] || []
   );
 // Initial state for conversations
@@ -223,24 +222,29 @@ export const {
   setPagination
 } = conversationSlice.actions;
 // Selector for active conversation id
-export const selectActiveConversationId = (state: RootState): string | number | null => 
+export const selectActiveConversationId = (state: any): string | number | null =>
   (state.conversation as ConversationState).activeConversationId;
+
 // Memoized selector for conversations
 // Use a direct selector for conversations (no memoization needed for identity)
-export const selectConversations = (state: RootState): Conversation[] => 
+export const selectConversations = (state: any): Conversation[] =>
   (state.conversation as ConversationState).conversations;
+
 // selectNotifications removed: use notificationSlice instead
 export const selectMessagesByConversation = createSelector(
-  [(state: RootState) => (state.conversation as ConversationState).messages, (state: RootState, conversationId: string | number) => conversationId],
+  [(state: any) => (state.conversation as ConversationState).messages, (state: any, conversationId: string | number) => conversationId],
   (messages: Record<string | number, Message[]>, conversationId: string | number): Message[] => messages[conversationId] || []
 );
-export const selectConversationLoading = (state: RootState): boolean => 
+
+export const selectConversationLoading = (state: any): boolean =>
   (state.conversation as ConversationState).loading;
-export const selectConversationError = (state: RootState): string | null => 
+
+export const selectConversationError = (state: any): string | null =>
   (state.conversation as ConversationState).error;
+
 // Selector for filtering conversations by user's assigned leads
 export const selectConversationsByUserLeads = createSelector(
-  [selectConversations, (state: RootState, userLeads: Array<{ id: string | number }>) => userLeads],
+  [selectConversations, (state: any, userLeads: Array<{ id: string | number }>) => userLeads],
   (conversations: Conversation[], userLeads: Array<{ id: string | number }>): Conversation[] => {
     // If user has assigned leads, filter conversations
     if (userLeads && userLeads.length > 0) {
@@ -257,7 +261,7 @@ export const selectConversationsByUserLeads = createSelector(
 // Unified action to mark conversation as read in both slices
 export const markConversationAsReadUnified = createAsyncThunk(
   'conversation/markAsReadUnified',
-  async (conversationId: string | number, { dispatch }: { dispatch: AppDispatch }) => {
+  async (conversationId: string | number, { dispatch }: { dispatch: any }) => {
     // Update conversation slice
     dispatch(markConversationRead(conversationId));
     // Update notification slice
@@ -274,4 +278,4 @@ export const markConversationAsReadUnified = createAsyncThunk(
     return conversationId;
   }
 );
-export default conversationSlice.reducer;
+export default conversationSlice.reducer;

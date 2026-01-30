@@ -22,16 +22,34 @@ import {
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getWidgetTypeFromId, WidgetLayoutItem } from '@/types/dashboard';
 
-// Widget components
-import { StatWidget } from './widgets/StatWidget';
-import { ChartWidget } from './widgets/ChartWidget';
-import { CreditsWidget } from './widgets/CreditsWidget';
-import { LatestCallsWidget } from './widgets/LatestCallsWidget';
-import { VoiceAgentsWidget } from './widgets/VoiceAgentsWidget';
-import { AIInsightsWidget } from './widgets/AIInsightsWidget';
-import { QuickActionsWidget } from './widgets/QuickActionsWidget';
-import { CalendarWidget } from './widgets/CalendarWidget';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
+
+// Dynamic Widget imports
+const StatWidget = dynamic(() => import('./widgets/StatWidget').then(mod => mod.StatWidget), {
+  loading: () => <div className="h-32 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const ChartWidget = dynamic(() => import('./widgets/ChartWidget').then(mod => mod.ChartWidget), {
+  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const CreditsWidget = dynamic(() => import('./widgets/CreditsWidget').then(mod => mod.CreditsWidget), {
+  loading: () => <div className="h-48 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const LatestCallsWidget = dynamic(() => import('./widgets/LatestCallsWidget').then(mod => mod.LatestCallsWidget), {
+  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const VoiceAgentsWidget = dynamic(() => import('./widgets/VoiceAgentsWidget').then(mod => mod.VoiceAgentsWidget), {
+  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const AIInsightsWidget = dynamic(() => import('./widgets/AIInsightsWidget').then(mod => mod.AIInsightsWidget), {
+  loading: () => <div className="h-48 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const QuickActionsWidget = dynamic(() => import('./widgets/QuickActionsWidget').then(mod => mod.QuickActionsWidget), {
+  loading: () => <div className="h-32 bg-secondary/20 animate-pulse rounded-xl" />
+});
+const CalendarWidget = dynamic(() => import('./widgets/CalendarWidget').then(mod => mod.CalendarWidget), {
+  loading: () => <div className="h-[400px] bg-secondary/20 animate-pulse rounded-xl" />
+});
 
 // Utilities
 import { apiGet } from '@/lib/api';
@@ -273,7 +291,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       try {
         const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/user/available-numbers');
         setNumbers(data?.numbers || data?.items || []);
-      } catch {}
+      } catch { }
     };
     loadNumbers();
   }, []);
@@ -306,7 +324,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     if (over && active.id !== over.id) {
       const oldIndex = layout.findIndex((item) => item.i === active.id);
       const newIndex = layout.findIndex((item) => item.i === over.id);
-      
+
       const newLayout = arrayMove(layout, oldIndex, newIndex);
       setLayout(newLayout);
     }
@@ -329,7 +347,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       const start = new Date(today);
       start.setDate(today.getDate() - (DAYS_RANGE - 1));
 
-      for (let dt = new Date(start); dt <= today; ) {
+      for (let dt = new Date(start); dt <= today;) {
         const key = dt.toISOString().slice(0, 10);
         out.push({
           dateKey: key,
@@ -341,7 +359,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         });
         dt.setDate(dt.getDate() + 1);
       }
-      
+
       return out;
     }
 
@@ -404,7 +422,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
   const renderWidget = (widgetId: string, isOverlay = false) => {
     const widgetType = getWidgetTypeFromId(widgetId);
-    
+
     switch (widgetType) {
       case 'calls-today':
         return (
@@ -481,7 +499,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       minHeight: `${item.h * 80}px`,
     };
   };
-  
+
   // Get responsive grid style for mobile
   const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
     // On mobile (< 768px), ignore gridColumn span. On desktop, use it.
@@ -522,9 +540,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
         <DragOverlay>
           {activeId ? (
-            <div 
+            <div
               className="opacity-90 shadow-2xl"
-              style={{ 
+              style={{
                 width: '400px',
                 minHeight: '160px',
               }}
@@ -538,7 +556,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       {isEditMode && (
         <div className="mt-6 p-4 border-2 border-dashed border-accent/30 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">
-            🎯 <span className="font-medium">Drag widgets</span> by their header to reorder • 
+            🎯 <span className="font-medium">Drag widgets</span> by their header to reorder •
             <span className="font-medium"> Click "+ Add Widget"</span> to add more
           </p>
         </div>

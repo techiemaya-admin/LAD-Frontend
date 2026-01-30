@@ -9,6 +9,22 @@ const nextConfig = {
   // ✅ REQUIRED when importing ../sdk
   experimental: {
     externalDir: true,
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      '@radix-ui/react-icons',
+      'recharts',
+      'chart.js',
+      '@mui/material',
+      '@mui/icons-material',
+      'ag-grid-react',
+      'ag-grid-community',
+      '@dnd-kit/core',
+      '@tanstack/react-query',
+      'date-fns',
+      'chartjs',
+    ],
+    webpackBuildWorker: true,
   },
 
   // ✅ Force single React Query instance
@@ -18,13 +34,13 @@ const nextConfig = {
       '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
     };
-    
+
     // Ensure node_modules is in resolve modules
     config.resolve.modules = [
       path.resolve(__dirname, 'node_modules'),
       'node_modules',
     ];
-    
+
     return config;
   },
 
