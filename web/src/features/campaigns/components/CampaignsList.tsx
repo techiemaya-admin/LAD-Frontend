@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter } from 'next/navigation';
 import { useCampaigns, useCampaignStats, useCampaignLiveUpdates, type Campaign } from '@/features/campaigns';
@@ -109,47 +109,25 @@ export default function CampaignsList() {
     [campaigns, searchQuery]
   );
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, bgcolor: '#F8F9FE', height: '100%', overflow: 'auto' }}>
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
-      <Box sx={{ 
-        mb: 3, 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        justifyContent: 'space-between', 
-        alignItems: { xs: 'stretch', sm: 'center' },
-        gap: { xs: 2, sm: 0 }
-      }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 1, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+      <div className="mb-3 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-0">
+        <div>
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
             Campaigns
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#64748B' }}>
+          </h1>
+          <p className="text-sm text-[#64748B]">
             Manage your multi-channel outreach campaigns
-          </Typography>
-        </Box>
+          </p>
+        </div>
         <Button
-          variant="contained"
-          startIcon={<Add />}
           onClick={() => router.push('/onboarding')}
-          sx={{
-            background: 'linear-gradient(135deg, #00eaff, #7c3aed)',
-            color: '#ffffff',
-            borderRadius: '12px',
-            textTransform: 'none',
-            fontWeight: 600,
-            px: { xs: 2, sm: 3 },
-            py: 1.5,
-            boxShadow: '0 4px 20px rgba(0, 234, 255, 0.3)',
-            width: { xs: '100%', sm: 'auto' },
-            '&:hover': {
-              background: 'linear-gradient(135deg, #7c3aed, #ff00e0)',
-              boxShadow: '0 8px 30px rgba(124, 58, 237, 0.5)',
-            },
-          }}
+          className="bg-gradient-to-br from-[#00eaff] to-[#7c3aed] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(0,234,255,0.3)] w-full sm:w-auto hover:from-[#7c3aed] hover:to-[#ff00e0] hover:shadow-[0_8px_30px_rgba(124,58,237,0.5)]"
         >
+          <Plus className="mr-2 h-4 w-4" />
           Create Campaign
         </Button>
-      </Box>
+      </div>
       {/* Stats Cards */}
       {stats && <CampaignStatsCards stats={stats} />}
       {/* Filters */}
@@ -185,6 +163,6 @@ export default function CampaignsList() {
         }}
         onNameChange={setNewCampaignName}
       />
-    </Box>
+    </div>
   );
-}
+}

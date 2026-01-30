@@ -1,13 +1,10 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Box, Card, CardContent, Typography, Button, Stack,
-  CircularProgress, TextField, InputAdornment
-} from '@mui/material';
-import {
-  ArrowBack, People, Search
-} from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Users, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
@@ -276,90 +273,66 @@ export default function CampaignLeadsPage() {
   }, [leads, searchQuery]);
   if (loading && leads.length === 0) {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FE' }}>
-        <Stack spacing={2} alignItems="center">
-          <CircularProgress />
-          <Typography>Loading leads...</Typography>
-        </Stack>
-      </Box>
+      <div className="h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col gap-4 items-center">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <p>Loading leads...</p>
+        </div>
+      </div>
     );
   }
   return (
-    <Box sx={{ 
-      width: '100%',
-      height: '100vh',
-      overflow: 'auto',
-      bgcolor: '#F8F9FE'
-    }}>
-      <Box sx={{ p: 3, pb: 6 }}>
+    <div className="w-full h-screen overflow-auto bg-slate-50">
+      <div className="p-6 pb-12">
         {/* Header */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
             <Button
-              startIcon={<ArrowBack />}
+              variant="outline"
               onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-              sx={{ minWidth: 'auto' }}
+              className="min-w-auto"
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Analytics
             </Button>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
+            <div>
+              <h4 className="text-2xl font-bold text-slate-800 mb-1">
                 Campaign Leads
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#64748B' }}>
+              </h4>
+              <p className="text-sm text-slate-500">
                 {filteredLeads.length} leads
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+              </p>
+            </div>
+          </div>
+        </div>
         {/* Search */}
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            placeholder="Search leads by name, email, company, or title..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search sx={{ color: '#64748B' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              bgcolor: 'white',
-              borderRadius: '12px',
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-              }
-            }}
-          />
-        </Box>
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Input
+              className="pl-10 bg-white rounded-xl"
+              placeholder="Search leads by name, email, company, or title..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
       {/* Employee Cards Grid */}
       {filteredLeads.length === 0 ? (
-        <Card sx={{ borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <CardContent sx={{ textAlign: 'center', py: 6 }}>
-            <People sx={{ fontSize: 64, color: '#CBD5E1', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: '#64748B', mb: 1 }}>
+        <Card className="rounded-2xl border border-slate-200 shadow-sm">
+          <CardContent className="text-center py-12">
+            <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h6 className="text-lg font-semibold text-slate-500 mb-2">
               {searchQuery ? 'No leads match your search' : 'No leads found'}
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#94A3B8' }}>
+            </h6>
+            <p className="text-sm text-slate-400">
               {searchQuery ? 'Try adjusting your search terms' : 'Leads will appear here once the campaign starts generating them'}
-            </Typography>
+            </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { 
-              xs: 'repeat(1, 1fr)', 
-              sm: 'repeat(2, 1fr)', 
-              md: 'repeat(3, 1fr)', 
-              lg: 'repeat(4, 1fr)' 
-            }, 
-            gap: 2 
-          }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredLeads.map((lead: CampaignLead, index: number) => {
               return (
                 <EmployeeCard
@@ -390,28 +363,28 @@ export default function CampaignLeadsPage() {
                 />
               );
             })}
-          </Box>
+          </div>
           {/* Pagination */}
           {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
+            <div className="flex justify-center gap-4 mt-8">
               <Button
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
-                variant="outlined"
+                variant="outline"
               >
                 Previous
               </Button>
-              <Typography sx={{ display: 'flex', alignItems: 'center', color: '#64748B' }}>
+              <p className="flex items-center text-slate-500">
                 Page {page} of {totalPages}
-              </Typography>
+              </p>
               <Button
                 disabled={page >= totalPages}
                 onClick={() => setPage(page + 1)}
-                variant="outlined"
+                variant="outline"
               >
                 Next
               </Button>
-            </Box>
+            </div>
           )}
         </>
       )}
@@ -424,7 +397,7 @@ export default function CampaignLeadsPage() {
         loading={summaryLoading}
         error={summaryError}
       />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

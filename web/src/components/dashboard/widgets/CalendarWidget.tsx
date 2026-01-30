@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
-import { useDashboardUsers, useBookings } from '@sdk/features/dashboard/hooks';
+import { useDashboardUsers, useBookings } from '@sdk/features/dashboard';
 
 interface CalendarWidgetProps {
   id: string;

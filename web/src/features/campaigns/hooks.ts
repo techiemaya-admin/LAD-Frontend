@@ -172,7 +172,7 @@ export function useCampaignLiveUpdates() {
   const eventSourceRef = useRef<EventSource | null>(null);
   useEffect(() => {
     // Connect to SSE endpoint for all campaigns updates
-    const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
     // Get auth token from localStorage (EventSource doesn't support custom headers)
     // Check both 'auth_token' and 'token' for compatibility
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');

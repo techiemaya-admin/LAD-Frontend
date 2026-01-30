@@ -1,30 +1,45 @@
-import { keyframes } from '@mui/material/styles';
-// Common theme-aligned animations
-export const fadeIn = keyframes`
-  from { 
-    opacity: 0; 
-    transform: translateY(8px); 
+// Standard CSS animations (add these to your global CSS or use Tailwind animations)
+// For fadeIn: use 'animate-[fadeIn]' with custom animation in tailwind.config.js
+// For pulse: use 'animate-pulse' (built-in Tailwind)
+// For ripple: use custom animation class
+
+// CSS animations as strings for inline styles or CSS-in-JS
+export const animations = `
+  @keyframes fadeIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(8px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+  
+  @keyframes pulseAnimation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes rippleKeyframes {
+    0% { 
+      transform: scale(0.8); 
+      opacity: 1; 
+    }
+    100% { 
+      transform: scale(2.4); 
+      opacity: 0; 
+    }
   }
 `;
-export const pulseAnimation = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-`;
-export const rippleKeyframes = keyframes`
-  0% { 
-    transform: scale(.8); 
-    opacity: 1; 
-  }
-  100% { 
-    transform: scale(2.4); 
-    opacity: 0; 
-  }
-`;
+
+// Animation class names for use with className
+export const animationClasses = {
+  fadeIn: 'animate-[fadeIn_0.3s_ease-out]',
+  pulse: 'animate-pulse', // Tailwind built-in
+  ripple: 'animate-[rippleKeyframes_1.2s_infinite_ease-in-out]',
+};
 // Common theme values consistent with dashboard
 export const commonTheme = {
   colors: {
@@ -71,132 +86,117 @@ export const commonTheme = {
     slow: '0.4s ease-in-out',
   }
 };
-// Common styled system utilities following dashboard pattern
+// Tailwind/CSS class utilities following dashboard pattern
 export const commonStyles = {
-  // Card styles matching dashboard components
-  card: {
-    borderRadius: '12px',
-    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-    bgcolor: 'background.paper',
-    transition: 'all 0.3s ease-in-out',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    },
+  // Card styles matching dashboard components - use as className
+  card: 'rounded-xl shadow-md bg-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-lg',
+  
+  // Status chip styles - returns className string
+  statusChip: (status) => {
+    const bgColor = getStatusColorClass(status);
+    return `inline-flex items-center justify-center h-5 px-2 rounded text-white text-xs ${bgColor}`;
   },
-  // Status chip styles
-  statusChip: (status, theme) => ({
-    height: '20px',
-    m: 0,
-    p: 0,
-    minWidth: 0,
-    bgcolor: getStatusColor(status, theme),
-    color: 'white',
-    '& .MuiChip-icon': {
-      color: 'inherit',
-      fontSize: { xs: '0.875rem', sm: '1rem' },
-      m: 0,
-      p: 0
-    },
-    '& .MuiChip-label': {
-      px: 0.5,
-      py: 0,
-      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-      lineHeight: 1
+  
+  // Badge styles with ripple effect - returns className and style
+  priorityBadge: (priority) => ({
+    className: `relative inline-flex ${getPriorityColorClass(priority)}`,
+    style: {
+      // Ripple effect via pseudo-element (add via CSS or use custom class)
     }
   }),
-  // Badge styles with ripple effect
-  priorityBadge: (priority, theme) => ({
-    '& .MuiBadge-badge': {
-      backgroundColor: getPriorityColor(priority, theme),
-      color: theme.palette.common.white,
-      '&::after': {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        borderRadius: '50%',
-        animation: `${rippleKeyframes} 1.2s infinite ease-in-out`,
-        border: `1px solid ${theme.palette.common.white}`,
-        content: '""',
-      },
-    },
-  }),
-  // Progress circle styles
-  progressCircle: {
-    position: 'relative',
-    '& .MuiCircularProgress-circle': {
-      strokeLinecap: 'round',
-    },
-  },
-  // Dialog styles matching theme
+  
+  // Progress circle styles - use with custom progress components
+  progressCircle: 'relative',
+  
+  // Dialog/Modal styles matching theme
   dialog: {
-    '& .MuiDialog-paper': {
-      borderRadius: '12px',
-      boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    },
-    '& .MuiDialogTitle-root': {
-      padding: '16px 24px',
-    },
-    '& .MuiDialogContent-root': {
-      padding: '16px 24px',
-    },
-    '& .MuiDialogActions-root': {
-      padding: '16px 24px',
-    },
+    paper: 'rounded-xl shadow-2xl',
+    title: 'px-6 py-4',
+    content: 'px-6 py-4',
+    actions: 'px-6 py-4',
   },
-  // Animation styles
-  animated: {
-    animation: `${fadeIn} 0.3s ease-out`,
-  },
-  // Hover styles
-  hoverable: (isHovered) => ({
-    transition: 'all 0.3s ease-in-out',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-    },
-    animation: isHovered ? `${pulseAnimation} 2s infinite` : 'none',
-  }),
-  // Scrollbar styles
-  customScrollbar: {
-    '&::-webkit-scrollbar': {
-      width: '4px',
-    },
-    '&::-webkit-scrollbar-track': {
-      background: 'transparent',
-    },
-    '&::-webkit-scrollbar-thumb': {
-      background: '#d1d5db',
-      borderRadius: '2px',
-      '&:hover': {
-        background: '#9ca3af',
-      },
-    },
-  },
+  
+  // Animation styles - use as className
+  animated: animationClasses.fadeIn,
+  
+  // Hover styles - returns className based on state
+  hoverable: (isHovered) => 
+    `transition-all duration-300 ease-in-out hover:-translate-y-0.5 ${isHovered ? 'animate-pulse' : ''}`,
+  
+  // Scrollbar styles - add to global CSS
+  customScrollbar: 'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400',
 };
-// Utility functions for consistent styling
-export const getStatusColor = (status, theme) => {
+
+// CSS string for custom scrollbar (add to global styles if not using Tailwind scrollbar plugin)
+export const customScrollbarCSS = `
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+`;
+// Utility functions for consistent styling - returns hex colors
+export const getStatusColor = (status) => {
   const statusColors = {
-    active: theme.palette.success.main,
-    pending: theme.palette.warning.main,
-    blocked: theme.palette.error.main,
-    inactive: theme.palette.grey[500],
-    new: theme.palette.info.main,
-    completed: theme.palette.success.dark,
+    active: commonTheme.colors.success,
+    pending: commonTheme.colors.warning,
+    blocked: commonTheme.colors.error,
+    inactive: commonTheme.colors.grey500,
+    new: commonTheme.colors.primary,
+    completed: '#059669', // success dark
   };
-  return statusColors[status?.toLowerCase()] || theme.palette.grey[500];
+  return statusColors[status?.toLowerCase()] || commonTheme.colors.grey500;
 };
-export const getPriorityColor = (priority, theme) => {
+
+// Returns Tailwind classes for status colors
+export const getStatusColorClass = (status) => {
+  const statusClasses = {
+    active: 'bg-green-500',
+    pending: 'bg-yellow-500',
+    blocked: 'bg-red-500',
+    inactive: 'bg-gray-500',
+    new: 'bg-blue-500',
+    completed: 'bg-green-600',
+  };
+  return statusClasses[status?.toLowerCase()] || 'bg-gray-500';
+};
+
+export const getPriorityColor = (priority) => {
   const priorityColors = {
-    high: theme.palette.error.main,
-    medium: theme.palette.warning.main,
-    low: theme.palette.success.main,
+    high: commonTheme.colors.error,
+    medium: commonTheme.colors.warning,
+    low: commonTheme.colors.success,
   };
-  return priorityColors[priority?.toLowerCase()] || theme.palette.success.main;
+  return priorityColors[priority?.toLowerCase()] || commonTheme.colors.success;
 };
-export const getProbabilityColor = (probability, theme) => {
-  if (probability >= 70) return theme.palette.success.main;
-  if (probability >= 40) return theme.palette.warning.main;
-  return theme.palette.error.main;
-};
+
+// Returns Tailwind classes for priority colors
+export const getPriorityColorClass = (priority) => {
+  const priorityClasses = {
+    high: 'bg-red-500',
+    medium: 'bg-yellow-500',
+    low: 'bg-green-500',
+  };
+  return priorityClasses[priority?.toLowerCase()] || 'bg-green-500';
+};
+
+export const getProbabilityColor = (probability) => {
+  if (probability >= 70) return commonTheme.colors.success;
+  if (probability >= 40) return commonTheme.colors.warning;
+  return commonTheme.colors.error;
+};
+
+// Returns Tailwind classes for probability colors
+export const getProbabilityColorClass = (probability) => {
+  if (probability >= 70) return 'bg-green-500';
+  if (probability >= 40) return 'bg-yellow-500';
+  return 'bg-red-500';
+};

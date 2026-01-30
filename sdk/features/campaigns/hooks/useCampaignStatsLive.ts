@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../../../shared/apiClient';
+import { logger } from '@/lib/logger';
 interface PlatformMetrics {
   linkedin: { sent: number; connected: number; replied: number };
   email: { sent: number; connected: number; replied: number };
@@ -74,8 +75,8 @@ export function useCampaignStatsLive({
         return;
       }
       // Ensure URL includes /api prefix
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
-      const baseUrl = backendUrl ? `${backendUrl}/api` : '/api';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+      const baseUrl = backendUrl ? `${backendUrl}/api` : 'https://lad-backend-develop-741719885039.us-central1.run.app/api';
       // Construct SSE URL with auth token
       const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
       const eventSource = new EventSource(sseUrl);
@@ -108,7 +109,19 @@ export function useCampaignStatsLive({
         setIsConnected(false);
         eventSource.close();
         eventSourceRef.current = null;
-        // Exponential backoff reconnection
+        
+        // If readyState is 2 (CLOSED), it means the connection was closed, likely due to:
+        // - MIME type error (backend returned JSON instead of text/event-stream)
+        // - Authentication error
+        // - Endpoint doesn't exist
+        // In these cases, immediately fall back to polling instead of retrying SSE
+        if (eventSource.readyState === 2) {
+          logger.warn('[CampaignStatsLive] SSE connection closed (likely MIME type error or auth issue). Falling back to polling.');
+          startFallbackPolling();
+          return;
+        }
+        
+        // Exponential backoff reconnection for other errors
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
@@ -118,6 +131,7 @@ export function useCampaignStatsLive({
           }, delay);
         } else {
           // Fall back to polling after max reconnect attempts
+          logger.warn('[CampaignStatsLive] Max reconnect attempts reached. Falling back to polling.');
           startFallbackPolling();
         }
       };

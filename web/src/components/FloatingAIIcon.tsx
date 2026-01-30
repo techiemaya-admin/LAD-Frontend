@@ -1,97 +1,42 @@
 'use client';
 import React from 'react';
-import { Box, styled } from '@mui/material';
-import { SmartToy } from '@mui/icons-material';
+import { Bot } from 'lucide-react';
+
 interface FloatingAIIconProps {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   onClick?: () => void;
 }
-const FloatingContainer = styled(Box)<{ position?: string }>(({ position = 'bottom-right' }) => {
-  const positions = {
-    'bottom-right': {
-      bottom: '120px',
-      right: '24px',
-    },
-    'bottom-left': {
-      bottom: '120px',
-      left: '24px',
-    },
-    'top-right': {
-      top: '120px',
-      right: '24px',
-    },
-    'top-left': {
-      top: '120px',
-      left: '24px',
-    },
-  };
-  return {
-    position: 'fixed',
-    ...positions[position as keyof typeof positions],
-    zIndex: 1000,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-});
-const IconWrapper = styled(Box)({
-  position: 'relative',
-  width: '64px',
-  height: '64px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  animation: 'float 3s ease-in-out infinite',
-  '@keyframes float': {
-    '0%, 100%': {
-      transform: 'translateY(0px)',
-    },
-    '50%': {
-      transform: 'translateY(-12px)',
-    },
-  },
-});
-const IconCircle = styled(Box)({
-  position: 'relative',
-  width: '64px',
-  height: '64px',
-  borderRadius: '50%',
-  background: '#ffffff',
-  border: '2px solid #0b1957',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: '0 4px 12px rgba(11, 25, 87, 0.2)',
-    borderColor: '#1a2d7a',
-  },
-});
-const IconContent = styled(Box)({
-  position: 'relative',
-  zIndex: 2,
-  color: '#0b1957',
-  transition: 'all 0.3s ease',
-  [`${IconCircle}:hover &`]: {
-    color: '#1a2d7a',
-  },
-});
+
+const positionClasses = {
+  'bottom-right': 'bottom-[120px] right-6',
+  'bottom-left': 'bottom-[120px] left-6',
+  'top-right': 'top-[120px] right-6',
+  'top-left': 'top-[120px] left-6',
+};
+
 export const FloatingAIIcon: React.FC<FloatingAIIconProps> = ({ 
   position = 'bottom-right',
   onClick 
 }) => {
   return (
-    <FloatingContainer position={position} onClick={onClick}>
-      <IconWrapper>
-        <IconCircle>
-          <IconContent>
-            <SmartToy sx={{ fontSize: 32 }} />
-          </IconContent>
-        </IconCircle>
-      </IconWrapper>
-    </FloatingContainer>
+    <div 
+      className={`fixed z-[1000] cursor-pointer flex items-center justify-center ${positionClasses[position]}`}
+      onClick={onClick}
+    >
+      <div className="relative w-16 h-16 flex items-center justify-center animate-float">
+        <div className="relative w-16 h-16 rounded-full bg-white border-2 border-[#0b1957] shadow-md flex items-center justify-center transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#0b1957]/20 hover:border-[#1a2d7a] group">
+          <Bot className="w-8 h-8 text-[#0b1957] transition-colors group-hover:text-[#1a2d7a]" />
+        </div>
+      </div>
+    </div>
   );
-};
+};
+
+// Add to your globals.css:
+// @keyframes float {
+//   0%, 100% { transform: translateY(0px); }
+//   50% { transform: translateY(-12px); }
+// }
+// .animate-float {
+//   animation: float 3s ease-in-out infinite;
+// }

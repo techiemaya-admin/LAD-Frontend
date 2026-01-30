@@ -4,23 +4,15 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Chip,
-  Typography,
-  Box,
-  CircularProgress,
-  IconButton,
-  Tooltip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import FilterListIcon from '@mui/icons-material/FilterList';
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { RefreshCw, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@sdk/features/campaigns/hooks/useCampaignActivityFeed';
 interface LiveActivityTableProps {
@@ -43,17 +35,17 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       actionType: actionFilter !== 'all' ? actionFilter : undefined
     }
   );
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status?.toLowerCase()) {
       case 'success':
-        return 'success';
+        return 'default';
       case 'pending':
-        return 'warning';
+        return 'outline';
       case 'failed':
       case 'error':
-        return 'error';
+        return 'destructive';
       default:
-        return 'default';
+        return 'secondary';
     }
   };
   const getPlatformIcon = (platform: string) => {
@@ -74,187 +66,176 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   };
   if (error) {
     return (
-      <Box p={3} textAlign="center">
-        <Typography color="error">Failed to load activity data</Typography>
-      </Box>
+      <div className="p-6 text-center">
+        <p className="text-destructive">Failed to load activity data</p>
+      </div>
     );
   }
   return (
-    <Box>
+    <div>
       {/* Header with filters */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} gap={2}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <div className="flex items-center gap-2">
+          <h6 className="text-lg font-semibold">
             Live Activity Feed
-          </Typography>
-          <Chip
-            size="small"
-            label={isConnected ? 'Live' : 'Offline'}
-            color={isConnected ? 'success' : 'default'}
-            sx={{
-              fontWeight: 600,
-              animation: isConnected ? 'pulse 2s infinite' : 'none',
-              '@keyframes pulse': {
-                '0%, 100%': { opacity: 1 },
-                '50%': { opacity: 0.6 }
-              }
-            }}
-          />
-        </Box>
-        <Box display="flex" gap={2} alignItems="center">
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Platform</InputLabel>
-            <Select
-              value={platformFilter}
-              label="Platform"
-              onChange={(e) => setPlatformFilter(e.target.value)}
-            >
-              <MenuItem value="all">All Platforms</MenuItem>
-              <MenuItem value="linkedin">LinkedIn</MenuItem>
-              <MenuItem value="email">Email</MenuItem>
-              <MenuItem value="whatsapp">WhatsApp</MenuItem>
-              <MenuItem value="call">Call</MenuItem>
-              <MenuItem value="sms">SMS</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Action</InputLabel>
-            <Select
-              value={actionFilter}
-              label="Action"
-              onChange={(e) => setActionFilter(e.target.value)}
-            >
-              <MenuItem value="all">All Actions</MenuItem>
-              <MenuItem value="connection_request">Connection Request</MenuItem>
-              <MenuItem value="message">Message</MenuItem>
-              <MenuItem value="call">Call</MenuItem>
-              <MenuItem value="email">Email</MenuItem>
-              <MenuItem value="reply">Reply</MenuItem>
-            </Select>
-          </FormControl>
-          <Tooltip title="Refresh">
-            <IconButton onClick={refresh} disabled={isLoading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+          </h6>
+          <Badge
+            variant={isConnected ? 'default' : 'secondary'}
+            className={`font-semibold ${isConnected ? 'animate-pulse' : ''}`}
+          >
+            {isConnected ? 'Live' : 'Offline'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={platformFilter} onValueChange={setPlatformFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              <SelectItem value="linkedin">LinkedIn</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="call">Call</SelectItem>
+              <SelectItem value="sms">SMS</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Action" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Actions</SelectItem>
+              <SelectItem value="connection_request">Connection Request</SelectItem>
+              <SelectItem value="message">Message</SelectItem>
+              <SelectItem value="call">Call</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="reply">Reply</SelectItem>
+            </SelectContent>
+          </Select>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={refresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
       {/* Activity Table */}
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
-          maxHeight, 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          borderRadius: 2
-        }}
-      >
-        <Table stickyHeader>
-          <TableHead>
+      <div className="rounded-lg border shadow-sm overflow-auto" style={{ maxHeight: `${maxHeight}px` }}>
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Timestamp
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              </TableHead>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Lead
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              </TableHead>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Action
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              </TableHead>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Platform
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              </TableHead>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Status
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#F8F9FE' }}>
+              </TableHead>
+              <TableHead className="font-semibold bg-[#F8F9FE]">
                 Details
-              </TableCell>
+              </TableHead>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {isLoading && activities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <CircularProgress size={32} />
+                <TableCell colSpan={6} className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
             ) : activities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <Typography color="textSecondary">
+                <TableCell colSpan={6} className="text-center py-8">
+                  <p className="text-muted-foreground">
                     No activity data available
-                  </Typography>
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
               activities.map((activity, index) => (
                 <TableRow 
                   key={activity.id || index}
-                  sx={{
-                    '&:hover': { backgroundColor: '#F8F9FE' },
-                    transition: 'background-color 0.2s'
-                  }}
+                  className="hover:bg-[#F8F9FE] transition-colors"
                 >
                   <TableCell>
-                    <Typography variant="body2" color="textSecondary">
+                    <p className="text-sm text-muted-foreground">
                       {format(new Date(activity.created_at), 'MMM dd, HH:mm:ss')}
-                    </Typography>
+                    </p>
                   </TableCell>
                   <TableCell>
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>
+                    <div>
+                      <p className="text-sm font-medium">
                         {activity.lead_name || 'Unknown'}
-                      </Typography>
+                      </p>
                       {activity.lead_phone && (
-                        <Typography variant="caption" color="textSecondary">
+                        <p className="text-xs text-muted-foreground">
                           {activity.lead_phone}
-                        </Typography>
+                        </p>
                       )}
-                    </Box>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
+                    <p className="text-sm">
                       {formatActionType(activity.action_type)}
-                    </Typography>
+                    </p>
                   </TableCell>
                   <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <div className="flex items-center gap-2">
                       <span>{getPlatformIcon(activity.platform)}</span>
-                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                      <p className="text-sm capitalize">
                         {activity.platform}
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={activity.status || 'Unknown'}
-                      color={getStatusColor(activity.status)}
-                      size="small"
-                      sx={{ fontWeight: 500 }}
-                    />
+                    <Badge
+                      variant={getStatusColor(activity.status)}
+                      className="font-medium"
+                    >
+                      {activity.status || 'Unknown'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title={activity.message_content || activity.error_message || ''}>
-                      <Typography 
-                        variant="body2" 
-                        color="textSecondary"
-                        sx={{
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {activity.message_content || activity.error_message || '-'}
-                      </Typography>
-                    </Tooltip>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p 
+                            className="text-sm text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
+                          >
+                            {activity.message_content || activity.error_message || '-'}
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {activity.message_content || activity.error_message || ''}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Box>
+      </div>
+    </div>
   );
-};
+};

@@ -1,20 +1,44 @@
 'use client';
 import React from 'react';
-import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
 import {
-  LinkedIn as LinkedInIcon,
-  Email,
-  Schedule,
+  Linkedin,
+  Mail,
+  Clock,
   CheckCircle,
   Send,
   Phone,
-  WhatsApp,
+  MessageSquare,
   Instagram,
-  PersonSearch,
-} from '@mui/icons-material';
+  UserSearch,
+} from 'lucide-react';
 import { StepDefinition } from '@/types/campaign';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import PlatformReorder from './PlatformReorder';
+
+const getIcon = (iconName: string) => {
+  const className = "w-5 h-5";
+  switch (iconName) {
+    case 'linkedin':
+      return <Linkedin className={className} />;
+    case 'email':
+      return <Mail className={className} />;
+    case 'whatsapp':
+      return <MessageSquare className={className} />;
+    case 'voice':
+      return <Phone className={className} />;
+    case 'instagram':
+      return <Instagram className={className} />;
+    case 'delay':
+      return <Clock className={className} />;
+    case 'condition':
+      return <CheckCircle className={className} />;
+    case 'leads':
+      return <UserSearch className={className} />;
+    default:
+      return <Send className={className} />;
+  }
+};
+
 const STEP_DEFINITIONS: StepDefinition[] = [
   // LinkedIn Actions (as per AI chat workflow)
   {
@@ -142,28 +166,6 @@ const STEP_DEFINITIONS: StepDefinition[] = [
     defaultData: { title: 'Condition', conditionType: 'connected' },
   },
 ];
-const getIcon = (iconName: string) => {
-  switch (iconName) {
-    case 'linkedin':
-      return <LinkedInIcon sx={{ fontSize: 20 }} />;
-    case 'email':
-      return <Email sx={{ fontSize: 20 }} />;
-    case 'whatsapp':
-      return <WhatsApp sx={{ fontSize: 20 }} />;
-    case 'voice':
-      return <Phone sx={{ fontSize: 20 }} />;
-    case 'instagram':
-      return <Instagram sx={{ fontSize: 20 }} />;
-    case 'delay':
-      return <Schedule sx={{ fontSize: 20 }} />;
-    case 'condition':
-      return <CheckCircle sx={{ fontSize: 20 }} />;
-    case 'leads':
-      return <PersonSearch sx={{ fontSize: 20 }} />;
-    default:
-      return <Send sx={{ fontSize: 20 }} />;
-  }
-};
 // Simple toast notification helper
 const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
   const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-amber-500';
@@ -175,6 +177,7 @@ const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'suc
     toast.remove();
   }, 3000);
 };
+
 export default function OnboardingStepLibrary() {
   const { addWorkflowNode, addWorkflowStep, workflowNodes, workflowPreview, addWorkflowEdge } = useOnboardingStore();
   const handleDragStart = (e: React.DragEvent, stepType: string) => {
@@ -236,165 +239,144 @@ export default function OnboardingStepLibrary() {
   const leadsSteps = STEP_DEFINITIONS.filter((s) => s.category === 'leads');
   const utilitySteps = STEP_DEFINITIONS.filter((s) => s.category === 'utility');
   const renderStepCard = (step: StepDefinition, categoryColor: string) => (
-    <Paper
+    <div
       key={step.type}
       draggable
       onDragStart={(e) => handleDragStart(e, step.type)}
       onClick={() => handleClick(step)}
-      sx={{
-        p: 2,
-        cursor: 'pointer',
-        border: '1px solid #E2E8F0',
-        borderRadius: '12px',
-        bgcolor: '#FFFFFF',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          borderColor: categoryColor,
-          boxShadow: `0 4px 12px ${categoryColor}25`,
-          transform: 'translateY(-2px)',
-        },
-        '&:active': {
-          cursor: 'grabbing',
-        },
+      className="p-4 cursor-pointer border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:cursor-grabbing"
+      style={{
+        borderColor: undefined,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = categoryColor;
+        e.currentTarget.style.boxShadow = `0 4px 12px ${categoryColor}25`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#E2E8F0';
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
       }}
     >
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: '6px',
-            bgcolor: categoryColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-          }}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-8 h-8 rounded-md flex items-center justify-center text-white"
+          style={{ backgroundColor: categoryColor }}
         >
           {getIcon(step.icon)}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-[#1E293B]">
             {step.label}
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+          </p>
+          <p className="text-[11px] text-[#64748B]">
             {step.description}
-          </Typography>
-        </Box>
-      </Stack>
-    </Paper>
+          </p>
+        </div>
+      </div>
+    </div>
   );
   return (
-    <Box
-      sx={{
-        width: '100%',
-        height: '100%',
-        bgcolor: '#F8FAFC',
-        overflowY: 'auto',
-        p: 2,
-      }}
-    >
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1E293B' }}>
+    <div className="w-full h-full bg-[#F8FAFC] overflow-y-auto p-4">
+      <h2 className="text-lg font-semibold mb-6 text-[#1E293B]">
         Step Library
-      </Typography>
+      </h2>
       {/* Platform Reorder Section */}
-      <Box sx={{ mb: 3, mx: -2, mt: -1 }}>
+      <div className="mb-6 -mx-4 -mt-2">
         <PlatformReorder />
-      </Box>
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-      <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#475569' }}>
+      </div>
+      <div className="my-6 border-t border-[#E2E8F0]" />
+      <p className="text-sm font-semibold mb-4 text-[#475569]">
         Add Steps
-      </Typography>
+      </p>
       {/* Lead Generation Steps */}
       {leadsSteps.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div className="mb-8">
+          <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
             Lead Generation
-          </Typography>
-          <Stack spacing={1}>
+          </span>
+          <div className="space-y-2">
             {leadsSteps.map((step) => renderStepCard(step, '#6366F1'))}
-          </Stack>
-        </Box>
+          </div>
+        </div>
       )}
       {linkedinSteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-              <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               LinkedIn
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {linkedinSteps.map((step) => renderStepCard(step, '#0077B5'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
       {emailSteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               Email
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {emailSteps.map((step) => renderStepCard(step, '#F59E0B'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
       {whatsappSteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               WhatsApp
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {whatsappSteps.map((step) => renderStepCard(step, '#25D366'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
       {voiceSteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               Voice Agent
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {voiceSteps.map((step) => renderStepCard(step, '#8B5CF6'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
       {instagramSteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               Instagram
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {instagramSteps.map((step) => renderStepCard(step, '#E4405F'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
       {utilitySteps.length > 0 && (
         <>
-          <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className="my-6 border-t border-[#E2E8F0]" />
+          <div className="mb-8">
+            <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
               Utility
-            </Typography>
-            <Stack spacing={1}>
+            </span>
+            <div className="space-y-2">
               {utilitySteps.map((step) => renderStepCard(step, '#10B981'))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
         </>
       )}
-    </Box>
+    </div>
   );
-}
+}

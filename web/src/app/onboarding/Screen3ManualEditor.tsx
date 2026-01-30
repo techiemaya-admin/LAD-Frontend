@@ -1,7 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { Box, Paper, Button, Typography, Stack } from '@mui/material';
-import { Save, X, Visibility, ArrowBack, Undo, Redo } from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { Save, X, Eye, ArrowLeft, Undo as UndoIcon, Redo as RedoIcon } from 'lucide-react';
 import ReactFlow, {
   Node,
   Edge,
@@ -464,89 +464,76 @@ export default function Screen3ManualEditor() {
   }, [manualFlow, setNodes, setEdges]);
   // Full screen editor mode (when Edit is clicked from preview)
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
+    <div className="h-screen flex flex-col bg-[#F8F9FE]">
       {/* Header */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderBottom: '1px solid #E2E8F0',
-          bgcolor: '#FFFFFF',
-          px: 3,
-          py: 2,
-          zIndex: 10,
-        }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center" spacing={2}>
+      <div className="border-b border-[#E2E8F0] bg-white px-6 py-4 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Button
-              startIcon={<ArrowBack />}
+              variant="ghost"
+              size="sm"
               onClick={handleCancel}
-              sx={{ minWidth: 'auto' }}
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B' }}>
+            <h2 className="text-xl font-semibold text-[#1E293B]">
               Edit Workflow
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={2} alignItems="center">
+            </h2>
+          </div>
+          <div className="flex gap-4 items-center">
             <Button
-              variant="outlined"
-              startIcon={<Undo />}
+              variant="outline"
+              size="sm"
               onClick={handleUndo}
               disabled={!canUndo()}
-              size="small"
               title="Undo (Ctrl+Z)"
             >
+              <UndoIcon className="w-4 h-4 mr-2" />
               Undo
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<Redo />}
+              variant="outline"
+              size="sm"
               onClick={handleRedo}
               disabled={!canRedo()}
-              size="small"
               title="Redo (Ctrl+Y)"
             >
+              <RedoIcon className="w-4 h-4 mr-2" />
               Redo
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<Visibility />}
+              variant="outline"
               onClick={handlePreview}
             >
+              <Eye className="w-4 h-4 mr-2" />
               Preview Again
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<X />}
+              variant="outline"
               onClick={handleCancel}
             >
+              <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
             <Button
-              variant="contained"
-              startIcon={<Save />}
               onClick={handleSave}
               disabled={saving}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3d91 100%)',
-                },
-              }}
+              className="text-white"
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
             >
+              <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Workflow (Final)'}
             </Button>
-          </Stack>
-        </Stack>
-      </Paper>
+          </div>
+        </div>
+      </div>
       {/* Main Content - 3 Column Layout */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Step Library */}
         <StepLibrary />
         {/* Center - Flow Canvas */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
+        <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -565,10 +552,10 @@ export default function Screen3ManualEditor() {
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             <Controls />
           </ReactFlow>
-        </Box>
+        </div>
         {/* Right Sidebar - Step Settings */}
         <StepSettings />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
-}
+}

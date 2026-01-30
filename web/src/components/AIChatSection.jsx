@@ -1,24 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
-  Box, 
-  Typography, 
-  TextField, 
-  IconButton, 
-  Button, 
-  Paper, 
-  Chip, 
-  CircularProgress,
-  Avatar
-} from '@mui/material';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import MicIcon from '@mui/icons-material/Mic';
-import SearchIcon from '@mui/icons-material/Search';
-import SendIcon from '@mui/icons-material/Send';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import PersonIcon from '@mui/icons-material/Person';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import CodeIcon from '@mui/icons-material/Code';
-import BusinessIcon from '@mui/icons-material/Business';
+  Paperclip, 
+  Mic, 
+  Search, 
+  Send, 
+  Bot, 
+  User, 
+  Sparkles, 
+  Code, 
+  Building2,
+  Loader2
+} from 'lucide-react';
 export default function AIChatSection({ onSendPrompt, onApplyParams, loading, chatHistory = [] }) {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -47,25 +44,25 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
   };
   const suggestedActions = [
     { 
-      icon: <BusinessIcon />, 
+      icon: <Building2 className="w-5 h-5" />, 
       text: 'Find companies', 
       color: '#FFE082',
       prompt: 'What type of companies are you looking for? Please specify the company type or industry and location.'
     },
     { 
-      icon: <AutoAwesomeIcon />, 
+      icon: <Sparkles className="w-5 h-5" />, 
       text: 'Industry search', 
       color: '#B3E5FC',
       prompt: 'What industry would you like to search? Please tell me the industry name and location you\'re interested in.'
     },
     { 
-      icon: <PersonIcon />, 
+      icon: <User className="w-5 h-5" />, 
       text: 'Employee search', 
       color: '#C8E6C9',
       prompt: 'Find executives in healthcare sector'
     },
     { 
-      icon: <CodeIcon />, 
+      icon: <Code className="w-5 h-5" />, 
       text: 'Custom query', 
       color: '#F8BBD0',
       prompt: 'Search for SaaS companies with more than 50 employees'
@@ -75,306 +72,156 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
     onSendPrompt(prompt);
   };
   const showWelcome = chatHistory.length === 0 && !loading;
+
   return (
-    <Box 
+    <div 
       id="ai-chat-section"
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        px: 2,
-        position: 'relative',
-        background: 'transparent',
-        // Ensure content is above background layers
-        '& > *': {
-          position: 'relative',
-          zIndex: 2,
-        }
-      }}>
+      className="h-full flex flex-col max-w-[1200px] mx-auto px-4 relative bg-transparent"
+    >
       {/* Welcome Screen */}
       {showWelcome && (
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mb: 4, mt: 4 }}>
-          <Typography 
-            variant="h3" 
-            sx={{ 
-              fontWeight: 700, 
-              mb: 2,
-              background: 'linear-gradient(135deg, #1a2d7a 0%, #0b1957 50%, #0a1445 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              textAlign: 'center'
-            }}
+        <div className="flex-1 flex flex-col justify-center items-center mb-8 mt-8">
+          <h1 
+            className="text-5xl font-bold mb-4 bg-gradient-to-r from-[#1a2d7a] via-[#0b1957] to-[#0a1445] bg-clip-text text-transparent text-center"
           >
             Let Agent Deal
-          </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              mb: 4, 
-              color: 'oklch(0.145 0 0)',
-              textAlign: 'center',
-              maxWidth: '600px'
-            }}
+          </h1>
+          <p 
+            className="mb-8 text-[oklch(0.145_0_0)] text-center max-w-[600px]"
           >
             Get started by typing a task and LAD can do the rest. Not sure where to start?
-          </Typography>
+          </p>
           {/* Suggested Actions */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
-            gap: 2,
-            width: '100%',
-            maxWidth: '900px',
-            mb: 4
-          }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-[900px] mb-8">
             {suggestedActions.map((action, index) => (
-              <Paper
+              <Card
                 key={index}
-                elevation={0}
                 onClick={() => handleQuickAction(action.prompt)}
-                sx={{
-                  p: 2.5,
-                  cursor: 'pointer',
-                  border: '1px solid oklch(0.922 0 0)',
-                  borderRadius: '20px',
-                  background: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.3s ease-in-out',
-                  color: '#0b1957',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(11, 25, 87, 0.15)',
-                    borderColor: '#0b1957',
-                    background: '#ffffff',
-                  }
-                }}
+                className="p-5 cursor-pointer border border-[oklch(0.922_0_0)] rounded-[20px] bg-white flex items-center justify-between transition-all duration-300 text-[#0b1957] shadow-sm hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(11,25,87,0.15)] hover:border-[#0b1957]"
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ 
-                    color: '#0b1957',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
+                <div className="flex items-center gap-3">
+                  <div className="text-[#0b1957] flex items-center">
                     {action.icon}
-                  </Box>
-                  <Typography variant="body1" sx={{ fontWeight: 500, color: '#0b1957' }}>
+                  </div>
+                  <span className="font-medium text-[#0b1957]">
                     {action.text}
-                  </Typography>
-                </Box>
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    ml: 1,
-                    color: '#0b1957',
-                    '&:hover': {
-                      bgcolor: 'oklch(0.97 0 0)',
-                    }
-                  }}
+                  </span>
+                </div>
+                <Button 
+                  size="icon"
+                  variant="ghost"
+                  className="ml-2 text-[#0b1957] h-8 w-8 hover:bg-[oklch(0.97_0_0)]"
                 >
-                  <SendIcon fontSize="small" />
-                </IconButton>
-              </Paper>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </Card>
             ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
       {/* Chat Messages */}
       {chatHistory.length > 0 && (
-        <Box sx={{ 
-          flex: 1, 
-          overflowY: 'auto', 
-          mb: 2,
-          px: 1,
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: 'linear-gradient(180deg, #00D9FF, #7C3AED)',
-            borderRadius: '4px',
-          }
-        }}>
+        <div className="flex-1 overflow-y-auto mb-4 px-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gradient-to-b [&::-webkit-scrollbar-thumb]:from-[#00D9FF] [&::-webkit-scrollbar-thumb]:to-[#7C3AED] [&::-webkit-scrollbar-thumb]:rounded">
           {chatHistory.map((message, index) => (
-            <Box
+            <div
               key={index}
-              sx={{
-                display: 'flex',
-                mb: 3,
-                alignItems: 'flex-start',
-                flexDirection: message.role === 'user' ? 'row-reverse' : 'row',
-                gap: 2
-              }}
+              className={`flex mb-6 items-start gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <Avatar
-                sx={{
-                  bgcolor: '#0b1957',
-                  background: '#0b1957',
-                  width: 36,
-                  height: 36,
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                }}
-              >
-                {message.role === 'user' ? (
-                  <PersonIcon fontSize="small" sx={{ color: '#ffffff' }} />
-                ) : (
-                  <SmartToyIcon fontSize="small" sx={{ color: '#ffffff' }} />
-                )}
+              <Avatar className="bg-[#0b1957] w-9 h-9 shadow-sm">
+                <AvatarFallback className="bg-[#0b1957]">
+                  {message.role === 'user' ? (
+                    <User className="h-4 w-4 text-white" />
+                  ) : (
+                    <Bot className="h-4 w-4 text-white" />
+                  )}
+                </AvatarFallback>
               </Avatar>
-              <Box sx={{ 
-                flex: 1,
-                maxWidth: '70%',
-                minWidth: 0
-              }}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 2,
-                    background: '#ffffff',
-                    color: '#0b1957',
-                    borderRadius: '20px',
-                    border: '1px solid oklch(0.922 0 0)',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#0b1957' }}>
+              <div className="flex-1 max-w-[70%] min-w-0">
+                <Card className="p-4 bg-white text-[#0b1957] rounded-[20px] border border-[oklch(0.922_0_0)] shadow-sm">
+                  <p className="whitespace-pre-wrap break-words text-[#0b1957]">
                     {message.content}
-                  </Typography>
+                  </p>
                   {/* Show expanded keywords if available */}
                   {message.expandedKeywords && (
-                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid oklch(0.922 0 0)' }}>
-                      <Typography variant="caption" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 600, color: '#7C3AED' }}>
-                        <AutoAwesomeIcon fontSize="small" sx={{ fontSize: '14px' }} />
+                    <div className="mt-4 pt-4 border-t border-[oklch(0.922_0_0)]">
+                      <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-[#7C3AED]">
+                        <Sparkles className="h-3.5 w-3.5" />
                         AI-Expanded Keywords
-                      </Typography>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        gap: 0.5, 
-                        maxHeight: '120px', 
-                        overflowY: 'auto',
-                        p: 1,
-                        bgcolor: 'oklch(0.985 0 0)',
-                        borderRadius: '8px',
-                        '&::-webkit-scrollbar': { width: '4px' },
-                        '&::-webkit-scrollbar-thumb': { background: '#7C3AED', borderRadius: '2px' }
-                      }}>
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto p-2 bg-[oklch(0.985_0_0)] rounded-lg [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#7C3AED] [&::-webkit-scrollbar-thumb]:rounded">
                         {message.expandedKeywords.map((keyword, idx) => (
-                          <Chip 
+                          <Badge 
                             key={idx}
-                            label={keyword} 
-                            size="small" 
-                            sx={{ 
-                              bgcolor: '#ffffff',
-                              color: '#7C3AED',
-                              border: '1px solid #E9D5FF',
-                              fontSize: '0.75rem',
-                              height: '24px',
-                              '&:hover': { bgcolor: '#F3E8FF' }
-                            }} 
-                          />
+                            variant="outline"
+                            className="bg-white text-[#7C3AED] border-[#E9D5FF] text-xs h-6 hover:bg-[#F3E8FF]"
+                          >
+                            {keyword}
+                          </Badge>
                         ))}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
                   )}
                   {message.suggestedParams && (
-                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid oklch(0.922 0 0)' }}>
-                      <Typography variant="caption" sx={{ mb: 1, display: 'block', fontWeight: 600, color: '#0b1957' }}>
+                    <div className="mt-4 pt-4 border-t border-[oklch(0.922_0_0)]">
+                      <span className="mb-2 block text-xs font-semibold text-[#0b1957]">
                         Suggested Parameters:
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+                      </span>
+                      <div className="flex flex-wrap gap-1 mb-3">
                         {message.suggestedParams.keywords && (
-                          <Chip 
-                            label={`Keywords: ${message.suggestedParams.keywords}`} 
-                            size="small" 
-                            sx={{ 
-                              bgcolor: 'oklch(0.97 0 0)',
-                              color: '#0b1957',
-                              border: '1px solid oklch(0.922 0 0)',
-                            }} 
-                          />
+                          <Badge 
+                            variant="outline"
+                            className="bg-[oklch(0.97_0_0)] text-[#0b1957] border-[oklch(0.922_0_0)]"
+                          >
+                            Keywords: {message.suggestedParams.keywords}
+                          </Badge>
                         )}
                         {message.suggestedParams.location && (
-                          <Chip 
-                            label={`Location: ${message.suggestedParams.location}`} 
-                            size="small"
-                            sx={{ 
-                              bgcolor: 'oklch(0.97 0 0)',
-                              color: '#0b1957',
-                              border: '1px solid oklch(0.922 0 0)',
-                            }}
-                          />
+                          <Badge 
+                            variant="outline"
+                            className="bg-[oklch(0.97_0_0)] text-[#0b1957] border-[oklch(0.922_0_0)]"
+                          >
+                            Location: {message.suggestedParams.location}
+                          </Badge>
                         )}
-                      </Box>
+                      </div>
                       <Button 
-                        size="small" 
-                        variant="contained"
+                        size="sm"
                         onClick={() => handleApplyParams(message.suggestedParams)}
-                        sx={{
-                          mt: 1,
-                          background: '#0b1957',
-                          color: '#ffffff',
-                          border: '1px solid #0b1957',
-                          borderRadius: '20px',
-                          '&:hover': {
-                            background: '#0d1f6f',
-                          }
-                        }}
+                        className="mt-2 bg-[#0b1957] text-white border border-[#0b1957] rounded-[20px] hover:bg-[#0d1f6f]"
                       >
                         Apply & Search
                       </Button>
-                    </Box>
+                    </div>
                   )}
-                </Paper>
-              </Box>
-            </Box>
+                </Card>
+              </div>
+            </div>
           ))}
           {loading && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-              <Avatar sx={{ 
-                background: '#0b1957', 
-                width: 36, 
-                height: 36,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              }}>
-                <SmartToyIcon fontSize="small" sx={{ color: '#ffffff' }} />
+            <div className="flex items-center gap-4 mb-6">
+              <Avatar className="bg-[#0b1957] w-9 h-9 shadow-sm">
+                <AvatarFallback className="bg-[#0b1957]">
+                  <Bot className="h-4 w-4 text-white" />
+                </AvatarFallback>
               </Avatar>
-              <Paper elevation={0} sx={{ 
-                p: 2, 
-                background: '#ffffff',
-                border: '1px solid oklch(0.922 0 0)',
-                borderRadius: '20px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={16} sx={{ color: '#0b1957' }} />
-                  <Typography variant="body2" sx={{ color: '#0b1957' }}>
+              <Card className="p-4 bg-white border border-[oklch(0.922_0_0)] rounded-[20px] shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0b1957]" />
+                  <span className="text-sm text-[#0b1957]">
                     AI is thinking...
-                  </Typography>
-                </Box>
-              </Paper>
-            </Box>
+                  </span>
+                </div>
+              </Card>
+            </div>
           )}
           <div ref={messagesEndRef} />
-        </Box>
+        </div>
       )}
       {/* Input Area - Fixed at bottom */}
-      <Box sx={{ 
-        position: 'sticky',
-        bottom: 0,
-        pt: 2,
-        pb: 1,
-      }}>
-        <Box sx={{ position: 'relative' }}>
-          <TextField
-            inputRef={inputRef}
-            fullWidth
-            multiline
-            maxRows={6}
+      <div className="sticky bottom-0 pt-4 pb-2">
+        <div className="relative">
+          <Textarea
+            ref={inputRef}
             placeholder="Summarize the latest"
             value={input}
             onChange={(e) => {
@@ -390,66 +237,28 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
               }
             }}
             disabled={loading}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '20px',
-                background: '#ffffff',
-                border: '1px solid oklch(0.922 0 0)',
-                fontSize: '1rem',
-                py: 1,
-                pr: 10,
-                color: '#0b1957',
-                '&:hover': {
-                  borderColor: '#0b1957',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                },
-                '&.Mui-focused': {
-                  borderColor: '#0b1957',
-                  boxShadow: '0 0 0 2px rgba(11, 25, 87, 0.2)',
-                }
-              },
-              '& .MuiOutlinedInput-input': {
-                py: 1.5,
-                '&::placeholder': {
-                  color: 'oklch(0.556 0 0)',
-                  opacity: 1,
-                }
-              }
-            }}
+            className="resize-none rounded-[20px] bg-white border border-[oklch(0.922_0_0)] text-base py-3 pr-24 text-[#0b1957] placeholder:text-[oklch(0.556_0_0)] hover:border-[#0b1957] hover:shadow-sm focus:border-[#0b1957] focus:shadow-[0_0_0_2px_rgba(11,25,87,0.2)] disabled:opacity-50"
+            rows={1}
           />
-          <IconButton
+          <Button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              bottom: 8,
-              background: '#0b1957',
-              color: '#ffffff',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              '&:hover': {
-                background: '#0d1f6f',
-                boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-              },
-              '&.Mui-disabled': {
-                background: 'oklch(0.97 0 0)',
-                color: 'oklch(0.556 0 0)',
-              }
-            }}
+            size="icon"
+            className="absolute right-2 bottom-2 bg-[#0b1957] text-white shadow-sm hover:bg-[#0d1f6f] hover:shadow-md disabled:bg-[oklch(0.97_0_0)] disabled:text-[oklch(0.556_0_0)]"
           >
-            <SendIcon />
-          </IconButton>
-        </Box>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
         {/* Action Buttons and Character Counter */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5, px: 0.5 }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+        <div className="flex justify-between items-center mt-1 px-1">
+          <div className="flex gap-2">
             {/* Hidden: Attach, Voice Message, and Browse Prompts buttons */}
-          </Box>
-          <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'oklch(0.556 0 0)' }}>
+          </div>
+          <span className="text-xs text-[oklch(0.556_0_0)]">
             {input.length} / 3,000
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+          </span>
+        </div>
+      </div>
+    </div>
   );
-}
+}

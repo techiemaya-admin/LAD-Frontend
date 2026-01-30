@@ -23,12 +23,13 @@ class ApiClient {
       throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
     }
     
-    // If backend URL is provided, append /api; otherwise use local default
+    // If backend URL is provided, append /api; otherwise use production backend as default
     if (backendUrl) {
       // Check if URL already contains /api suffix
       this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
     } else {
-      this.baseURL = 'http://localhost:3004/api';
+      // Default to production backend instead of localhost
+      this.baseURL = 'https://lad-backend-develop-741719885039.us-central1.run.app/api';
     }
   }
   private async request<T>(

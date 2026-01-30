@@ -1,30 +1,33 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Box, Paper, Typography, Stack, Button, CircularProgress, Chip } from '@mui/material';
+import { Button } from '@/components/ui/button';
 import {
-  LinkedIn as LinkedInIcon,
-  Email,
-  WhatsApp,
+  Linkedin,
+  Mail,
+  MessageSquare,
   Instagram,
   Phone,
-  Schedule,
+  Clock,
   CheckCircle,
-  ArrowForward,
+  ArrowRight,
   Edit,
-} from '@mui/icons-material';
+  Loader2,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 const getStepIcon = (type: string) => {
-  if (type.includes('linkedin')) return <LinkedInIcon sx={{ fontSize: 24 }} />;
-  if (type.includes('email')) return <Email sx={{ fontSize: 24 }} />;
-  if (type.includes('whatsapp')) return <WhatsApp sx={{ fontSize: 24 }} />;
-  if (type.includes('instagram')) return <Instagram sx={{ fontSize: 24 }} />;
-  if (type.includes('voice')) return <Phone sx={{ fontSize: 24 }} />;
-  if (type === 'delay') return <Schedule sx={{ fontSize: 24 }} />;
-  if (type === 'condition') return <CheckCircle sx={{ fontSize: 24 }} />;
-  return <ArrowForward sx={{ fontSize: 24 }} />;
+  const className = "w-6 h-6";
+  if (type.includes('linkedin')) return <Linkedin className={className} />;
+  if (type.includes('email')) return <Mail className={className} />;
+  if (type.includes('whatsapp')) return <MessageSquare className={className} />;
+  if (type.includes('instagram')) return <Instagram className={className} />;
+  if (type.includes('voice')) return <Phone className={className} />;
+  if (type === 'delay') return <Clock className={className} />;
+  if (type === 'condition') return <CheckCircle className={className} />;
+  return <ArrowRight className={className} />;
 };
 const getStepColor = (type: string) => {
   if (type.includes('linkedin')) return '#0077B5';
@@ -213,214 +216,109 @@ export default function Screen2AutoWorkflow() {
   };
   if (isGenerating) {
     return (
-      <Box
-        sx={{
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F8F9FE',
-          gap: 3,
-        }}
-      >
-        <CircularProgress size={60} sx={{ color: '#667eea' }} />
-        <Typography variant="h6" sx={{ color: '#64748B' }}>
+      <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FE] gap-6">
+        <Loader2 className="w-[60px] h-[60px] text-[#667eea] animate-spin" />
+        <h2 className="text-xl font-medium text-[#64748B]">
           Generating your workflow...
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#94A3B8' }}>
+        </h2>
+        <p className="text-sm text-[#94A3B8]">
           This may take a few seconds
-        </Typography>
-      </Box>
+        </p>
+      </div>
     );
   }
   if (error && !autoFlow) {
     return (
-      <Box
-        sx={{
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F8F9FE',
-          gap: 3,
-          p: 3,
-        }}
-      >
-        <Typography variant="h6" sx={{ color: '#EF4444' }}>
+      <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FE] gap-6 p-6">
+        <h2 className="text-xl font-medium text-[#EF4444]">
           Error generating workflow
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#64748B' }}>
+        </h2>
+        <p className="text-sm text-[#64748B]">
           {error}
-        </Typography>
-        <Button variant="contained" onClick={generateWorkflow}>
+        </p>
+        <Button onClick={generateWorkflow}>
           Retry
         </Button>
-      </Box>
+      </div>
     );
   }
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
+    <div className="h-screen flex flex-col bg-[#F8F9FE]">
       {/* Header */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          borderBottom: '1px solid #E2E8F0',
-          bgcolor: '#FFFFFF',
-        }}
-      >
-        <Typography variant="h5" sx={{ fontWeight: 600, color: '#1E293B', mb: 1 }}>
+      <div className="p-6 border-b border-[#E2E8F0] bg-white">
+        <h1 className="text-2xl font-semibold text-[#1E293B] mb-2">
           Your Auto-Generated Workflow
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#64748B' }}>
+        </h1>
+        <p className="text-sm text-[#64748B]">
           Based on your requirements, we've created this automation workflow. Review it and make any changes if needed.
-        </Typography>
-      </Paper>
+        </p>
+      </div>
       {/* Workflow Steps */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          p: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 3,
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6">
         {autoFlow?.steps.map((step, index) => (
           <React.Fragment key={step.id}>
-            <Paper
-              elevation={0}
-              sx={{
-                width: '100%',
-                maxWidth: 800,
-                p: 3,
-                border: '1px solid #E2E8F0',
-                borderRadius: 2,
-                bgcolor: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 3,
-              }}
-            >
+            <div className="w-full max-w-[800px] p-6 border border-[#E2E8F0] rounded-lg bg-white flex items-center gap-6">
               {/* Step Number */}
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '50%',
-                  bgcolor: '#F1F5F9',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 600,
-                  color: '#1E293B',
-                  flexShrink: 0,
-                }}
-              >
+              <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center font-semibold text-[#1E293B] shrink-0">
                 {index + 1}
-              </Box>
+              </div>
               {/* Step Icon */}
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 2,
-                  bgcolor: getStepColor(step.type),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  flexShrink: 0,
-                }}
+              <div
+                className="w-14 h-14 rounded-lg flex items-center justify-center text-white shrink-0"
+                style={{ backgroundColor: getStepColor(step.type) }}
               >
                 {getStepIcon(step.type)}
-              </Box>
+              </div>
               {/* Step Info */}
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-[#1E293B] mb-1">
                   {step.title}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1 }}>
+                </h3>
+                <p className="text-sm text-[#64748B] mb-2">
                   {step.description}
-                </Typography>
+                </p>
                 {step.variables && step.variables.length > 0 && (
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <div className="flex gap-2 flex-wrap">
                     {step.variables.map((variable: string) => (
-                      <Chip
+                      <Badge
                         key={variable}
-                        label={`{{${variable}}}`}
-                        size="small"
-                        sx={{
-                          bgcolor: '#F1F5F9',
-                          color: '#1E293B',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                      />
+                        variant="secondary"
+                        className="bg-[#F1F5F9] text-[#1E293B] font-mono text-[11px]"
+                      >
+                        {`{{${variable}}}`}
+                      </Badge>
                     ))}
-                  </Stack>
+                  </div>
                 )}
-              </Box>
-            </Paper>
+              </div>
+            </div>
             {/* Arrow between steps */}
             {index < (autoFlow?.steps.length || 0) - 1 && (
-              <ArrowForward sx={{ color: '#94A3B8', fontSize: 32 }} />
+              <ArrowRight className="text-[#94A3B8] w-8 h-8" />
             )}
           </React.Fragment>
         ))}
-      </Box>
+      </div>
       {/* Action Buttons */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          borderTop: '1px solid #E2E8F0',
-          bgcolor: '#FFFFFF',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 2,
-        }}
-      >
+      <div className="p-6 border-t border-[#E2E8F0] bg-white flex justify-center gap-4">
         <Button
-          variant="outlined"
-          size="large"
-          startIcon={<Edit />}
+          variant="outline"
+          size="lg"
           onClick={handleEditWorkflow}
-          sx={{
-            borderColor: '#E2E8F0',
-            color: '#1E293B',
-            px: 4,
-            py: 1.5,
-            '&:hover': {
-              borderColor: '#94A3B8',
-              bgcolor: '#F8FAFC',
-            },
-          }}
+          className="px-8 py-3 border-[#E2E8F0] text-[#1E293B] hover:border-[#94A3B8] hover:bg-[#F8FAFC]"
         >
+          <Edit className="w-4 h-4 mr-2" />
           Edit Workflow
         </Button>
         <Button
-          variant="contained"
-          size="large"
+          size="lg"
           onClick={handleSaveWorkflow}
-          sx={{
-            bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #6a3d91 100%)',
-            },
-            px: 4,
-            py: 1.5,
-            fontWeight: 600,
-          }}
+          className="px-8 py-3 font-semibold text-white"
+          style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
         >
           Looks Good → Save Workflow
         </Button>
-      </Paper>
-    </Box>
+      </div>
+    </div>
   );
-}
+}

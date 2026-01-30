@@ -1,27 +1,20 @@
 'use client';
 import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Card,
-  CardContent,
-  CardActions,
-  Avatar,
-  Typography,
-  Chip,
-  Tooltip,
-  IconButton,
-  Button,
-} from '@mui/material';
-import {
-  Person,
+  User,
   Phone,
-  LocationOn,
-  Email,
-  LinkedIn as LinkedInIcon,
-  Business,
-  CheckCircle,
-  Language,
-} from '@mui/icons-material';
+  MapPin,
+  Mail,
+  Linkedin,
+  Building2,
+  CheckCircle2,
+  Globe,
+} from 'lucide-react';
+
 interface LeadCardProps {
   lead: {
     id: string;
@@ -48,6 +41,7 @@ interface LeadCardProps {
   onViewDetails?: (lead: any) => void;
   onViewEmployees?: (lead: any) => void;
 }
+
 export default function LeadCard({
   lead,
   index = 0,
@@ -57,24 +51,28 @@ export default function LeadCard({
   onViewEmployees,
 }: LeadCardProps) {
   if (!lead) return null;
+
   const leadId = lead.id || index;
   const leadName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Lead';
   const leadPhoto = lead.photo_url || lead.profile_image;
+
   const locationParts = [
     lead.city,
     lead.state,
     lead.country,
   ].filter(Boolean);
   const locationLabel = locationParts.join(', ');
+
   const getStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'success';
-      case 'completed': return 'info';
-      case 'stopped': return 'error';
-      case 'pending': return 'warning';
-      default: return 'default';
+      case 'active': return 'default';
+      case 'completed': return 'secondary';
+      case 'stopped': return 'destructive';
+      case 'pending': return 'outline';
+      default: return 'outline';
     }
   };
+
   const getInitials = (name: string) => {
     if (!name) return '?';
     const parts = name.trim().split(' ');
@@ -83,334 +81,158 @@ export default function LeadCard({
     }
     return name.substring(0, 2).toUpperCase();
   };
+
   return (
     <Card
       onClick={onSelect}
-      sx={{
-        flex: 1,
-        minHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.2s ease',
-        border: isSelected ? '2px solid' : '1px solid',
-        borderColor: isSelected ? '#0b1957' : '#e9ecef',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        position: 'relative',
-        bgcolor: '#ffffff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          borderColor: isSelected ? '#0b1957' : '#dee2e6',
-        },
-        '&::before': isSelected
-          ? {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '3px',
-              background: '#0b1957',
-              zIndex: 1,
-            }
-          : {},
-      }}
+      className={`
+        flex-1 min-h-full flex flex-col transition-all duration-200 rounded-xl overflow-hidden relative
+        ${isSelected 
+          ? 'border-2 border-[#0b1957] shadow-lg' 
+          : 'border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
+        }
+        bg-white cursor-pointer
+        ${isSelected ? 'before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-[#0b1957] before:z-10' : ''}
+      `}
     >
-      <CardContent
-        sx={{ flexGrow: 1, p: 0, position: 'relative', zIndex: 2 }}
-      >
+      <CardContent className="flex-grow p-0 relative z-20">
         {/* Header */}
-        <Box
-          sx={{
-            bgcolor: '#ffffff',
-            p: 2.5,
-            position: 'relative',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 2,
-              position: 'relative',
-            }}
-          >
-            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+        <div className="bg-white p-6 relative">
+          <div className="flex items-start gap-4 relative">
+            <div className="relative flex-shrink-0">
               <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: '#0b1957',
-                  flexShrink: 0,
-                  border: isSelected
-                    ? '3px solid #0b1957'
-                    : '2px solid #e9ecef',
-                }}
-                src={leadPhoto}
-                alt={leadName}
+                className={`w-12 h-12 ${isSelected ? 'border-[3px] border-[#0b1957]' : 'border-2 border-gray-200'}`}
               >
-                {!leadPhoto && <Person />}
+                <AvatarImage src={leadPhoto} alt={leadName} />
+                <AvatarFallback className="bg-[#0b1957] text-white">
+                  <User className="w-6 h-6" />
+                </AvatarFallback>
               </Avatar>
               {isSelected && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    bgcolor: '#0b1957',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid white',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    zIndex: 3,
-                  }}
-                >
-                  <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
-                </Box>
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md z-30">
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                </div>
               )}
-            </Box>
-            <Box
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                minHeight: '56px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant="h6"
-                  fontWeight="bold"
+            </div>
+            <div className="flex-1 min-w-0 min-h-[56px] flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <h3
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onViewDetails) {
                       onViewDetails(lead);
                     }
                   }}
-                  sx={{
-                    wordBreak: 'break-word',
-                    lineHeight: 1.3,
-                    fontSize: '1.125rem',
-                    color: '#000000',
-                    cursor: 'pointer',
-                    transition: 'color 0.2s',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    '&:hover': {
-                      color: '#0b1957',
-                      textDecoration: 'underline',
-                    },
-                  }}
+                  className="font-bold text-lg leading-snug text-black cursor-pointer transition-colors line-clamp-2 hover:text-[#0b1957] hover:underline"
                 >
                   {leadName}
-                </Typography>
+                </h3>
                 {lead.title && (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: '#64748B',
-                      fontSize: '0.75rem',
-                      mt: 0.5,
-                      display: 'block',
-                    }}
-                  >
+                  <p className="text-slate-500 text-xs mt-1">
                     {lead.title}
-                  </Typography>
+                  </p>
                 )}
-              </Box>
+              </div>
               {lead.status && (
-                <Chip
-                  label={lead.status}
-                  color={getStatusColor(lead.status) as any}
-                  size="small"
-                  sx={{ textTransform: 'capitalize', fontSize: '0.75rem', ml: 1 }}
-                />
+                <Badge variant={getStatusColor(lead.status) as any} className="capitalize text-xs ml-2">
+                  {lead.status}
+                </Badge>
               )}
-            </Box>
-          </Box>
-        </Box>
+            </div>
+          </div>
+        </div>
         {/* Body */}
-        <Box sx={{ p: 2.5, pt: 2 }}>
-          <Box sx={{ mb: 0 }}>
+        <div className="p-6 pt-4">
+          <div className="mb-0">
             {/* Company */}
             {lead.company && (
-              <Box sx={{ minHeight: '24px', mb: 1 }}>
-                <Chip
-                  icon={<Business sx={{ fontSize: 16 }} />}
-                  label={lead.company}
-                  size="small"
-                  variant="outlined"
-                  sx={{ fontWeight: 'bold', height: 24 }}
-                />
-              </Box>
+              <div className="min-h-[24px] mb-2">
+                <Badge variant="outline" className="font-bold h-6 gap-1">
+                  <Building2 className="w-4 h-4" />
+                  {lead.company}
+                </Badge>
+              </div>
             )}
             {/* Contact + location row */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-                mb: 1.5,
-              }}
-            >
+            <div className="flex flex-col gap-2 mb-3">
               {/* Phone */}
               {lead.phone && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Phone sx={{ fontSize: 18, color: '#0b1957' }} />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#0b1957',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                    }}
-                  >
+                <div className="flex items-center gap-2">
+                  <Phone className="w-[18px] h-[18px] text-[#0b1957]" />
+                  <span className="text-[#0b1957] text-sm font-semibold">
                     {lead.phone}
-                  </Typography>
-                </Box>
+                  </span>
+                </div>
               )}
               {/* Email */}
               {lead.email && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Email sx={{ fontSize: 18, color: '#0b1957' }} />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#0b1957',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                    }}
-                  >
+                <div className="flex items-center gap-2">
+                  <Mail className="w-[18px] h-[18px] text-[#0b1957]" />
+                  <span className="text-[#0b1957] text-sm font-semibold">
                     {lead.email}
-                  </Typography>
-                </Box>
+                  </span>
+                </div>
               )}
               {/* Location */}
               {locationLabel && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LocationOn sx={{ fontSize: 18, color: '#0b1957' }} />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: locationLabel
-                        ? '#0b1957'
-                        : 'oklch(0.556 0 0)',
-                      fontSize: '0.875rem',
-                    }}
-                  >
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-[18px] h-[18px] text-[#0b1957]" />
+                  <span className="text-[#0b1957] text-sm">
                     {locationLabel}
-                  </Typography>
-                </Box>
+                  </span>
+                </div>
               )}
-            </Box>
+            </div>
             {/* Links row */}
             {(lead.website || lead.linkedin_url) && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 1,
-                  mt: 1,
-                }}
-              >
+              <div className="flex flex-wrap gap-2 mt-2">
                 {lead.website && (
-                  <Chip
-                    icon={<Language />}
-                    label="Website"
-                    component="a"
-                    href={lead.website}
-                    target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#0b1957',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#0b1957',
-                      },
+                  <Badge
+                    variant="outline"
+                    className="bg-gray-50 text-[#0b1957] border-gray-300 hover:border-[#0b1957] cursor-pointer gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(lead.website, '_blank');
                     }}
-                  />
+                  >
+                    <Globe className="w-4 h-4" />
+                    Website
+                  </Badge>
                 )}
                 {lead.linkedin_url && (
-                  <Chip
-                    icon={<LinkedInIcon />}
-                    label="LinkedIn"
-                    component="a"
-                    href={lead.linkedin_url}
-                    target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#0077b5',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#0077b5',
-                      },
+                  <Badge
+                    variant="outline"
+                    className="bg-gray-50 text-[#0077b5] border-gray-300 hover:border-[#0077b5] cursor-pointer gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(lead.linkedin_url, '_blank');
                     }}
-                  />
+                  >
+                    <Linkedin className="w-4 h-4" />
+                    LinkedIn
+                  </Badge>
                 )}
-              </Box>
+              </div>
             )}
-          </Box>
-        </Box>
+          </div>
+        </div>
       </CardContent>
       {/* Footer actions */}
       {onViewEmployees && lead.company && (
-        <CardActions
-          sx={{
-            px: 2.5,
-            pb: 2.5,
-            pt: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-          }}
-        >
+        <div className="px-6 pb-6 pt-0 flex items-center justify-center gap-4">
           <Button
-            variant="contained"
             onClick={(e) => {
               e.stopPropagation();
               if (onViewEmployees) {
                 onViewEmployees(lead);
               }
             }}
-            sx={{
-              background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              textTransform: 'none',
-              px: 4.5,
-              py: 1,
-              height: '38px',
-              minWidth: '160px',
-              borderRadius: '50px',
-              boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-              transition: 'all 0.3s ease',
-              flexShrink: 0,
-              '&:hover': {
-                background: 'linear-gradient(135deg, #3a7bd5 0%, #2a5db0 100%)',
-                transform: 'translateY(-1px)',
-              },
-            }}
+            className="bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white font-bold text-sm px-9 py-2 h-[38px] min-w-[160px] rounded-full shadow-[0_4px_12px_rgba(0,210,255,0.4)] transition-all duration-300 hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5"
           >
             View Employees
           </Button>
-        </CardActions>
+        </div>
       )}
     </Card>
   );
-}
+}

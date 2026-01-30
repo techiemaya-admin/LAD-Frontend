@@ -1,26 +1,24 @@
 'use client';
 import React, { useCallback, useMemo } from 'react';
-import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
 import {
-  LinkedIn as LinkedInIcon,
-  Email,
-  Schedule,
+  Linkedin,
+  Mail,
+  Clock,
   CheckCircle,
-  Visibility,
-  PersonAdd,
-  Message,
+  Eye,
+  UserPlus,
+  MessageSquare,
   Send,
   Phone,
-  WhatsApp,
   Instagram,
   Search,
-  Business,
-  People,
-  PostAdd,
-  Comment,
-  AutoAwesome,
-  PersonSearch
-} from '@mui/icons-material';
+  Building2,
+  Users,
+  FileText,
+  MessageCircle,
+  Sparkles,
+  UserSearch
+} from 'lucide-react';
 import { StepDefinition } from '@/types/campaign';
 import { useCampaignStore } from '../store/campaignStore';
 const STEP_DEFINITIONS: StepDefinition[] = [
@@ -202,25 +200,26 @@ const STEP_DEFINITIONS: StepDefinition[] = [
   },
 ];
 const getIcon = (iconName: string) => {
+  const className = "w-5 h-5";
   switch (iconName) {
     case 'linkedin':
-      return <LinkedInIcon sx={{ fontSize: 20 }} />;
+      return <Linkedin className={className} />;
     case 'email':
-      return <Email sx={{ fontSize: 20 }} />;
+      return <Mail className={className} />;
     case 'whatsapp':
-      return <WhatsApp sx={{ fontSize: 20 }} />;
+      return <MessageSquare className={className} />;
     case 'voice':
-      return <Phone sx={{ fontSize: 20 }} />;
+      return <Phone className={className} />;
     case 'instagram':
-      return <Instagram sx={{ fontSize: 20 }} />;
+      return <Instagram className={className} />;
     case 'delay':
-      return <Schedule sx={{ fontSize: 20 }} />;
+      return <Clock className={className} />;
     case 'condition':
-      return <CheckCircle sx={{ fontSize: 20 }} />;
+      return <CheckCircle className={className} />;
     case 'leads':
-      return <PersonSearch sx={{ fontSize: 20 }} />;
+      return <UserSearch className={className} />;
     default:
-      return <Send sx={{ fontSize: 20 }} />;
+      return <Send className={className} />;
   }
 };
 export default function StepLibrary() {
@@ -241,438 +240,239 @@ export default function StepLibrary() {
   const leadsSteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'leads'), []);
   const utilitySteps = useMemo(() => STEP_DEFINITIONS.filter((s) => s.category === 'utility'), []);
   return (
-    <Box
-      sx={{
-        width: 280,
-        height: '100%',
-        bgcolor: '#F8FAFC',
-        borderRight: '1px solid #E2E8F0',
-        overflowY: 'auto',
-        p: 2,
-      }}
-    >
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1E293B' }}>
+    <div className="w-[280px] h-full bg-[#F8FAFC] border-r border-[#E2E8F0] overflow-y-auto p-4">
+      <h2 className="text-lg font-semibold mb-6 text-[#1E293B]">
         Step Library
-      </Typography>
+      </h2>
       {/* Lead Generation Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           Lead Generation
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {leadsSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#6366F1',
-                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#6366F1] hover:shadow-[0_2px_8px_rgba(99,102,241,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#6366F1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#6366F1] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* LinkedIn Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           LinkedIn
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {linkedinSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#7c3aed',
-                  boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#7c3aed] hover:shadow-[0_4px_12px_rgba(124,58,237,0.15)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#0077B5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#0077B5] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* Email Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           Email
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {emailSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#F59E0B',
-                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#F59E0B] hover:shadow-[0_2px_8px_rgba(245,158,11,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#F59E0B',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#F59E0B] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* WhatsApp Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           WhatsApp
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {whatsappSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#25D366',
-                  boxShadow: '0 2px 8px rgba(37, 211, 102, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#25D366] hover:shadow-[0_2px_8px_rgba(37,211,102,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#25D366',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#25D366] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* Voice Agent Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           Voice Agent
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {voiceSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#8B5CF6',
-                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#8B5CF6] hover:shadow-[0_2px_8px_rgba(139,92,246,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#8B5CF6',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#8B5CF6] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* Instagram Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           Instagram
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {instagramSteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#E4405F',
-                  boxShadow: '0 2px 8px rgba(228, 64, 95, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#E4405F] hover:shadow-[0_2px_8px_rgba(228,64,95,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-                    background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md flex items-center justify-center text-white" style={{ background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)' }}>
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
+        </div>
+      </div>
       {/* Divider */}
-      <Divider sx={{ my: 3, borderColor: '#E2E8F0' }} />
+      <div className="my-6 border-t border-[#E2E8F0]" />
       {/* Utility Steps */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div className="mb-8">
+        <span className="text-xs text-[#64748B] font-bold mb-3 block uppercase tracking-wider">
           Utility
-        </Typography>
-        <Stack spacing={1}>
+        </span>
+        <div className="space-y-2">
           {utilitySteps.map((step) => (
-            <Paper
+            <div
               key={step.type}
               draggable
               onDragStart={(e) => handleDragStart(e, step.type)}
               onClick={() => handleClick(step)}
-              sx={{
-                p: 2,
-                cursor: 'grab',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: '#10B981',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': {
-                  cursor: 'grabbing',
-                },
-              }}
+              className="p-4 cursor-grab border border-[#E2E8F0] rounded-xl bg-white shadow-sm transition-all duration-200 hover:border-[#10B981] hover:shadow-[0_2px_8px_rgba(16,185,129,0.1)] hover:-translate-y-0.5 active:cursor-grabbing"
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '6px',
-                    bgcolor: '#10B981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
-                  }}
-                >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-[#10B981] flex items-center justify-center text-white">
                   {getIcon(step.icon)}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1E293B]">
                     {step.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '11px' }}>
+                  </p>
+                  <p className="text-[11px] text-[#64748B]">
                     {step.description}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
-}
+}

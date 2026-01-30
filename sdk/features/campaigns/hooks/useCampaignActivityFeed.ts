@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { logger } from '@/lib/logger';
 interface CampaignActivity {
   id: string;
   campaign_id: string;
@@ -55,9 +56,22 @@ export function useCampaignActivityFeed(
       if (options.platform) params.append('platform', options.platform);
       if (options.actionType) params.append('actionType', options.actionType);
       if (options.status) params.append('status', options.status);
-      const response = await axios.get(
-        `/api/campaigns/${campaignId}/analytics?${params.toString()}`
-      );
+      
+      // Use full backend URL instead of relative path
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+      const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
+      const url = `${baseUrl}/campaigns/${campaignId}/analytics?${params.toString()}`;
+      
+      // Get auth token for the request
+      const token = typeof window !== 'undefined' 
+        ? (localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token'))
+        : null;
+      
+      const response = await axios.get(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        withCredentials: true
+      });
+      
       if (response.data?.success) {
         setActivities(response.data.data.activities || []);
         setTotal(response.data.data.total || 0);
@@ -65,7 +79,7 @@ export function useCampaignActivityFeed(
         throw new Error('Failed to fetch activity feed');
       }
     } catch (err) {
-      console.error('[useCampaignActivityFeed] Error:', err);
+      logger.error('[useCampaignActivityFeed] Error fetching activities', err);
       setError(err instanceof Error ? err : new Error('Unknown error'));
       setActivities([]);
       setTotal(0);
@@ -76,77 +90,87 @@ export function useCampaignActivityFeed(
   // SSE connection for real-time updates
   useEffect(() => {
     if (!campaignId) return;
+    
     // Initial fetch
     fetchActivities();
-    // Connect to SSE for live updates
+    
+    // Connect to SSE for live updates using the /events endpoint
     const connectSSE = () => {
       try {
         // Get auth token from localStorage (EventSource doesn't support custom headers)
         const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token');
         if (!token) {
-          console.warn('[ActivityFeed] No auth token found, cannot connect to SSE');
+          logger.warn('[ActivityFeed] No auth token found, cannot connect to SSE');
           setIsConnected(false);
           return;
         }
         
-        // Use backend URL for SSE connection
-        if (!process.env.NEXT_PUBLIC_BACKEND_URL && !process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
-          throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
-        }
-        // Ensure URL includes /api prefix
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3004';
+        // Use backend URL for SSE connection - use /events endpoint which supports SSE
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
         const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
-        const sseUrl = `${baseUrl}/campaigns/${campaignId}/analytics?limit=${options.limit}&token=${encodeURIComponent(token)}`;
-        console.log('[ActivityFeed] Connecting to SSE:', sseUrl.replace(token, 'TOKEN_HIDDEN'));
+        const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
+        logger.debug('[ActivityFeed] Connecting to SSE', { url: sseUrl.replace(token, 'TOKEN_HIDDEN') });
         
         const eventSource = new EventSource(sseUrl);
         eventSourceRef.current = eventSource;
         
         eventSource.onopen = () => {
-          console.log('[ActivityFeed] SSE connected successfully');
+          logger.debug('[ActivityFeed] SSE connected successfully');
           setIsConnected(true);
         };
         
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log('[ActivityFeed] SSE message received:', data.type);
-            // When stats update, refetch activities to show new ones
-            if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'STATS_UPDATE' || data.type === 'INITIAL_STATS') {
+            logger.debug('[ActivityFeed] SSE message received', { type: data.type });
+            // When stats or activities update, refetch activities to show new ones
+            if (data.type === 'CAMPAIGN_STATS_UPDATED' || 
+                data.type === 'STATS_UPDATE' || 
+                data.type === 'INITIAL_STATS' ||
+                data.type === 'ACTIVITY_UPDATE' ||
+                data.type === 'NEW_ACTIVITY') {
               fetchActivities();
             }
           } catch (err) {
-            console.error('[ActivityFeed] Failed to parse SSE:', err);
+            logger.error('[ActivityFeed] Failed to parse SSE message', err);
           }
         };
         
         eventSource.onerror = (err) => {
-          console.error('[ActivityFeed] SSE error:', err);
-          console.log('[ActivityFeed] SSE readyState:', eventSource.readyState);
+          logger.error('[ActivityFeed] SSE error', { error: err, readyState: eventSource.readyState });
           setIsConnected(false);
-          eventSource.close();
           
-          // Don't reconnect if it's an authentication error (readyState 2 = CLOSED)
-          // Authentication errors return JSON instead of SSE stream, causing MIME type errors
+          // If readyState is 2 (CLOSED), it means the connection was closed
+          // This could be due to MIME type error, auth error, or endpoint issue
           if (eventSource.readyState === 2) {
-            console.warn('[ActivityFeed] SSE connection closed (possible auth error). Not reconnecting.');
-            console.warn('[ActivityFeed] Please log out and log back in to refresh your session.');
+            logger.warn('[ActivityFeed] SSE connection closed. Will retry...');
+            eventSource.close();
+            eventSourceRef.current = null;
+            // Retry connection after 5 seconds
+            setTimeout(() => {
+              if (campaignId) {
+                connectSSE();
+              }
+            }, 5000);
             return;
           }
           
-          // Reconnect after 5 seconds for other errors
+          // For other errors, try to reconnect
           setTimeout(() => {
-            if (eventSourceRef.current === eventSource) {
-              console.log('[ActivityFeed] Attempting to reconnect...');
+            if (eventSourceRef.current === eventSource && campaignId) {
+              logger.debug('[ActivityFeed] Attempting to reconnect...');
               connectSSE();
             }
           }, 5000);
         };
       } catch (err) {
-        console.error('[ActivityFeed] Failed to connect SSE:', err);
+        logger.error('[ActivityFeed] Failed to connect SSE', err);
+        setIsConnected(false);
       }
     };
+    
     connectSSE();
+    
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();

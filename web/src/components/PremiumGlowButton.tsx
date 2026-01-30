@@ -1,102 +1,42 @@
 'use client';
 import React from 'react';
-import { Button, ButtonProps, styled } from '@mui/material';
-interface PremiumGlowButtonProps extends ButtonProps {
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+interface PremiumGlowButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'gradient';
   glowColor?: string;
+  children: React.ReactNode;
 }
-const StyledPremiumButton = styled(Button)<{ buttonVariant?: string; glowColor?: string }>(({ buttonVariant = 'gradient', glowColor = '#00eaff' }) => {
-  const variants = {
-    gradient: {
-      background: 'linear-gradient(135deg, #00eaff 0%, #7c3aed 50%, #ff00e0 100%)',
-      backgroundSize: '200% 200%',
-      color: '#ffffff',
-      border: 'none',
-      boxShadow: `0 8px 32px rgba(0, 234, 255, 0.4), 0 0 30px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
-      '&:hover': {
-        background: 'linear-gradient(135deg, #ff00e0 0%, #7c3aed 50%, #00eaff 100%)',
-        backgroundSize: '200% 200%',
-        boxShadow: `0 12px 40px rgba(255, 0, 224, 0.5), 0 0 50px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)`,
-        animation: 'gradient-shift 2s ease infinite',
-      },
-    },
-    primary: {
-      background: 'rgba(0, 234, 255, 0.15)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(0, 234, 255, 0.4)',
-      color: '#00eaff',
-      boxShadow: `0 8px 32px rgba(0, 234, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
-      '&:hover': {
-        background: 'rgba(0, 234, 255, 0.25)',
-        borderColor: 'rgba(0, 234, 255, 0.6)',
-        boxShadow: `0 12px 40px rgba(0, 234, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
-      },
-    },
-    secondary: {
-      background: 'rgba(124, 58, 237, 0.15)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(124, 58, 237, 0.4)',
-      color: '#9663f0',
-      boxShadow: `0 8px 32px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
-      '&:hover': {
-        background: 'rgba(124, 58, 237, 0.25)',
-        borderColor: 'rgba(124, 58, 237, 0.6)',
-        boxShadow: `0 12px 40px rgba(124, 58, 237, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
-      },
-    },
-  };
-  const variantStyles = variants[buttonVariant as keyof typeof variants] || variants.gradient;
-  return {
-    ...variantStyles,
-    borderRadius: '16px',
-    padding: '14px 32px',
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    textTransform: 'none',
-    letterSpacing: '0.5px',
-    position: 'relative',
-    overflow: 'hidden',
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    textShadow: '0 0 20px rgba(255, 255, 255, 0.5)',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: '-100%',
-      width: '100%',
-      height: '100%',
-      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-      transition: 'left 0.5s ease',
-    },
-    '&:hover::before': {
-      left: '100%',
-    },
-    '&:hover': {
-      transform: 'translateY(-3px)',
-      ...variantStyles['&:hover'],
-    },
-    '&:active': {
-      transform: 'translateY(-1px)',
-    },
-    '@keyframes gradient-shift': {
-      '0%, 100%': {
-        backgroundPosition: '0% 50%',
-      },
-      '50%': {
-        backgroundPosition: '100% 50%',
-      },
-    },
-  };
-});
+
+const variantClasses = {
+  gradient: 'bg-gradient-to-r from-cyan-400 via-purple-600 to-pink-500 bg-[length:200%_200%] text-white border-none shadow-[0_8px_32px_rgba(0,234,255,0.4),0_0_30px_rgba(124,58,237,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-gradient-to-r hover:from-pink-500 hover:via-purple-600 hover:to-cyan-400 hover:shadow-[0_12px_40px_rgba(255,0,224,0.5),0_0_50px_rgba(124,58,237,0.4),inset_0_1px_0_rgba(255,255,255,0.3)]',
+  primary: 'bg-cyan-400/15 backdrop-blur-[10px] border border-cyan-400/40 text-cyan-400 shadow-[0_8px_32px_rgba(0,234,255,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:bg-cyan-400/25 hover:border-cyan-400/60 hover:shadow-[0_12px_40px_rgba(0,234,255,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]',
+  secondary: 'bg-purple-600/15 backdrop-blur-[10px] border border-purple-600/40 text-purple-400 shadow-[0_8px_32px_rgba(124,58,237,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:bg-purple-600/25 hover:border-purple-600/60 hover:shadow-[0_12px_40px_rgba(124,58,237,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]',
+};
+
 export const PremiumGlowButton: React.FC<PremiumGlowButtonProps> = ({ 
   variant = 'gradient',
   glowColor,
   children,
+  className,
   ...props 
 }) => {
   return (
-    <StyledPremiumButton buttonVariant={variant} glowColor={glowColor} {...props}>
+    <Button
+      className={cn(
+        'rounded-2xl px-8 py-3.5 text-[0.95rem] font-semibold normal-case tracking-wide relative overflow-hidden',
+        'transition-all duration-400 hover:-translate-y-1 active:-translate-y-0.5',
+        'text-shadow-[0_0_20px_rgba(255,255,255,0.5)]',
+        'before:content-[""] before:absolute before:top-0 before:-left-full before:w-full before:h-full',
+        'before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent',
+        'before:transition-[left] before:duration-500 hover:before:left-full',
+        variantClasses[variant],
+        className
+      )}
+      {...props}
+    >
       {children}
-    </StyledPremiumButton>
+    </Button>
   );
-};
+};
