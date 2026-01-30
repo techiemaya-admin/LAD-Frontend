@@ -3,6 +3,7 @@
  * where localStorage/sessionStorage might be blocked
  */
 import { logger } from '@/lib/logger';
+import { cookieStorage } from './cookieStorage';
 class SafeStorage {
   private memoryStore: Map<string, string> = new Map();
   private isStorageAvailable(): boolean {
@@ -20,6 +21,10 @@ class SafeStorage {
   }
   getItem(key: string): string | null {
     try {
+      // Use cookies for auth keys
+      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+        return cookieStorage.getItem(key);
+      }
       if (this.isStorageAvailable()) {
         return localStorage.getItem(key);
       }
@@ -31,6 +36,11 @@ class SafeStorage {
   }
   setItem(key: string, value: string): void {
     try {
+      // Use cookies for auth keys
+      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+        cookieStorage.setItem(key, value);
+        return;
+      }
       const storageAvailable = this.isStorageAvailable();
       if (process.env.NODE_ENV === 'development') {
         logger.debug('[SafeStorage] setItem', { key, storageAvailable });
@@ -56,6 +66,11 @@ class SafeStorage {
   }
   removeItem(key: string): void {
     try {
+      // Use cookies for auth keys
+      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+        cookieStorage.removeItem(key);
+        return;
+      }
       if (this.isStorageAvailable()) {
         localStorage.removeItem(key);
       }
@@ -78,4 +93,4 @@ class SafeStorage {
   }
 }
 // Export a singleton instance
-export const safeStorage = new SafeStorage();
+export const safeStorage = new SafeStorage();

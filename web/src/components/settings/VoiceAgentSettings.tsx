@@ -465,3 +465,4 @@ import { VoiceAgentSettings } from '@/components/voice-agent/VoiceAgentSettings'
 const Index = () => {
   return <VoiceAgentSettings />;
 };
+export default Index;
