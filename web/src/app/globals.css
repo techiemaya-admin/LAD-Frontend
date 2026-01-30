@@ -14,6 +14,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    background: #f2f7ff;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -396,7 +397,7 @@
 
 /* Background override */
 body {
-  background: linear-gradient(to bottom right, #dbeafe, #f1f5f9);
+  background: #f2f7ff;
   min-height: 100vh;
 }
 /* Mobile-friendly drag and drop styles */
@@ -426,6 +427,32 @@ body {
     [data-dnd-dragging] {
       opacity: 0.5;
     }
+  }
+}
+
+/* Dashboard Widget Styles */
+.widget-card {
+  @apply backdrop-blur-sm;
+}
+
+.widget-card:hover {
+  @apply border-border/70;
+}
+
+@media (min-width: 768px) {
+  .widget-card {
+    @apply shadow-sm;
+  }
+  
+  .widget-card:hover:not(.widget-card-edit) {
+    @apply shadow-md border-border/60;
+  }
+}
+
+/* Dashboard Grid Responsive */
+@media (max-width: 640px) {
+  .dashboard-grid {
+    @apply px-0;
   }
 }
 

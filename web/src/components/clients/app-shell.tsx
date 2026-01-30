@@ -31,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="flex min-h-screen bg-[#f2f7ff]">
       <Sidebar />
       <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 overflow-x-hidden md:ml-16 pt-14 md:pt-0">
         <div className="max-w-7xl mx-auto w-full">{children}</div>

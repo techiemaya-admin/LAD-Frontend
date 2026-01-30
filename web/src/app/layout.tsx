@@ -5,6 +5,7 @@ import AppShell from "@/components/clients/app-shell";
 import { AppToasterProvider } from "@/components/ui/app-toaster";
 import { LoadingProvider } from "@/components/providers/loading-provider";
 import ContentGate from "@/components/clients/content-gate";
+import PageLoader from '@/components/loader/PageLoader';
 import Providers from "./providers";
 // Import VAPI error suppression (temporarily disable VAPI errors)
 import "@/utils/suppressVAPIErrors";
@@ -55,17 +56,18 @@ export default function RootLayout({
       </head>
       <body className={`antialiased`}>
         <Providers>
-          <AppToasterProvider>
-            <LoadingProvider>
+          <LoadingProvider>
+            <AppToasterProvider>
+              <PageLoader />
               <AppShell>
                 <ContentGate>
                   {children}
                 </ContentGate>
               </AppShell>
-            </LoadingProvider>
-          </AppToasterProvider>
+            </AppToasterProvider>
+          </LoadingProvider>
         </Providers>
       </body>
     </html>
   );
-}
+}

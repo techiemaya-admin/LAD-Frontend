@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AgentFormData, DEFAULT_AGENT_FORM } from '@/types/agent';
 import { useToast } from '../hooks/use-toast';
+import { UserStorage } from '@/utils/userStorage';
+import { getCurrentUser } from '@/lib/auth';
 
 interface ValidationErrors {
   name?: string;
@@ -28,22 +30,37 @@ export function useAgentForm(initialData?: AgentFormData): UseAgentFormReturn {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isDirty, setIsDirty] = useState(false);
   const initialRef = useRef<AgentFormData>(initialData || DEFAULT_AGENT_FORM);
+  const userStorageRef = useRef<UserStorage | null>(null);
 
-  // Load draft from localStorage on mount
+  // Initialize user storage on mount
   useEffect(() => {
-    if (!initialData) {
-      const draft = localStorage.getItem(DRAFT_KEY);
+    const initUserStorage = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.id) {
+          userStorageRef.current = new UserStorage(user.id);
+        }
+      } catch (e) {
+        // User not available, will use regular localStorage fallback
+      }
+    };
+    initUserStorage();
+  }, []);
+
+  // Load draft from user-scoped localStorage on mount
+  useEffect(() => {
+    if (!initialData && userStorageRef.current) {
+      const draft = userStorageRef.current.getJSON<AgentFormData>(DRAFT_KEY);
       if (draft) {
         try {
-          const parsed = JSON.parse(draft);
-          setFormData(parsed);
+          setFormData(draft);
           setIsDirty(true);
           toast({
             title: 'Draft Restored',
             description: 'Your unsaved changes have been restored.',
           });
         } catch (e) {
-          localStorage.removeItem(DRAFT_KEY);
+          userStorageRef.current?.removeItem(DRAFT_KEY);
         }
       }
     }
@@ -51,9 +68,9 @@ export function useAgentForm(initialData?: AgentFormData): UseAgentFormReturn {
 
   // Auto-save draft when dirty
   useEffect(() => {
-    if (isDirty) {
+    if (isDirty && userStorageRef.current) {
       const timeout = setTimeout(() => {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+        userStorageRef.current?.setJSON(DRAFT_KEY, formData);
       }, 1000);
       return () => clearTimeout(timeout);
     }
@@ -87,7 +104,9 @@ export function useAgentForm(initialData?: AgentFormData): UseAgentFormReturn {
     setFormData(resetData);
     setErrors({});
     setIsDirty(false);
-    localStorage.removeItem(DRAFT_KEY);
+    if (userStorageRef.current) {
+      userStorageRef.current.removeItem(DRAFT_KEY);
+    }
     initialRef.current = resetData;
   }, []);
 

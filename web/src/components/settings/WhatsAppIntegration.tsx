@@ -1,187 +1,256 @@
 'use client';
-import React, { useState } from 'react';
-import { 
-  MessageSquare, 
-  CheckCircle, 
-  AlertCircle, 
+
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  MessageSquare,
+  CheckCircle,
+  AlertCircle,
   RefreshCw,
   Smartphone,
   Loader2,
   QrCode
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { safeStorage } from '@/utils/storage';
-import { getApiBaseUrl } from '@/lib/api-utils';
+
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
+const BACKEND = process.env.NEXT_PUBLIC_WP_BACKEND!;
+
 export const WhatsAppIntegration: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const generateQRCode = async () => {
-    setIsLoading(true);
-    setConnectionStatus('connecting');
+  const [loading, setLoading] = useState(false);
+  const [sseConnected, setSseConnected] = useState(false);
+  const [timer, setTimer] = useState(240);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  /* -------------------- SSE -------------------- */
+
+  useEffect(() => {
+    connectSSE();
+    return () => cleanupAll();
+  }, []);
+
+  const connectSSE = async () => {
     try {
-            const response = await fetch(`${getApiBaseUrl()}/api/whatsapp/generate-qr`, {
-        method: 'POST',
+      const response = await fetch(`${BACKEND}/events`, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
+          'ngrok-skip-browser-warning': 'true'
         }
       });
-      if (!response.ok) {
-        throw new Error('Failed to generate QR code');
+
+      if (!response.ok || !response.body) {
+        throw new Error('SSE connection failed');
       }
-      const data = await response.json();
-      setQrCode(data.qrCode);
-      // Poll for connection status
-      pollConnectionStatus();
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      setConnectionStatus('disconnected');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  const pollConnectionStatus = () => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`${getApiBaseUrl()}/api/whatsapp/status`, {
-          headers: {
-            'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const message = JSON.parse(line.slice(6));
+              console.log('📨 SSE:', message);
+              await handleSSE(message);
+            } catch (err) {
+              console.error('SSE parse error:', err);
+            }
           }
-        });
-        const data = await response.json();
-        if (data.connected) {
-          setIsConnected(true);
-          setConnectionStatus('connected');
-          setQrCode(null);
-          clearInterval(interval);
         }
-      } catch (error) {
-        console.error('Error checking connection status:', error);
       }
-    }, 3000);
-    // Stop polling after 2 minutes
-    setTimeout(() => clearInterval(interval), 120000);
-  };
-  const disconnectWhatsApp = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${getApiBaseUrl()}/api/whatsapp/disconnect`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`
-        }
-      });
-      if (response.ok) {
-        setIsConnected(false);
-        setConnectionStatus('disconnected');
-        setQrCode(null);
-      }
-    } catch (error) {
-      console.error('Error disconnecting WhatsApp:', error);
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.error('❌ SSE error:', err);
+      setSseConnected(false);
+      
+      setTimeout(() => {
+        connectSSE();
+      }, 3000);
     }
   };
+
+  /* -------------------- HANDLE EVENTS -------------------- */
+
+  const handleSSE = async (msg: any) => {
+    switch (msg.type) {
+      case 'connected':
+        console.log('✅ SSE connected successfully');
+        setSseConnected(true);
+        break;
+
+      case 'qr': {
+        const QRCode = (await import('qrcode')).default;
+        const img = await QRCode.toDataURL(msg.data.qr, { width: 260 });
+        setQrCode(img);
+        setStatus('connecting');
+        setLoading(false);
+        startTimer();
+        break;
+      }
+
+      case 'login_success':
+        cleanupQR();
+        setQrCode(null);
+        setIsConnected(true);
+        setStatus('connected');
+        break;
+
+      case 'qr_timeout':
+      case 'qr_error':
+        cleanupQR();
+        setQrCode(null);
+        setStatus('disconnected');
+        alert('QR expired. Try again.');
+        break;
+    }
+  };
+
+  /* -------------------- TIMER -------------------- */
+
+  const startTimer = () => {
+    cleanupQR();
+    setTimer(240);
+
+    timerRef.current = setInterval(() => {
+      setTimer((t) => {
+        if (t <= 1) {
+          cleanupQR();
+          setQrCode(null);
+          setStatus('disconnected');
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  const cleanupQR = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const cleanupAll = () => {
+    cleanupQR();
+  };
+
+  /* -------------------- ACTIONS -------------------- */
+
+  const startLogin = async () => {
+    if (!sseConnected || status === 'connecting') return;
+
+    setLoading(true);
+    setStatus('connecting');
+
+    await fetch(`${BACKEND}/api/login`, { method: 'POST' });
+    // QR will arrive via SSE
+  };
+
+  const logout = async () => {
+    await fetch(`${BACKEND}/api/logout`, { method: 'POST' });
+    cleanupQR();
+    setIsConnected(false);
+    setStatus('disconnected');
+    setQrCode(null);
+  };
+
+  const formatTime = () =>
+    `${Math.floor(timer / 60)
+      .toString()
+      .padStart(2, '0')}:${(timer % 60).toString().padStart(2, '0')}`;
+
+  /* -------------------- UI -------------------- */
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3">
+        <div className="flex gap-3 items-center">
           <div className="p-2 bg-green-100 rounded-lg">
             <MessageSquare className="h-6 w-6 text-green-600" />
           </div>
           <div>
             <CardTitle>WhatsApp Integration</CardTitle>
-            <CardDescription>Connect your WhatsApp account to send and receive messages</CardDescription>
+            <CardDescription>Connect using QR code</CardDescription>
           </div>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-4">
-        {/* Connection Status */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Smartphone className="h-5 w-5 text-gray-600" />
+        {!sseConnected && (
+          <div className="flex items-center gap-2 text-xs p-3 bg-yellow-50 border rounded">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Connecting to server…
+          </div>
+        )}
+
+        <div className="flex justify-between p-4 bg-gray-50 rounded">
+          <div className="flex gap-2 items-center">
+            <Smartphone className="h-5 w-5" />
             <div>
-              <p className="font-medium text-sm">Connection Status</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {connectionStatus === 'connected' ? 'WhatsApp is connected and active' : 
-                 connectionStatus === 'connecting' ? 'Waiting for QR code scan...' :
-                 'WhatsApp is not connected'}
+              <p className="text-sm font-medium">Connection Status</p>
+              <p className="text-xs text-gray-500">
+                {status === 'connected'
+                  ? 'Connected'
+                  : status === 'connecting'
+                  ? 'Waiting for scan'
+                  : 'Disconnected'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            )}
-            {connectionStatus === 'connecting' && (
-              <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />
-            )}
-            {connectionStatus === 'disconnected' && (
-              <AlertCircle className="h-5 w-5 text-gray-400" />
-            )}
-          </div>
+
+          {status === 'connected' && <CheckCircle className="text-green-500" />}
+          {status === 'connecting' && <RefreshCw className="animate-spin" />}
+          {status === 'disconnected' && <AlertCircle />}
         </div>
-        {/* QR Code Display */}
+
         {qrCode && (
-          <div className="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-gray-300 rounded-lg">
-            <QrCode className="h-8 w-8 text-gray-400 mb-4" />
-            <img src={qrCode} alt="WhatsApp QR Code" className="w-64 h-64 mb-4" />
-            <p className="text-sm text-gray-600 text-center">
-              Scan this QR code with WhatsApp on your phone
-            </p>
-            <p className="text-xs text-gray-500 text-center mt-2">
-              Open WhatsApp → Settings → Linked Devices → Link a Device
-            </p>
+          <div className="border-2 border-dashed p-4 rounded text-center">
+            <div className="flex justify-between mb-2 text-sm">
+              <span>Scan QR</span>
+              <span className={timer < 60 ? 'text-red-500' : ''}>
+                {formatTime()}
+              </span>
+            </div>
+            <img src={qrCode} className="mx-auto w-64 h-64" />
           </div>
         )}
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          {!isConnected ? (
-            <Button
-              onClick={generateQRCode}
-              disabled={isLoading || connectionStatus === 'connecting'}
-              className="flex-1"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Generate QR Code
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              onClick={disconnectWhatsApp}
-              disabled={isLoading}
-              variant="destructive"
-              className="flex-1"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Disconnecting...
-                </>
-              ) : (
-                'Disconnect WhatsApp'
-              )}
-            </Button>
-          )}
-        </div>
-        {/* Info */}
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-800">
-            <strong>Note:</strong> Keep your phone connected to the internet. Messages will be synced automatically.
-          </p>
-        </div>
+
+        {!isConnected ? (
+          <Button
+            onClick={startLogin}
+            disabled={loading || !sseConnected}
+            className="w-full"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin mr-2" />
+            ) : (
+              <QrCode className="mr-2" />
+            )}
+            Generate QR
+          </Button>
+        ) : (
+          <Button
+            variant="destructive"
+            onClick={logout}
+            className="w-full"
+          >
+            Disconnect
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
-};
+};
