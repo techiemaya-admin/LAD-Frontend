@@ -59,6 +59,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     setSelectedDate,
   } = useDashboardStore();
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Fetch users and bookings using SDK hooks
   const { data: users = [], isLoading: isLoadingUsers } = useDashboardUsers();
@@ -179,7 +180,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                   <motion.div
                     key={day.toISOString()}
                     whileHover={{ scale: 1.05 }}
-                    onClick={() => setSelectedDate(day)}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      setIsModalOpen(true);
+                    }}
                     className={cn(
                       'relative p-1 min-h-[60px] rounded-lg border cursor-pointer transition-colors',
                       !isCurrentMonth && 'opacity-40',
@@ -191,7 +195,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                     <span className={cn(
                       'text-xs font-medium',
                       isTodayDate && 'text-primary',
-                      isSelected && 'text-accent'
+                      isSelected && 'text-accent-foreground'
                     )}>
                       {format(day, 'd')}
                     </span>
@@ -207,9 +211,23 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                                 'text-[10px] px-1 py-0.5 rounded border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
                                 config.className
                               )}
-                              title={`Type: ${booking.booking_type}\nSource: ${booking.booking_source}`}
+                              title={`Type: ${booking.booking_type}\nSource: ${booking.booking_source}` +
+                                (booking.lead_name ? `\nLead Name: ${booking.lead_name}` : '') +
+                                (booking.assigned_user_name ? `\nAssigned User: ${booking.assigned_user_name}` : '')}
                             >
-                              <div className="text-[9px] opacity-75 truncate">{booking.booking_type} · {booking.booking_source}</div>
+                              <div className="text-[9px] opacity-75 truncate">
+                                {booking.booking_type} · {booking.booking_source}
+                                {booking.lead_name && (
+                                  <>
+                                    <br /><span className="font-medium">Lead:</span> {booking.lead_name}
+                                  </>
+                                )}
+                                {booking.assigned_user_name && (
+                                  <>
+                                    <br /><span className="font-medium">User:</span> {booking.assigned_user_name}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -295,57 +313,84 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             </div>
           </div>
         )}
-        {/* Selected Date Events */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">
-              {format(selectedDate, 'EEEE, MMMM d')}
-            </p>
-            <span className="text-xs text-muted-foreground">
-              {getEventsForDate(selectedDate).length} bookings
-            </span>
-          </div>
-          <div className="space-y-2 max-h-[120px] overflow-auto custom-scrollbar">
-            {getEventsForDate(selectedDate).length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                No bookings scheduled
-              </p>
-            ) : (
-              getEventsForDate(selectedDate).map((booking: any) => {
-                const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
-                const config = eventTypeConfig[type];
-                const Icon = config.icon;
-                return (
-                  <div
-                    key={booking.id}
-                    className={cn(
-                      'flex items-start gap-3 p-2 rounded-lg border transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]',
-                      config.className
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs opacity-75">
-                        {format(new Date(booking.scheduled_at), 'HH:mm')}
-                        {booking.timezone && ` · ${booking.timezone}`}
-                        {booking.status && ` · ${booking.status}`}
-                      </p>
-                      <p className="text-xs opacity-70 mt-1">
-                        <span className="inline-block bg-opacity-20 px-2 py-0.5 rounded text-[10px] mr-1">
-                          {booking.booking_type}
-                        </span>
-                        <span className="inline-block bg-opacity-20 px-2 py-0.5 rounded text-[10px]">
-                          {booking.booking_source}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        {/* Selected Date Events Popup Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-lg max-h-[600px] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                {getEventsForDate(selectedDate).length} booking{getEventsForDate(selectedDate).length !== 1 ? 's' : ''} scheduled
+              </div>
+              
+              {getEventsForDate(selectedDate).length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No bookings scheduled for this date
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {getEventsForDate(selectedDate).map((booking: any) => {
+                    const type = booking.booking_type === 'auto_followup' ? 'followup' : 'call';
+                    const config = eventTypeConfig[type];
+                    const Icon = config.icon;
+                    return (
+                      <div
+                        key={booking.id}
+                        className={cn(
+                          'flex gap-3 p-3 rounded-lg border',
+                          config.className
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">
+                              {format(new Date(booking.scheduled_at), 'HH:mm')}
+                            </p>
+                            {booking.status && (
+                              <Badge variant="outline" className="text-xs">
+                                {booking.status}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs">
+                              <span className="font-medium">Type:</span> {booking.booking_type}
+                            </p>
+                            <p className="text-xs">
+                              <span className="font-medium">Source:</span> {booking.booking_source}
+                            </p>
+                            {booking.lead_name && (
+                              <p className="text-xs">
+                                <span className="font-medium">Lead Name:</span> {booking.lead_name}
+                              </p>
+                            )}
+                            {booking.assigned_user_name && (
+                              <p className="text-xs">
+                                <span className="font-medium">Assigned User:</span> {booking.assigned_user_name}
+                              </p>
+                            )}
+                            {booking.timezone && (
+                              <p className="text-xs">
+                                <span className="font-medium">Timezone:</span> {booking.timezone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </WidgetWrapper>
   );
 };
+
