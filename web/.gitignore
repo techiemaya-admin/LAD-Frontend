@@ -48,6 +48,7 @@ next-env.d.ts
 Thumbs.db
 # Documentation files (local development only)
 payload.json
+batch calls response.json
 web/CALLLOGS_SKELETON_IMPLEMENTATION.md
 web/CALLLOGS_VERIFIED.md
 web/IMPLEMENTATION_SUMMARY.md
