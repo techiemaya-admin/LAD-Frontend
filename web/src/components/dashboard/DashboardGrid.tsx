@@ -24,31 +24,32 @@ import { getWidgetTypeFromId, WidgetLayoutItem } from '@/types/dashboard';
 
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
+import { PageLoadingSentry } from '@/components/loader/PageLoadingSentry';
 
 // Dynamic Widget imports
 const StatWidget = dynamic(() => import('./widgets/StatWidget').then(mod => mod.StatWidget), {
-  loading: () => <div className="h-32 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-32 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const ChartWidget = dynamic(() => import('./widgets/ChartWidget').then(mod => mod.ChartWidget), {
-  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-64 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const CreditsWidget = dynamic(() => import('./widgets/CreditsWidget').then(mod => mod.CreditsWidget), {
-  loading: () => <div className="h-48 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-48 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const LatestCallsWidget = dynamic(() => import('./widgets/LatestCallsWidget').then(mod => mod.LatestCallsWidget), {
-  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-64 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const VoiceAgentsWidget = dynamic(() => import('./widgets/VoiceAgentsWidget').then(mod => mod.VoiceAgentsWidget), {
-  loading: () => <div className="h-64 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-64 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const AIInsightsWidget = dynamic(() => import('./widgets/AIInsightsWidget').then(mod => mod.AIInsightsWidget), {
-  loading: () => <div className="h-48 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-48 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const QuickActionsWidget = dynamic(() => import('./widgets/QuickActionsWidget').then(mod => mod.QuickActionsWidget), {
-  loading: () => <div className="h-32 bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-32 bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 const CalendarWidget = dynamic(() => import('./widgets/CalendarWidget').then(mod => mod.CalendarWidget), {
-  loading: () => <div className="h-[400px] bg-secondary/20 animate-pulse rounded-xl" />
+  loading: () => <><PageLoadingSentry /><div className="h-[400px] bg-secondary/20 animate-pulse rounded-xl" /></>
 });
 
 // Utilities
