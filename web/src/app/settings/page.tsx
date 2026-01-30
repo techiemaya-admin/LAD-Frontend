@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
-import { VoiceAgentSettings } from '../../components/settings/VoiceAgentSettings';
+import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';
@@ -88,14 +88,36 @@ const SettingsPage: React.FC = () => {
         <div className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className="relative">
+              <div className="relative group">
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-md flex items-center justify-center border-2 border-white">
                   <img
-                    src="/logo.png"
+                    src={companyLogo}
                     alt="Company Logo"
                     className="w-full h-full object-cover"
                   />
                 </div>
+                <label
+                  htmlFor="header-logo-upload"
+                  className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-2 rounded-full cursor-pointer hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg opacity-0 group-hover:opacity-100"
+                >
+                  <Upload className="w-3 h-3" />
+                  <input
+                    id="header-logo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          dispatch(setCompanyLogo(reader.result as string));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
               </div>
               <div>
                 <h1 className="text-gray-900 font-semibold text-xl">{companyName}</h1>

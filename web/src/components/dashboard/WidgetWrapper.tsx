@@ -46,16 +46,17 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'widget-card h-full flex flex-col overflow-hidden border border-border rounded-lg bg-card',
+        'widget-card h-full flex flex-col overflow-hidden border border-border/50 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow duration-300',
+        'bg-gradient-to-br from-white to-slate-50',
         isEditMode && 'widget-card-edit cursor-move',
-        isDragging && 'shadow-2xl ring-2 ring-accent',
+        isDragging && 'shadow-xl ring-2 ring-accent',
         className
       )}
       {...attributes}
     >
       {/* Widget Header */}
       <div 
-        className="flex items-center justify-between px-4 py-3 border-b border-border/50"
+        className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border/30 bg-gradient-to-r from-slate-50 to-transparent"
         {...(isEditMode ? listeners : {})}
       >
         <div className="flex items-center gap-2">
@@ -99,9 +100,9 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
         </div>
       </div>
       {/* Widget Content */}
-      <div className="flex-1 p-4 overflow-auto custom-scrollbar">
+      <div className="flex-1 p-4 sm:p-5 overflow-auto custom-scrollbar">
         {children}
       </div>
     </div>
   );
-};
+};

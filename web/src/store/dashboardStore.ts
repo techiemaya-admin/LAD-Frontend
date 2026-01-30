@@ -10,6 +10,9 @@ import {
   generateWidgetId,
 } from '@/types/dashboard';
 interface DashboardState {
+  // User ID
+  userId: string | null;
+  setUserId: (id: string) => void;
   // Edit mode
   isEditMode: boolean;
   setEditMode: (mode: boolean) => void;
@@ -44,6 +47,9 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>()(
   persist(
     (set, get) => ({
+      // User ID
+      userId: null,
+      setUserId: (id) => set({ userId: id }),
       // Edit mode
       isEditMode: false,
       setEditMode: (mode) => set({ isEditMode: mode }),
@@ -181,6 +187,7 @@ export const useDashboardStore = create<DashboardState>()(
     {
       name: 'dashboard-storage',
       partialize: (state) => ({
+        userId: state.userId,
         layout: state.layout,
         savedLayouts: state.savedLayouts,
         currentLayoutId: state.currentLayoutId,
@@ -188,4 +195,4 @@ export const useDashboardStore = create<DashboardState>()(
       }),
     }
   )
-);
+);

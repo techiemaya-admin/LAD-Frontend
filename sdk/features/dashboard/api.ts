@@ -50,7 +50,7 @@ export const fetchDashboardUsers = async (): Promise<User[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.users || [];
+  return Array.isArray(data) ? data : data.data || data.users || [];
 };
 
 /**
@@ -71,7 +71,7 @@ export const fetchOwnerBookings = async (): Promise<Booking[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.bookings || [];
+  return Array.isArray(data) ? data : data.data || data.bookings || [];
 };
 
 /**
@@ -100,7 +100,7 @@ export const fetchUserBookings = async (userId: string): Promise<Booking[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.bookings || [];
+  return Array.isArray(data) ? data : data.data || data.bookings || [];
 };
 
 /**
@@ -132,7 +132,7 @@ export const fetchDashboardCalls = async (): Promise<CallLog[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.calls || [];
+  return Array.isArray(data) ? data : data.data || data.calls || [];
 };
 
 /**
@@ -161,7 +161,7 @@ export const fetchUserCalls = async (userId: string): Promise<CallLog[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.calls || [];
+  return Array.isArray(data) ? data : data.data || data.calls || [];
 };
 
 /**

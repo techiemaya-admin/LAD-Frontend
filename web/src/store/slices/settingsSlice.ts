@@ -1,6 +1,7 @@
 // Redux slice for user settings (theme, language, timezone, etc.)
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { logger } from '@/lib/logger';
+import { UserStorage } from '@/utils/userStorage';
 // Initial state for settings
 interface SettingsState {
   theme: 'light' | 'dark';
@@ -12,11 +13,38 @@ interface SettingsState {
   companyLogo: string;
   [key: string]: unknown;
 }
-// Load settings from localStorage if available
+
+let userStorage: UserStorage | null = null;
+
+// Initialize user storage from auth
+const initializeUserStorage = async (): Promise<void> => {
+  try {
+    const { getCurrentUser } = await import('@/lib/auth');
+    const user = await getCurrentUser();
+    if (user?.id) {
+      userStorage = new UserStorage(user.id);
+    }
+  } catch (e) {
+    logger.debug('[Settings] Could not initialize user storage', { error: String(e) });
+  }
+};
+
+// Load settings from user-scoped localStorage if available
 const loadSettingsFromStorage = (): Partial<SettingsState> => {
   if (typeof window === 'undefined') return {};
   try {
-    const stored = localStorage.getItem('app_settings');
+    let stored: string | null = null;
+    
+    // Try user-scoped storage first
+    if (userStorage) {
+      stored = userStorage.getItem('app_settings');
+    }
+    
+    // Fallback to regular localStorage
+    if (!stored) {
+      stored = localStorage.getItem('app_settings');
+    }
+    
     if (stored) {
       const parsed = JSON.parse(stored);
       if (process.env.NODE_ENV === 'development') {
@@ -29,11 +57,18 @@ const loadSettingsFromStorage = (): Partial<SettingsState> => {
   }
   return {};
 };
-// Save settings to localStorage
+// Save settings to user-scoped localStorage
 const saveSettingsToStorage = (settings: SettingsState): void => {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem('app_settings', JSON.stringify(settings));
+    const settingsJson = JSON.stringify(settings);
+    // Try to save to user-scoped storage first
+    if (userStorage) {
+      userStorage.setItem('app_settings', settingsJson);
+    } else {
+      // Fallback to regular localStorage
+      localStorage.setItem('app_settings', settingsJson);
+    }
     if (process.env.NODE_ENV === 'development') {
       logger.debug('[Settings] Saved to localStorage');
     }
@@ -41,6 +76,10 @@ const saveSettingsToStorage = (settings: SettingsState): void => {
     logger.warn('Failed to save settings to localStorage', error);
   }
 };
+// Initialize user storage on app start
+if (typeof window !== 'undefined') {
+  initializeUserStorage();
+}
 const defaultState: SettingsState = {
   theme: 'light',
   language: 'en',
@@ -90,4 +129,4 @@ const settingsSlice = createSlice({
 export const { setTheme, setLanguage, setCompanyName, setCompanyLogo, setUserSettings } = settingsSlice.actions;
 export default settingsSlice.reducer;
 // Selector to get the settings object from state
-export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;
+export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;

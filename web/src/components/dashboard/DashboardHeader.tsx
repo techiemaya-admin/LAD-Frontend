@@ -9,7 +9,8 @@ import {
   X, 
   Check,
   Layout,
-  ChevronDown
+  ChevronDown,
+  TvMinimalPlay
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,14 +58,17 @@ export const DashboardHeader: React.FC = () => {
   };
   return (
     <div className="flex items-center justify-between mb-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {currentLayout ? currentLayout.name : 'Default Layout'}
-          {isEditMode && (
-            <span className="ml-2 text-accent">• Editing</span>
-          )}
-        </p>
+      <div className="flex items-center gap-3">
+        <TvMinimalPlay className="h-20 w-8" color="#0b1957" />
+        <div>
+          <h1 className="text-2xl font-bold font-display tracking-tight">Smart Overview</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {currentLayout ? currentLayout.name : 'Default Layout'}
+            {isEditMode && (
+              <span className="ml-2 text-accent">• Editing</span>
+            )}
+          </p>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {isEditMode ? (
@@ -159,4 +163,4 @@ export const DashboardHeader: React.FC = () => {
       </div>
     </div>
   );
-};
+};
