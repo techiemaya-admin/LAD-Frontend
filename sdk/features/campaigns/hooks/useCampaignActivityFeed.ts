@@ -58,7 +58,7 @@ export function useCampaignActivityFeed(
       if (options.status) params.append('status', options.status);
       
       // Use full backend URL instead of relative path
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL ;
       const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
       const url = `${baseUrl}/campaigns/${campaignId}/analytics?${params.toString()}`;
       
@@ -106,7 +106,7 @@ export function useCampaignActivityFeed(
         }
         
         // Use backend URL for SSE connection - use /events endpoint which supports SSE
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL ;
         const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
         const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
         logger.debug('[ActivityFeed] Connecting to SSE', { url: sseUrl.replace(token, 'TOKEN_HIDDEN') });

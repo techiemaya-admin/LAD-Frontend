@@ -29,7 +29,7 @@ class ApiClient {
       this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
     } else {
       // Default to production backend instead of localhost
-      this.baseURL = 'https://lad-backend-develop-741719885039.us-central1.run.app/api';
+      this.baseURL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
     }
   }
   private async request<T>(

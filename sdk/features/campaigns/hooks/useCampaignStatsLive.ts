@@ -75,8 +75,8 @@ export function useCampaignStatsLive({
         return;
       }
       // Ensure URL includes /api prefix
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
-      const baseUrl = backendUrl ? `${backendUrl}/api` : 'https://lad-backend-develop-741719885039.us-central1.run.app/api';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL ;
+      const baseUrl = backendUrl ? `${backendUrl}/api` : undefined;
       // Construct SSE URL with auth token
       const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
       const eventSource = new EventSource(sseUrl);

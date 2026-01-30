@@ -17,12 +17,12 @@ interface LatestCallsWidgetProps {
   calls: CallLog[];
 }
 const statusStyles: Record<string, string> = {
-  ended: 'bg-green-100 text-green-700 border-green-200',
-  completed: 'bg-green-100 text-green-700 border-green-200',
-  answered: 'bg-green-100 text-green-700 border-green-200',
-  failed: 'bg-red-100 text-red-700 border-red-200',
-  in_queue: 'bg-amber-100 text-amber-700 border-amber-200',
-  ringing: 'bg-blue-100 text-blue-700 border-blue-200',
+  ended: 'bg-green-100 text-green-700 border-green-200 capitalize',
+  completed: 'bg-green-100 text-green-700 border-green-200 capitalize',
+  answered: 'bg-green-100 text-green-700 border-green-200 capitalize',
+  failed: 'bg-red-100 text-red-700 border-red-200 capitalize',
+  in_queue: 'bg-amber-100 text-amber-700 border-amber-200 capitalize',
+  ringing: 'bg-blue-100 text-blue-700 border-blue-200 capitalize',
 };
 export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
   id,
@@ -110,4 +110,4 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};
