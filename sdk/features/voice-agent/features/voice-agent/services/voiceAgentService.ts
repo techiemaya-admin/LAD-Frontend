@@ -28,85 +28,17 @@ const logger = createLogger();
  */
 class VoiceAgentService {
   /**
-   * Check if VAPI is disabled
+   * Check if VAPI is disabled (VAPI service is disabled, but backend voice calling still works)
    */
   private isVAPIDisabled(): boolean {
-    // Check if force disabled in localStorage (emergency override)
-    if (typeof window !== 'undefined' && localStorage.getItem('disable_vapi') === 'true') {
-      logger.warn('VAPI disabled via localStorage override');
-      return true;
-    }
-
-    // Always allow VAPI in development mode for testing
-    if (process.env.NODE_ENV === 'development') {
-      logger.debug('VAPI enabled for development mode');
-      return false;
-    }
-
-    // Note: Removed NEXT_PUBLIC_DISABLE_VAPI check to allow VAPI in production
-    // VAPI is now enabled by default for authenticated users
-
-    // Check if user has voice agent features enabled based on email
-    if (typeof window !== 'undefined') {
-      // Try multiple sources for user email
-      let userEmail = localStorage.getItem('user_email') || 
-                      localStorage.getItem('email') ||
-                      sessionStorage.getItem('user_email') ||
-                      sessionStorage.getItem('email') || '';
-      
-      // Also try to get email from auth object
-      if (!userEmail) {
-        try {
-          const authStr = localStorage.getItem('auth');
-          if (authStr) {
-            const auth = JSON.parse(authStr);
-            userEmail = auth?.user?.email || auth?.email || '';
-            if (userEmail) {
-              logger.info('VAPI: Found email from auth object', { userEmail: userEmail?.split('@')[0] + '@...' });
-            }
-          }
-        } catch (e) {
-          logger.debug('VAPI: Failed to parse auth object', { error: e?.message });
-        }
-      }
-      
-      logger.info('VAPI: Checking user email for access', { hasEmail: !!userEmail, userEmail: userEmail?.split('@')[0] + '@...' });
-      
-      // Allow specific domains that have voice agent features
-      const allowedDomains = [
-        'sasyaspaces.com',
-        'techiemaya.com', 
-        'plutotravels.ae'
-      ];
-      
-      const domain = userEmail.split('@')[1]?.toLowerCase();
-      logger.info('VAPI: User domain check', { domain: domain || 'NO_DOMAIN', allowed: allowedDomains });
-      
-      if (domain && allowedDomains.includes(domain)) {
-        logger.info('✅ VAPI ENABLED for authorized domain', { domain });
-        return false;
-      } else if (userEmail) {
-        // Email found but domain not in allowed list - still allow VAPI for authenticated users
-        logger.info('⚠️ VAPI: Domain not in whitelist but user authenticated - enabling anyway', { domain, email: userEmail?.split('@')[0] + '@...' });
-        return false;
-      }
-    }
-    
-    // Default: ALLOW VAPI for anyone (fallback to enabled state)
-    // This ensures that if we can't determine auth status, we still try to fetch data
-    logger.info('VAPI: Using default enabled state (no auth info found but proceeding)');
-    return false;
+    // VAPI service is disabled - backend uses its own voice calling mechanism
+    return true;
   }
 
   /**
    * Safe API call wrapper that handles errors and disabled state
    */
   private async safeApiCall<T>(apiCall: () => Promise<T>, fallback: T, methodName: string): Promise<T> {
-    if (this.isVAPIDisabled()) {
-      logger.warn('VAPI disabled, skipping API call', { method: methodName });
-      return fallback;
-    }
-
     try {
       return await apiCall();
     } catch (error: any) {
@@ -116,6 +48,8 @@ class VoiceAgentService {
         method: methodName,
         message: error?.message || String(error) || 'Unknown error',
         errorType: error?.constructor?.name || typeof error,
+        isAxiosError: error?.isAxiosError,
+        hasResponse: !!error?.response
       };
 
       // Add response details if available (avoid circular refs)
@@ -149,11 +83,25 @@ class VoiceAgentService {
         errorDetails.isNetworkError = true;
       }
       
+      // Ensure we have at least some error details to log
+      // If errorDetails is empty or only has method, include the original error
+      if (Object.keys(errorDetails).length <= 1) {
+        errorDetails.rawError = String(error);
+        errorDetails.rawErrorKeys = error ? Object.keys(error) : [];
+      }
+      
       // Safe logging with try-catch to prevent logger errors
       try {
-        logger.error(`API call failed for ${methodName}`, errorDetails);
+        // Ensure errorDetails is properly serializable
+        const serializedDetails = JSON.parse(JSON.stringify(errorDetails));
+        logger.error(`API call failed for ${methodName}`, serializedDetails);
       } catch (logError) {
-        console.error(`Failed to log error for ${methodName}:`, error?.message || error);
+        logger.error(`Failed to log error for ${methodName}`, {
+          message: error?.message || String(error),
+          status: error?.response?.status,
+          code: error?.code,
+          logError: String(logError)
+        });
       }
       
       // Log additional details for 500 errors
@@ -200,10 +148,29 @@ class VoiceAgentService {
       }
       
       // For other errors, log and return fallback instead of throwing
-      logger.error(`Unexpected error in ${methodName}, returning fallback`, {
-        message: error.message,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n')
-      });
+      const finalErrorLog = {
+        message: error?.message || String(error),
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        backendError: error?.response?.data?.error,
+        backendDetails: error?.response?.data?.details,
+        backendMessage: error?.response?.data?.message,
+        code: error?.code,
+        url: error?.config?.url,
+        baseURL: error?.config?.baseURL,
+        method: methodName
+      };
+      
+      // Only add fullBackendResponse if it's serializable
+      if (error?.response?.data) {
+        try {
+          finalErrorLog.fullBackendResponse = JSON.parse(JSON.stringify(error.response.data));
+        } catch {
+          finalErrorLog.fullBackendResponse = String(error.response.data);
+        }
+      }
+      
+      logger.error(`Unexpected error in ${methodName}, returning fallback`, finalErrorLog);
       return fallback;
     }
   }
@@ -306,14 +273,31 @@ class VoiceAgentService {
           payload: { ...payload, initiated_by: userId ? 'UUID_PROVIDED' : 'NULL' } 
         });
         
-        const response = await api.post('/api/voice-agent/calls/start-call', payload);
-        
-        logger.debug('Voice call response received', { 
-          status: response.status, 
-          hasData: !!response.data 
-        });
-        
-        return response.data?.data ?? response.data;
+        try {
+          const response = await api.post('/api/voice-agent/calls/start-call', payload);
+          
+          logger.debug('Voice call response received', { 
+            status: response.status, 
+            hasData: !!response.data 
+          });
+          
+          return response.data?.data ?? response.data;
+        } catch (apiError: any) {
+          // Log detailed error info for debugging
+          const errorInfo = {
+            status: apiError?.response?.status,
+            statusText: apiError?.response?.statusText,
+            message: apiError?.message,
+            backendError: apiError?.response?.data?.error,
+            backendDetails: apiError?.response?.data?.details,
+            backendMessage: apiError?.response?.data?.message,
+            fullResponseData: apiError?.response?.data,
+            payload: payload
+          };
+          
+          logger.error('Voice call API error', errorInfo);
+          throw apiError; // Re-throw to be caught by safeApiCall
+        }
       },
       { id: 'disabled', status: 'disabled', message: 'VAPI feature is temporarily disabled' } as any,
       'makeCall'
