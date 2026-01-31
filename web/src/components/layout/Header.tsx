@@ -11,10 +11,11 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export function NavbarDemo() {
   const router = useRouter();
+  const pathname = usePathname();
   const navItems = [
     {
       name: "Home",
@@ -45,7 +46,7 @@ export function NavbarDemo() {
         {/* Desktop Navigation */}
         <NavBody>
           <NavbarLogo />
-          <NavItems items={navItems} />
+          <NavItems items={navItems} activePath={pathname} />
           <div className="flex items-center gap-4">
             <NavbarButton variant="secondary" onClick={login}>Login</NavbarButton>
             <NavbarButton variant="primary" onClick={handleGetStarted}>Get Started</NavbarButton>
@@ -71,7 +72,7 @@ export function NavbarDemo() {
                 key={`mobile-link-${idx}`}
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="relative text-neutral-600 dark:text-neutral-300"
+                className={`relative text-neutral-600 dark:text-neutral-300 ${pathname === item.link ? 'font-bold text-[#0b1957] dark:text-[#0b1957]' : ''}`}
               >
                 <span className="block">{item.name}</span>
               </a>
