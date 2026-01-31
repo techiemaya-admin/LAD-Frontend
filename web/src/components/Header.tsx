@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   const totalUnread = useSelector(selectTotalUnread, shallowEqual);
   const dispatch = useDispatch();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = React.useState(false);
   const [greeting, setGreeting] = React.useState('Good Day!'); // Default greeting for SSR
@@ -63,9 +65,11 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     try {
       await authService.logout();
       dispatch(logoutAction());
+      queryClient.clear();
       setTimeout(() => router.push('/login'), 1200);
     } catch (e) {
       dispatch(logoutAction());
+      queryClient.clear();
       setTimeout(() => router.push('/login'), 1200);
     }
     setMenuOpen(false);
@@ -230,4 +234,4 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     </div>
   );
 };
-export default Header;
+export default Header;

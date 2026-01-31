@@ -68,8 +68,21 @@ export function useCampaignStatsLive({
   const connectSSE = useCallback(() => {
     if (!enabled || !campaignId) return;
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token');
+      // Get auth token from cookies (EventSource doesn't support custom headers)
+      let token: string | null = null;
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        for (const cookie of cookies) {
+          const [rawName, ...rawValueParts] = cookie.trim().split('=');
+          const name = rawName?.trim();
+          const value = rawValueParts.join('=');
+          if (!name) continue;
+          if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
+            token = decodeURIComponent(value || '');
+            break;
+          }
+        }
+      }
       if (!token) {
         setError(new Error('Authentication required'));
         return;

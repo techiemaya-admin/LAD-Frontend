@@ -6,20 +6,32 @@ import { logger } from '@/lib/logger';
 
 // User-scoped storage adapter for Zustand persist middleware
 let userStorageInstance: UserStorage | null = null;
+let userStorageInitPromise: Promise<UserStorage | null> | null = null;
 
 const getUserStorageInstance = async (): Promise<UserStorage | null> => {
   if (userStorageInstance) return userStorageInstance;
-  try {
-    const { getCurrentUser } = await import('@/lib/auth');
-    const user = await getCurrentUser();
-    if (user?.id) {
-      userStorageInstance = new UserStorage(user.id);
-      return userStorageInstance;
+  // If initialization is already in progress, reuse the same promise so we only
+  // call getCurrentUser (/api/auth/me) once even if multiple callers arrive
+  if (userStorageInitPromise) return userStorageInitPromise;
+
+  userStorageInitPromise = (async () => {
+    try {
+      const { getCurrentUser } = await import('@/lib/auth');
+      const user = await getCurrentUser();
+      if (user?.id) {
+        userStorageInstance = new UserStorage(user.id);
+        return userStorageInstance;
+      }
+    } catch (e) {
+      logger.debug('[OnboardingStore] Could not initialize user storage', { error: String(e) });
+    } finally {
+      // Allow future re-init attempts if needed
+      userStorageInitPromise = null;
     }
-  } catch (e) {
-    logger.debug('[OnboardingStore] Could not initialize user storage', { error: String(e) });
-  }
-  return null;
+    return null;
+  })();
+
+  return userStorageInitPromise;
 };
 
 // Custom storage adapter for Zustand that uses user-scoped storage

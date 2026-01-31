@@ -5,6 +5,7 @@ import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { logout as logoutAction } from '@/store/slices/authSlice';
 import authService from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +43,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -63,9 +65,11 @@ export function Sidebar() {
     try {
       await authService.logout();
       dispatch(logoutAction());
+      queryClient.clear();
       setTimeout(() => router.push('/login'), 1200);
     } catch (e) {
       dispatch(logoutAction());
+      queryClient.clear();
       setTimeout(() => router.push('/login'), 1200);
     }
     setIsMobileMenuOpen(false);

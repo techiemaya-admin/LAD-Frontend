@@ -25,14 +25,24 @@ class APIClient {
     // Request interceptor for auth token
     this.instance.interceptors.request.use(
       (config) => {
-        // Get token from localStorage or sessionStorage (check both 'token' and 'auth_token')
-        const token = 
-          (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null) ||
-          (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null) ||
-          (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('token') : null) ||
-          (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('auth_token') : null);
-        
+        let token: string | null = null;
+
+        if (typeof document !== 'undefined') {
+          const cookies = document.cookie ? document.cookie.split(';') : [];
+          for (const cookie of cookies) {
+            const [rawName, ...rawValueParts] = cookie.trim().split('=');
+            const name = rawName?.trim();
+            const value = rawValueParts.join('=');
+            if (!name) continue;
+            if (name === 'auth_token' || name === 'token') {
+              token = decodeURIComponent(value || '');
+              break;
+            }
+          }
+        }
+
         if (token) {
+          config.headers = config.headers || {};
           config.headers.Authorization = `Bearer ${token}`;
         }
         

@@ -38,22 +38,51 @@ export async function login(payload: LoginPayload): Promise<void> {
     // ignore
   }
 }
+let currentUserPromise: Promise<User> | null = null;
+
 export async function getCurrentUser(): Promise<User> {
-  const token = typeof window !== "undefined"
-    ? (safeStorage.getItem("auth_token") || safeStorage.getItem("token"))
-    : null;
-  const res = await loadingFetch(getApiUrl("/api/auth/me"), {
-    method: "GET",
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const msg = await safeError(res);
-    throw new Error(msg || "Failed to load current user");
+  // If a request is already in-flight or completed, reuse it so /api/auth/me
+  // is only called once per page load.
+  if (currentUserPromise) {
+    return currentUserPromise;
   }
-  return res.json();
+
+  currentUserPromise = (async () => {
+    const token = typeof document !== "undefined"
+      ? (() => {
+          const cookies = document.cookie ? document.cookie.split(";") : [];
+          for (const cookie of cookies) {
+            const [rawName, ...rawValueParts] = cookie.trim().split("=");
+            const name = rawName?.trim();
+            const value = rawValueParts.join("=");
+            if (!name) continue;
+            if (name === "auth_token" || name === "token") {
+              return decodeURIComponent(value || "");
+            }
+          }
+          return null;
+        })()
+      : null;
+
+    const res = await loadingFetch(getApiUrl("/api/auth/me"), {
+      method: "GET",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      // On error, clear the cached promise so a later call can retry
+      const msg = await safeError(res);
+      currentUserPromise = null;
+      throw new Error(msg || "Failed to load current user");
+    }
+
+    return res.json();
+  })();
+
+  return currentUserPromise;
 }
 async function safeError(res: Response): Promise<string | undefined> {
   try {
@@ -62,4 +91,4 @@ async function safeError(res: Response): Promise<string | undefined> {
   } catch {
     return res.statusText || undefined;
   }
-}
+}

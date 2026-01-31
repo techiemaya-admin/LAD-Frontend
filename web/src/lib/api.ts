@@ -4,12 +4,26 @@ import { logger } from "@/lib/logger";
 // Use backend URL directly
 const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app").replace(/\/+$/, "");
 function authHeaders() {
-  if (typeof window === "undefined") {
+  if (typeof document === "undefined") {
     logger.debug('[API] authHeaders: Running on server, no token');
     return {} as Record<string, string>;
   }
-  const token = safeStorage.getItem("token") || safeStorage.getItem("auth_token");
-  logger.debug('[API] authHeaders: Token present:', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
+
+  let token: string | null = null;
+
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split("=");
+    const name = rawName?.trim();
+    const value = rawValueParts.join("=");
+    if (!name) continue;
+    if (name === "auth_token" || name === "token") {
+      token = decodeURIComponent(value || "");
+      break;
+    }
+  }
+
+  logger.debug('[API] authHeaders: Token present (from cookies):', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 function handleAuthError(status: number, path: string) {

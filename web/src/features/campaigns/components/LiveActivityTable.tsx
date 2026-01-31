@@ -209,7 +209,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                   <TableCell>
                     <Badge
                       variant={getStatusColor(activity.status)}
-                      className="font-medium"
+                      className="font-medium capitalize"
                     >
                       {activity.status || 'Unknown'}
                     </Badge>

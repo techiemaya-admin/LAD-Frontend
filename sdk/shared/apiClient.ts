@@ -51,9 +51,20 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...options?.headers,
     };
-    // Add auth token from localStorage if available
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    // Add auth token from cookies if available
+    if (typeof document !== 'undefined') {
+      let token: string | null = null;
+      const cookies = document.cookie ? document.cookie.split(';') : [];
+      for (const cookie of cookies) {
+        const [rawName, ...rawValueParts] = cookie.trim().split('=');
+        const name = rawName?.trim();
+        const value = rawValueParts.join('=');
+        if (!name) continue;
+        if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
+          token = decodeURIComponent(value || '');
+          break;
+        }
+      }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
