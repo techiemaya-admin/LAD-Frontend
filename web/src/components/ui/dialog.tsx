@@ -122,9 +122,10 @@ export {
   DialogContent,
   DialogDescription,
   DialogActions,
+  DialogActions as DialogFooter,
   DialogHeader,
   DialogOverlay,
   DialogPortal,
   DialogTitle,
   DialogTrigger,
-}
+}

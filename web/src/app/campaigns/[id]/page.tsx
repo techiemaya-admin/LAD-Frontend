@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Box, Button, TextField, Stack, Paper, Typography, CircularProgress } from '@mui/material';
-import { ArrowBack, Save, PlayArrow, Visibility, Pause } from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Save, Play, Eye, Pause, Loader2 } from 'lucide-react';
 import { useCampaignStore } from '../../../features/campaigns/store/campaignStore';
 import { useCampaign, updateCampaign, createCampaign, pauseCampaign } from '@/features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
@@ -163,111 +164,89 @@ export default function CampaignDetailPage() {
   };
   if (loading) {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FE' }}>
-        <Stack spacing={2} alignItems="center">
-          <CircularProgress />
-          <Typography>Loading campaign...</Typography>
-        </Stack>
-      </Box>
+      <div className="h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-2xl shadow-lg">
+          <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
+          <p className="text-base font-semibold">Loading campaign...</p>
+        </div>
+      </div>
     );
   }
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#F8F9FE' }}>
+    <div className="h-screen flex flex-col bg-[#F8F9FE]">
       {/* Header */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderBottom: '1px solid #E2E8F0',
-          bgcolor: '#FFFFFF',
-          px: 3,
-          py: 2,
-          zIndex: 10,
-        }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center" spacing={2}>
+      <div className="border-b border-[#E2E8F0] bg-white px-6 py-4 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Button
-              startIcon={<ArrowBack />}
+              variant="ghost"
+              size="sm"
               onClick={() => router.push('/campaigns')}
-              sx={{ minWidth: 'auto' }}
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <TextField
+            <Input
               placeholder="Campaign Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              variant="outlined"
-              size="small"
-              sx={{
-                minWidth: 300,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#F8FAFC',
-                },
-              }}
+              className="min-w-[300px] bg-[#F8FAFC]"
             />
-          </Stack>
-          <Stack direction="row" spacing={2}>
+          </div>
+          <div className="flex gap-4">
             <Button
-              variant="outlined"
-              startIcon={<Visibility />}
+              variant="outline"
               onClick={handlePreview}
             >
+              <Eye className="w-4 h-4 mr-2" />
               Preview
             </Button>
             <Button
-              variant="contained"
-              color="primary"
+              variant="default"
               onClick={() => router.push(`/campaigns/${campaignId}/edit`)}
               disabled={saving}
             >
               Edit Workflow
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<Save />}
+              variant="outline"
               onClick={() => handleSave(false)}
               disabled={saving}
             >
+              <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Draft'}
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<Pause />}
+              variant="outline"
               onClick={handlePauseCampaign}
               disabled={saving}
             >
+              <Pause className="w-4 h-4 mr-2" />
               Pause
             </Button>
             <Button
-              variant="contained"
-              startIcon={<PlayArrow />}
+              variant="default"
               onClick={handleStartCampaign}
               disabled={saving}
-              sx={{
-                background: 'linear-gradient(135deg, #00eaff, #7c3aed)',
-                color: '#ffffff',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #7c3aed, #ff00e0)',
-                },
-              }}
+              className="bg-gradient-to-r from-[#00eaff] to-[#7c3aed] text-white hover:from-[#7c3aed] hover:to-[#ff00e0]"
             >
+              <Play className="w-4 h-4 mr-2" />
               Start Campaign
             </Button>
-          </Stack>
-        </Stack>
-      </Paper>
+          </div>
+        </div>
+      </div>
       {/* Main Content - 3 Column Layout */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Step Library */}
         <StepLibrary />
         {/* Center - Flow Canvas */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
+        <div className="flex-1 relative">
           <FlowCanvas />
-        </Box>
+        </div>
         {/* Right Sidebar - Step Settings */}
         <StepSettings />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
-}
+}

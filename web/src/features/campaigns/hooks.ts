@@ -94,7 +94,8 @@ export function useCampaigns(filters?: { search?: string; status?: string }) {
   });
   return {
     campaigns: query.data || [],
-    loading: query.isLoading,
+    // Only show loading state on initial fetch; keep UI stable during background refetches
+    loading: query.isLoading && !query.data,
     error: query.error ? (query.error as Error).message : undefined,
     refetch: query.refetch,
     start: startMutation.mutateAsync,
@@ -136,7 +137,8 @@ export function useCampaignStats() {
   });
   return {
     stats: query.data as CampaignStats | undefined,
-    loading: query.isLoading,
+    // Only show loading on the very first fetch; SSE-driven refetches stay in background
+    loading: query.isLoading && !query.data,
     error: query.error ? (query.error as Error).message : undefined,
     refetch: query.refetch,
   };
@@ -172,10 +174,22 @@ export function useCampaignLiveUpdates() {
   const eventSourceRef = useRef<EventSource | null>(null);
   useEffect(() => {
     // Connect to SSE endpoint for all campaigns updates
-    const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
-    // Get auth token from localStorage (EventSource doesn't support custom headers)
-    // Check both 'auth_token' and 'token' for compatibility
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const baseUrl = process.env.NEXT_PUBLIC_CAMPAIGN_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+    // Get auth token from cookies (EventSource doesn't support custom headers)
+    let token: string | null = null;
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie ? document.cookie.split(';') : [];
+      for (const cookie of cookies) {
+        const [rawName, ...rawValueParts] = cookie.trim().split('=');
+        const name = rawName?.trim();
+        const value = rawValueParts.join('=');
+        if (!name) continue;
+        if (name === 'auth_token' || name === 'token' || name === 'access_token' || name === 'auth') {
+          token = decodeURIComponent(value || '');
+          break;
+        }
+      }
+    }
     if (!token) {
       return;
     }
@@ -196,8 +210,9 @@ export function useCampaignLiveUpdates() {
         if (data.type === 'INITIAL_DATA') {
           // Initial data received
         } else if (data.type === 'CAMPAIGN_STATS_UPDATED' || data.type === 'campaign-update') {
-          // Invalidate campaigns list to trigger refetch with new stats
+          // Refresh both campaigns list and aggregate stats via React Query
           queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+          queryClient.invalidateQueries({ queryKey: ['campaign-stats'] });
         }
       } catch (error) {
         // Silent parse error

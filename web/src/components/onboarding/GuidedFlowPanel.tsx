@@ -1,9 +1,20 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
-import { Box, Typography, Chip, TextField, Button, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, Autocomplete, Slider, Switch, Card, CardContent, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, ArrowRight, Building2, Briefcase, MapPin, Users, Smartphone, MessageSquare, Phone, Linkedin, Mail, Zap, Calendar, TrendingUp, Shield, AlertTriangle, Loader2 } from 'lucide-react';
-import { ICPQuestion, fetchICPQuestions } from '@/features/ai-icp-assistant/api';
+import { fetchICPQuestions } from '@/features/ai-icp-assistant/api';
 import { StepType } from '@/types/campaign';
 import StepLayout from './StepLayout';
 import { apiPost } from '@/lib/api';
@@ -26,6 +37,12 @@ const VOICE_ACTIONS = [
   { value: 'call', label: 'Call', recommended: true },
   { value: 'leave_voicemail', label: 'Leave voicemail', recommended: false },
 ];
+// ICP Question type
+interface ICPQuestion {
+  intentKey: string;
+  question: string;
+  helperText?: string;
+}
 // Helper to render actions with auto-select and badge
 interface Action {
   value: string;
@@ -42,29 +59,26 @@ interface RenderActionsProps {
 }
 function RenderActions({ actions, answersKey, answers, setAnswers, validationErrors, setValidationErrors }: RenderActionsProps) {
   return (
-    <Stack spacing={2}>
+    <div className="flex flex-col gap-4">
       {actions.map((action: Action) => (
-        <FormControlLabel
-          key={action.value}
-          control={
-            <Checkbox
-              checked={answers[answersKey]?.includes(action.value) || false}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const current = answers[answersKey] || [];
-                let updated;
-                if (e.target.checked) {
-                  updated = [...current, action.value];
-                } else {
-                  updated = current.filter((a: string) => a !== action.value);
-                }
-                setAnswers({ ...answers, [answersKey]: updated });
-                if (validationErrors[answersKey] && updated.length > 0) {
-                  setValidationErrors({ ...validationErrors, [answersKey]: false });
-                }
-              }}
-            />
-          }
-          label={
+        <div key={action.value} className="flex items-center gap-2">
+          <Checkbox
+            checked={answers[answersKey]?.includes(action.value) || false}
+            onCheckedChange={(checked: boolean) => {
+              const current = answers[answersKey] || [];
+              let updated;
+              if (checked) {
+                updated = [...current, action.value];
+              } else {
+                updated = current.filter((a: string) => a !== action.value);
+              }
+              setAnswers({ ...answers, [answersKey]: updated });
+              if (validationErrors[answersKey] && updated.length > 0) {
+                setValidationErrors({ ...validationErrors, [answersKey]: false });
+              }
+            }}
+          />
+          <Label>
             <span>
               {action.label}
               {action.recommended && (
@@ -82,10 +96,10 @@ function RenderActions({ actions, answersKey, answers, setAnswers, validationErr
                 </span>
               )}
             </span>
-          }
-        />
+          </Label>
+        </div>
       ))}
-    </Stack>
+    </div>
   );
 }
 type GuidedStep = 
@@ -513,7 +527,7 @@ export default function GuidedFlowPanel() {
     const hasCustomIndustry = sourceAnswers.customIndustry && String(sourceAnswers.customIndustry).trim().length > 0;
     if (hasIndustries || hasLocation || hasRoles || hasCustomIndustry) {
       // Use dailyLeadVolume from state (set in Step 6: Campaign Settings) or from answers, or default to 25
-      const leadsPerDay = dailyLeadVolume || sourceAnswers.leads_per_day || answers.dailyLeadVolume || 25;
+      const leadsPerDay = dailyLeadVolume || (sourceAnswers as any).leads_per_day || answers.dailyLeadVolume || 25;
       nodes.push({
         id: 'lead_gen_1',
         type: 'lead_generation',
@@ -855,45 +869,22 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+        <div className="max-w-[800px] mx-auto">
           {/* Best Customers Question */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.bestCustomers ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.bestCustomers ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2–3 best customers?')}
-            </Typography>
+            </h3>
             {getQuestionByIntent('ideal_customer')?.helperText && (
-              <Typography
-                variant="caption"
-                sx={{
-                  mb: 2,
-                  color: '#64748B',
-                  display: 'block',
-                  fontSize: '13px',
-                  fontStyle: 'italic',
-                }}
-              >
+              <p className="mb-4 text-[#64748B] block text-[13px] italic">
                 {getQuestionByIntent('ideal_customer')?.helperText}
-              </Typography>
+              </p>
             )}
-            <TextField
-              fullWidth
-              multiline
+            <Textarea
               rows={3}
               placeholder="Example: Logistics company, Real estate developer, SME retail chain"
               value={bestCustomersRawText || answers.bestCustomers?.join(', ') || ''}
@@ -908,112 +899,48 @@ export default function GuidedFlowPanel() {
                   setValidationErrors({ ...validationErrors, bestCustomers: false });
                 }
               }}
-              error={validationErrors.bestCustomers}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className={`bg-white rounded-lg w-full ${validationErrors.bestCustomers ? 'border-2 border-red-500' : ''}`}
             />
-          </Box>
+          </div>
           {/* Most Profitable Question */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.mostProfitable ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.mostProfitable ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('profitability')?.question || '2. Which of them brought you the most profit overall?')}
-            </Typography>
+            </h3>
             {getQuestionByIntent('profitability')?.helperText && (
-              <Typography
-                variant="caption"
-                sx={{
-                  mb: 2,
-                  color: '#64748B',
-                  display: 'block',
-                  fontSize: '13px',
-                  fontStyle: 'italic',
-                }}
-              >
+              <p className="mb-4 text-[#64748B] block text-[13px] italic">
                 {getQuestionByIntent('profitability')?.helperText}
-              </Typography>
+              </p>
             )}
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 2,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            <p className="mb-4 text-[#64748B] block text-[13px] italic">
               Example: The client with repeat projects, not one-off work
-            </Typography>
-            <TextField
-              fullWidth
+            </p>
+            <Input
               placeholder="Enter the most profitable customer"
               value={answers.mostProfitable || ''}
               onChange={(e) => {
                 setAnswers({ ...answers, mostProfitable: e.target.value });
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className="bg-white rounded-lg w-full"
             />
-          </Box>
+          </div>
           {/* Easiest to Work With Question */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.easiestToWorkWith ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.easiestToWorkWith ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('work_compatibility')?.question || '3. Which one was the easiest to work with?')}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 2,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-4 text-[#64748B] block text-[13px] italic">
               Example: Clear decision-maker, paid on time, respected your process
-            </Typography>
-            <TextField
-              fullWidth
+            </p>
+            <Input
               placeholder="Enter the easiest customer to work with"
               value={answers.easiestToWorkWith || ''}
               onChange={(e) => {
@@ -1023,194 +950,105 @@ export default function GuidedFlowPanel() {
                   setValidationErrors({ ...validationErrors, easiestToWorkWith: false });
                 }
               }}
-              error={validationErrors.easiestToWorkWith}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className={`bg-white rounded-lg w-full ${validationErrors.easiestToWorkWith ? 'border-2 border-red-500' : ''}`}
             />
-          </Box>
+          </div>
           {/* Section 2: Define Company */}
           {/* Question 5: Company Size */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.companySize ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.companySize ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               5. What size was the company?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Example: 10–50 employees, 50–200 employees
-            </Typography>
-            <Stack direction="row" spacing={2}>
-              {COMPANY_SIZES.map((size) => (
-                <Button
-                  key={size.value}
-                  variant={answers.companySize === size.value ? 'contained' : 'outlined'}
-                  onClick={() => {
-                    setAnswers({ ...answers, companySize: size.value });
-                    if (validationErrors.companySize) {
-                      setValidationErrors({ ...validationErrors, companySize: false });
-                    }
-                  }}
-                  sx={{
-                    flex: 1,
-                    bgcolor: answers.companySize === size.value ? '#6366F1' : '#FFFFFF',
-                    color: answers.companySize === size.value ? '#FFFFFF' : '#1E293B',
-                    borderColor: '#E2E8F0',
-                    '&:hover': {
-                      bgcolor: answers.companySize === size.value ? '#4F46E5' : '#F1F5F9',
-                      borderColor: answers.companySize === size.value ? '#4F46E5' : '#CBD5E1',
-                    },
-                  }}
-                >
-                  {size.label}
-                </Button>
-              ))}
-            </Stack>
-          </Box>
+            </p>
+            <div className="flex flex-row gap-4">
+              {COMPANY_SIZES.map((size) => {
+                const isSelected = answers.companySize === size.value;
+                return (
+                  <Button
+                    key={size.value}
+                    className={`flex-1 ${
+                      isSelected
+                        ? 'bg-[#6366F1] text-white border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                        : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                    } border transition-all`}
+                    onClick={() => {
+                      setAnswers({ ...answers, companySize: size.value });
+                      if (validationErrors.companySize) {
+                        setValidationErrors({ ...validationErrors, companySize: false });
+                      }
+                    }}
+                  >
+                    {size.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
           {/* Question 6: Value Alignment */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.valueAlignment ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.valueAlignment ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               6. Did they already value your service, or did you have to convince them?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Example: They understood the value vs they only compared prices
-            </Typography>
-            <Stack spacing={2}>
+            </p>
+            <div className="flex flex-col gap-4">
               <Button
-                variant={answers.valueAlignment === 'valued' ? 'contained' : 'outlined'}
+                className={`w-full text-left justify-start border transition-all ${
+                  answers.valueAlignment === 'valued'
+                    ? 'bg-[#6366F1] text-white border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                    : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                }`}
                 onClick={() => {
                   setAnswers({ ...answers, valueAlignment: 'valued' });
                   if (validationErrors.valueAlignment) {
                     setValidationErrors({ ...validationErrors, valueAlignment: false });
                   }
                 }}
-                sx={{
-                  width: '100%',
-                  textAlign: 'left',
-                  bgcolor: answers.valueAlignment === 'valued' ? '#6366F1' : '#FFFFFF',
-                  color: answers.valueAlignment === 'valued' ? '#FFFFFF' : '#1E293B',
-                  borderColor: '#E2E8F0',
-                  justifyContent: 'flex-start',
-                  '&:hover': {
-                    bgcolor: answers.valueAlignment === 'valued' ? '#4F46E5' : '#F1F5F9',
-                    borderColor: answers.valueAlignment === 'valued' ? '#4F46E5' : '#CBD5E1',
-                  },
-                }}
               >
                 They already valued our service
               </Button>
               <Button
-                variant={answers.valueAlignment === 'convinced' ? 'contained' : 'outlined'}
+                className={`w-full text-left justify-start border transition-all ${
+                  answers.valueAlignment === 'convinced'
+                    ? 'bg-[#6366F1] text-white border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                    : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                }`}
                 onClick={() => {
                   setAnswers({ ...answers, valueAlignment: 'convinced' });
                   if (validationErrors.valueAlignment) {
                     setValidationErrors({ ...validationErrors, valueAlignment: false });
                   }
                 }}
-                sx={{
-                  width: '100%',
-                  textAlign: 'left',
-                  bgcolor: answers.valueAlignment === 'convinced' ? '#6366F1' : '#FFFFFF',
-                  color: answers.valueAlignment === 'convinced' ? '#FFFFFF' : '#1E293B',
-                  borderColor: '#E2E8F0',
-                  justifyContent: 'flex-start',
-                  '&:hover': {
-                    bgcolor: answers.valueAlignment === 'convinced' ? '#4F46E5' : '#F1F5F9',
-                    borderColor: answers.valueAlignment === 'convinced' ? '#4F46E5' : '#CBD5E1',
-                  },
-                }}
               >
                 We had to convince them
               </Button>
-            </Stack>
-          </Box>
+            </div>
+          </div>
           {/* Section 3: Decision Maker */}
           {/* Question 8: Problem Feeler */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.problemFeeler ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.problemFeeler ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               8. Who actually felt the problem you solved?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 2,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-4 text-[#64748B] block text-[13px] italic">
               Example: Operations team struggling with delays
-            </Typography>
-            <TextField
-              fullWidth
+            </p>
+            <Input
               placeholder="Enter who felt the problem"
               value={answers.problemFeeler || ''}
               onChange={(e) => {
@@ -1219,55 +1057,32 @@ export default function GuidedFlowPanel() {
                   setValidationErrors({ ...validationErrors, problemFeeler: false });
                 }
               }}
-              error={validationErrors.problemFeeler}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className={`bg-white rounded-lg w-full ${validationErrors.problemFeeler ? 'border-2 border-red-500' : ''}`}
             />
-          </Box>
+          </div>
           {/* Question 9: Role/Title */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.decisionMakers ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.decisionMakers ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               9. What was that person's role or title?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Example: Operations Manager, Founder, Finance Head
-            </Typography>
-            <Stack spacing={2} sx={{ mb: 2 }}>
+            </p>
+            <div className="flex flex-col gap-4 mb-4">
               {DECISION_MAKER_TITLES.map((title) => {
                 const isSelected = answers.decisionMakers?.includes(title.value) || false;
                 return (
                   <Button
                     key={title.value}
-                    variant={isSelected ? 'contained' : 'outlined'}
+                    className={`w-full text-left justify-start border transition-all ${
+                      isSelected
+                        ? 'bg-[#6366F1] text-white border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                        : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                    }`}
                     onClick={() => {
                       const current = answers.decisionMakers || [];
                       const updated = current.includes(title.value)
@@ -1275,28 +1090,14 @@ export default function GuidedFlowPanel() {
                         : [...current, title.value];
                       setAnswers({ ...answers, decisionMakers: updated });
                     }}
-                    startIcon={isSelected ? <CheckCircle2 size={18} /> : null}
-                    sx={{
-                      width: '100%',
-                      textAlign: 'left',
-                      justifyContent: 'flex-start',
-                      bgcolor: isSelected ? '#6366F1' : '#FFFFFF',
-                      color: isSelected ? '#FFFFFF' : '#1E293B',
-                      borderColor: '#E2E8F0',
-                      '&:hover': {
-                        bgcolor: isSelected ? '#4F46E5' : '#F1F5F9',
-                        borderColor: isSelected ? '#4F46E5' : '#CBD5E1',
-                      },
-                    }}
                   >
+                    {isSelected && <CheckCircle2 size={18} className="mr-2" />}
                     {title.label}
                   </Button>
                 );
               })}
-            </Stack>
-            <TextField
-              fullWidth
-              size="small"
+            </div>
+            <Input
               placeholder="Or type a custom title..."
               value={customTitleSearchTerm}
               onChange={(e) => {
@@ -1313,182 +1114,102 @@ export default function GuidedFlowPanel() {
                   setCustomTitleSearchTerm('');
                 }
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className="bg-white rounded-lg w-full"
             />
-          </Box>
+          </div>
           {/* Section 4: Buying Trigger */}
           {/* Question 10: Buying Trigger */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.buyingTrigger ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.buyingTrigger ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               10. What situation made them buy?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Example: Expansion, compliance issue, cost overruns
-            </Typography>
-            <Stack spacing={2}>
+            </p>
+            <div className="flex flex-col gap-4">
               {B2B_TRIGGERS.map((trigger) => {
                 const isSelected = answers.buyingTrigger === trigger.value;
                 return (
                   <Button
                     key={trigger.value}
-                    variant={isSelected ? 'contained' : 'outlined'}
+                    className={`w-full text-left justify-start border transition-all ${
+                      isSelected
+                        ? 'bg-[#6366F1] text-white border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                        : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                    }`}
                     onClick={() => {
                       setAnswers({ ...answers, buyingTrigger: trigger.value });
                       if (validationErrors.buyingTrigger) {
                         setValidationErrors({ ...validationErrors, buyingTrigger: false });
                       }
                     }}
-                    startIcon={isSelected ? <CheckCircle2 size={18} /> : null}
-                    sx={{
-                      width: '100%',
-                      textAlign: 'left',
-                      justifyContent: 'flex-start',
-                      bgcolor: isSelected ? '#6366F1' : '#FFFFFF',
-                      color: isSelected ? '#FFFFFF' : '#1E293B',
-                      borderColor: '#E2E8F0',
-                      '&:hover': {
-                        bgcolor: isSelected ? '#4F46E5' : '#F1F5F9',
-                        borderColor: isSelected ? '#4F46E5' : '#CBD5E1',
-                      },
-                    }}
                   >
+                    {isSelected && <CheckCircle2 size={18} className="mr-2" />}
                     {trigger.label}
                   </Button>
                 );
               })}
-            </Stack>
-          </Box>
+            </div>
+          </div>
           {/* Question: Would Clone */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.wouldClone ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.wouldClone ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               If you could clone this customer, would you?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               If yes — this is your ICP
-            </Typography>
-            <Stack direction="row" spacing={2}>
+            </p>
+            <div className="flex flex-row gap-4">
               <Button
-                variant={answers.wouldClone === true ? 'contained' : 'outlined'}
+                className={`flex-1 border transition-all ${
+                  answers.wouldClone === true
+                    ? 'bg-[#10B981] text-white border-[#10B981] hover:bg-[#059669] hover:border-[#059669]'
+                    : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                }`}
                 onClick={() => {
                   setAnswers({ ...answers, wouldClone: true });
                   if (validationErrors.wouldClone) {
                     setValidationErrors({ ...validationErrors, wouldClone: false });
                   }
                 }}
-                sx={{
-                  flex: 1,
-                  bgcolor: answers.wouldClone === true ? '#10B981' : '#FFFFFF',
-                  color: answers.wouldClone === true ? '#FFFFFF' : '#1E293B',
-                  borderColor: '#E2E8F0',
-                  '&:hover': {
-                    bgcolor: answers.wouldClone === true ? '#059669' : '#F1F5F9',
-                    borderColor: answers.wouldClone === true ? '#059669' : '#CBD5E1',
-                  },
-                }}
               >
                 Yes
               </Button>
               <Button
-                variant={answers.wouldClone === false ? 'contained' : 'outlined'}
+                className={`flex-1 border transition-all ${
+                  answers.wouldClone === false
+                    ? 'bg-[#EF4444] text-white border-[#EF4444] hover:bg-[#DC2626] hover:border-[#DC2626]'
+                    : 'bg-white text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                }`}
                 onClick={() => {
                   setAnswers({ ...answers, wouldClone: false });
                   if (validationErrors.wouldClone) {
                     setValidationErrors({ ...validationErrors, wouldClone: false });
                   }
                 }}
-                sx={{
-                  flex: 1,
-                  bgcolor: answers.wouldClone === false ? '#EF4444' : '#FFFFFF',
-                  color: answers.wouldClone === false ? '#FFFFFF' : '#1E293B',
-                  borderColor: '#E2E8F0',
-                  '&:hover': {
-                    bgcolor: answers.wouldClone === false ? '#DC2626' : '#F1F5F9',
-                    borderColor: answers.wouldClone === false ? '#DC2626' : '#CBD5E1',
-                  },
-                }}
               >
                 No
               </Button>
-            </Stack>
-          </Box>
+            </div>
+          </div>
           {/* Question 11: Company Name */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.companyName ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.companyName ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               11. What's your company name?
-            </Typography>
-            <TextField
-              fullWidth
+            </h3>
+            <Input
               placeholder="Enter your company name"
               value={answers.companyName || ''}
               onChange={(e) => {
@@ -1497,43 +1218,20 @@ export default function GuidedFlowPanel() {
                   setValidationErrors({ ...validationErrors, companyName: false });
                 }
               }}
-              error={validationErrors.companyName}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
+              className={`bg-white rounded-lg w-full ${validationErrors.companyName ? 'border-2 border-red-500' : ''}`}
             />
-          </Box>
+          </div>
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+          <div className="flex flex-row justify-end gap-4 mt-8">
             <Button
-              endIcon={<ArrowRight size={18} />}
               onClick={handleStepComplete}
-              variant="contained"
-              sx={{
-                px: 4,
-                py: 1.5,
-                bgcolor: '#6366F1',
-                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '14px',
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                  boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
+              className="px-6 py-3 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all"
             >
               Next
+              <ArrowRight size={18} className="ml-2" />
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
       </StepLayout>
     );
   };
@@ -1561,49 +1259,36 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+        <div className="max-w-[800px] mx-auto">
           {/* Industries Card */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.industries ? '2px solid #EF4444' : '1px solid #E2E8F0',
-              transition: 'all 0.2s',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl transition-all ${
+              validationErrors.industries ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               Which industries or company types are you targeting?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Select one or more industries to target
-            </Typography>
-            <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1.5} sx={{ mb: 3 }}>
+            </p>
+            <div className="flex flex-row flex-wrap gap-3 mb-6">
               {INDUSTRY_CHIPS.map(({ label, icon: Icon, color }) => {
                 const isSelected = selectedIndustries.includes(label);
                 const IconComponent = Icon;
                 return (
-                  <Chip
+                  <Badge
                     key={label}
-                    icon={<IconComponent size={16} />}
-                    label={label}
+                    className={`cursor-pointer h-10 px-4 text-sm font-medium transition-all rounded-full flex items-center gap-2 ${
+                      isSelected
+                        ? `border-2 border-[${color}] text-[${color}] scale-105`
+                        : 'border-2 border-[#E2E8F0] text-[#64748B]'
+                    } hover:scale-105`}
+                    style={{
+                      borderColor: isSelected ? color : '#E2E8F0',
+                      color: isSelected ? color : '#64748B',
+                      boxShadow: isSelected ? `0 0 0 4px ${color}15, 0 2px 8px ${color}20` : 'none',
+                    }}
                     onClick={() => {
                       const current = answers.industries || [];
                       const updated = current.includes(label)
@@ -1614,79 +1299,46 @@ export default function GuidedFlowPanel() {
                         setValidationErrors({ ...validationErrors, industries: false });
                       }
                     }}
-                    sx={{
-                      cursor: 'pointer',
-                      height: '40px',
-                      px: 2,
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                      bgcolor: isSelected ? '#FFFFFF' : '#FFFFFF',
-                      color: isSelected ? color : '#64748B',
-                      border: isSelected 
-                        ? `2px solid ${color}` 
-                        : '2px solid #E2E8F0',
-                      boxShadow: isSelected
-                        ? `0 0 0 4px ${color}15, 0 2px 8px ${color}20`
-                        : 'none',
-                      '&:hover': {
-                        borderColor: color,
-                        transform: 'scale(1.02)',
-                        boxShadow: `0 0 0 2px ${color}20`,
-                      },
-                      '& .MuiChip-icon': {
-                        color: isSelected ? color : '#94A3B8',
-                      },
-                    }}
-                  />
+                  >
+                    <IconComponent size={16} />
+                    {label}
+                  </Badge>
                 );
               })}
               {/* +More Button */}
-              <Chip
-                label="+More"
+              <Badge
+                className="cursor-pointer h-10 px-4 text-sm font-medium bg-white text-[#6366F1] border-2 border-[#6366F1] hover:bg-[#6366F120] hover:scale-105 transition-all rounded-full"
                 onClick={() => setShowMoreIndustries(true)}
-                sx={{
-                  cursor: 'pointer',
-                  height: '40px',
-                  px: 2,
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  bgcolor: '#FFFFFF',
-                  color: '#6366F1',
-                  border: '2px solid #6366F1',
-                  '&:hover': {
-                    bgcolor: '#6366F120',
-                    transform: 'scale(1.02)',
-                  },
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              />
-            </Stack>
+              >
+                +More
+              </Badge>
+            </div>
             {/* More Industries Dialog */}
             <Dialog
               open={showMoreIndustries}
-              onClose={() => setShowMoreIndustries(false)}
-              maxWidth="sm"
-              fullWidth
+              onOpenChange={(open) => setShowMoreIndustries(open)}
             >
               <DialogTitle>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <h2 className="font-semibold text-lg">
                   Select Industries
-                </Typography>
+                </h2>
               </DialogTitle>
               <DialogContent>
-                <Stack spacing={2} sx={{ mt: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#64748B', mb: 2 }}>
+                <div className="flex flex-col gap-4 mt-2">
+                  <p className="text-[#64748B] mb-4">
                     Select one or more industries from the list below
-                  </Typography>
-                  <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1.5}>
+                  </p>
+                  <div className="flex flex-row flex-wrap gap-3">
                     {ADDITIONAL_INDUSTRIES.map((industry) => {
                       const isSelected = selectedIndustries.includes(industry);
                       return (
-                        <Chip
+                        <Badge
                           key={industry}
-                          label={industry}
+                          className={`cursor-pointer h-10 px-4 text-sm font-medium transition-all rounded-full ${
+                            isSelected
+                              ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                              : 'bg-white text-[#64748B] border-2 border-[#E2E8F0] hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                          }`}
                           onClick={() => {
                             const current = answers.industries || [];
                             const updated = current.includes(industry)
@@ -1694,53 +1346,32 @@ export default function GuidedFlowPanel() {
                               : [...current, industry];
                             setAnswers({ ...answers, industries: updated });
                           }}
-                          sx={{
-                            cursor: 'pointer',
-                            height: '40px',
-                            px: 2,
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            bgcolor: isSelected ? '#6366F1' : '#FFFFFF',
-                            color: isSelected ? '#FFFFFF' : '#64748B',
-                            border: isSelected ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                            '&:hover': {
-                              bgcolor: isSelected ? '#4F46E5' : '#F1F5F9',
-                              borderColor: isSelected ? '#4F46E5' : '#CBD5E1',
-                            },
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          }}
-                        />
+                        >
+                          {industry}
+                        </Badge>
                       );
                     })}
-                  </Stack>
-                </Stack>
+                  </div>
+                </div>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setShowMoreIndustries(false)} variant="contained">
+              <DialogFooter>
+                <Button onClick={() => setShowMoreIndustries(false)}>
                   Done
                 </Button>
-              </DialogActions>
+              </DialogFooter>
             </Dialog>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              <TextField
-                fullWidth
-                size="small"
+            <div className="flex gap-2 items-start">
+              <Input
+                className="bg-white rounded-lg w-full"
                 placeholder="Or type a custom industry (e.g., 'SaaS', 'fitness centers')..."
                 value={customIndustryInput}
                 onChange={(e) => {
                   setCustomIndustryInput(e.target.value);
                   setIndustryClassification(null); // Clear previous classification
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: '#FFFFFF',
-                    borderRadius: '8px',
-                  },
-                }}
               />
               <Button
-                variant="contained"
-                size="small"
+                size="sm"
                 disabled={!customIndustryInput.trim() || isClassifyingIndustry}
                 onClick={async () => {
                   const input = customIndustryInput.trim();
@@ -1748,7 +1379,15 @@ export default function GuidedFlowPanel() {
                   setIsClassifyingIndustry(true);
                   setIndustryClassification(null);
                   try {
-                    const response = await apiPost('/api/ai-icp-assistant/classify-industry', {
+                    const response = await apiPost<{
+                      success: boolean;
+                      confidence?: string;
+                      apollo_industry?: string;
+                      reasoning?: string;
+                      clarifying_question?: string;
+                      alternative_industries?: string[];
+                      error?: string;
+                    }>('/api/ai-icp-assistant/classify-industry', {
                       industry_input: input
                     });
                     if (response.success) {
@@ -1757,7 +1396,7 @@ export default function GuidedFlowPanel() {
                       if (response.confidence === 'high' || response.confidence === 'medium') {
                         const currentIndustries = answers.industries || [];
                         const apolloIndustry = response.apollo_industry;
-                        if (!currentIndustries.includes(apolloIndustry)) {
+                        if (apolloIndustry && !currentIndustries.includes(apolloIndustry)) {
                           setAnswers({ 
                             ...answers, 
                             industries: [...currentIndustries, apolloIndustry]
@@ -1777,47 +1416,42 @@ export default function GuidedFlowPanel() {
                     setIsClassifyingIndustry(false);
                   }
                 }}
-                sx={{
-                  minWidth: '120px',
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                }}
+                className="min-w-[120px] whitespace-nowrap"
               >
                 {isClassifyingIndustry ? (
                   <>
-                    <CircularProgress size={16} sx={{ mr: 1 }} color="inherit" />
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                     Analyzing...
                   </>
                 ) : (
                   '🤖 Find Industry'
                 )}
               </Button>
-            </Box>
+            </div>
             {/* Industry Classification Result */}
             {industryClassification && industryClassification.success && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#F0F9FF', borderRadius: '8px', border: '1px solid #3B82F6' }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 1 }}>
+              <div className="mt-4 p-4 bg-[#F0F9FF] rounded-lg border border-[#3B82F6]">
+                <p className="font-semibold text-[#1E293B] mb-2 text-sm">
                   ✅ Matched Apollo Industry: <strong>{industryClassification.apollo_industry}</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1 }}>
+                </p>
+                <p className="text-[#64748B] mb-2 text-sm">
                   Confidence: {industryClassification.confidence} • {industryClassification.reasoning}
-                </Typography>
+                </p>
                 {industryClassification.confidence === 'low' && industryClassification.clarifying_question && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    {industryClassification.clarifying_question}
+                  <Alert className="mt-2">
+                    <AlertDescription>{industryClassification.clarifying_question}</AlertDescription>
                   </Alert>
                 )}
                 {industryClassification.alternative_industries && industryClassification.alternative_industries.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748B', mb: 1 }}>
+                  <div className="mt-4">
+                    <p className="font-semibold text-[#64748B] mb-2 text-sm">
                       Alternative Industries:
-                    </Typography>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                    </p>
+                    <div className="flex flex-row flex-wrap gap-2">
                       {industryClassification.alternative_industries.map((alt: string, idx: number) => (
-                        <Chip
+                        <Badge
                           key={idx}
-                          label={alt}
-                          size="small"
+                          className="cursor-pointer hover:bg-[#E0F2FE]"
                           onClick={() => {
                             const currentIndustries = answers.industries || [];
                             if (!currentIndustries.includes(alt)) {
@@ -1827,62 +1461,44 @@ export default function GuidedFlowPanel() {
                               });
                             }
                           }}
-                          sx={{
-                            cursor: 'pointer',
-                            '&:hover': { bgcolor: '#E0F2FE' }
-                          }}
-                        />
+                        >
+                          {alt}
+                        </Badge>
                       ))}
-                    </Stack>
-                  </Box>
+                    </div>
+                  </div>
                 )}
-              </Box>
+              </div>
             )}
             {industryClassification && !industryClassification.success && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {industryClassification.error}
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{industryClassification.error}</AlertDescription>
               </Alert>
             )}
-          </Box>
+          </div>
           {/* Roles/Decision Maker Card */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.roles ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.roles ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               Which roles or job titles are you targeting?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Select one or more roles to target
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+            </p>
+            <div className="flex flex-row flex-wrap gap-2 mb-4">
               {ROLE_CHIPS.map((role) => {
                 const isSelected = answers.roles?.includes(role) || false;
                 return (
-                  <Chip
+                  <Badge
                     key={role}
-                    label={role}
+                    className={`cursor-pointer px-3 py-1 rounded-full border transition-all ${
+                      isSelected
+                        ? 'bg-[#6366F1] text-white border-[#6366F1] font-semibold hover:bg-[#4F46E5] hover:border-[#4F46E5]'
+                        : 'bg-white text-[#1E293B] border-[#E2E8F0] font-normal hover:bg-[#F1F5F9] hover:border-[#CBD5E1]'
+                    }`}
                     onClick={() => {
                       const current = answers.roles || [];
                       const updated = current.includes(role)
@@ -1893,24 +1509,14 @@ export default function GuidedFlowPanel() {
                         setValidationErrors({ ...validationErrors, roles: false });
                       }
                     }}
-                    sx={{
-                      cursor: 'pointer',
-                      bgcolor: isSelected ? '#6366F1' : '#FFFFFF',
-                      color: isSelected ? '#FFFFFF' : '#1E293B',
-                      border: `1px solid ${isSelected ? '#6366F1' : '#E2E8F0'}`,
-                      fontWeight: isSelected ? 600 : 400,
-                      '&:hover': {
-                        bgcolor: isSelected ? '#4F46E5' : '#F1F5F9',
-                        borderColor: isSelected ? '#4F46E5' : '#CBD5E1',
-                      },
-                    }}
-                  />
+                  >
+                    {role}
+                  </Badge>
                 );
               })}
-            </Stack>
-            <TextField
-              fullWidth
-              size="small"
+            </div>
+            <Input
+              className="bg-white rounded-lg w-full"
               placeholder="Or type a custom role..."
               value={customRoleInput}
               onChange={(e) => {
@@ -1937,143 +1543,103 @@ export default function GuidedFlowPanel() {
                   setAnswers({ ...answers, customRole: '', roles: filtered });
                 }
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#FFFFFF',
-                  borderRadius: '8px',
-                },
-              }}
             />
-          </Box>
+          </div>
           {/* Location Card */}
-          <Box
-            sx={{
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.location ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.location ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1,
-                fontWeight: 600,
-                color: '#1E293B',
-                fontSize: '15px',
-              }}
-            >
+            <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
               Target location?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mb: 3,
-                color: '#64748B',
-                display: 'block',
-                fontSize: '13px',
-              }}
-            >
+            </h3>
+            <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Enter country, state, city, or any location
-            </Typography>
-            <Autocomplete
-              multiple
-              freeSolo
-              options={locationSuggestions}
-              value={locationTokens}
-              onChange={(event, newValue) => {
-                setLocationTokens(newValue);
-                setAnswers({ ...answers, location: newValue.join(', ') });
-                if (validationErrors.location && newValue.length > 0) {
-                  setValidationErrors({ ...validationErrors, location: false });
-                }
-              }}
-              inputValue={locationInput}
-              onInputChange={(event, newInputValue) => {
-                setLocationInput(newInputValue);
-              }}
-              onBlur={(event) => {
-                // If user typed something but didn't press Enter, add it to location
-                const trimmedInput = locationInput.trim();
-                if (trimmedInput && !locationTokens.includes(trimmedInput)) {
-                  const newTokens = [...locationTokens, trimmedInput];
-                  setLocationTokens(newTokens);
-                  setAnswers({ ...answers, location: newTokens.join(', ') });
-                  setLocationInput('');
-                }
-              }}
-              onKeyDown={(event) => {
-                // Allow Enter key to add the current input as a location
-                if (event.key === 'Enter' && locationInput.trim() && !locationTokens.includes(locationInput.trim())) {
-                  event.preventDefault();
-                  const newTokens = [...locationTokens, locationInput.trim()];
-                  setLocationTokens(newTokens);
-                  setAnswers({ ...answers, location: newTokens.join(', ') });
-                  setLocationInput('');
-                }
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={index}
-                    label={option}
-                    icon={<MapPin size={14} />}
-                    sx={{
-                      bgcolor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '6px',
-                      height: '32px',
-                      '& .MuiChip-deleteIcon': {
-                        fontSize: '16px',
-                      },
-                    }}
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
+            </p>
+            <div className="space-y-2">
+              {locationTokens.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {locationTokens.map((token, index) => (
+                    <Badge
+                      key={index}
+                      className="bg-white border border-[#E2E8F0] rounded-md h-8 px-2 flex items-center gap-1"
+                      onClick={() => {
+                        const newTokens = locationTokens.filter((_, i) => i !== index);
+                        setLocationTokens(newTokens);
+                        setAnswers({ ...answers, location: newTokens.join(', ') });
+                      }}
+                    >
+                      <MapPin size={14} />
+                      {token}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="relative">
+                <Input
+                  className="bg-white rounded-lg w-full pr-10"
                   placeholder="e.g., United States, California, San Francisco"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#FFFFFF',
-                      borderRadius: '8px',
-                    },
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onBlur={() => {
+                    const trimmedInput = locationInput.trim();
+                    if (trimmedInput && !locationTokens.includes(trimmedInput)) {
+                      const newTokens = [...locationTokens, trimmedInput];
+                      setLocationTokens(newTokens);
+                      setAnswers({ ...answers, location: newTokens.join(', ') });
+                      setLocationInput('');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && locationInput.trim() && !locationTokens.includes(locationInput.trim())) {
+                      e.preventDefault();
+                      const newTokens = [...locationTokens, locationInput.trim()];
+                      setLocationTokens(newTokens);
+                      setAnswers({ ...answers, location: newTokens.join(', ') });
+                      setLocationInput('');
+                    }
                   }}
                 />
-              )}
-            />
-          </Box>
+                {locationInput && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {locationSuggestions
+                      .filter(suggestion => 
+                        suggestion.toLowerCase().includes(locationInput.toLowerCase()) &&
+                        !locationTokens.includes(suggestion)
+                      )
+                      .map((suggestion, idx) => (
+                        <div
+                          key={idx}
+                          className="px-3 py-2 hover:bg-[#F1F5F9] cursor-pointer"
+                          onClick={() => {
+                            if (!locationTokens.includes(suggestion)) {
+                              const newTokens = [...locationTokens, suggestion];
+                              setLocationTokens(newTokens);
+                              setAnswers({ ...answers, location: newTokens.join(', ') });
+                              setLocationInput('');
+                            }
+                          }}
+                        >
+                          {suggestion}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+          <div className="flex flex-row justify-end gap-4 mt-8">
             <Button
-              endIcon={<ArrowRight size={18} />}
               onClick={handleStepComplete}
-              variant="contained"
-              sx={{
-                px: 4,
-                py: 1.5,
-                bgcolor: '#6366F1',
-                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '14px',
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                  boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
+              className="px-6 py-3 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#4F46E5] hover:to-[#7C3AED] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all"
             >
               Continue
+              <ArrowRight size={18} className="ml-2" />
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
       </StepLayout>
     );
   };
@@ -2100,93 +1666,73 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+        <div className="max-w-[800px] mx-auto">
           {/* Platform Selection */}
-          <Box 
-            sx={{ 
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: validationErrors.platforms ? '2px solid #EF4444' : '1px solid #E2E8F0',
-            }}
+          <div 
+            className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+              validationErrors.platforms ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+            }`}
           >
-            <Typography variant="body2" sx={{ mb: 2, color: '#64748B' }}>
+            <p className="mb-4 text-[#64748B] text-sm">
               Which platforms do you want to use for outreach?
-            </Typography>
-            <Stack spacing={2}>
+            </p>
+            <div className="flex flex-col gap-4">
               {PLATFORM_OPTIONS.map((platform) => (
-                <FormControlLabel
+                <div
                   key={platform.value}
-                  control={
-                    <Checkbox
-                      checked={selectedPlatforms.includes(platform.value)}
-                      disabled={(platform as any).disabled || (platform as any).comingSoon}
-                      onChange={(e) => {
-                        const current = answers.platforms || [];
-                        const updated = e.target.checked
-                          ? [...current, platform.value]
-                          : current.filter(p => p !== platform.value);
-                        setAnswers({ ...answers, platforms: updated });
-                        // Clear validation error when user selects a platform
-                        if (validationErrors.platforms && updated.length > 0) {
-                          setValidationErrors({ ...validationErrors, platforms: false });
-                        }
-                        // Update channel connections
-                        if (platform.value === 'linkedin') {
-                          setChannelConnection('linkedin', e.target.checked);
-                        } else if (platform.value === 'email') {
-                          setChannelConnection('email', e.target.checked);
-                        } else if (platform.value === 'whatsapp') {
-                          setChannelConnection('whatsapp', e.target.checked);
-                        } else if (platform.value === 'voice') {
-                          setChannelConnection('voiceAgent', e.target.checked);
-                        }
-                      }}
-                    />
-                  }
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <span>{platform.label}</span>
-                      {platform.comingSoon && (
-                        <Chip
-                          label="Coming Soon"
-                          size="small"
-                          sx={{
-                            height: '20px',
-                            fontSize: '10px',
-                            fontWeight: 600,
-                            bgcolor: '#F59E0B',
-                            color: '#FFFFFF',
-                          }}
-                        />
-                      )}
-                    </Box>
-                  }
-                  sx={{
-                opacity: (platform as any).disabled || (platform as any).comingSoon ? 0.6 : 1,
-                cursor: (platform as any).disabled || (platform as any).comingSoon ? 'not-allowed' : 'pointer',
-                  }}
-                />
+                  className={`flex items-center gap-2 ${
+                    (platform as any).disabled || (platform as any).comingSoon ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
+                  <Checkbox
+                    checked={selectedPlatforms.includes(platform.value)}
+                    disabled={(platform as any).disabled || (platform as any).comingSoon}
+                    onCheckedChange={(checked) => {
+                      const current = answers.platforms || [];
+                      const updated = checked
+                        ? [...current, platform.value]
+                        : current.filter(p => p !== platform.value);
+                      setAnswers({ ...answers, platforms: updated });
+                      // Clear validation error when user selects a platform
+                      if (validationErrors.platforms && updated.length > 0) {
+                        setValidationErrors({ ...validationErrors, platforms: false });
+                      }
+                      // Update channel connections
+                      if (platform.value === 'linkedin') {
+                        setChannelConnection('linkedin', checked as boolean);
+                      } else if (platform.value === 'email') {
+                        setChannelConnection('email', checked as boolean);
+                      } else if (platform.value === 'whatsapp') {
+                        setChannelConnection('whatsapp', checked as boolean);
+                      } else if (platform.value === 'voice') {
+                        setChannelConnection('voiceAgent', checked as boolean);
+                      }
+                    }}
+                  />
+                  <Label className="flex items-center gap-2">
+                    <span>{platform.label}</span>
+                    {platform.comingSoon && (
+                      <Badge className="h-5 text-[10px] font-semibold bg-[#F59E0B] text-white">
+                        Coming Soon
+                      </Badge>
+                    )}
+                  </Label>
+                </div>
               ))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
           {/* LinkedIn Logic Section */}
           {selectedPlatforms.includes('linkedin') && (
             <>
-              <Box 
-                sx={{ 
-                  mb: 4,
-                  p: 3,
-                  bgcolor: '#FAFBFC',
-                  borderRadius: '12px',
-                  border: validationErrors.linkedinActions ? '2px solid #EF4444' : '1px solid #E2E8F0',
-                }}
+              <div 
+                className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                  validationErrors.linkedinActions ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+                }`}
               >
-                <Typography variant="body2" sx={{ mb: 2, color: '#64748B' }}>
+                <p className="mb-4 text-[#64748B] text-sm">
                   What should we do on LinkedIn?
-                </Typography>
-                <Stack spacing={2}>
+                </p>
+                <div className="flex flex-col gap-4">
                   {/* LinkedIn Actions */}
                   <RenderActions actions={LINKEDIN_ACTIONS} answersKey="linkedinActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
                   {/* WhatsApp Actions */}
@@ -2195,232 +1741,205 @@ export default function GuidedFlowPanel() {
                   <RenderActions actions={EMAIL_ACTIONS} answersKey="emailActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
                   {/* Voice Actions */}
                   <RenderActions actions={VOICE_ACTIONS} answersKey="voiceActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
-                </Stack>
-              </Box>
+                </div>
+              </div>
               {/* LinkedIn Connection Message */}
               {answers.linkedinActions?.includes('send_connection') && (
-                <Box
-                  sx={{
-                    mb: 4,
-                    p: 3,
-                    bgcolor: '#FAFBFC',
-                    borderRadius: '12px',
-                    border: '1px solid #E2E8F0',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                         <Linkedin size={18} color="#0077B5" />
                         Connection Request Message
-                      </Typography>
-                      <Typography variant="caption" sx={{ mt: 0.5, color: '#64748B', display: 'block', fontSize: '13px' }}>
+                      </h3>
+                      <p className="mt-1 text-[#64748B] block text-[13px]">
                         LinkedIn limits connection messages to 4-5 per month for normal accounts
-                      </Typography>
-                    </Box>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={enableConnectionMessage}
-                          onChange={(e) => setEnableConnectionMessage(e.target.checked)}
-                          sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#0077B5' },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#0077B5' },
-                          }}
-                        />
-                      }
-                      label={enableConnectionMessage ? 'Enabled' : 'Disabled'}
-                      sx={{ m: 0 }}
-                    />
-                  </Box>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={enableConnectionMessage}
+                        onCheckedChange={(checked) => setEnableConnectionMessage(checked as boolean)}
+                      />
+                      <Label>{enableConnectionMessage ? 'Enabled' : 'Disabled'}</Label>
+                    </div>
+                  </div>
                   {enableConnectionMessage && (
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={4}
-                      label="Connection Request Message"
-                      value={linkedinConnectionMessage}
-                      onChange={(e) => setLinkedinConnectionMessage(e.target.value)}
-                      placeholder="Hi {{first_name}}, I'd like to connect with you..."
-                      helperText="Use {{first_name}}, {{last_name}}, {{company}}, {{job_title}} for personalization"
-                    />
+                    <div>
+                      <Label>Connection Request Message</Label>
+                      <Textarea
+                        className="bg-white rounded-lg w-full mt-2"
+                        rows={4}
+                        value={linkedinConnectionMessage}
+                        onChange={(e) => setLinkedinConnectionMessage(e.target.value)}
+                        placeholder="Hi {{first_name}}, I'd like to connect with you..."
+                      />
+                      <p className="mt-1 text-xs text-[#64748B]">
+                        Use {'{{'}first_name{'}}'}, {'{{'}last_name{'}}'}, {'{{'}company{'}}'}, {'{{'}job_title{'}}'} for personalization
+                      </p>
+                    </div>
                   )}
-                </Box>
+                </div>
               )}
               {/* LinkedIn Message Content */}
               {answers.linkedinActions?.includes('send_message') && (
-                <Box
-                  sx={{
-                    mb: 4,
-                    p: 3,
-                    bgcolor: '#FAFBFC',
-                    borderRadius: '12px',
-                    border: validationErrors.linkedinMessage ? '2px solid #EF4444' : '1px solid #E2E8F0',
-                  }}
+                <div
+                  className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                    validationErrors.linkedinMessage ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+                  }`}
                 >
-                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                     <MessageSquare size={18} color="#0077B5" />
                     LinkedIn Message Content
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={5}
-                    label="LinkedIn Message *"
-                    value={linkedinMessage}
-                    onChange={(e) => {
-                      setLinkedinMessage(e.target.value);
-                      if (validationErrors.linkedinMessage && e.target.value.trim().length > 0) {
-                        setValidationErrors({ ...validationErrors, linkedinMessage: false });
-                      }
-                    }}
-                    error={validationErrors.linkedinMessage}
-                    placeholder="Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in..."
-                    helperText="Use {{first_name}}, {{last_name}}, {{company}}, {{job_title}} for personalization"
-                  />
-                </Box>
+                  </h3>
+                  <div>
+                    <Label>LinkedIn Message *</Label>
+                    <Textarea
+                      className={`bg-white rounded-lg w-full mt-2 ${validationErrors.linkedinMessage ? 'border-2 border-red-500' : ''}`}
+                      rows={5}
+                      value={linkedinMessage}
+                      onChange={(e) => {
+                        setLinkedinMessage(e.target.value);
+                        if (validationErrors.linkedinMessage && e.target.value.trim().length > 0) {
+                          setValidationErrors({ ...validationErrors, linkedinMessage: false });
+                        }
+                      }}
+                      placeholder="Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in..."
+                    />
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      Use {'{{'}first_name{'}}'}, {'{{'}last_name{'}}'}, {'{{'}company{'}}'}, {'{{'}job_title{'}}'} for personalization
+                    </p>
+                  </div>
+                </div>
               )}
             </>
           )}
           {/* WhatsApp Logic Section */}
           {selectedPlatforms.includes('whatsapp') && (
-            <Box
-              sx={{
-                mb: 4,
-                p: 3,
-                bgcolor: '#FAFBFC',
-                borderRadius: '12px',
-                border: validationErrors.whatsappMessage ? '2px solid #EF4444' : '1px solid #E2E8F0',
-              }}
+            <div
+              className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                validationErrors.whatsappMessage ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+              }`}
             >
-              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                 <MessageSquare size={18} color="#25D366" />
                 WhatsApp Message
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                label="WhatsApp Message *"
-                value={answers.whatsappMessage || ''}
-                onChange={(e) => {
-                  setAnswers({ ...answers, whatsappMessage: e.target.value });
-                  if (validationErrors.whatsappMessage && e.target.value.trim().length > 0) {
-                    setValidationErrors({ ...validationErrors, whatsappMessage: false });
-                  }
-                }}
-                error={validationErrors.whatsappMessage}
-                placeholder="Hi {{first_name}}, I wanted to reach out about..."
-                helperText="Use {{first_name}}, {{last_name}}, {{company}}, {{job_title}} for personalization"
-              />
-            </Box>
+              </h3>
+              <div>
+                <Label>WhatsApp Message *</Label>
+                <Textarea
+                  className={`bg-white rounded-lg w-full mt-2 ${validationErrors.whatsappMessage ? 'border-2 border-red-500' : ''}`}
+                  rows={5}
+                  value={answers.whatsappMessage || ''}
+                  onChange={(e) => {
+                    setAnswers({ ...answers, whatsappMessage: e.target.value });
+                    if (validationErrors.whatsappMessage && e.target.value.trim().length > 0) {
+                      setValidationErrors({ ...validationErrors, whatsappMessage: false });
+                    }
+                  }}
+                  placeholder="Hi {{first_name}}, I wanted to reach out about..."
+                />
+                <p className="mt-1 text-xs text-[#64748B]">
+                  Use {'{{'}first_name{'}}'}, {'{{'}last_name{'}}'}, {'{{'}company{'}}'}, {'{{'}job_title{'}}'} for personalization
+                </p>
+              </div>
+            </div>
           )}
           {/* Email Logic Section */}
           {selectedPlatforms.includes('email') && (
             <>
-              <Box
-                sx={{
-                  mb: 4,
-                  p: 3,
-                  bgcolor: '#FAFBFC',
-                  borderRadius: '12px',
-                  border: validationErrors.emailSubject ? '2px solid #EF4444' : '1px solid #E2E8F0',
-                }}
+              <div
+                className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                  validationErrors.emailSubject ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+                }`}
               >
-                <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                   <Mail size={18} color="#6366F1" />
                   Email Subject
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Email Subject *"
-                  value={answers.emailSubject || ''}
-                  onChange={(e) => {
-                    setAnswers({ ...answers, emailSubject: e.target.value });
-                    if (validationErrors.emailSubject && e.target.value.trim().length > 0) {
-                      setValidationErrors({ ...validationErrors, emailSubject: false });
-                    }
-                  }}
-                  error={validationErrors.emailSubject}
-                  placeholder="Quick question about {{company}}"
-                  helperText="Use {{first_name}}, {{last_name}}, {{company}}, {{job_title}} for personalization"
-                />
-              </Box>
-              <Box
-                sx={{
-                  mb: 4,
-                  p: 3,
-                  bgcolor: '#FAFBFC',
-                  borderRadius: '12px',
-                  border: validationErrors.emailMessage ? '2px solid #EF4444' : '1px solid #E2E8F0',
-                }}
+                </h3>
+                <div>
+                  <Label>Email Subject *</Label>
+                  <Input
+                    className={`bg-white rounded-lg w-full mt-2 ${validationErrors.emailSubject ? 'border-2 border-red-500' : ''}`}
+                    value={answers.emailSubject || ''}
+                    onChange={(e) => {
+                      setAnswers({ ...answers, emailSubject: e.target.value });
+                      if (validationErrors.emailSubject && e.target.value.trim().length > 0) {
+                        setValidationErrors({ ...validationErrors, emailSubject: false });
+                      }
+                    }}
+                    placeholder="Quick question about {{company}}"
+                  />
+                  <p className="mt-1 text-xs text-[#64748B]">
+                    Use {'{{'}first_name{'}}'}, {'{{'}last_name{'}}'}, {'{{'}company{'}}'}, {'{{'}job_title{'}}'} for personalization
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                  validationErrors.emailMessage ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+                }`}
               >
-                <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                   <Mail size={18} color="#6366F1" />
                   Email Message
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={5}
-                  label="Email Message *"
-                  value={answers.emailMessage || ''}
-                  onChange={(e) => {
-                    setAnswers({ ...answers, emailMessage: e.target.value });
-                    if (validationErrors.emailMessage && e.target.value.trim().length > 0) {
-                      setValidationErrors({ ...validationErrors, emailMessage: false });
-                    }
-                  }}
-                  error={validationErrors.emailMessage}
-                  placeholder="Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in..."
-                  helperText="Use {{first_name}}, {{last_name}}, {{company}}, {{job_title}} for personalization"
-                />
-              </Box>
+                </h3>
+                <div>
+                  <Label>Email Message *</Label>
+                  <Textarea
+                    className={`bg-white rounded-lg w-full mt-2 ${validationErrors.emailMessage ? 'border-2 border-red-500' : ''}`}
+                    rows={5}
+                    value={answers.emailMessage || ''}
+                    onChange={(e) => {
+                      setAnswers({ ...answers, emailMessage: e.target.value });
+                      if (validationErrors.emailMessage && e.target.value.trim().length > 0) {
+                        setValidationErrors({ ...validationErrors, emailMessage: false });
+                      }
+                    }}
+                    placeholder="Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in..."
+                  />
+                  <p className="mt-1 text-xs text-[#64748B]">
+                    Use {'{{'}first_name{'}}'}, {'{{'}last_name{'}}'}, {'{{'}company{'}}'}, {'{{'}job_title{'}}'} for personalization
+                  </p>
+                </div>
+              </div>
             </>
           )}
           {/* Voice Logic Section */}
           {selectedPlatforms.includes('voice') && (
             <>
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="body2" sx={{ mb: 2, color: '#64748B' }}>
+              <div className="mb-8">
+                <p className="mb-4 text-[#64748B] text-sm">
                   Do you want to enable AI voice calls?
-                </Typography>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={answers.voiceEnabled !== false}
-                      onChange={(e) => setAnswers({ ...answers, voiceEnabled: e.target.checked })}
-                    />
-                  }
-                  label="Enable AI voice calls"
-                  sx={{ mb: 3 }}
-                />
-              </Box>
+                </p>
+                <div className="flex items-center gap-2 mb-6">
+                  <Checkbox
+                    checked={answers.voiceEnabled !== false}
+                    onCheckedChange={(checked) => setAnswers({ ...answers, voiceEnabled: checked as boolean })}
+                  />
+                  <Label>Enable AI voice calls</Label>
+                </div>
+              </div>
               {answers.voiceEnabled !== false && (
                 <>
                   {/* Voice Agent Selection */}
-                  <Box
-                    sx={{
-                      mb: 4,
-                      p: 3,
-                      bgcolor: '#FAFBFC',
-                      borderRadius: '12px',
-                      border: validationErrors.voiceAgentId ? '2px solid #EF4444' : '1px solid #E2E8F0',
-                    }}
+                  <div
+                    className={`mb-8 p-6 bg-[#FAFBFC] rounded-xl ${
+                      validationErrors.voiceAgentId ? 'border-2 border-[#EF4444]' : 'border border-[#E2E8F0]'
+                    }`}
                   >
-                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                       <Phone size={18} color="#8B5CF6" />
                       Voice Agent Configuration
-                    </Typography>
-                    <Typography variant="caption" sx={{ mb: 3, color: '#64748B', display: 'block', fontSize: '13px' }}>
+                    </h3>
+                    <p className="mb-6 text-[#64748B] block text-[13px]">
                       Select the voice agent to use for calls
-                    </Typography>
-                    <FormControl fullWidth required sx={{ mb: 3 }}>
-                      <InputLabel>Voice Agent *</InputLabel>
+                    </p>
+                    <div className="mb-6">
+                      <Label>Voice Agent *</Label>
                       <Select
                         value={answers.voiceAgentId || voiceAgentId || '24'}
-                        onChange={(e) => {
-                          const agentId = e.target.value;
+                        onValueChange={(agentId) => {
                           setVoiceAgentId(agentId);
                           const agentNames: Record<string, string> = {
                             '24': 'VAPI Agent',
@@ -2435,89 +1954,91 @@ export default function GuidedFlowPanel() {
                             setValidationErrors({ ...validationErrors, voiceAgentId: false });
                           }
                         }}
-                        label="Voice Agent *"
                       >
-                        <MenuItem value="24">VAPI Agent</MenuItem>
-                        <MenuItem value="1">Agent 1</MenuItem>
-                        <MenuItem value="2">Agent 2</MenuItem>
-                        <MenuItem value="3">Agent 3</MenuItem>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select voice agent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="24">VAPI Agent</SelectItem>
+                          <SelectItem value="1">Agent 1</SelectItem>
+                          <SelectItem value="2">Agent 2</SelectItem>
+                          <SelectItem value="3">Agent 3</SelectItem>
+                        </SelectContent>
                       </Select>
-                      <Typography variant="caption" sx={{ mt: 1, color: '#64748B', fontSize: '12px' }}>
+                      <p className="mt-2 text-[#64748B] text-[12px]">
                         Each agent has its own pre-configured template and settings
-                      </Typography>
-                    </FormControl>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={4}
-                      required
-                      label="Call Context *"
-                      value={answers.voiceContext || voiceContext || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setVoiceContext(value);
-                        setAnswers({ ...answers, voiceContext: value });
-                        if (validationErrors.voiceContext && value.trim().length > 0) {
-                          setValidationErrors({ ...validationErrors, voiceContext: false });
-                        }
-                      }}
-                      error={validationErrors.voiceContext}
-                      placeholder="Provide context about the lead, company, or what to discuss in the call. Example: 'This is a follow-up call about our corporate travel services. The lead is interested in travel management for their company.'"
-                      helperText="Required: This context will be provided to the voice agent to personalize the conversation"
-                    />
-                  </Box>
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Call Context *</Label>
+                      <Textarea
+                        className={`bg-white rounded-lg w-full mt-2 ${validationErrors.voiceContext ? 'border-2 border-red-500' : ''}`}
+                        rows={4}
+                        value={answers.voiceContext || voiceContext || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setVoiceContext(value);
+                          setAnswers({ ...answers, voiceContext: value });
+                          if (validationErrors.voiceContext && value.trim().length > 0) {
+                            setValidationErrors({ ...validationErrors, voiceContext: false });
+                          }
+                        }}
+                        placeholder="Provide context about the lead, company, or what to discuss in the call. Example: 'This is a follow-up call about our corporate travel services. The lead is interested in travel management for their company.'"
+                      />
+                      <p className="mt-1 text-xs text-[#64748B]">
+                        Required: This context will be provided to the voice agent to personalize the conversation
+                      </p>
+                      
+                    </div>
+                  </div>
                   {/* Call Timing */}
-                  <Box
-                    sx={{
-                      mb: 4,
-                      p: 3,
-                      bgcolor: '#FAFBFC',
-                      borderRadius: '12px',
-                      border: '1px solid #E2E8F0',
-                    }}
-                  >
-                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+                    <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                       <Calendar size={18} color="#8B5CF6" />
                       Call Timing
-                    </Typography>
-                    <Typography variant="caption" sx={{ mb: 3, color: '#64748B', display: 'block', fontSize: '13px' }}>
+                    </h3>
+                    <p className="mb-6 text-[#64748B] block text-[13px]">
                       When should the voice calls be made?
-                    </Typography>
-                    <FormControl fullWidth>
-                      <InputLabel>When should calls be made?</InputLabel>
+                    </p>
+                    <div>
+                      <Label>When should calls be made?</Label>
                       <Select
                         value={answers.voiceTiming || 'immediate'}
-                        onChange={(e) => setAnswers({ ...answers, voiceTiming: e.target.value as any })}
-                        label="When should calls be made?"
+                        onValueChange={(value) => setAnswers({ ...answers, voiceTiming: value as any })}
                       >
-                        <MenuItem value="immediate">Immediate call</MenuItem>
-                        <MenuItem value="after_linkedin">Call after LinkedIn connection accepted</MenuItem>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select timing" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="immediate">Immediate call</SelectItem>
+                          <SelectItem value="after_linkedin">Call after LinkedIn connection accepted</SelectItem>
+                        </SelectContent>
                       </Select>
-                    </FormControl>
+                    </div>
                     {answers.voiceTiming === 'after_linkedin' && (
-                      <Box sx={{ mt: 2, p: 1.5, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                        <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px' }}>
+                      <div className="mt-4 p-3 bg-[#EFF6FF] rounded-lg border border-[#BFDBFE]">
+                        <p className="text-[#1E40AF] text-[12px]">
                           <strong>Note:</strong> The voice call will only be made after the LinkedIn connection request is accepted. 
                           A condition step will be added to check this before making the call.
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
-                  </Box>
+                  </div>
                 </>
               )}
             </>
           )}
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+          <div className="flex flex-row justify-end gap-4 mt-8">
             <Button
-              endIcon={<ArrowRight size={16} />}
               onClick={handleStepComplete}
-              variant="contained"
               disabled={!answers.platforms || answers.platforms.length === 0}
+              className="px-6 py-3 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#4F46E5] hover:to-[#7C3AED] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue
+              <ArrowRight size={16} className="ml-2" />
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
       </StepLayout>
     );
   };
@@ -2574,221 +2095,190 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
-          <Typography variant="body1" sx={{ mb: 3, color: '#64748B', fontSize: '14px' }}>
+        <div className="max-w-[800px] mx-auto">
+          <p className="mb-6 text-[#64748B] text-sm">
             Configure when and how your campaign actions should execute. Set delays between steps and conditions that must be met before proceeding.
-          </Typography>
+          </p>
           {/* Delay Configuration */}
-          <Box 
-            sx={{ 
-              mb: 4,
-              p: 3,
-              bgcolor: '#FAFBFC',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+            <div className="flex items-center gap-2 mb-6">
               <Calendar size={20} color="#6366F1" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '16px' }}>
+              <h3 className="font-semibold text-[#1E293B] text-base">
                 Delay Between Actions
-              </Typography>
-            </Box>
-            <Typography variant="body2" sx={{ mb: 3, color: '#64748B', fontSize: '13px' }}>
+              </h3>
+            </div>
+            <p className="mb-6 text-[#64748B] text-[13px]">
               How long should the system wait before executing the next action? This helps make your outreach feel more natural.
-            </Typography>
-            <Stack spacing={3} direction="row" sx={{ alignItems: 'flex-start' }}>
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel>Days</InputLabel>
+            </p>
+            <div className="flex gap-6 items-start">
+              <div className="flex-1">
+                <Label>Days</Label>
                 <Select
-                  value={delayDays}
-                  label="Days"
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
+                  value={String(delayDays)}
+                  onValueChange={(value) => {
+                    const newValue = Number(value);
                     setDelayDays(newValue);
                     setAnswers({ ...answers, delayDays: newValue });
                   }}
                 >
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 14, 21, 30].map((day) => (
-                    <MenuItem key={day} value={day}>
-                      {day} {day === 1 ? 'day' : 'days'}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 14, 21, 30].map((day) => (
+                      <SelectItem key={day} value={String(day)}>
+                        {day} {day === 1 ? 'day' : 'days'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-              </FormControl>
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel>Hours</InputLabel>
+              </div>
+              <div className="flex-1">
+                <Label>Hours</Label>
                 <Select
-                  value={delayHours}
-                  label="Hours"
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
+                  value={String(delayHours)}
+                  onValueChange={(value) => {
+                    const newValue = Number(value);
                     setDelayHours(newValue);
                     setAnswers({ ...answers, delayHours: newValue });
                   }}
                 >
-                  {[0, 1, 2, 3, 4, 6, 8, 12, 18, 24].map((hour) => (
-                    <MenuItem key={hour} value={hour}>
-                      {hour} {hour === 1 ? 'hour' : 'hours'}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Hours" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 1, 2, 3, 4, 6, 8, 12, 18, 24].map((hour) => (
+                      <SelectItem key={hour} value={String(hour)}>
+                        {hour} {hour === 1 ? 'hour' : 'hours'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-              </FormControl>
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel>Minutes</InputLabel>
+              </div>
+              <div className="flex-1">
+                <Label>Minutes</Label>
                 <Select
-                  value={delayMinutes}
-                  label="Minutes"
-                  onChange={(e) => {
-                    const newValue = Number(e.target.value);
+                  value={String(delayMinutes)}
+                  onValueChange={(value) => {
+                    const newValue = Number(value);
                     setDelayMinutes(newValue);
                     setAnswers({ ...answers, delayMinutes: newValue });
                   }}
                 >
-                  {[0, 15, 30, 45, 60, 90, 120].map((min) => (
-                    <MenuItem key={min} value={min}>
-                      {min} {min === 1 ? 'minute' : 'minutes'}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Minutes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 15, 30, 45, 60, 90, 120].map((min) => (
+                      <SelectItem key={min} value={String(min)}>
+                        {min} {min === 1 ? 'minute' : 'minutes'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-              </FormControl>
-            </Stack>
-            <Box sx={{ mt: 2, p: 2, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-              <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              </div>
+            </div>
+            <div className="mt-4 p-4 bg-[#EFF6FF] rounded-lg border border-[#BFDBFE]">
+              <p className="text-[#1E40AF] text-[12px] flex items-center gap-1">
                 <AlertTriangle size={14} />
                 <strong>Example:</strong> If you set 1 day, 2 hours, and 30 minutes, the system will wait 1 day, 2 hours, and 30 minutes before executing the next action in your campaign.
-              </Typography>
-            </Box>
-          </Box>
+              </p>
+            </div>
+          </div>
           {/* Condition Configuration */}
           {conditionOptions.length > 0 && (
-            <Box 
-              sx={{ 
-                mb: 4,
-                p: 3,
-                bgcolor: '#FAFBFC',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+              <div className="flex items-center gap-2 mb-6">
                 <Shield size={20} color="#6366F1" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '16px' }}>
+                <h3 className="font-semibold text-[#1E293B] text-base">
                   Conditions to Wait For
-                </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ mb: 3, color: '#64748B', fontSize: '13px' }}>
+                </h3>
+              </div>
+              <p className="mb-6 text-[#64748B] text-[13px]">
                 Choose what must happen before proceeding to the next action. The system will wait until this condition is met.
-              </Typography>
-              <Stack spacing={2}>
+              </p>
+              <div className="flex flex-col gap-4">
                 {conditionOptions.map((option) => (
                   <Card
                     key={option.value}
-                    sx={{
-                      p: 2,
-                      cursor: 'pointer',
-                      border: conditionType === option.value ? '2px solid #6366F1' : '1px solid #E2E8F0',
-                      bgcolor: conditionType === option.value ? '#EEF2FF' : '#FFFFFF',
-                      '&:hover': {
-                        borderColor: '#6366F1',
-                        bgcolor: conditionType === option.value ? '#EEF2FF' : '#F8FAFC',
-                      },
-                    }}
+                    className={`p-4 cursor-pointer border transition-all ${
+                      conditionType === option.value
+                        ? 'border-2 border-[#6366F1] bg-[#EEF2FF] hover:border-[#6366F1] hover:bg-[#EEF2FF]'
+                        : 'border border-[#E2E8F0] bg-white hover:border-[#6366F1] hover:bg-[#F8FAFC]'
+                    }`}
                     onClick={() => {
                       setConditionType(option.value);
                       setAnswers({ ...answers, conditionType: option.value });
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <div className="flex items-start gap-4">
                       <Checkbox
                         checked={conditionType === option.value}
-                        onChange={() => {
+                        onCheckedChange={() => {
                           setConditionType(option.value);
                           setAnswers({ ...answers, conditionType: option.value });
                         }}
-                        sx={{
-                          color: '#6366F1',
-                          '&.Mui-checked': {
-                            color: '#6366F1',
-                          },
-                        }}
+                        className="text-indigo-500"
                       />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-[#1E293B] mb-1 text-sm">
                           {option.label}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                        </h4>
+                        <p className="text-[#64748B] text-[12px]">
                           {option.description}
-                        </Typography>
-                      </Box>
-                    </Box>
+                        </p>
+                      </div>
+                    </div>
                   </Card>
                 ))}
-              </Stack>
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#F0FDF4', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
-                <Typography variant="caption" sx={{ color: '#166534', fontSize: '12px', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              </div>
+              <div className="mt-4 p-4 bg-[#F0FDF4] rounded-lg border border-[#BBF7D0]">
+                <p className="text-[#166534] text-[12px] flex items-center gap-1">
                   <CheckCircle2 size={14} />
                   <strong>How it works:</strong> After the delay period, the system will check if this condition is met. If yes, it proceeds to the next action. If not, it continues waiting.
-                </Typography>
-              </Box>
-            </Box>
+                </p>
+              </div>
+            </div>
           )}
           {/* Platform-specific information */}
           {selectedPlatforms.length > 0 && (
-            <Box 
-              sx={{ 
-                mb: 4,
-                p: 3,
-                bgcolor: '#FFFBEB',
-                borderRadius: '12px',
-                border: '1px solid #FDE68A',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#92400E', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <div className="mb-8 p-6 bg-[#FFFBEB] rounded-xl border border-[#FDE68A]">
+              <h4 className="font-semibold text-[#92400E] mb-2 flex items-center gap-2 text-sm">
                 <TrendingUp size={16} />
                 How This Applies to Your Campaign
-              </Typography>
-              <Stack spacing={1} sx={{ mt: 2 }}>
+              </h4>
+              <div className="flex flex-col gap-2 mt-4">
                 {hasLinkedIn && answers.linkedinActions?.includes('send_message') && (
-                  <Typography variant="body2" sx={{ color: '#78350F', fontSize: '13px' }}>
+                  <p className="text-[#78350F] text-[13px]">
                     • <strong>LinkedIn:</strong> After sending a connection request, the system will wait for the configured delay, then check if the connection was accepted before sending a message.
-                  </Typography>
+                  </p>
                 )}
                 {hasEmail && hasLinkedIn && (
-                  <Typography variant="body2" sx={{ color: '#78350F', fontSize: '13px' }}>
+                  <p className="text-[#78350F] text-[13px]">
                     • <strong>Email:</strong> If you're also using LinkedIn, the email will be sent after the delay period following the LinkedIn connection.
-                  </Typography>
+                  </p>
                 )}
                 {hasVoice && (
-                  <Typography variant="body2" sx={{ color: '#78350F', fontSize: '13px' }}>
+                  <p className="text-[#78350F] text-[13px]">
                     • <strong>Voice Call:</strong> The call will be made after the configured condition is met (e.g., after LinkedIn connection is accepted).
-                  </Typography>
+                  </p>
                 )}
                 {hasWhatsApp && (
-                  <Typography variant="body2" sx={{ color: '#78350F', fontSize: '13px' }}>
+                  <p className="text-[#78350F] text-[13px]">
                     • <strong>WhatsApp:</strong> Messages will be sent after the configured delay period.
-                  </Typography>
+                  </p>
                 )}
-              </Stack>
-            </Box>
+              </div>
+            </div>
           )}
           <Button
-            variant="contained"
-            fullWidth
+            className="mt-4 py-3 w-full text-[15px] font-semibold bg-[#6366F1] hover:bg-[#4F46E5]"
             onClick={handleStepComplete}
-            sx={{
-              mt: 2,
-              py: 1.5,
-              bgcolor: '#6366F1',
-              '&:hover': { bgcolor: '#4F46E5' },
-              fontSize: '15px',
-              fontWeight: 600,
-            }}
           >
             Continue
-            <ArrowRight size={18} style={{ marginLeft: '8px' }} />
+            <ArrowRight size={18} className="ml-2" />
           </Button>
-        </Box>
+        </div>
       </StepLayout>
     );
   };
@@ -2824,168 +2314,118 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="body2" sx={{ mb: 2, color: '#64748B' }}>
+        <div className="max-w-[800px] mx-auto">
+        <div className="mb-8">
+          <p className="mb-4 text-[#64748B] text-sm">
             Do you want to enable AI voice calls?
-          </Typography>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={answers.voiceEnabled !== false}
-                onChange={(e) => setAnswers({ ...answers, voiceEnabled: e.target.checked })}
-              />
-            }
-            label="Enable AI voice calls"
-            sx={{ mb: 3 }}
-          />
+          </p>
+          <div className="flex items-center gap-2 mb-6">
+            <Checkbox
+              checked={answers.voiceEnabled !== false}
+              onCheckedChange={(checked) => setAnswers({ ...answers, voiceEnabled: checked as boolean })}
+            />
+            <Label>Enable AI voice calls</Label>
+          </div>
           {answers.voiceEnabled !== false && (
             <>
               {/* Voice Agent Selection - REQUIRED */}
-              <Box
-                sx={{
-                  mb: 4,
-                  p: 3,
-                  bgcolor: '#FAFBFC',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    mb: 1,
-                    fontWeight: 600,
-                    color: '#1E293B',
-                    fontSize: '15px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  }}
-                >
+              <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+                <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                   <Phone size={18} color="#8B5CF6" />
                   Voice Agent Configuration
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    mb: 3,
-                    color: '#64748B',
-                    display: 'block',
-                    fontSize: '13px',
-                  }}
-                >
+                </h3>
+                <p className="mb-6 text-[#64748B] block text-[13px]">
                   Select the voice agent to use for calls
-                </Typography>
-                <FormControl fullWidth required sx={{ mb: 3 }}>
-                  <InputLabel>Voice Agent *</InputLabel>
+                </p>
+                <div className="mb-6">
+                  <Label>Voice Agent *</Label>
                   <Select
                     value={voiceAgentId}
-                    onChange={(e) => {
-                      const agentId = e.target.value;
+                    onValueChange={(agentId) => {
                       setVoiceAgentId(agentId);
                       setVoiceAgentName(agentNames[agentId] || 'Custom Agent');
                     }}
-                    label="Voice Agent *"
                   >
-                    <MenuItem value="24">VAPI Agent</MenuItem>
-                    <MenuItem value="1">Agent 1</MenuItem>
-                    <MenuItem value="2">Agent 2</MenuItem>
-                    <MenuItem value="3">Agent 3</MenuItem>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select voice agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="24">VAPI Agent</SelectItem>
+                      <SelectItem value="1">Agent 1</SelectItem>
+                      <SelectItem value="2">Agent 2</SelectItem>
+                      <SelectItem value="3">Agent 3</SelectItem>
+                    </SelectContent>
                   </Select>
-                  <Typography variant="caption" sx={{ mt: 1, color: '#64748B', fontSize: '12px' }}>
+                  <p className="mt-2 text-[#64748B] text-[12px]">
                     Each agent has its own pre-configured template and settings
-                  </Typography>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  required
-                  label="Call Context *"
-                  value={voiceContext}
-                  onChange={(e) => setVoiceContext(e.target.value)}
-                  placeholder="Provide context about the lead, company, or what to discuss in the call. Example: 'This is a follow-up call about our corporate travel services. The lead is interested in travel management for their company.'"
-                  helperText="Required: This context will be provided to the voice agent to personalize the conversation"
-                  sx={{ mb: 2 }}
-                  error={!voiceContext || voiceContext.trim() === ''}
-                />
+                  </p>
+                </div>
+                <div>
+                  <Label>Call Context *</Label>
+                  <Textarea
+                    className={`bg-white rounded-lg w-full mt-2 ${!voiceContext || voiceContext.trim() === '' ? 'border-2 border-red-500' : ''}`}
+                    rows={4}
+                    value={voiceContext}
+                    onChange={(e) => setVoiceContext(e.target.value)}
+                    placeholder="Provide context about the lead, company, or what to discuss in the call. Example: 'This is a follow-up call about our corporate travel services. The lead is interested in travel management for their company.'"
+                  />
+                  <p className="mt-1 text-xs text-[#64748B]">
+                    Required: This context will be provided to the voice agent to personalize the conversation
+                  </p>
+                </div>
                 {(!voiceContext || voiceContext.trim() === '') && (
-                  <Typography variant="caption" color="error.main" sx={{ fontSize: '12px', mb: 2, display: 'block' }}>
+                  <p className="mt-2 text-xs text-red-500 block">
                     ⚠️ Call context is required. The voice agent needs this information to conduct the conversation.
-                  </Typography>
+                  </p>
                 )}
-              </Box>
+              </div>
               {/* Timing Configuration */}
-              <Box
-                sx={{
-                  mb: 4,
-                  p: 3,
-                  bgcolor: '#FAFBFC',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    mb: 1,
-                    fontWeight: 600,
-                    color: '#1E293B',
-                    fontSize: '15px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  }}
-                >
+              <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
+                <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
                   <Calendar size={18} color="#8B5CF6" />
                   Call Timing
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    mb: 3,
-                    color: '#64748B',
-                    display: 'block',
-                    fontSize: '13px',
-                  }}
-                >
+                </h3>
+                <p className="mb-6 text-[#64748B] block text-[13px]">
                   When should the voice calls be made?
-                </Typography>
-                <FormControl fullWidth>
-                  <InputLabel>When should calls be made?</InputLabel>
+                </p>
+                <div>
+                  <Label>When should calls be made?</Label>
                   <Select
                     value={answers.voiceTiming || 'immediate'}
-                    onChange={(e) => setAnswers({ ...answers, voiceTiming: e.target.value as any })}
-                    label="When should calls be made?"
+                    onValueChange={(value) => setAnswers({ ...answers, voiceTiming: value as any })}
                   >
-                    <MenuItem value="immediate">Immediate call</MenuItem>
-                    <MenuItem value="after_linkedin">Call after LinkedIn connection accepted</MenuItem>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select timing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate call</SelectItem>
+                      <SelectItem value="after_linkedin">Call after LinkedIn connection accepted</SelectItem>
+                    </SelectContent>
                   </Select>
-                </FormControl>
+                </div>
                 {answers.voiceTiming === 'after_linkedin' && (
-                  <Box sx={{ mt: 2, p: 1.5, bgcolor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                    <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '12px' }}>
+                  <div className="mt-4 p-3 bg-[#EFF6FF] rounded-lg border border-[#BFDBFE]">
+                    <p className="text-[#1E40AF] text-[12px]">
                       <strong>Note:</strong> The voice call will only be made after the LinkedIn connection request is accepted. 
                       A condition step will be added to check this before making the call.
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                 )}
-              </Box>
+              </div>
             </>
           )}
-        </Box>
-        <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+        </div>
+        <div className="flex flex-row justify-end gap-4 mt-8">
           <Button
-            endIcon={<ArrowRight size={16} />}
             onClick={handleStepComplete}
-            variant="contained"
             disabled={answers.voiceEnabled !== false && (!voiceAgentId || !voiceContext || voiceContext.trim() === '')}
+            className="px-6 py-3 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#4F46E5] hover:to-[#7C3AED] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
+            <ArrowRight size={16} className="ml-2" />
           </Button>
-        </Stack>
-        </Box>
+        </div>
+        </div>
       </StepLayout>
     );
   };
@@ -3079,144 +2519,85 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '900px', mx: 'auto', pb: 4, width: '100%' }}>
+        <div className="max-w-[900px] mx-auto pb-8 w-full">
           {/* Campaign Name Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B' }}>
-                  Campaign Name
-                </Typography>
-              </Box>
-              <TextField
-                fullWidth
-                required
-                label="Campaign Name *"
-                value={campaignName}
-                onChange={(e) => setCampaignName(e.target.value)}
-                placeholder="e.g., Q1 LinkedIn Outreach Campaign"
-                helperText="Give your campaign a memorable name"
-                sx={{ mb: 1 }}
-              />
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-[#1E293B] mb-4">
+                Campaign Name
+              </h3>
+              <div>
+                <Label>Campaign Name *</Label>
+                <Input
+                  className="bg-white rounded-lg w-full mt-2"
+                  required
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="e.g., Q1 LinkedIn Outreach Campaign"
+                />
+                <p className="mt-1 text-xs text-[#64748B]">
+                  Give your campaign a memorable name
+                </p>
+              </div>
             </CardContent>
           </Card>
           {/* Campaign Duration Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <Calendar size={20} color="#6366F1" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                <h3 className="font-semibold text-[#1E293B]">
                   Campaign Duration
-                </Typography>
-              </Box>
-              <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
+                </h3>
+              </div>
+              <p className="text-[#1E293B] mb-4 font-medium">
                 How long should this campaign run?
-              </Typography>
-              <Box
-                sx={{
-                  mb: 2,
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  '&::-webkit-scrollbar': {
-                    height: '6px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    background: '#F1F5F9',
-                    borderRadius: '3px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    background: '#CBD5E1',
-                    borderRadius: '3px',
-                    '&:hover': {
-                      background: '#94A3B8',
-                    },
-                  },
-                }}
-              >
-                <Stack 
-                  direction="row" 
-                  spacing={2} 
-                  sx={{ 
-                    minWidth: 'max-content',
-                    pb: 1,
-                  }}
-                >
+              </p>
+              <div className="mb-4 overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-[#CBD5E1] scrollbar-track-[#F1F5F9]">
+                <div className="flex flex-row gap-4 min-w-max pb-2">
                   {[
                     { days: 7, label: '7 days', subtitle: 'Quick test' },
                     { days: 14, label: '14 days', subtitle: 'Recommended' },
                     { days: 30, label: '30 days', subtitle: 'Long-term' },
                   ].map((option) => (
-                    <Box
+                    <div
                       key={option.days}
                       onClick={() => {
                         setCampaignDuration(option.days);
                         setCustomDuration('');
                       }}
-                      sx={{
-                        cursor: 'pointer',
-                        minWidth: '140px',
-                        flexShrink: 0,
-                        p: 2,
-                        borderRadius: '8px',
-                        border: campaignDuration === option.days ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                        bgcolor: campaignDuration === option.days ? '#F8F9FF' : '#FFFFFF',
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                          borderColor: '#6366F1',
-                          transform: 'translateY(-2px)',
-                        },
-                      }}
+                      className={`cursor-pointer min-w-[140px] flex-shrink-0 p-4 rounded-lg border transition-all ${
+                        campaignDuration === option.days
+                          ? 'border-2 border-[#6366F1] bg-[#F8F9FF]'
+                          : 'border-2 border-[#E2E8F0] bg-white'
+                      } hover:border-[#6366F1] hover:-translate-y-0.5`}
                     >
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                      <p className="font-semibold text-[#1E293B] mb-1 text-sm">
                         {option.label}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                      </p>
+                      <p className="text-[#64748B] text-[12px]">
                         {option.subtitle}
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   ))}
-                  <Box
+                  <div
                     onClick={() => setCustomDuration('')}
-                    sx={{
-                      cursor: 'pointer',
-                      minWidth: '140px',
-                      flexShrink: 0,
-                      p: 2,
-                      borderRadius: '8px',
-                      border: customDuration !== '' || ![7, 14, 30].includes(campaignDuration) ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                      bgcolor: customDuration !== '' || ![7, 14, 30].includes(campaignDuration) ? '#F8F9FF' : '#FFFFFF',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        borderColor: '#6366F1',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
+                    className={`cursor-pointer min-w-[140px] flex-shrink-0 p-4 rounded-lg border transition-all ${
+                      customDuration !== '' || ![7, 14, 30].includes(campaignDuration)
+                        ? 'border-2 border-[#6366F1] bg-[#F8F9FF]'
+                        : 'border-2 border-[#E2E8F0] bg-white'
+                    } hover:border-[#6366F1] hover:-translate-y-0.5`}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                    <p className="font-semibold text-[#1E293B] text-sm">
                       Custom
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
+                    </p>
+                  </div>
+                </div>
+              </div>
               {(customDuration !== '' || ![7, 14, 30].includes(campaignDuration)) && (
-                <TextField
-                  fullWidth
-                  size="small"
+                <Input
                   type="number"
+                  className="mt-2 bg-white rounded-lg w-full"
                   placeholder="Enter days (e.g., 21)"
                   value={customDuration || campaignDuration}
                   onChange={(e) => {
@@ -3226,216 +2607,155 @@ export default function GuidedFlowPanel() {
                       setCampaignDuration(value);
                     }
                   }}
-                  sx={{
-                    mt: 2,
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#FFFFFF',
-                      borderRadius: '8px',
-                    },
-                  }}
                 />
               )}
-              <Box sx={{ mt: 2, p: 1.5, bgcolor: '#F0F9FF', borderRadius: '6px', border: '1px solid #BAE6FD' }}>
-                <Typography variant="caption" sx={{ color: '#0369A1', fontSize: '12px' }}>
+              <div className="mt-4 p-3 bg-[#F0F9FF] rounded-md border border-[#BAE6FD]">
+                <p className="text-[#0369A1] text-[12px]">
                   💡 Most successful campaigns run for at least 14 days.
-                </Typography>
-              </Box>
+                </p>
+              </div>
             </CardContent>
           </Card>
           {/* Daily Lead Volume Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <TrendingUp size={20} color="#6366F1" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                <h3 className="font-semibold text-[#1E293B]">
                   Daily Lead Volume
-                </Typography>
-              </Box>
-              <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
+                </h3>
+              </div>
+              <p className="text-[#1E293B] mb-4 font-medium">
                 How many new leads do you want to target per day?
-              </Typography>
-              <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+              </p>
+              <div className="flex flex-row gap-4 mb-6">
                 {[
                   { value: 10, label: '10 / day', subtitle: 'Safe', color: '#10B981' },
                   { value: 25, label: '25 / day', subtitle: 'Balanced (Recommended)', color: '#6366F1' },
                   { value: 50, label: '50 / day', subtitle: 'Aggressive', color: '#EF4444' },
                 ].map((preset) => (
-                  <Box
+                  <div
                     key={preset.value}
                     onClick={() => setDailyLeadVolume(preset.value)}
-                    sx={{
-                      cursor: 'pointer',
-                      flex: 1,
-                      p: 2,
-                      borderRadius: '8px',
-                      border: dailyLeadVolume === preset.value ? `2px solid ${preset.color}` : '2px solid #E2E8F0',
-                      bgcolor: dailyLeadVolume === preset.value ? `${preset.color}15` : '#FFFFFF',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        borderColor: preset.color,
-                        transform: 'translateY(-2px)',
-                      },
+                    className={`cursor-pointer flex-1 p-4 rounded-lg border transition-all ${
+                      dailyLeadVolume === preset.value
+                        ? `border-2 border-[${preset.color}] bg-[${preset.color}]15`
+                        : 'border-2 border-[#E2E8F0] bg-white'
+                    } hover:border-[${preset.color}] hover:-translate-y-0.5`}
+                    style={{
+                      borderColor: dailyLeadVolume === preset.value ? preset.color : '#E2E8F0',
+                      backgroundColor: dailyLeadVolume === preset.value ? `${preset.color}15` : '#FFFFFF',
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                    <p className="font-semibold text-[#1E293B] mb-1 text-sm">
                       {preset.label}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                    </p>
+                    <p className="text-[#64748B] text-[12px]">
                       {preset.subtitle}
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                 ))}
-              </Stack>
-              <Box sx={{ px: 1 }}>
+              </div>
+              <div className="px-1">
                 <Slider
                   value={dailyLeadVolume}
-                  onChange={(e, newValue) => setDailyLeadVolume(newValue as number)}
+                  onValueChange={(value) => setDailyLeadVolume(value)}
                   min={5}
                   max={100}
                   step={5}
-                  marks={[
-                    { value: 10, label: '10' },
-                    { value: 25, label: '25' },
-                    { value: 50, label: '50' },
-                    { value: 75, label: '75' },
-                    { value: 100, label: '100' },
-                  ]}
-                  sx={{
-                    color: dailyLeadVolume <= 10 ? '#10B981' : dailyLeadVolume <= 25 ? '#6366F1' : '#EF4444',
-                    '& .MuiSlider-thumb': {
-                      width: 20,
-                      height: 20,
-                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
-                    },
-                  }}
+                  className={dailyLeadVolume <= 10 ? 'text-[#10B981]' : dailyLeadVolume <= 25 ? 'text-[#6366F1]' : 'text-[#EF4444]'}
                 />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#64748B' }}>
+                <div className="flex justify-between mt-2">
+                  <p className="text-xs text-[#64748B]">
                     Current: {dailyLeadVolume} leads/day
-                  </Typography>
+                  </p>
                   {dailyLeadVolume > 25 && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <div className="flex items-center gap-1">
                       <AlertTriangle size={14} color="#EF4444" />
-                      <Typography variant="caption" sx={{ color: '#EF4444', fontWeight: 500 }}>
+                      <p className="text-xs text-[#EF4444] font-medium">
                         Higher volumes may increase platform risk.
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   )}
-                </Box>
-              </Box>
+                </div>
+              </div>
             </CardContent>
           </Card>
           {/* Campaign Schedule Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <p className="text-[#1E293B] mb-4 font-medium">
                 On which days should the campaign run?
-              </Typography>
-              <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                <Box
+              </p>
+              <div className="flex flex-row gap-4 mb-6">
+                <div
                   onClick={() => {
                     setWorkingDays(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']);
                   }}
-                  sx={{
-                    cursor: 'pointer',
-                    flex: 1,
-                    p: 2,
-                    borderRadius: '8px',
-                    border: workingDays.length === 5 && workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d)) 
-                      ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                    bgcolor: workingDays.length === 5 && workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))
-                      ? '#F8F9FF' : '#FFFFFF',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: '#6366F1',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
+                  className={`cursor-pointer flex-1 p-4 rounded-lg border transition-all ${
+                    workingDays.length === 5 && workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))
+                      ? 'border-2 border-[#6366F1] bg-[#F8F9FF]'
+                      : 'border-2 border-[#E2E8F0] bg-white'
+                  } hover:border-[#6366F1] hover:-translate-y-0.5`}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                  <p className="font-semibold text-[#1E293B] mb-1 text-sm">
                     Weekdays
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                  </p>
+                  <p className="text-[#64748B] text-[12px]">
                     Mon–Fri (Recommended)
-                  </Typography>
-                </Box>
-                <Box
+                  </p>
+                </div>
+                <div
                   onClick={() => {
                     setWorkingDays(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
                   }}
-                  sx={{
-                    cursor: 'pointer',
-                    flex: 1,
-                    p: 2,
-                    borderRadius: '8px',
-                    border: workingDays.length === 7 ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                    bgcolor: workingDays.length === 7 ? '#F8F9FF' : '#FFFFFF',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: '#6366F1',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
+                  className={`cursor-pointer flex-1 p-4 rounded-lg border transition-all ${
+                    workingDays.length === 7
+                      ? 'border-2 border-[#6366F1] bg-[#F8F9FF]'
+                      : 'border-2 border-[#E2E8F0] bg-white'
+                  } hover:border-[#6366F1] hover:-translate-y-0.5`}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                  <p className="font-semibold text-[#1E293B] mb-1 text-sm">
                     All days
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                  </p>
+                  <p className="text-[#64748B] text-[12px]">
                     Every day
-                  </Typography>
-                </Box>
-                <Box
+                  </p>
+                </div>
+                <div
                   onClick={() => {
                     // Keep current selection for custom
                   }}
-                  sx={{
-                    cursor: 'pointer',
-                    flex: 1,
-                    p: 2,
-                    borderRadius: '8px',
-                    border: workingDays.length !== 5 && workingDays.length !== 7 ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                    bgcolor: workingDays.length !== 5 && workingDays.length !== 7 ? '#F8F9FF' : '#FFFFFF',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: '#6366F1',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
+                  className={`cursor-pointer flex-1 p-4 rounded-lg border transition-all ${
+                    workingDays.length !== 5 && workingDays.length !== 7
+                      ? 'border-2 border-[#6366F1] bg-[#F8F9FF]'
+                      : 'border-2 border-[#E2E8F0] bg-white'
+                  } hover:border-[#6366F1] hover:-translate-y-0.5`}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                  <p className="font-semibold text-[#1E293B] mb-1 text-sm">
                     Custom
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px' }}>
+                  </p>
+                  <p className="text-[#64748B] text-[12px]">
                     Select specific days
-                  </Typography>
-                </Box>
-              </Stack>
+                  </p>
+                </div>
+              </div>
               {(workingDays.length !== 5 || !workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))) && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" sx={{ color: '#64748B', mb: 1.5, display: 'block' }}>
+                <div className="mt-4">
+                  <p className="text-[#64748B] mb-3 block text-xs">
                     Select specific days:
-                  </Typography>
-                  <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1.5}>
+                  </p>
+                  <div className="flex flex-row flex-wrap gap-3">
                     {workingDaysOptions.map((day) => {
                       const isSelected = workingDays.includes(day.value);
                       return (
-                        <Chip
+                        <Badge
                           key={day.value}
-                          label={day.label}
+                          className={`cursor-pointer h-9 min-w-[56px] text-[13px] font-medium transition-all rounded-full ${
+                            isSelected
+                              ? 'bg-[#6366F1] text-white'
+                              : 'bg-white text-[#64748B] border-2 border-[#E2E8F0]'
+                          } hover:border-[#6366F1] hover:scale-105`}
                           onClick={() => {
                             if (isSelected) {
                               setWorkingDays(workingDays.filter(d => d !== day.value));
@@ -3443,305 +2763,190 @@ export default function GuidedFlowPanel() {
                               setWorkingDays([...workingDays, day.value]);
                             }
                           }}
-                          sx={{
-                            cursor: 'pointer',
-                            height: '36px',
-                            minWidth: '56px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            transition: 'all 0.2s',
-                            bgcolor: isSelected ? '#6366F1' : '#FFFFFF',
-                            color: isSelected ? '#FFFFFF' : '#64748B',
-                            border: isSelected ? 'none' : '2px solid #E2E8F0',
-                            '&:hover': {
-                              borderColor: '#6366F1',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        />
+                        >
+                          {day.label}
+                        </Badge>
                       );
                     })}
-                  </Stack>
-                </Box>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
           {/* Smart Safety Controls Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="body1" sx={{ color: '#1E293B', mb: 1, fontWeight: 500 }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <p className="text-[#1E293B] mb-4 font-medium">
                 Enable smart throttling to protect your account?
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+              </p>
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
                     <Shield size={20} color="#6366F1" />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2" component="span" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#1E293B] text-sm">
                         {smartThrottling ? 'Enabled' : 'Disabled'}
-                      </Typography>
+                      </span>
                       {smartThrottling && (
-                        <Chip
-                          label="Recommended"
-                          size="small"
-                          sx={{
-                            ml: 1,
-                            height: '20px',
-                            fontSize: '10px',
-                            bgcolor: '#10B981',
-                            color: '#FFFFFF',
-                            fontWeight: 600,
-                          }}
-                        />
+                        <Badge className="h-5 text-[10px] font-semibold bg-[#10B981] text-white">
+                          Recommended
+                        </Badge>
                       )}
-                    </Box>
-                  </Box>
-                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '13px' }}>
+                    </div>
+                  </div>
+                  <p className="text-[#64748B] text-[13px]">
                     Automatically adjusts activity to stay within safe platform limits.
-                  </Typography>
-                </Box>
+                  </p>
+                </div>
                 <Switch
                   checked={smartThrottling}
-                  onChange={(e) => setSmartThrottling(e.target.checked)}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#6366F1',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      bgcolor: '#6366F1',
-                    },
-                  }}
+                  onCheckedChange={(checked) => setSmartThrottling(checked as boolean)}
                 />
-              </Box>
+              </div>
             </CardContent>
           </Card>
           {/* Advanced Options Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
               <Button
-                fullWidth
+                className="w-full justify-between text-[#64748B] font-medium hover:bg-[#F8F9FA]"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                sx={{
-                  justifyContent: 'space-between',
-                  textTransform: 'none',
-                  color: '#64748B',
-                  fontWeight: 500,
-                  '&:hover': {
-                    bgcolor: '#F8F9FA',
-                  },
-                }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                <span className="font-medium text-sm">
                   Advanced Options
-                </Typography>
+                </span>
                 <ArrowRight
                   size={16}
+                  className="transition-transform"
                   style={{
                     transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s',
                   }}
                 />
               </Button>
               {showAdvanced && (
-                <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #E2E8F0' }}>
-                  <Stack spacing={3}>
+                <div className="mt-6 pt-6 border-t border-[#E2E8F0]">
+                  <div className="flex flex-col gap-6">
                     {/* Daily Max Connections/Messages */}
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#1E293B', mb: 1 }}>
+                    <div>
+                      <Label className="text-sm font-medium text-[#1E293B] mb-2 block">
                         Daily max connections/messages
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        size="small"
+                      </Label>
+                      <Input
                         type="number"
+                        className="bg-white rounded-lg w-full"
                         value={dailyMaxConnections}
                         onChange={(e) => setDailyMaxConnections(parseInt(e.target.value) || 50)}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            bgcolor: '#FFFFFF',
-                            borderRadius: '8px',
-                          },
-                        }}
                       />
-                    </Box>
+                    </div>
                     {/* Randomized Delays */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#1E293B', mb: 0.5 }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium text-[#1E293B] mb-1 block">
                           Randomized delays between actions
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        </Label>
+                        <p className="text-xs text-[#64748B]">
                           Adds natural variation to prevent detection
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                       <Switch
                         checked={randomizedDelays}
-                        onChange={(e) => setRandomizedDelays(e.target.checked)}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#6366F1',
-                          },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            bgcolor: '#6366F1',
-                          },
-                        }}
+                        onCheckedChange={(checked) => setRandomizedDelays(checked as boolean)}
                       />
-                    </Box>
+                    </div>
                     {/* Auto-pause on Warning */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#1E293B', mb: 0.5 }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium text-[#1E293B] mb-1 block">
                           Auto-pause on warning signals
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        </Label>
+                        <p className="text-xs text-[#64748B]">
                           Automatically pause if platform warnings detected
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                       <Switch
                         checked={autoPauseOnWarning}
-                        onChange={(e) => setAutoPauseOnWarning(e.target.checked)}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#6366F1',
-                          },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            bgcolor: '#6366F1',
-                          },
-                        }}
+                        onCheckedChange={(checked) => setAutoPauseOnWarning(checked as boolean)}
                       />
-                    </Box>
+                    </div>
                     {/* Time Window */}
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#1E293B', mb: 1 }}>
+                    <div>
+                      <Label className="text-sm font-medium text-[#1E293B] mb-2 block">
                         Time window for outreach
-                      </Typography>
-                      <Stack direction="row" spacing={2}>
-                        <TextField
-                          size="small"
-                          type="time"
-                          label="Start"
-                          value={timeWindowStart}
-                          onChange={(e) => setTimeWindowStart(e.target.value)}
-                          sx={{
-                            flex: 1,
-                            '& .MuiOutlinedInput-root': {
-                              bgcolor: '#FFFFFF',
-                              borderRadius: '8px',
-                            },
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          type="time"
-                          label="End"
-                          value={timeWindowEnd}
-                          onChange={(e) => setTimeWindowEnd(e.target.value)}
-                          sx={{
-                            flex: 1,
-                            '& .MuiOutlinedInput-root': {
-                              bgcolor: '#FFFFFF',
-                              borderRadius: '8px',
-                            },
-                          }}
-                        />
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </Box>
+                      </Label>
+                      <div className="flex flex-row gap-4">
+                        <div className="flex-1">
+                          <Label>Start</Label>
+                          <Input
+                            type="time"
+                            className="bg-white rounded-lg w-full mt-2"
+                            value={timeWindowStart}
+                            onChange={(e) => setTimeWindowStart(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Label>End</Label>
+                          <Input
+                            type="time"
+                            className="bg-white rounded-lg w-full mt-2"
+                            value={timeWindowEnd}
+                            onChange={(e) => setTimeWindowEnd(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
           {/* Campaign Summary Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '2px solid #6366F1',
-              bgcolor: '#F8F9FF',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.1)',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B', mb: 2 }}>
+          <Card className="mb-6 rounded-xl border-2 border-[#6366F1] bg-[#F8F9FF] shadow-md">
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-[#1E293B] mb-4">
                 Your campaign will:
-              </Typography>
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+              </h3>
+              <div className="flex flex-col gap-3 mb-4">
+                <p className="text-[#1E293B] text-sm">
                   • Run for <strong>{campaignDuration} days</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] text-sm">
                   • Target <strong>{dailyLeadVolume} leads per day</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] text-sm">
                   • Operate on <strong>{getScheduleText()}</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] text-sm">
                   • Estimated total leads: <strong>~{Math.round(totalLeads)}</strong>
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[#1E293B] text-sm">
                     • Risk level:
-                  </Typography>
-                  <Chip
-                    label={riskLevel.toLowerCase()}
-                    size="small"
-                    sx={{
-                      bgcolor: riskLevel === 'Low' ? '#10B981' : riskLevel === 'Medium' ? '#6366F1' : '#EF4444',
-                      color: '#FFFFFF',
-                      fontWeight: 600,
-                      fontSize: '11px',
-                      textTransform: 'capitalize',
-                    }}
-                  />
-                </Box>
-              </Stack>
-              <Typography variant="caption" sx={{ color: '#64748B', fontSize: '12px', fontStyle: 'italic' }}>
+                  </p>
+                  <Badge
+                    className={`text-[11px] font-semibold capitalize ${
+                      riskLevel === 'Low' ? 'bg-[#10B981]' : riskLevel === 'Medium' ? 'bg-[#6366F1]' : 'bg-[#EF4444]'
+                    } text-white`}
+                  >
+                    {riskLevel.toLowerCase()}
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-[#64748B] text-[12px] italic">
                 You can change these settings anytime.
-              </Typography>
+              </p>
             </CardContent>
           </Card>
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+          <div className="flex flex-row justify-end gap-4 mt-8">
             <Button
-              endIcon={<ArrowRight size={18} />}
               onClick={handleStepComplete}
-              variant="contained"
-              sx={{
-                px: 4,
-                py: 1.5,
-                bgcolor: '#6366F1',
-                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '14px',
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                  boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
+              className="px-6 py-3 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#4F46E5] hover:to-[#7C3AED] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all"
             >
               Continue
+              <ArrowRight size={18} className="ml-2" />
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
       </StepLayout>
     );
   };
@@ -3888,184 +3093,132 @@ export default function GuidedFlowPanel() {
           }
         }}
       >
-        <Box sx={{ maxWidth: '900px', mx: 'auto', pb: 4, width: '100%' }}>
+        <div className="max-w-[900px] mx-auto pb-8 w-full">
           {/* Campaign Summary Card */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 600, color: '#1E293B', fontSize: '18px' }}>
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none">
+            <CardContent className="p-6">
+              <h3 className="mb-6 font-semibold text-[#1E293B] text-lg">
                 🎯 Your Campaign Setup
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
+              </h3>
+              <div className="mb-4">
+                <p className="text-[#64748B] mb-2 font-semibold text-sm">
                   Campaign Name:
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#1E293B', mb: 2 }}>
-                  {campaignName || <span style={{ fontStyle: 'italic', color: '#94A3B8' }}>Not set</span>}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
+                </p>
+                <p className="text-[#1E293B] mb-4">
+                  {campaignName || <span className="italic text-[#94A3B8]">Not set</span>}
+                </p>
+              </div>
+              <div className="mb-4">
+                <p className="text-[#64748B] mb-2 font-semibold text-sm">
                   Target Audience:
-                </Typography>
+                </p>
                 {answers.industries && answers.industries.length > 0 && (
-                  <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
+                  <p className="text-[#1E293B] mb-1 text-sm">
                     Industries: {answers.industries.join(', ')}
-                  </Typography>
+                  </p>
                 )}
                 {answers.roles && answers.roles.length > 0 && (
-                  <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
+                  <p className="text-[#1E293B] mb-1 text-sm">
                     Roles: {answers.roles.join(', ')}
-                  </Typography>
+                  </p>
                 )}
                 {answers.location && (
-                  <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
+                  <p className="text-[#1E293B] mb-1 text-sm">
                     Location: {answers.location}
-                  </Typography>
+                  </p>
                 )}
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
+              </div>
+              <div className="mb-4">
+                <p className="text-[#64748B] mb-2 font-semibold text-sm">
                   Platforms:
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] text-sm">
                   {answers.platforms?.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ') || 'None'}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
+                </p>
+              </div>
+              <div className="mb-4">
+                <p className="text-[#64748B] mb-2 font-semibold text-sm">
                   Campaign Settings:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] mb-1 text-sm">
                   Duration: {campaignDuration} days
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5, color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] mb-1 text-sm">
                   Daily Leads: {currentDailyLeadVolume}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ color: '#64748B', mb: 1, fontWeight: 600 }}>
+                </p>
+              </div>
+              <div>
+                <p className="text-[#64748B] mb-2 font-semibold text-sm">
                   Workflow Steps:
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1E293B' }}>
+                </p>
+                <p className="text-[#1E293B] text-sm">
                   {stepCount} step{stepCount !== 1 ? 's' : ''} configured
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 1 }}>
+                </p>
+                <p className="text-[#64748B] block mt-2 text-xs">
                   Check the preview panel to see your complete workflow
-                </Typography>
-              </Box>
+                </p>
+              </div>
             </CardContent>
           </Card>
           {/* Campaign Creation Info */}
-          <Card
-            sx={{
-              mb: 3,
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              boxShadow: 'none',
-              bgcolor: '#F8FAFC',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: '8px',
-                    bgcolor: '#6366F1',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+          <Card className="mb-6 rounded-xl border border-[#E2E8F0] shadow-none bg-[#F8FAFC]">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-[#6366F1] text-white flex items-center justify-center">
                   <Zap size={20} />
-                </Box>
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#1E293B] mb-1">
                     Ready to Launch Your Campaign
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#64748B', fontSize: '13px' }}>
+                  </p>
+                  <p className="text-[#64748B] text-[13px]">
                     Your campaign will be created and started automatically. Apollo will generate leads based on your criteria, then LinkedIn actions will begin executing immediately.
-                  </Typography>
-                </Box>
-              </Box>
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           {/* Error Alert */}
           {createError && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setCreateError(null)}>
-              {createError}
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{createError}</AlertDescription>
             </Alert>
           )}
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <div className="flex flex-row gap-4 justify-end">
             <Button
               onClick={() => setCurrentStep('campaign_settings')}
-              variant="outlined"
+              variant="outline"
               disabled={isCreatingCampaign}
-              sx={{
-                px: 3,
-                py: 1.5,
-              }}
+              className="px-6 py-3"
             >
               Back to Edit
             </Button>
             <Button
-              endIcon={isCreatingCampaign ? <CircularProgress size={16} color="inherit" /> : <CheckCircle2 size={18} />}
               onClick={handleCreateCampaign}
-              variant="contained"
               disabled={isCreatingCampaign || !campaignName || campaignName.trim() === ''}
-              sx={{
-                px: 4,
-                py: 1.5,
-                bgcolor: '#6366F1',
-                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '14px',
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                  boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
+              className="px-6 py-3 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#4F46E5] hover:to-[#7C3AED] text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-lg transition-all"
             >
-              {isCreatingCampaign ? 'Creating & Starting Campaign...' : 'Create and Start Campaign'}
+              {isCreatingCampaign ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating & Starting Campaign...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={18} className="mr-2" />
+                  Create and Start Campaign
+                </>
+              )}
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
       </StepLayout>
     );
   };
   return (
-    <Box
-      sx={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        sx={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="h-full w-full flex flex-col overflow-hidden">
         {currentStep === 'icp_questions' && renderStep1()}
         {currentStep === 'target_definition' && renderStep2()}
         {currentStep === 'platform_selection' && renderStep3Platform()}
@@ -4073,7 +3226,7 @@ export default function GuidedFlowPanel() {
         {currentStep === 'voice_agent' && renderStep5()}
         {currentStep === 'campaign_settings' && renderStep6()}
         {currentStep === 'confirmation' && renderStep7()}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
-}
+}

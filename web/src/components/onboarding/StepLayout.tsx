@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 interface StepLayoutProps {
   currentStep: number;
@@ -21,151 +22,54 @@ export default function StepLayout({
   onStepClick,
 }: StepLayoutProps) {
   return (
-    <Box
-      sx={{
-        height: '100%',
-        maxHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: '#FFFFFF',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="h-full max-h-full flex flex-col bg-white overflow-hidden">
       {/* Header with Back Navigation */}
-      <Box
-        sx={{
-          px: 4,
-          py: 3,
-          borderBottom: '1px solid #E2E8F0',
-          bgcolor: '#FFFFFF',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          flexShrink: 0,
-        }}
-      >
-        <IconButton
+      <div className="px-4 py-3 border-b border-gray-200 bg-white flex items-center gap-2 shrink-0">
+        <button
           onClick={onBack}
-          sx={{
-            p: 1,
-            '&:hover': { bgcolor: '#F1F5F9' },
-            transition: 'all 0.2s',
-          }}
+          className="p-1 hover:bg-gray-100 rounded transition-all duration-200"
         >
           <ArrowLeft className="w-5 h-5 text-gray-700" />
-        </IconButton>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+        </button>
+        <div className="flex-1 flex items-center gap-2">
           {showProgress && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: '#64748B',
-                fontWeight: 500,
-                fontSize: '13px',
-                px: 1.5,
-                py: 0.5,
-                bgcolor: '#F8F9FA',
-                borderRadius: '6px',
-              }}
-            >
+            <Badge variant="secondary" className="text-gray-600 font-medium text-xs">
               Step {currentStep} of {totalSteps}
-            </Typography>
+            </Badge>
           )}
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              fontSize: '18px',
-              color: '#1E293B',
-            }}
-          >
+          <h2 className="font-semibold text-lg text-gray-900">
             {stepTitle}
-          </Typography>
-        </Box>
-      </Box>
+          </h2>
+        </div>
+      </div>
       {/* Progress Dots */}
       {showProgress && (
-        <Box
-          sx={{
-            px: 4,
-            py: 2,
-            borderBottom: '1px solid #F1F5F9',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            flexShrink: 0,
-          }}
-        >
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-1 shrink-0">
           {Array.from({ length: totalSteps }).map((_, index) => {
             const stepNum = index + 1;
             const isActive = stepNum === currentStep;
             const isCompleted = stepNum < currentStep;
             const isClickable = onStepClick && (isCompleted || stepNum === currentStep);
             return (
-              <Box
+              <div
                 key={stepNum}
                 onClick={() => isClickable && onStepClick(stepNum)}
-                sx={{
-                  flex: 1,
-                  height: '3px',
-                  borderRadius: '2px',
-                  bgcolor: isActive || isCompleted ? '#6366F1' : '#E2E8F0',
-                  position: 'relative',
-                  transition: 'all 0.3s ease',
-                  cursor: isClickable ? 'pointer' : 'default',
-                  '&:hover': isClickable ? {
-                    height: '4px',
-                    transform: 'translateY(-0.5px)',
-                  } : {},
-                  '&::after': isActive ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    height: '100%',
-                    width: '100%',
-                    bgcolor: '#6366F1',
-                    borderRadius: '2px',
-                    animation: 'pulse 2s ease-in-out infinite',
-                  } : {},
-                  '@keyframes pulse': {
-                    '0%, 100%': { opacity: 1 },
-                    '50%': { opacity: 0.6 },
-                  },
-                }}
+                className={`flex-1 h-[3px] rounded-sm transition-all duration-300 ${
+                  isActive || isCompleted ? 'bg-indigo-500' : 'bg-gray-200'
+                } ${
+                  isClickable ? 'cursor-pointer hover:h-1' : 'cursor-default'
+                } ${
+                  isActive ? 'animate-pulse' : ''
+                }`}
               />
             );
           })}
-        </Box>
+        </div>
       )}
       {/* Content Area */}
-      <Box
-        sx={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          px: 4,
-          py: 4,
-          position: 'relative',
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: '#F1F5F9',
-            borderRadius: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#CBD5E1',
-            borderRadius: '4px',
-            '&:hover': {
-              background: '#94A3B8',
-            },
-          },
-        }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 relative scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {children}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
-}
+}

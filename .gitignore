@@ -8,3 +8,55 @@ web/OPTIMISTIC_NAVIGATION.md
 web/QUICKSTART_SKELETON_LOADING.md
 web/TROUBLESHOOTING.md
 web/VISUAL_GUIDE.md
+web/payload.json
+web/batch calls response.json
+web/new batch calls.json
+web/components.json
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db

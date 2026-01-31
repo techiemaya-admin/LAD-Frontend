@@ -23,12 +23,13 @@ class ApiClient {
       throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
     }
     
-    // If backend URL is provided, append /api; otherwise use local default
+    // If backend URL is provided, append /api; otherwise use production backend as default
     if (backendUrl) {
       // Check if URL already contains /api suffix
       this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
     } else {
-      this.baseURL = 'http://localhost:3004/api';
+      // Default to production backend instead of localhost
+      this.baseURL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
     }
   }
   private async request<T>(
@@ -50,9 +51,20 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...options?.headers,
     };
-    // Add auth token from localStorage if available
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    // Add auth token from cookies if available
+    if (typeof document !== 'undefined') {
+      let token: string | null = null;
+      const cookies = document.cookie ? document.cookie.split(';') : [];
+      for (const cookie of cookies) {
+        const [rawName, ...rawValueParts] = cookie.trim().split('=');
+        const name = rawName?.trim();
+        const value = rawValueParts.join('=');
+        if (!name) continue;
+        if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
+          token = decodeURIComponent(value || '');
+          break;
+        }
+      }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }

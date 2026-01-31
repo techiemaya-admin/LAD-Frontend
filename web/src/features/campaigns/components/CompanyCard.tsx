@@ -1,33 +1,29 @@
 'use client';
 import React from 'react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Card,
-  CardContent,
-  CardActions,
-  Avatar,
-  Typography,
-  Chip,
   Tooltip,
-  IconButton,
-  Button,
-  CircularProgress,
-} from '@mui/material';
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
-  Business,
+  Building2,
   Phone,
-  LocationOn,
-  People,
-  Language,
-  LinkedIn as LinkedInIcon,
+  MapPin,
+  Users,
+  Globe,
+  Linkedin,
   Facebook,
   Instagram,
-  Article,
-  RssFeed,
+  Rss,
   Settings,
   CheckCircle,
-  Group,
-} from '@mui/icons-material';
+  Loader2,
+} from 'lucide-react';
 function getCompanySizeLabel(employeeCount: number | string | undefined | null): string {
   const count = parseInt(String(employeeCount || 0), 10);
   if (!count) return 'Unknown';
@@ -114,324 +110,166 @@ export default function CompanyCard({
   return (
     <Card
       onClick={onSelect}
-      sx={{
-        flex: 1,
-        minHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.2s ease',
-        border: isSelected ? '2px solid' : '1px solid',
-        borderColor: isSelected ? '#0b1957' : '#e9ecef',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        position: 'relative',
-        bgcolor: '#ffffff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          borderColor: isSelected ? '#0b1957' : '#dee2e6',
-        },
-        '&::before': isSelected
-          ? {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '3px',
-              background: '#0b1957',
-              zIndex: 1,
-            }
-          : {},
-      }}
+      className={`
+        flex flex-1 min-h-full flex-col transition-all duration-200 ease-in-out
+        ${isSelected ? 'border-2 border-[#0b1957]' : 'border border-[#e9ecef]'}
+        rounded-xl overflow-hidden relative bg-white shadow-sm cursor-pointer
+        hover:shadow-md hover:border-[${isSelected ? '#0b1957' : '#dee2e6'}]
+        ${isSelected ? 'before:content-[""] before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-[#0b1957] before:z-[1]' : ''}
+      `}
     >
-      <CardContent
-        sx={{ flexGrow: 1, p: 0, position: 'relative', zIndex: 2 }}
-      >
+      <CardContent className="flex-grow p-0 relative z-[2]">
         {/* Header */}
-        <Box
-          sx={{
-            bgcolor: '#ffffff',
-            p: 2.5,
-            position: 'relative',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 2,
-              position: 'relative',
-            }}
-          >
-            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+        <div className="bg-white p-6 relative">
+        <div className="bg-white p-6 relative">
+          <div className="flex items-start gap-4 relative">
+            <div className="relative flex-shrink-0">
               <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: 'primary.main',
-                  flexShrink: 0,
-                  border: isSelected
-                    ? '3px solid #0b1957'
-                    : '2px solid #e9ecef',
-                }}
-                src={companyLogo}
-                alt={`${companyName} logo`}
+                className={`w-12 h-12 flex-shrink-0 ${
+                  isSelected ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'
+                }`}
               >
-                {!companyLogo && <Business />}
+                <AvatarImage src={companyLogo} alt={`${companyName} logo`} />
+                <AvatarFallback className="bg-primary">
+                  <Building2 className="w-6 h-6" />
+                </AvatarFallback>
               </Avatar>
               {isSelected && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    bgcolor: '#0b1957',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid white',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    zIndex: 3,
-                  }}
-                >
-                  <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
-                </Box>
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md z-[3]">
+                  <CheckCircle className="w-4 h-4 text-white" />
+                </div>
               )}
-            </Box>
-            <Box
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                minHeight: '56px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight="bold"
+            </div>
+            <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
+              <h3
                 onClick={(e) => {
                   e.stopPropagation();
                   if (handleViewDetails) {
                     handleViewDetails(company);
                   }
                 }}
-                sx={{
-                  wordBreak: 'break-word',
-                  lineHeight: 1.3,
-                  fontSize: '1.125rem',
-                  color: '#000000',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  '&:hover': {
-                    color: '#0b1957',
-                    textDecoration: 'underline',
-                  },
-                }}
+                className="break-words leading-tight text-lg font-bold text-black cursor-pointer transition-colors duration-200 line-clamp-2 hover:text-[#0b1957] hover:underline"
               >
                 {companyName}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+              </h3>
+            </div>
+          </div>
+        </div>
+        </div>
         {/* Body */}
-        <Box sx={{ p: 2.5, pt: 2 }}>
-          <Box sx={{ mb: 0 }}>
+        <div className="px-6 pt-4 pb-6">
+          <div className="mb-0">
             {/* Industry */}
-            <Box sx={{ minHeight: '24px', mb: 0.5 }}>
+            <div className="min-h-[24px] mb-1">
               {company.industry && (
-                <Chip
-                  label={company.industry}
-                  size="small"
-                  variant="outlined"
-                  sx={{ fontWeight: 'bold', height: 24 }}
-                />
+                <Badge variant="outline" className="font-bold h-6">
+                  {company.industry}
+                </Badge>
               )}
-            </Box>
+            </div>
             {/* Decision Maker Contact */}
-            <Box sx={{ minHeight: '60px', mb: 0 }}>
+            <div className="min-h-[60px] mb-0">
               {hasPhoneBlock && (
-                <Box
-                  sx={{
-                    mb: 1,
-                    p: 1.5,
-                    bgcolor: '#f0fff4',
-                    borderRadius: 1,
-                    border: '1px solid #28a745',
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: '#28a745',
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      letterSpacing: '0.5px',
-                      fontSize: '0.7rem',
-                      mb: 1,
-                      display: 'block',
-                    }}
-                  >
+                <div className="mb-2 p-3 bg-green-50 rounded border border-green-600">
+                  <div className="text-green-600 uppercase font-bold tracking-wide text-[0.7rem] mb-2">
                     ✓ DECISION MAKER CONTACT
-                  </Typography>
+                  </div>
                   {/* Phone */}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      mb: phoneInfo?.name ? 0.5 : 0,
-                    }}
+                  <div
+                    className={`flex items-center gap-2 ${
+                      phoneInfo?.name ? 'mb-1' : ''
+                    }`}
                   >
-                    <Phone sx={{ fontSize: 16, color: '#28a745' }} />
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: '#212529',
-                        fontWeight: 700,
-                        fontSize: '0.95rem',
-                      }}
-                    >
+                    <Phone className="w-4 h-4 text-green-600" />
+                    <span className="text-[#212529] font-bold text-[0.95rem]">
                       {phoneInfo?.phone}
-                    </Typography>
+                    </span>
                     {phoneInfo?.confidence && (
-                      <Chip
-                        label={phoneInfo.confidence}
-                        size="small"
-                        sx={{
-                          bgcolor: '#28a745',
-                          color: 'white',
-                          fontSize: '0.65rem',
-                          height: '18px',
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                        }}
-                      />
+                      <Badge className="bg-green-600 text-white text-[0.65rem] h-[18px] font-semibold uppercase">
+                        {phoneInfo.confidence}
+                      </Badge>
                     )}
-                  </Box>
+                  </div>
                   {/* Contact person */}
                   {phoneInfo?.name && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: '#2e7d32',
-                        fontSize: '0.75rem',
-                      }}
-                    >
+                    <p className="text-green-800 text-xs">
                       {phoneInfo.name}
                       {phoneInfo.title ? ` • ${phoneInfo.title}` : ''}
-                    </Typography>
+                    </p>
                   )}
-                </Box>
+                </div>
               )}
-            </Box>
+            </div>
+            </div>
             {/* Contact + location row */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-                mb: 1.5,
-              }}
-            >
+            <div className="flex flex-col gap-2 mb-3">
               {/* Phone (company-level / button) */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Phone sx={{ fontSize: 18, color: '#0b1957' }} />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: company.phone ? '#0b1957' : 'oklch(0.556 0 0)',
-                    fontSize: '0.875rem',
-                    fontWeight: company.phone ? 600 : 400,
-                  }}
+              <div className="flex items-center gap-2">
+                <Phone className="w-[18px] h-[18px] text-[#0b1957]" />
+                <span
+                  className={`text-sm ${
+                    company.phone
+                      ? 'text-[#0b1957] font-semibold'
+                      : 'text-gray-600'
+                  }`}
                 >
                   {company.phone || 'Phone number not available'}
-                </Typography>
+                </span>
                 {handleGetContact && (
-                  <Tooltip
-                    title={
-                      phoneLoading?.[companyId]
-                        ? 'Finding decision maker phone…'
-                        : 'Get decision maker phone'
-                    }
-                    arrow
-                  >
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGetContact(company);
-                        }}
-                        disabled={phoneLoading?.[companyId]}
-                        sx={{
-                          p: 0.5,
-                          bgcolor: 'oklch(0.97 0 0)',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': {
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#0b1957',
-                          },
-                        }}
-                      >
-                        {phoneLoading?.[companyId] ? (
-                          <CircularProgress size={18} sx={{ color: '#0b1957' }} />
-                        ) : (
-                          <Settings
-                            sx={{ fontSize: 18, color: '#0b1957' }}
-                          />
-                        )}
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGetContact(company);
+                            }}
+                            disabled={phoneLoading?.[companyId]}
+                            className="h-7 w-7 p-1 bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957]"
+                          >
+                            {phoneLoading?.[companyId] ? (
+                              <Loader2 className="h-[18px] w-[18px] text-[#0b1957] animate-spin" />
+                            ) : (
+                              <Settings className="h-[18px] w-[18px] text-[#0b1957]" />
+                            )}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {phoneLoading?.[companyId]
+                            ? 'Finding decision maker phone…'
+                            : 'Get decision maker phone'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
-              </Box>
+              </div>
               {/* Location */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LocationOn sx={{ fontSize: 18, color: '#0b1957' }} />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: locationLabel
-                      ? '#0b1957'
-                      : 'oklch(0.556 0 0)',
-                    fontSize: '0.875rem',
-                  }}
+              <div className="flex items-center gap-2">
+                <MapPin className="w-[18px] h-[18px] text-[#0b1957]" />
+                <span
+                  className={`text-sm ${
+                    locationLabel ? 'text-[#0b1957]' : 'text-gray-600'
+                  }`}
                 >
                   {locationLabel || 'Location not available'}
-                </Typography>
-              </Box>
-            </Box>
+                </span>
+              </div>
+            </div>
+            </div>
             {/* Company size / scale */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                mb: 1.5,
-              }}
-            >
-              <Group sx={{ fontSize: 18, color: sizeColor }} />
-              <Typography
-                variant="body2"
-                sx={{
-                  color: '#0b1957',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                }}
-              >
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-[18px] h-[18px]" style={{ color: sizeColor }} />
+              <span className="text-[#0b1957] text-sm font-semibold">
                 {sizeLabel}
-              </Typography>
-            </Box>
+              </span>
+            </div>
+            </div>
             {/* Links row */}
             {(company.website ||
               company.linkedinProfile ||
@@ -439,190 +277,119 @@ export default function CompanyCard({
               company.facebookUrl ||
               company.instagramUrl ||
               company.blogUrl) && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 1,
-                  mt: 1,
-                }}
-              >
+              <div className="flex flex-wrap gap-2 mt-2">
                 {company.website && (
-                  <Chip
-                    icon={<Language />}
-                    label="Website"
-                    component="a"
+                  <a
                     href={company.website}
                     target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#0b1957',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#0b1957',
-                      },
-                    }}
-                  />
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-[#0b1957] border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] cursor-pointer"
+                    >
+                      <Globe className="w-3 h-3 mr-1" />
+                      Website
+                    </Badge>
+                  </a>
                 )}
                 {company.linkedinProfile && (
-                  <Chip
-                    icon={<LinkedInIcon />}
-                    label="LinkedIn"
-                    component="a"
+                  <a
                     href={company.linkedinProfile}
                     target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#0077b5',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#0077b5',
-                      },
-                    }}
-                  />
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-[#0077b5] border border-gray-200 hover:bg-gray-50 hover:border-[#0077b5] cursor-pointer"
+                    >
+                      <Linkedin className="w-3 h-3 mr-1" />
+                      LinkedIn
+                    </Badge>
+                  </a>
                 )}
                 {company.facebookUrl && (
-                  <Chip
-                    icon={<Facebook />}
-                    label="Facebook"
-                    component="a"
+                  <a
                     href={company.facebookUrl}
                     target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#1877F2',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#1877F2',
-                      },
-                    }}
-                  />
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-[#1877F2] border border-gray-200 hover:bg-gray-50 hover:border-[#1877F2] cursor-pointer"
+                    >
+                      <Facebook className="w-3 h-3 mr-1" />
+                      Facebook
+                    </Badge>
+                  </a>
                 )}
                 {company.instagramUrl && (
-                  <Chip
-                    icon={<Instagram />}
-                    label="Instagram"
-                    component="a"
+                  <a
                     href={company.instagramUrl}
                     target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#C13584',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#C13584',
-                      },
-                    }}
-                  />
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-[#C13584] border border-gray-200 hover:bg-gray-50 hover:border-[#C13584] cursor-pointer"
+                    >
+                      <Instagram className="w-3 h-3 mr-1" />
+                      Instagram
+                    </Badge>
+                  </a>
                 )}
                 {company.blogUrl && (
-                  <Chip
-                    icon={<RssFeed />}
-                    label="Blog"
-                    component="a"
+                  <a
                     href={company.blogUrl}
                     target="_blank"
-                    clickable
-                    sx={{
-                      bgcolor: 'oklch(0.97 0 0)',
-                      color: '#0b1957',
-                      border: '1px solid oklch(0.922 0 0)',
-                      '&:hover': {
-                        bgcolor: 'oklch(0.97 0 0)',
-                        borderColor: '#0b1957',
-                      },
-                    }}
-                  />
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-[#0b1957] border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] cursor-pointer"
+                    >
+                      <Rss className="w-3 h-3 mr-1" />
+                      Blog
+                    </Badge>
+                  </a>
                 )}
-              </Box>
+              </div>
             )}
-          </Box>
-        </Box>
+          </div>
+        </div>
+      </CardContent>
       </CardContent>
       {/* Footer actions */}
-      <CardActions
-        sx={{
-          px: 2.5,
-          pb: 2.5,
-          pt: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-        }}
-      >
+      <CardFooter className="px-6 pb-6 pt-0 flex items-center justify-between gap-4">
         {/* Employee count & CTA */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <Box
-              sx={{
-                width: 65,
-                height: 65,
-                borderRadius: '50%',
-                background: hasEmployees
-                  ? 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)'
-                  : 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: hasEmployees
-                  ? '0 4px 12px rgba(0, 210, 255, 0.4)'
-                  : '0 4px 12px rgba(0, 0, 0, 0.25)',
-                flexShrink: 0,
-              }}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0 ${
+                hasEmployees
+                  ? 'bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] shadow-[0_4px_12px_rgba(0,210,255,0.4)]'
+                  : 'bg-gradient-to-br from-[#9e9e9e] to-[#757575] shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
+              }`}
             >
-              <Box
-                sx={{
-                  width: 55,
-                  height: 55,
-                  borderRadius: '50%',
-                  bgcolor: '#e0e0e0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                }}
-              >
-                <People
-                  sx={{
-                    color: hasEmployees ? '#3a7bd5' : '#757575',
-                    fontSize: hasEmployees ? 22 : 18,
-                    mb: hasEmployees ? 0.2 : 0,
-                  }}
+              <div className="w-[55px] h-[55px] rounded-full bg-[#e0e0e0] flex items-center justify-center flex-col gap-1">
+                <Users
+                  className={hasEmployees ? 'text-[#3a7bd5]' : 'text-[#757575]'}
+                  style={{ fontSize: hasEmployees ? 22 : 18 }}
                 />
                 {hasEmployees && (
-                  <Typography
-                    variant="h6"
-                    fontWeight="bold"
-                    sx={{
-                      color: '#3a7bd5',
-                      fontSize: '0.95rem',
-                      lineHeight: 1,
-                    }}
-                  >
+                  <span className="text-[#3a7bd5] text-[0.95rem] font-bold leading-none">
                     {company.employeeCount}
-                  </Typography>
+                  </span>
                 )}
-              </Box>
-            </Box>
-          </Box>
+              </div>
+            </div>
+          </div>
           <Button
-            variant="contained"
             onClick={(e) => {
               e.stopPropagation();
               if (handleGetEmployees) {
@@ -630,36 +397,19 @@ export default function CompanyCard({
               }
             }}
             disabled={!hasEmployees}
-            sx={{
-              background: hasEmployees
-                ? 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)'
-                : 'linear-gradient(135deg, #bdbdbd 0%, #9e9e9e 100%)',
-              color: hasEmployees ? 'white' : '#757575',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              textTransform: 'none',
-              px: 4.5,
-              py: 1,
-              height: '38px',
-              minWidth: '160px',
-              borderRadius: '50px',
-              boxShadow: hasEmployees
-                ? '0 4px 12px rgba(0, 210, 255, 0.4)'
-                : '0 4px 12px rgba(0, 0, 0, 0.25)',
-              transition: 'all 0.3s ease',
-              flexShrink: 0,
-              '&:hover': {
-                background: hasEmployees
-                  ? 'linear-gradient(135deg, #3a7bd5 0%, #2a5db0 100%)'
-                  : 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
-                transform: hasEmployees ? 'translateY(-1px)' : 'none',
-              },
-            }}
+            className={`
+              ${
+                hasEmployees
+                  ? 'bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white shadow-[0_4px_12px_rgba(0,210,255,0.4)] hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-[1px]'
+                  : 'bg-gradient-to-br from-[#bdbdbd] to-[#9e9e9e] text-[#757575] shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
+              }
+              font-bold text-[0.85rem] px-7 py-2 h-[38px] min-w-[160px] rounded-full transition-all duration-300 flex-shrink-0
+            `}
           >
             {hasEmployees ? 'View Employees' : 'No Employees Data'}
           </Button>
-        </Box>
-      </CardActions>
+        </div>
+      </CardFooter>
     </Card>
   );
-}
+}

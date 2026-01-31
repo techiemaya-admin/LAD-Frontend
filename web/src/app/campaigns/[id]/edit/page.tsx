@@ -1,8 +1,10 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Box, Button, TextField, Stack, Paper, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { ArrowBack, Save, PlayArrow } from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Play, Loader2 } from 'lucide-react';
 import { useCampaign, updateCampaign } from '@/features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
@@ -167,83 +169,82 @@ export default function CampaignEditPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <CircularProgress />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
   return (
-    <Box className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
-      <Paper className="border-b p-4 sticky top-0 z-10" elevation={1}>
-        <Stack direction="row" spacing={2} alignItems="center">
+      <div className="border-b p-4 sticky top-0 z-10 bg-white shadow-sm">
+        <div className="flex gap-4 items-center">
           <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ArrowBack />}
+            variant="outline"
+            size="sm"
             onClick={() => router.push(`/campaigns/${campaignId}`)}
           >
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <TextField
-            size="small"
+          <Input
+            size="default"
             value={campaignName}
             onChange={(e) => setCampaignName(e.target.value)}
             placeholder="Campaign name"
-            variant="outlined"
-            sx={{ flex: 1, maxWidth: 400 }}
+            className="flex-1 max-w-md"
           />
-          <Stack direction="row" spacing={1}>
+          <div className="flex gap-2">
             <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<Save />}
+              variant="default"
+              size="sm"
               onClick={() => handleSave(false)}
               disabled={saving}
             >
+              <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save'}
             </Button>
             <Button
-              variant="contained"
-              color="success"
-              size="small"
-              startIcon={<PlayArrow />}
+              variant="default"
+              size="sm"
               onClick={() => {
                 setShowStartDialog(true);
               }}
               disabled={saving}
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
+              <Play className="w-4 h-4 mr-2" />
               Save & Start
             </Button>
-          </Stack>
-        </Stack>
-      </Paper>
+          </div>
+        </div>
+      </div>
       {/* Workflow Editor - using AI Assistant workflow editor */}
-      <Box className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto">
         <Screen3ManualEditor />
-      </Box>
+      </div>
       {/* Start Confirmation Dialog */}
-      <Dialog open={showStartDialog} onClose={() => setShowStartDialog(false)}>
-        <DialogTitle>Start Campaign</DialogTitle>
+      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
         <DialogContent>
-          <Typography>
+          <DialogHeader>
+            <DialogTitle>Start Campaign</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-4">
             Are you sure you want to save and start this campaign? It will begin executing immediately.
-          </Typography>
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStartDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setShowStartDialog(false);
+                handleSave(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Start Campaign
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowStartDialog(false)}>Cancel</Button>
-          <Button
-            onClick={() => {
-              setShowStartDialog(false);
-              handleSave(true);
-            }}
-            variant="contained"
-            color="success"
-          >
-            Start Campaign
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
-}
+}

@@ -10,12 +10,27 @@ const getBackendUrl = (): string => {
 };
 
 /**
- * Get authorization token from localStorage
+ * Get authorization token from cookies
  * Token is stored during login process
  */
 const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('auth_token') || localStorage.getItem('token') || null;
+  if (typeof document === 'undefined') return null;
+
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    const name = rawName?.trim();
+    const value = rawValueParts.join('=');
+
+    if (!name) continue;
+
+    if (name === 'auth_token' || name === 'token') {
+      return decodeURIComponent(value || '');
+    }
+  }
+
+  return null;
 };
 
 /**

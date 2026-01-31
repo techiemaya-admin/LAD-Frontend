@@ -1,19 +1,18 @@
 'use client';
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Box, Typography, IconButton } from '@mui/material';
 import {
-  LinkedIn as LinkedInIcon,
-  Email,
-  Schedule,
+  Linkedin,
+  Mail,
+  Clock,
   CheckCircle,
-  PlayArrow,
-  Stop,
-  Delete,
+  Play,
+  StopCircle,
+  Trash2,
   Phone,
-  WhatsApp,
-  PersonSearch,
-} from '@mui/icons-material';
+  MessageCircle,
+  UserSearch,
+} from 'lucide-react';
 import { useCampaignStore } from '../../store/campaignStore';
 import { StepType } from '@/types/campaign';
 const getNodeColor = (type: StepType) => {
@@ -27,15 +26,15 @@ const getNodeColor = (type: StepType) => {
   return { bg: '#7c3aed', border: '#6D28D9' };
 };
 const getNodeIcon = (type: StepType) => {
-  if (type === 'start') return <PlayArrow sx={{ fontSize: 18 }} />;
-  if (type === 'end') return <Stop sx={{ fontSize: 18 }} />;
-  if (type === 'lead_generation') return <PersonSearch sx={{ fontSize: 18 }} />;
-  if (type.includes('linkedin')) return <LinkedInIcon sx={{ fontSize: 18 }} />;
-  if (type.includes('email')) return <Email sx={{ fontSize: 18 }} />;
-  if (type.includes('whatsapp')) return <WhatsApp sx={{ fontSize: 18 }} />;
-  if (type.includes('voice')) return <Phone sx={{ fontSize: 18 }} />;
-  if (type === 'delay') return <Schedule sx={{ fontSize: 18 }} />;
-  if (type === 'condition') return <CheckCircle sx={{ fontSize: 18 }} />;
+  if (type === 'start') return <Play className="w-[18px] h-[18px]" />;
+  if (type === 'end') return <StopCircle className="w-[18px] h-[18px]" />;
+  if (type === 'lead_generation') return <UserSearch className="w-[18px] h-[18px]" />;
+  if (type.includes('linkedin')) return <Linkedin className="w-[18px] h-[18px]" />;
+  if (type.includes('email')) return <Mail className="w-[18px] h-[18px]" />;
+  if (type.includes('whatsapp')) return <MessageCircle className="w-[18px] h-[18px]" />;
+  if (type.includes('voice')) return <Phone className="w-[18px] h-[18px]" />;
+  if (type === 'delay') return <Clock className="w-[18px] h-[18px]" />;
+  if (type === 'condition') return <CheckCircle className="w-[18px] h-[18px]" />;
   return null;
 };
 export default function CustomNode({ data, id, selected, type: nodeType }: NodeProps) {
@@ -88,88 +87,46 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
     return data?.title || stepType;
   };
   return (
-    <Box
-      sx={{
-        minWidth: 200,
-        bgcolor: '#FFFFFF',
+    <div
+      className="min-w-[200px] bg-white rounded-xl shadow-md transition-all duration-200 relative"
+      style={{
         border: `2px solid ${isSelected ? '#7c3aed' : colors.border}`,
-        borderRadius: '12px',
         boxShadow: isSelected ? '0 4px 12px rgba(124, 58, 237, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-        transition: 'all 0.2s',
-        position: 'relative',
       }}
     >
       <Handle type="target" position={Position.Top} style={{ background: colors.bg }} />
-      <Box
-        sx={{
-          bgcolor: colors.bg,
-          color: '#FFFFFF',
-          px: 2,
-          py: 1,
-          borderTopLeftRadius: '10px',
-          borderTopRightRadius: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+      <div
+        className="px-4 py-2 rounded-t-[10px] flex items-center justify-between text-white"
+        style={{ backgroundColor: colors.bg }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {getNodeIcon(stepType)}
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontWeight: 600, 
-              fontSize: '12px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flex: 1,
-            }}
+          <span 
+            className="font-semibold text-xs overflow-hidden text-ellipsis whitespace-nowrap flex-1"
             title={data?.title || stepType}
           >
             {data?.title || stepType}
-          </Typography>
-        </Box>
+          </span>
+        </div>
         {stepType !== 'start' && stepType !== 'end' && (
-          <IconButton
-            size="small"
+          <button
             onClick={handleDelete}
-            sx={{
-              color: '#FFFFFF',
-              p: 0.5,
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-            }}
+            className="text-white p-1 hover:bg-white/20 rounded transition-colors"
           >
-            <Delete sx={{ fontSize: 14 }} />
-          </IconButton>
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         )}
-      </Box>
-      <Box sx={{ p: stepType === 'delay' || stepType === 'condition' ? 2 : 1.5 }}>
+      </div>
+      <div className={stepType === 'delay' || stepType === 'condition' ? 'p-4' : 'p-3'}>
         {stepType === 'condition' && (
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: '#64748B',
-                fontSize: '10px',
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'block',
-                mb: 0.5,
-              }}
+          <div>
+            <span
+              className="text-[#64748B] text-[10px] font-medium uppercase tracking-wide block mb-1"
             >
               Checking:
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#1E293B',
-                fontSize: '13px',
-                fontWeight: 600,
-                display: 'block',
-                lineHeight: 1.4,
-              }}
+            </span>
+            <p
+              className="text-[#1E293B] text-[13px] font-semibold block leading-snug"
             >
               {(() => {
                 // Try to get condition text from getPreviewText first
@@ -195,34 +152,18 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
                 }
                 return 'Condition';
               })()}
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
         {stepType === 'delay' && (
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: '#64748B',
-                fontSize: '10px',
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'block',
-                mb: 0.5,
-              }}
+          <div>
+            <span
+              className="text-[#64748B] text-[10px] font-medium uppercase tracking-wide block mb-1"
             >
               Wait Time:
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#1E293B',
-                fontSize: '13px',
-                fontWeight: 600,
-                display: 'block',
-                lineHeight: 1.4,
-              }}
+            </span>
+            <p
+              className="text-[#1E293B] text-[13px] font-semibold block leading-snug"
             >
               {(() => {
                 // Try to get delay text from getPreviewText first
@@ -248,25 +189,17 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
                 }
                 return 'Delay';
               })()}
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
         {stepType !== 'delay' && stepType !== 'condition' && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: '#64748B',
-              fontSize: '11px',
-              display: 'block',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
+          <p
+            className="text-[#64748B] text-[11px] block overflow-hidden text-ellipsis whitespace-nowrap"
           >
             {getPreviewText()}
-          </Typography>
+          </p>
         )}
-      </Box>
+      </div>
       {/* For condition nodes, add two source handles for TRUE/FALSE branches */}
       {stepType === 'condition' ? (
         <>
@@ -286,6 +219,6 @@ export default function CustomNode({ data, id, selected, type: nodeType }: NodeP
       ) : (
         <Handle type="source" position={Position.Bottom} style={{ background: colors.bg }} />
       )}
-    </Box>
+    </div>
   );
-}
+}

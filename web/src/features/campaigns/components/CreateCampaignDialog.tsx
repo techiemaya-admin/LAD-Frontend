@@ -1,6 +1,14 @@
 'use client';
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/app-toaster';
 interface CreateCampaignDialogProps {
@@ -26,38 +34,33 @@ export default function CreateCampaignDialog({
     }
   };
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New Campaign</DialogTitle>
-      <DialogContent>
-        <TextField
-          fullWidth
-          label="Campaign Name"
-          value={campaignName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNameChange(e.target.value)}
-          placeholder="e.g., Q1 Outreach Campaign"
-          sx={{ mt: 2 }}
-          onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter' && campaignName.trim()) {
-              handleCreate();
-            }
-          }}
-        />
+    <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Campaign</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          <Input
+            placeholder="e.g., Q1 Outreach Campaign"
+            value={campaignName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNameChange(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter' && campaignName.trim()) {
+                handleCreate();
+              }
+            }}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleCreate}
+            className="bg-gradient-to-br from-[#00eaff] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#ff00e0]"
+          >
+            Create & Build
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleCreate}
-          variant="contained"
-          sx={{
-            background: 'linear-gradient(135deg, #00eaff, #7c3aed)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #7c3aed, #ff00e0)',
-            },
-          }}
-        >
-          Create & Build
-        </Button>
-      </DialogActions>
     </Dialog>
   );
-}
+}

@@ -181,7 +181,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
           </div>
         ) : (
           <>
-            <div className="space-y-3 flex-1 overflow-y-auto">
+            <div className="space-y-3 flex-1 overflow-y-auto p-2">
               {paginatedAgents.map((agent) => (
                 <div
                   key={agent.id}

@@ -1,44 +1,46 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 import {
-  Box, Card, CardContent, Typography, Button, Grid, Stack,
-  CircularProgress, LinearProgress, Avatar, Chip, Paper, IconButton
-} from '@mui/material';
-import {
-  ArrowBack, TrendingUp, People, Send, CheckCircle, Email, OpenInNew,
-  Error as ErrorIcon, LinkedIn as LinkedInIcon, Phone, WhatsApp,
-  Reply, TouchApp, BarChart, Timeline, AutoGraph, Rocket, Bolt, Insights, 
-  Campaign, Speed as SpeedIcon, EmojiEvents, DarkMode, LightMode, Wifi, WifiOff
-} from '@mui/icons-material';
-import { useCampaignAnalytics } from '@/features/campaigns/hooks/useCampaignAnalytics';
+  ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
+  AlertCircle, Linkedin, Phone, MessageCircle,
+  Reply, Hand, BarChart3, Timeline, TrendingDown, Rocket, Zap, Lightbulb, 
+  Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff
+} from 'lucide-react';
+import { useCampaignAnalytics } from '@sdk/features/campaigns/hooks/useCampaignAnalytics';
 import { useCampaignStatsLive } from '@sdk/features/campaigns/hooks/useCampaignStatsLive';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
+import { Loader2 } from 'lucide-react';
 const platformConfig = {
   linkedin: {
     name: 'LinkedIn',
-    icon: LinkedInIcon,
+    icon: Linkedin,
     color: '#0A66C2',
-    gradient: 'linear-gradient(135deg, #0A66C2 0%, #004182 100%)',
+    gradient: 'from-[#0A66C2] to-[#004182]',
   },
   email: {
     name: 'Email',
-    icon: Email,
+    icon: Mail,
     color: '#F59E0B',
-    gradient: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+    gradient: 'from-[#F59E0B] to-[#D97706]',
   },
   whatsapp: {
     name: 'WhatsApp',
-    icon: WhatsApp,
+    icon: MessageCircle,
     color: '#25D366',
-    gradient: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+    gradient: 'from-[#25D366] to-[#128C7E]',
   },
   voice: {
     name: 'Voice',
     icon: Phone,
     color: '#8B5CF6',
-    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+    gradient: 'from-[#8B5CF6] to-[#7C3AED]',
   },
 };
 export default function CampaignAnalyticsPage() {
@@ -61,19 +63,19 @@ export default function CampaignAnalyticsPage() {
   }, [error, push, router]);
   if (loading) {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <Card sx={{ p: 4, borderRadius: 4, textAlign: 'center' }}>
-          <CircularProgress sx={{ color: '#6366F1' }} />
-          <Typography sx={{ mt: 2, fontWeight: 600 }}>Loading Advanced Analytics...</Typography>
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
+        <Card className="p-8 rounded-2xl text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 font-semibold">Loading Advanced Analytics...</p>
         </Card>
-      </Box>
+      </div>
     );
   }
   if (!analytics) {
     return (
-      <Box sx={{ p: 3, bgcolor: '#0F172A', minHeight: '100vh' }}>
-        <Typography color="white">No analytics data available</Typography>
-      </Box>
+      <div className="p-6 bg-slate-900 min-h-screen">
+        <p className="text-white">No analytics data available</p>
+      </div>
     );
   }
   const stepTypes = analytics?.step_analytics?.map((s: any) => s.type?.toLowerCase()) || [];
@@ -114,246 +116,301 @@ export default function CampaignAnalyticsPage() {
       ];
   // Theme colors
   const theme = {
-    bg: isDarkMode ? '#0F172A' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
-    cardBg: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
-    cardBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
-    textPrimary: isDarkMode ? 'white' : '#1E293B',
-    textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : '#64748B',
-    textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : '#94A3B8',
-    statBg: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
-    statBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
-    progressBg: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+    bg: isDarkMode ? 'bg-slate-900' : 'bg-gradient-to-br from-indigo-50 via-blue-50 to-violet-50',
+    cardBg: isDarkMode ? 'bg-slate-800/80' : 'bg-white',
+    cardBorder: isDarkMode ? 'border-white/10' : 'border-slate-200',
+    textPrimary: isDarkMode ? 'text-white' : 'text-slate-900',
+    textSecondary: isDarkMode ? 'text-white/60' : 'text-slate-600',
+    textTertiary: isDarkMode ? 'text-white/50' : 'text-slate-500',
+    statBg: isDarkMode ? 'bg-white/5' : 'bg-slate-50',
+    statBorder: isDarkMode ? 'border-white/10' : 'border-slate-200',
+    progressBg: isDarkMode ? 'bg-white/10' : 'bg-slate-200',
   };
   return (
-    <Box sx={{ p: 3, background: theme.bg, height: '100%', overflow: 'auto', transition: 'all 0.3s ease' }}>
+    <div className={`p-6 ${theme.bg} min-h-screen overflow-auto transition-all duration-300`}>
       {/* Hero Header */}
-      <Box sx={{ background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)', borderRadius: 4, p: 4, mb: 4, position: 'relative', overflow: 'hidden', boxShadow: '0 10px 40px rgba(30, 41, 59, 0.4)' }}>
-        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)', borderRadius: '50%' }} />
-        <Box sx={{ position: 'absolute', bottom: -30, left: '30%', width: 150, height: 150, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <IconButton onClick={() => router.push('/campaigns')} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}><ArrowBack /></IconButton>
-              <Chip icon={<Rocket sx={{ color: '#fff !important' }} />} label="Advanced Analytics" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
-            </Box>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>{analytics.campaign.name}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B', ml: 1 }} />} label={analytics.campaign.status} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', textTransform: 'capitalize', fontWeight: 600 }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.8)' }}>Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Chip 
-              icon={isConnected ? <Wifi /> : <WifiOff />} 
-              label={isConnected ? 'Live' : 'Offline'} 
-              sx={{ 
-                bgcolor: isConnected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', 
-                color: isConnected ? '#10B981' : '#EF4444', 
-                fontWeight: 600,
-                border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` 
-              }} 
-            />
-            <Button variant="contained" startIcon={isDarkMode ? <LightMode /> : <DarkMode />} onClick={() => setIsDarkMode(!isDarkMode)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, px: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}>{isDarkMode ? 'Light' : 'Dark'}</Button>
-            <Button variant="contained" startIcon={<People />} onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} sx={{ bgcolor: 'white', color: '#6366F1', fontWeight: 600, px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}>View Leads</Button>
-            <Button variant="outlined" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} sx={{ borderColor: 'white', color: 'white', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>Edit Campaign</Button>
-          </Box>
-        </Box>
-      </Box>
+      <div className="bg-gradient-to-br from-slate-900 to-slate-700 rounded-2xl p-8 mb-8 relative overflow-hidden shadow-2xl">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-8 left-1/3 w-36 h-36 bg-blue-500/15 rounded-full blur-3xl" />
+        <div className="relative z-10 flex justify-between items-start flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-4 mb-4">
+              <Button 
+                onClick={() => router.push('/campaigns')} 
+                variant="ghost" 
+                size="icon"
+                className="bg-white/20 text-white hover:bg-white/30"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Badge className="bg-white/20 text-white font-semibold border-0">
+                <Rocket className="h-3 w-3 mr-1" />
+                Advanced Analytics
+              </Badge>
+            </div>
+            <h1 className="text-4xl font-extrabold text-white mb-2">{analytics.campaign.name}</h1>
+            <div className="flex items-center gap-4 flex-wrap">
+              <Badge className="bg-white/20 text-white capitalize font-semibold border-0">
+                <div className={`w-2 h-2 rounded-full mr-2 ${analytics.campaign.status === 'running' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {analytics.campaign.status}
+              </Badge>
+              <p className="text-white/80">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+          <div className="flex gap-4 items-center">
+            <Badge 
+              className={`${isConnected ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} font-semibold`}
+            >
+              {isConnected ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+              {isConnected ? 'Live' : 'Offline'}
+            </Badge>
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsDarkMode(!isDarkMode)} 
+              className="bg-white/20 text-white font-semibold px-4 hover:bg-white/30"
+            >
+              {isDarkMode ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+              {isDarkMode ? 'Light' : 'Dark'}
+            </Button>
+            <Button 
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} 
+              className="bg-white text-indigo-600 font-semibold px-6 hover:bg-white/90"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              View Leads
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} 
+              className="border-white text-white hover:bg-white/10"
+            >
+              Edit Campaign
+            </Button>
+          </div>
+        </div>
+      </div>
       {/* Quick Stats Row */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 3, position: 'relative', overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(99, 102, 241, 0.1)', width: 40, height: 40 }}><People sx={{ color: '#6366F1' }} /></Avatar></Box>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Total Leads</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.leads_count ?? analytics.overview.total_leads}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><TrendingUp sx={{ color: '#10B981', fontSize: 16 }} /><Typography sx={{ color: '#10B981', fontSize: 12, fontWeight: 600 }}>Active Campaign</Typography></Box>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 3, position: 'relative', overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', width: 40, height: 40 }}><Send sx={{ color: '#10B981' }} /></Avatar></Box>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Messages Sent</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.sent_count ?? analytics.overview.sent}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><Bolt sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>Outreach</Typography></Box>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 3, position: 'relative', overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', width: 40, height: 40 }}><LinkedInIcon sx={{ color: '#3B82F6' }} /></Avatar></Box>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Connected</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.connected_count ?? analytics.overview.connected}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><CheckCircle sx={{ color: '#3B82F6', fontSize: 16 }} /><Typography sx={{ color: '#3B82F6', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 3, position: 'relative', overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <Box sx={{ position: 'absolute', top: 10, right: 10 }}><Avatar sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', width: 40, height: 40 }}><Reply sx={{ color: '#F59E0B' }} /></Avatar></Box>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14, mb: 1 }}>Replied</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, color: theme.textPrimary }}>{liveStats?.replied_count ?? analytics.overview.replied}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}><EmojiEvents sx={{ color: '#F59E0B', fontSize: 16 }} /><Typography sx={{ color: '#F59E0B', fontSize: 12, fontWeight: 600 }}>{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</Typography></Box>
-          </Card>
-        </Grid>
-      </Grid>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl p-6 relative overflow-hidden ${isDarkMode ? '' : 'shadow-md'} transition-all hover:shadow-lg`}>
+          <div className="absolute top-3 right-3">
+            <Avatar className="bg-indigo-100 h-10 w-10">
+              <Users className="h-5 w-5 text-indigo-600" />
+            </Avatar>
+          </div>
+          <p className={`${theme.textSecondary} text-sm mb-2`}>Total Leads</p>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.leads_count ?? analytics.overview.total_leads}</h2>
+          <div className="flex items-center gap-1 mt-2">
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <p className="text-emerald-500 text-xs font-semibold">Active Campaign</p>
+          </div>
+        </Card>
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl p-6 relative overflow-hidden ${isDarkMode ? '' : 'shadow-md'} transition-all hover:shadow-lg`}>
+          <div className="absolute top-3 right-3">
+            <Avatar className="bg-emerald-100 h-10 w-10">
+              <Send className="h-5 w-5 text-emerald-600" />
+            </Avatar>
+          </div>
+          <p className={`${theme.textSecondary} text-sm mb-2`}>Messages Sent</p>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.sent_count ?? analytics.overview.sent}</h2>
+          <div className="flex items-center gap-1 mt-2">
+            <Zap className="h-4 w-4 text-amber-500" />
+            <p className="text-amber-500 text-xs font-semibold">Outreach</p>
+          </div>
+        </Card>
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl p-6 relative overflow-hidden ${isDarkMode ? '' : 'shadow-md'} transition-all hover:shadow-lg`}>
+          <div className="absolute top-3 right-3">
+            <Avatar className="bg-blue-100 h-10 w-10">
+              <Linkedin className="h-5 w-5 text-blue-600" />
+            </Avatar>
+          </div>
+          <p className={`${theme.textSecondary} text-sm mb-2`}>Connected</p>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.connected_count ?? analytics.overview.connected}</h2>
+          <div className="flex items-center gap-1 mt-2">
+            <CheckCircle className="h-4 w-4 text-blue-600" />
+            <p className="text-blue-600 text-xs font-semibold">{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</p>
+          </div>
+        </Card>
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl p-6 relative overflow-hidden ${isDarkMode ? '' : 'shadow-md'} transition-all hover:shadow-lg`}>
+          <div className="absolute top-3 right-3">
+            <Avatar className="bg-amber-100 h-10 w-10">
+              <Reply className="h-5 w-5 text-amber-600" />
+            </Avatar>
+          </div>
+          <p className={`${theme.textSecondary} text-sm mb-2`}>Replied</p>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.replied_count ?? analytics.overview.replied}</h2>
+          <div className="flex items-center gap-1 mt-2">
+            <Trophy className="h-4 w-4 text-amber-500" />
+            <p className="text-amber-500 text-xs font-semibold">{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</p>
+          </div>
+        </Card>
+      </div>
       {/* Analytics Charts Section */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <Avatar sx={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', width: 44, height: 44 }}><BarChart sx={{ color: 'white' }} /></Avatar>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: theme.textPrimary }}>Visual Analytics</Typography>
-            <Typography sx={{ color: theme.textSecondary, fontSize: 14 }}>Charts and graphs for deeper insights</Typography>
-          </Box>
-        </Box>
-        <Box sx={{ 
-          '& .MuiPaper-root': { 
-            bgcolor: isDarkMode ? 'rgba(30, 41, 59, 0.8) !important' : 'white !important', 
-            border: `1px solid ${theme.cardBorder}`,
-            boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)',
-            '& .MuiTypography-root': { color: `${theme.textPrimary} !important` }
-          },
-          '& .recharts-text': { fill: `${theme.textSecondary} !important` },
-          '& .recharts-cartesian-grid-horizontal line, & .recharts-cartesian-grid-vertical line': { stroke: `${theme.cardBorder} !important` },
-          '& .recharts-legend-item-text': { color: `${theme.textPrimary} !important` }
-        }}>
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-6">
+          <Avatar className="bg-gradient-to-br from-emerald-500 to-emerald-600 h-11 w-11">
+            <BarChart3 className="h-5 w-5 text-white" />
+          </Avatar>
+          <div>
+            <h2 className={`text-2xl font-bold ${theme.textPrimary}`}>Visual Analytics</h2>
+            <p className={`${theme.textSecondary} text-sm`}>Charts and graphs for deeper insights</p>
+          </div>
+        </div>
+        <div className={isDarkMode ? 'analytics-dark' : ''}>
           <AnalyticsCharts data={{ leadsOverTime, channelBreakdown, funnel }} />
-        </Box>
-      </Box>
+        </div>
+      </div>
       {/* Channel Performance Cards */}
       {platformAnalytics.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <Avatar sx={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', width: 44, height: 44 }}><Insights /></Avatar>
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: theme.textPrimary }}>Channel Performance</Typography>
-              <Typography sx={{ color: theme.textSecondary, fontSize: 14 }}>Real-time analytics for your active channels</Typography>
-            </Box>
-            <Chip icon={<AutoGraph sx={{ fontSize: 16, color: '#10B981 !important' }} />} label="Live" size="small" sx={{ ml: 'auto', bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981', fontWeight: 600, animation: 'pulse 2s infinite', '@keyframes pulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.7 } } }} />
-          </Box>
-          <Grid container spacing={3}>
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            <Avatar className="bg-gradient-to-br from-indigo-500 to-purple-600 h-11 w-11">
+              <Lightbulb className="h-5 w-5 text-white" />
+            </Avatar>
+            <div>
+              <h2 className={`text-2xl font-bold ${theme.textPrimary}`}>Channel Performance</h2>
+              <p className={`${theme.textSecondary} text-sm`}>Real-time analytics for your active channels</p>
+            </div>
+            <Badge className="ml-auto bg-emerald-500/10 text-emerald-500 font-semibold animate-pulse">
+              <TrendingDown className="h-3 w-3 mr-1" />
+              Live
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {platformAnalytics.map((item: any) => {
               const config = platformConfig[item.platform as keyof typeof platformConfig];
               const PlatformIcon = config.icon;
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={item.platform}>
-                  <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, overflow: 'hidden', transition: 'all 0.3s ease', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', '&:hover': { transform: 'translateY(-8px)', boxShadow: `0 20px 40px ${config.color}20`, border: `1px solid ${config.color}40` } }}>
-                    <Box sx={{ background: config.gradient, p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}><PlatformIcon sx={{ color: '#fff', fontSize: 24 }} /></Avatar>
-                        <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff' }}>{config.name}</Typography>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>Channel Analytics</Typography>
-                        </Box>
-                      </Box>
-                      <Chip label={item.actions > 0 ? 'Active' : 'Ready'} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 600, fontSize: 11 }} />
-                    </Box>
-                    <Box sx={{ p: 2.5 }}>
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 6 }}>
-                          <Box sx={{ textAlign: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: config.color }}>{item.actions}</Typography>
-                            <Typography sx={{ color: theme.textSecondary, fontSize: 12 }}>Actions</Typography>
-                          </Box>
-                        </Grid>
-                        <Grid size={{ xs: 6 }}>
-                          <Box sx={{ textAlign: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#10B981' }}>{item.sent}</Typography>
-                            <Typography sx={{ color: theme.textSecondary, fontSize: 12 }}>Sent</Typography>
-                          </Box>
-                        </Grid>
-                        <Grid size={{ xs: 6 }}>
-                          <Box sx={{ textAlign: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#3B82F6' }}>{item.connected}</Typography>
-                            <Typography sx={{ color: theme.textSecondary, fontSize: 12 }}>Connected</Typography>
-                          </Box>
-                        </Grid>
-                        <Grid size={{ xs: 6 }}>
-                          <Box sx={{ textAlign: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#F59E0B' }}>{item.replied}</Typography>
-                            <Typography sx={{ color: theme.textSecondary, fontSize: 12 }}>Replied</Typography>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                      <Box sx={{ mt: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography sx={{ color: theme.textSecondary, fontSize: 13 }}>Success Rate</Typography>
-                          <Typography sx={{ color: config.color, fontWeight: 700 }}>{item.rate.toFixed(1)}%</Typography>
-                        </Box>
-                        <LinearProgress variant="determinate" value={Math.min(item.rate, 100)} sx={{ height: 8, borderRadius: 4, bgcolor: theme.progressBg, '& .MuiLinearProgress-bar': { background: config.gradient, borderRadius: 4 } }} />
-                      </Box>
-                    </Box>
-                  </Card>
-                </Grid>
+                <Card 
+                  key={item.platform} 
+                  className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl overflow-hidden transition-all duration-300 ${isDarkMode ? '' : 'shadow-md'} hover:-translate-y-2 hover:shadow-xl`}
+                  style={{ borderColor: `${config.color}40` }}
+                >
+                  <div className={`bg-gradient-to-br ${config.gradient} p-5 flex items-center justify-between`}>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="bg-white/20 h-12 w-12">
+                        <PlatformIcon className="h-6 w-6 text-white" />
+                      </Avatar>
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{config.name}</h3>
+                        <p className="text-white/80 text-xs">Channel Analytics</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-white/20 text-white font-semibold text-xs border-0">
+                      {item.actions > 0 ? 'Active' : 'Ready'}
+                    </Badge>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className={`text-center p-3 ${theme.statBg} rounded-xl border ${theme.statBorder}`}>
+                        <h4 className="text-2xl font-extrabold" style={{ color: config.color }}>{item.actions}</h4>
+                        <p className={`${theme.textSecondary} text-xs`}>Actions</p>
+                      </div>
+                      <div className={`text-center p-3 ${theme.statBg} rounded-xl border ${theme.statBorder}`}>
+                        <h4 className="text-2xl font-extrabold text-emerald-500">{item.sent}</h4>
+                        <p className={`${theme.textSecondary} text-xs`}>Sent</p>
+                      </div>
+                      <div className={`text-center p-3 ${theme.statBg} rounded-xl border ${theme.statBorder}`}>
+                        <h4 className="text-2xl font-extrabold text-blue-500">{item.connected}</h4>
+                        <p className={`${theme.textSecondary} text-xs`}>Connected</p>
+                      </div>
+                      <div className={`text-center p-3 ${theme.statBg} rounded-xl border ${theme.statBorder}`}>
+                        <h4 className="text-2xl font-extrabold text-amber-500">{item.replied}</h4>
+                        <p className={`${theme.textSecondary} text-xs`}>Replied</p>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <p className={`${theme.textSecondary} text-sm`}>Success Rate</p>
+                        <p className="font-bold" style={{ color: config.color }}>{item.rate.toFixed(1)}%</p>
+                      </div>
+                      <Progress value={Math.min(item.rate, 100)} className="h-2" />
+                    </div>
+                  </div>
+                </Card>
               );
             })}
-          </Grid>
-        </Box>
+          </div>
+        </div>
       )}
       {/* Performance Metrics Section */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, height: '100%', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.2)' }}><BarChart sx={{ color: '#3B82F6' }} /></Avatar>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: theme.textPrimary }}>Outreach Metrics</Typography>
-              </Box>
-              <Stack spacing={2.5}>
-                {[
-                  { label: 'Sent', value: analytics.overview.sent, icon: Send, color: '#6366F1' },
-                  { label: 'Delivered', value: analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
-                  { label: 'Opened', value: analytics.overview.opened, icon: OpenInNew, color: '#8B5CF6' },
-                  { label: 'Clicked', value: analytics.overview.clicked, icon: TouchApp, color: '#EC4899' },
-                  { label: 'Connected', value: analytics.overview.connected, icon: LinkedInIcon, color: '#0A66C2' },
-                  { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
-                ].map((metric) => (
-                  <Box key={metric.label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: theme.statBg, borderRadius: 2, border: `1px solid ${theme.statBorder}` }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: `${metric.color}20`, width: 36, height: 36 }}><metric.icon sx={{ color: metric.color, fontSize: 18 }} /></Avatar>
-                      <Typography sx={{ color: theme.textSecondary }}>{metric.label}</Typography>
-                    </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: theme.textPrimary }}>{metric.value}</Typography>
-                  </Box>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, height: '100%', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Avatar sx={{ bgcolor: 'rgba(139, 92, 246, 0.2)' }}><SpeedIcon sx={{ color: '#8B5CF6' }} /></Avatar>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: theme.textPrimary }}>Performance Rates</Typography>
-              </Box>
-              <Stack spacing={3}>
-                {[
-                  { label: 'Delivery Rate', value: analytics.metrics.delivery_rate ?? 0, color: '#10B981' },
-                  { label: 'Open Rate', value: analytics.metrics.open_rate ?? 0, color: '#8B5CF6' },
-                  { label: 'Click Rate', value: analytics.metrics.click_rate ?? 0, color: '#EC4899' },
-                  { label: 'Connection Rate', value: analytics.metrics.connection_rate ?? 0, color: '#0A66C2' },
-                  { label: 'Reply Rate', value: analytics.metrics.reply_rate ?? 0, color: '#F59E0B' },
-                ].map((rate) => (
-                  <Box key={rate.label}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ color: theme.textSecondary }}>{rate.label}</Typography>
-                      <Typography sx={{ color: rate.color, fontWeight: 700 }}>{rate.value.toFixed(1)}%</Typography>
-                    </Box>
-                    <LinearProgress variant="determinate" value={rate.value} sx={{ height: 10, borderRadius: 5, bgcolor: theme.progressBg, '& .MuiLinearProgress-bar': { bgcolor: rate.color, borderRadius: 5 } }} />
-                  </Box>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl h-full ${isDarkMode ? '' : 'shadow-md'} transition-all`}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <Avatar className="bg-blue-500/20">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+              </Avatar>
+              <h3 className={`text-xl font-bold ${theme.textPrimary}`}>Outreach Metrics</h3>
+            </div>
+            <div className="space-y-5">
+              {[
+                { label: 'Sent', value: analytics.overview.sent, icon: Send, color: '#6366F1' },
+                { label: 'Delivered', value: analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
+                { label: 'Opened', value: analytics.overview.opened, icon: ExternalLink, color: '#8B5CF6' },
+                { label: 'Clicked', value: analytics.overview.clicked, icon: Hand, color: '#EC4899' },
+                { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
+                { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
+              ].map((metric) => (
+                <div 
+                  key={metric.label} 
+                  className={`flex justify-between items-center p-4 ${theme.statBg} rounded-xl border ${theme.statBorder}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9" style={{ backgroundColor: `${metric.color}20` }}>
+                      <metric.icon className="h-4 w-4" style={{ color: metric.color }} />
+                    </Avatar>
+                    <p className={theme.textSecondary}>{metric.label}</p>
+                  </div>
+                  <p className={`text-xl font-bold ${theme.textPrimary}`}>{metric.value}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl h-full ${isDarkMode ? '' : 'shadow-md'} transition-all`}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <Avatar className="bg-purple-500/20">
+                <Gauge className="h-5 w-5 text-purple-600" />
+              </Avatar>
+              <h3 className={`text-xl font-bold ${theme.textPrimary}`}>Performance Rates</h3>
+            </div>
+            <div className="space-y-6">
+              {[
+                { label: 'Delivery Rate', value: analytics.metrics.delivery_rate ?? 0, color: '#10B981' },
+                { label: 'Open Rate', value: analytics.metrics.open_rate ?? 0, color: '#8B5CF6' },
+                { label: 'Click Rate', value: analytics.metrics.click_rate ?? 0, color: '#EC4899' },
+                { label: 'Connection Rate', value: analytics.metrics.connection_rate ?? 0, color: '#0A66C2' },
+                { label: 'Reply Rate', value: analytics.metrics.reply_rate ?? 0, color: '#F59E0B' },
+              ].map((rate) => (
+                <div key={rate.label}>
+                  <div className="flex justify-between mb-2">
+                    <p className={theme.textSecondary}>{rate.label}</p>
+                    <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
+                  </div>
+                  <Progress value={rate.value} className="h-2.5" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       {/* No Steps Message */}
       {(!analytics.step_analytics || analytics.step_analytics.length === 0) && platformAnalytics.length === 0 && (
-        <Card sx={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 3, p: 6, textAlign: 'center', boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)', transition: 'all 0.3s ease' }}>
-          <Avatar sx={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', width: 80, height: 80, mx: 'auto', mb: 3 }}><Campaign sx={{ fontSize: 40 }} /></Avatar>
-          <Typography variant="h5" sx={{ color: theme.textPrimary, fontWeight: 700, mb: 1 }}>No Campaign Steps Yet</Typography>
-          <Typography sx={{ color: theme.textSecondary, mb: 3 }}>Add steps to your campaign to start seeing analytics data here</Typography>
-          <Button variant="contained" onClick={() => router.push(`/campaigns/${campaignId}`)} sx={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', fontWeight: 600 }}>Configure Campaign</Button>
+        <Card className={`${theme.cardBg} border ${theme.cardBorder} rounded-2xl p-12 text-center ${isDarkMode ? '' : 'shadow-md'} transition-all`}>
+          <Avatar className="bg-gradient-to-br from-indigo-500 to-purple-600 h-20 w-20 mx-auto mb-6">
+            <Megaphone className="h-10 w-10 text-white" />
+          </Avatar>
+          <h2 className={`text-2xl ${theme.textPrimary} font-bold mb-2`}>No Campaign Steps Yet</h2>
+          <p className={`${theme.textSecondary} mb-6`}>Add steps to your campaign to start seeing analytics data here</p>
+          <Button 
+            onClick={() => router.push(`/campaigns/${campaignId}`)} 
+            className="bg-gradient-to-br from-indigo-500 to-purple-600 font-semibold"
+          >
+            Configure Campaign
+          </Button>
         </Card>
       )}
-    </Box>
+    </div>
   );
 }

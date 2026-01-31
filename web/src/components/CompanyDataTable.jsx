@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apolloLeadsService, getDecisionMakerPhone } from '@/features/apollo-leads';
-import { Phone as PhoneIcon } from '@mui/icons-material';
+import { Phone as PhoneIcon } from 'lucide-react';
 import { safeStorage } from '../utils/storage';
 // Get API base URL from environment variable
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
@@ -19,77 +19,59 @@ const getUserId = () => {
     return 'demo_user_123';
   }
 };
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
+import { Chip } from '@/components/ui/chip';
 import {
-  Box,
-  Grid,
-  Typography,
-  Chip,
-  Tooltip,
-  IconButton,
-  Card,
-  CardContent,
-  CardActions,
-  Avatar,
-  Link,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Checkbox,
-  FormControlLabel,
-  Paper,
-  Fade,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-  Alert,
-  Menu,
-  Tabs,
-  Tab,
-  Skeleton,
-  Stack
-} from '@mui/material';
-import {
-  Business,
-  Person,
-  Email,
+  Building2 as Business,
+  User as Person,
+  Mail as Email,
   Phone,
-  Language,
-  LocationOn,
-  LinkedIn as LinkedInIcon,
-  LinkedIn,
-  ExpandMore,
-  People,
-  Work,
-  SelectAll,
-  SmartToy,
-  CheckCircle,
+  Globe as Language,
+  MapPin as LocationOn,
+  Linkedin as LinkedInIcon,
+  Linkedin as LinkedIn,
+  ChevronDown as ExpandMore,
+  Users as People,
+  Briefcase as Work,
+  CheckSquare as SelectAll,
+  Bot as SmartToy,
+  CheckCircle2 as CheckCircle,
   Check,
   Facebook,
   Instagram,
-  CalendarToday,
-  Group,
-  AttachMoney,
+  Calendar as CalendarToday,
+  Users as Group,
+  DollarSign as AttachMoney,
   Home,
   Tag,
   Settings,
   TrendingUp,
   TrendingDown,
-  ShowChart,
+  LineChart as ShowChart,
   Lock,
-  Public,
+  Globe as Public,
   Code,
-  Article,
-  RssFeed,
-  ViewModule,
-  ViewList,
-  BusinessCenter,
-  Straighten,
-  FilterList
-} from '@mui/icons-material';
+  FileText as Article,
+  Rss as RssFeed,
+  Grid as ViewModule,
+  List as ViewList,
+  Briefcase as BusinessCenter,
+  Ruler as Straighten,
+  Filter as FilterList,
+  Loader2
+} from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
 export default function CompanyDataTable({ 
   data = [], 
@@ -459,15 +441,12 @@ if (!id) return null;
     }
   const handleViewDetails = async (company) => {
     // Fetch richer company details for Apollo results when available
-      try {
-        :', company);
-        );
-        // Get company ID for summary lookup
+    try {
+      console.log('Viewing company:', company);
+      // Get company ID for summary lookup
       const companyId = normalizeCompanyId(company.id || company.company_id || company.apollo_organization_id);
       // First check if company already has summary attached (from restoration)
-      let summary = company.summary;
-      || 'none'
-      });
+      let summary = company.summary || 'none';
       // If not, try to find in companySummaries prop with multiple matching strategies
       if (!summary && companyId && Object.keys(companySummaries).length > 0) {
         // Try direct lookup
@@ -485,10 +464,11 @@ if (!id) return null;
       }
       // Log summary lookup result
       if (summary) {
-        } else {
-        );
+        console.log('✓ Using company summary');
+      } else {
+        console.log('⚠ No summary available for company');
       }
-        // Always set company with summary (preserve if it exists, add if found)
+      // Always set company with summary (preserve if it exists, add if found)
         const companyWithSummary = {
           ...company,
           ...(summary ? { summary } : {}) // Always include summary if we have it
@@ -525,21 +505,21 @@ if (!id) return null;
             }
           } else {
             console.warn('⚠️ No additional details returned for company id:', company.id);
+          }
+        } catch (e) {
+          console.error('❌ Failed fetching company details:', e);
+        } finally {
+          // Clear loading marker
+          setSelectedCompany(prev => {
+            if (!prev) return prev;
+            const copy = { ...prev };
+            delete copy.__loadingDetails;
+            return copy;
+          });
         }
-      } catch (e) {
-        console.error('❌ Failed fetching company details:', e);
-      } finally {
-        // Clear loading marker
-        setSelectedCompany(prev => {
-          if (!prev) return prev;
-          const copy = { ...prev };
-          delete copy.__loadingDetails;
-          return copy;
-        });
-      }
       }
     } catch (e) {
-      console.error('❌ Failed fetching company details:', e);
+      console.error('❌ Failed in handleViewDetails:', e);
     }
   };
   const handleCloseDialog = () => {
@@ -1238,7 +1218,7 @@ if (!id) return null;
     setPhoneLoading(prev => ({ ...prev, [companyId]: true }));
     setPhoneError(prev => ({ ...prev, [companyId]: null }));
     try {
-      ');
+      console.log('Fetching phone for company');
       const phoneResult = await getDecisionMakerPhone(
         companyDomain,
         companyName,
@@ -1513,9 +1493,10 @@ if (!id) return null;
       // Handle ANY immediate success with phone number (cached OR instant reveal)
       if (data.success && data.phone) {
         if (data.from_cache) {
-          ');
+          console.log('Phone from cache');
         } else {
-          }
+          console.log('Phone revealed instantly');
+        }
         // Normalize phone number - remove all spaces but preserve dashes before storing
         const normalizedPhone = (data.phone || '').replace(/\s+/g, ""); // Remove spaces only, preserve dashes (-)
         setRevealedContacts(prev => ({
@@ -1532,7 +1513,7 @@ if (!id) return null;
       }
       // Handle "processing" status (webhook-based reveal)
       if (data.status === 'processing') {
-        ');
+        console.log('Phone reveal in progress');
         // Start polling for phone reveal status
         let pollAttempts = 0;
         const maxPollAttempts = 60; // Poll for up to 5 minutes (60 * 5 seconds)
@@ -1677,9 +1658,10 @@ if (!id) return null;
       }
       if (data.success && data.email) {
         if (data.from_cache) {
-          ');
+          console.log('Email from cache');
         } else {
-          }
+          console.log('Email revealed instantly');
+        }
         setRevealedContacts(prev => ({
           ...prev,
           [employeeId]: { ...prev[employeeId], email: data.email }
@@ -1834,47 +1816,64 @@ if (!id) return null;
     }
   };
   const renderCLevelExecutives = (executives) => {
-    );
     if (!executives || executives.length === 0) {
-      return <Typography variant="body2" color="text.secondary">No executive data available</Typography>;
+      return <p className="text-sm text-muted-foreground">No executive data available</p>;
     }
     // // Disabled for performance
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <div className="flex flex-col gap-1">
         {executives.map((exec, index) => (
-          <Card key={index} variant="outlined" sx={{ p: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                <Person fontSize="small" />
+          <Card key={index} className="border p-1">
+            <div className="flex items-center gap-1">
+              <Avatar className="w-8 h-8 bg-primary">
+                <Person className="h-4 w-4" />
               </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle2" fontWeight="bold">
+              <div className="flex-1">
+                <p className="text-sm font-bold">
                   {exec.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
+                </p>
+                <p className="text-xs text-muted-foreground">
                   {exec.position}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                </p>
+              </div>
+              <div className="flex gap-0.5">
                 {exec.email && (
-                  <Tooltip title="Email">
-                    <IconButton size="small" href={`mailto:${exec.email}`}>
-                      <Email fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={`mailto:${exec.email}`}>
+                            <Email className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Email</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 {exec.linkedin && (
-                  <Tooltip title="LinkedIn">
-                    <IconButton size="small" href={exec.linkedin} target="_blank">
-                      <Language fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={exec.linkedin} target="_blank" rel="noopener noreferrer">
+                            <Language className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>LinkedIn</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
-              </Box>
-            </Box>
+              </div>
+            </div>
           </Card>
         ))}
-      </Box>
+      </div>
     );
   };
   const getIndustryColor = (industry) => {
@@ -1915,141 +1914,104 @@ if (!id) return null;
     return '#f44336'; // Red for 1-10
   };
   return (
-    <Box sx={{ width: '100%', p: 2 }}>
+    <div className="w-full p-2">
       {/* Header - Matching Image Design */}
       {searchQuery && (
-        <Box sx={{ 
-          mb: 3, 
-          p: 3,
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%)',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-            <Business sx={{ fontSize: 28, color: '#64b5f6' }} />
-            <Typography variant="h5" fontWeight="600" sx={{ color: '#ffffff' }}>
+        <div className="mb-3 p-3 rounded-xl bg-gradient-to-br from-slate-800/95 to-slate-700/95 border border-slate-400/20 shadow-lg">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Business className="h-7 w-7 text-blue-400" />
+            <h2 className="text-xl font-semibold text-white">
               {searchQuery.industry || 'Company Search Results'}
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
+            </h2>
+          </div>
+          <p className="text-sm text-white/70 mb-1">
             Found {data.length} leads • {searchQuery.date || new Date().toLocaleString()} 
             {searchQuery.location && ` • Location: ${searchQuery.location}`}
-          </Typography>
+          </p>
           <Chip 
-            label={`${data.length} results`}
-            size="small"
-            sx={{ 
-              bgcolor: 'rgba(100, 181, 246, 0.2)',
-              color: '#64b5f6',
-              fontWeight: 600,
-              border: '1px solid rgba(100, 181, 246, 0.3)',
-              fontSize: '0.85rem'
-            }}
-          />
-        </Box>
+            className="bg-blue-400/20 text-blue-400 font-semibold border border-blue-400/30 text-sm"
+          >
+            {data.length} results
+          </Chip>
+        </div>
       )}
       {/* Fallback Header if no search query */}
       {!searchQuery && !employeeSearchQuery && (
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Business sx={{ fontSize: 32, color: 'primary.main' }} />
-          <Typography variant="h4" fontWeight="bold">
+        <div className="mb-3 flex items-center gap-2">
+          <Business className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold">
             Company Data Results
-          </Typography>
-        </Box>
+          </h1>
+        </div>
       )}
       {/* Header for employee search */}
       {employeeSearchQuery && (
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Business sx={{ fontSize: 32, color: 'primary.main' }} />
-          <Typography variant="h4" fontWeight="bold">
+        <div className="mb-3 flex items-center gap-2">
+          <Business className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold">
             Company Data Results
-          </Typography>
-        </Box>
+          </h1>
+        </div>
       )}
       {/* Tabs for Companies and Employees - Always show */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="border-b border-border mb-3 flex items-center justify-between">
           <Tabs 
-            value={activeTab} 
-            onChange={(e, newValue) => {
+            value={String(activeTab)} 
+            onValueChange={(newValue) => {
               userManuallyChangedTabRef.current = true; // Mark as manual change
-              updateActiveTab(newValue);
+              updateActiveTab(parseInt(newValue));
               // Reset the flag after a short delay to allow auto-switch for new searches
               setTimeout(() => {
                 userManuallyChangedTabRef.current = false;
               }, 2000); // 2 seconds delay
             }}
-            sx={{
-              '& .MuiTab-root': {
-                fontSize: '1rem',
-                fontWeight: 600,
-                textTransform: 'none',
-                minHeight: 56,
-                color: 'oklch(0.556 0 0)',
-                '&.Mui-selected': {
-                  color: '#0b1957',
-                }
-              },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#0b1957',
-              }
-            }}
+            className="w-auto"
           >
-            <Tab 
-              label={`Companies (${(() => {
-                const filtered = getFilteredData().filter(item => {
-                  const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
-                  if (!isCompany) return false;
-                  const hasPhone = Boolean(item.phone);
-                  const hasEmployees = Boolean(item.employeeCount && item.employeeCount > 0);
-                  return hasPhone || hasEmployees;
-                });
-                return filtered.length;
-              })()})`} 
-              icon={<Business />}
-              iconPosition="start"
-              disabled={false}
-            />
-            <Tab 
-              label={`Employees (${(() => {
-                const filtered = getFilteredEmployeeData().filter(item => {
-                  return item.first_name || item.last_name || item.title || (item.name && !item.companyName && !item.username);
-                });
-                return filtered.length;
-              })()})`} 
-              icon={<Person />}
-              iconPosition="start"
-              disabled={false}
-            />
+            <TabsList className="h-14">
+              <TabsTrigger 
+                value="0"
+                className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
+              >
+                <Business className="mr-2 h-4 w-4" />
+                Companies ({(() => {
+                  const filtered = getFilteredData().filter(item => {
+                    const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
+                    if (!isCompany) return false;
+                    const hasPhone = Boolean(item.phone);
+                    const hasEmployees = Boolean(item.employeeCount && item.employeeCount > 0);
+                    return hasPhone || hasEmployees;
+                  });
+                  return filtered.length;
+                })()})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="1"
+                className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
+              >
+                <Person className="mr-2 h-4 w-4" />
+                Employees ({(() => {
+                  const filtered = getFilteredEmployeeData().filter(item => {
+                    return item.first_name || item.last_name || item.title || (item.name && !item.companyName && !item.username);
+                  });
+                  return filtered.length;
+                })()})
+              </TabsTrigger>
+            </TabsList>
           </Tabs>
           {/* Buttons on the right side of tabs line */}
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
+          <div className="flex gap-1.5 items-center flex-nowrap">
             {/* Employees Tab Buttons */}
             {activeTab === 1 && selectedEmployees.size > 0 && (
-              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'nowrap' }}>
+              <div className="flex gap-1.5 items-center flex-nowrap">
                 {onUnlockAllEmployeeEmails && (
                   <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<Email />}
+                    variant="default"
+                    size="sm"
                     onClick={onUnlockAllEmployeeEmails}
                     disabled={Object.values(unlockingEmployeeContacts).some(v => v?.email)}
-                    sx={{
-                      background: '#0b1957',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      borderRadius: '20px',
-                      whiteSpace: 'nowrap',
-                      px: 2,
-                      '&:hover': {
-                        background: '#0d1f6f',
-                        boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.3s ease-in-out',
-                    }}
+                    className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
                   >
+                    <Email className="mr-2 h-4 w-4" />
                     {selectAllEmployees || selectedEmployees.size === employeeData.length
                       ? 'Unlock All Emails'
                       : `Unlock Emails (${selectedEmployees.size})`}
@@ -2057,28 +2019,13 @@ if (!id) return null;
                 )}
                 {onUnlockAllEmployeePhones && (
                   <Button
-                    variant="contained"
-                    color="secondary"
-                    size="small"
-                    startIcon={<Phone />}
+                    variant="default"
+                    size="sm"
                     onClick={onUnlockAllEmployeePhones}
                     disabled={Object.values(unlockingEmployeeContacts).some(v => v?.phone)}
-                    sx={{
-                      background: '#0b1957',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      borderRadius: '20px',
-                      whiteSpace: 'nowrap',
-                      px: 2,
-                      '&:hover': {
-                        background: '#0d1f6f',
-                        boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.3s ease-in-out',
-                    }}
+                    className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
                   >
+                    <Phone className="mr-2 h-4 w-4" />
                     {selectAllEmployees || selectedEmployees.size === employeeData.length
                       ? 'Unlock All Numbers'
                       : `Unlock Numbers (${selectedEmployees.size})`}
@@ -2086,125 +2033,76 @@ if (!id) return null;
                 )}
                 {showAITrigger && (
                   <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<PhoneIcon />}
+                    variant="default"
+                    size="sm"
                     onClick={handleStartIntelligentCallingEmployees}
                     disabled={intelligentCallingLoading || selectedEmployees.size === 0}
-                    sx={{ 
-                      background: '#0b1957', 
-                      borderRadius: '20px',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      px: 2,
-                      '&:hover': { 
-                        background: '#0d1f6f',
-                        boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.3s ease-in-out',
-                    }}
+                    className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 transition-all duration-300 ease-in-out hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5"
                   >
-                    {intelligentCallingLoading ? <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} /> : null}
+                    <PhoneIcon className="h-4 w-4 mr-1" />
+                    {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : null}
                     Start Intelligent Calling
                   </Button>
                 )}
-              </Box>
+              </div>
             )}
             {/* Companies Tab Button */}
             {activeTab === 0 && showAITrigger && (
               <Button
-                variant="contained"
-                size="small"
-                startIcon={<PhoneIcon />}
+                variant="default"
+                size="sm"
                 onClick={handleStartIntelligentCallingCompanies}
                 disabled={intelligentCallingLoading || selectedCompanies.size === 0}
-                sx={{ 
-                  background: '#0b1957', 
-                  borderRadius: '20px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  px: 2,
-                  '&:hover': { 
-                    background: '#0d1f6f',
-                    boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-                    transform: 'translateY(-1px)',
-                  },
-                  transition: 'all 0.3s ease-in-out',
-                }}
+                className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
               >
-                {intelligentCallingLoading ? <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} /> : null}
+                {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : <PhoneIcon className="mr-2 h-4 w-4" />}
                 Start Intelligent Calling
               </Button>
             )}
-          </Box>
-        </Box>
+          </div>
+        </div>
       {/* Selection Controls - Show for both tabs */}
-      <Box sx={{ p: 2, mb: 3, position: 'relative' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', position: 'relative', justifyContent: 'space-between' }}>
+      <div className="p-2 mb-3 relative">
+        <div className="flex items-center gap-2 flex-wrap relative justify-between">
           {/* Left side controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Filter Button - Moved to the left */}
-            <Box sx={{ position: 'relative', display: 'inline-block' }}>
-              <Button
-                ref={filterButtonRef}
-                id="filter-button"
-                variant="contained"
-                size="small"
-                startIcon={<FilterList />}
-                onClick={handleFilterClick}
-                sx={{
-                  background: '#0b1957',
-                  color: '#ffffff',
-                  borderRadius: '20px',
-                  fontWeight: 600,
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  '&:hover': {
-                    background: '#0d1f6f',
-                    boxShadow: '0 2px 6px rgba(11, 25, 87, 0.3)',
-                  }
-                }}
-              >
-                Filter & Select
-              </Button>
-            </Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={activeTab === 0 ? selectAll : selectAllEmployees}
-                  onChange={activeTab === 0 ? handleSelectAll : handleSelectAllEmployees}
-                  icon={<SelectAll />}
-                  checkedIcon={<CheckCircle />}
-                  sx={{
-                    color: '#0b1957',
-                    '&.Mui-checked': {
-                      color: '#0b1957',
-                    }
-                  }}
-                />
-              }
-              label="Select All"
-              sx={{ color: '#0b1957' }}
-            />
-            <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>
-              {activeTab === 0 
-                ? `${selectedCompanies.size} of ${getFilteredData().length} companies selected`
-                : `${selectedEmployees.size} of ${getFilteredEmployeeData().length} employees selected`
-              }
-            </Typography>
-          </Box>
+            <div className="relative inline-block">
+              <DropdownMenu open={Boolean(filterAnchorEl)} onOpenChange={(open) => {
+                if (!open) {
+                  handleFilterClose();
+                } else {
+                  setFilterAnchorEl(true);
+                }
+              }}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    ref={filterButtonRef}
+                    id="filter-button"
+                    variant="default"
+                    size="sm"
+                    className="bg-[#0b1957] text-white rounded-[20px] font-semibold shadow-sm hover:bg-[#0d1f6f] hover:shadow-md"
+                  >
+                    <FilterList className="mr-2 h-4 w-4" />
+                    Filter & Select
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="start"
+                  className="min-w-[280px] max-h-[400px] bg-white shadow-lg border border-gray-200 rounded-[20px] mt-1 z-[1300]"
+                >
+                  {/* Filter content will go here */}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
           {/* Right side: Send Connection Button and Pagination controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div className="flex items-center gap-2">
             {/* Send Connection Button - Only on Employees tab and when employees are selected */}
             {activeTab === 1 && selectedEmployees.size > 0 && (
               <Button
-                variant="contained"
-                size="small"
-                startIcon={<LinkedInIcon />}
+                variant="default"
+                size="sm"
                 onClick={() => {
                   if (onSendLinkedInConnections) {
                     onSendLinkedInConnections();
@@ -2213,28 +2111,13 @@ if (!id) return null;
                   }
                 }}
                 disabled={!onSendLinkedInConnections || selectedEmployees.size === 0}
-                sx={{
-                  background: (onSendLinkedInConnections && selectedEmployees.size > 0) ? '#0077b5' : '#cccccc',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  borderRadius: '20px',
-                  whiteSpace: 'nowrap',
-                  px: 2,
-                  '&:hover': {
-                    background: (onSendLinkedInConnections && selectedEmployees.size > 0) ? '#005885' : '#cccccc',
-                    boxShadow: (onSendLinkedInConnections && selectedEmployees.size > 0) ? '0 2px 6px rgba(0, 119, 181, 0.3)' : 'none',
-                    transform: (onSendLinkedInConnections && selectedEmployees.size > 0) ? 'translateY(-1px)' : 'none',
-                  },
-                  '&:disabled': {
-                    background: '#cccccc',
-                    color: '#666666',
-                    cursor: 'not-allowed',
-                    opacity: 0.6
-                  },
-                  transition: 'all 0.3s ease-in-out',
-                }}
+                className={`rounded-[20px] shadow-sm font-semibold whitespace-nowrap px-2 transition-all ${
+                  onSendLinkedInConnections && selectedEmployees.size > 0
+                    ? 'bg-[#0077b5] text-white hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5'
+                    : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                }`}
               >
+                <LinkedInIcon className="mr-2 h-4 w-4" />
                 Send Connection {selectedEmployees.size > 0 ? `(${selectedEmployees.size})` : ''}
               </Button>
             )}
@@ -2242,297 +2125,210 @@ if (!id) return null;
             {(() => {
               const controls = activeTab === 0 ? paginationControls : employeePaginationControls;
               return controls && (
-                <Box>
+                <div>
                   {controls}
-                </Box>
+                </div>
               );
             })()}
-          </Box>
-        </Box>
-      </Box>
-      {/* Filter Menu - Always render for proper positioning */}
-      <Menu
-        anchorEl={filterAnchorEl}
-        open={Boolean(filterAnchorEl)}
-        onClose={handleFilterClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        disableScrollLock={false}
-        disablePortal={false}
-        MenuListProps={{
-          'aria-labelledby': 'filter-button',
-          dense: false,
-        }}
-        PaperProps={{
-          elevation: 8,
-          sx: {
-            bgcolor: '#ffffff',
-            minWidth: 280,
-            maxHeight: 400,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-            border: '1px solid oklch(0.922 0 0)',
-            borderRadius: '20px',
-            mt: 0.5,
-          }
-        }}
-        slotProps={{
-          root: {
-            sx: {
-              zIndex: 1300,
-            }
-          }
-        }}
-        sx={{
-          '& .MuiPaper-root': {
-            marginTop: '4px !important',
-          }
-        }}
-      >
+          </div>
+        </div>
+      </div>
         {/* Company Filters */}
-        {activeTab === 0 && [
-            <MenuItem key="company-size-header" disabled sx={{ fontWeight: 700, color: '#0b1957', fontSize: '0.875rem', opacity: 1, bgcolor: 'oklch(0.97 0 0)' }}>
+        {activeTab === 0 && (
+          <>
+            <DropdownMenuLabel key="company-size-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
               Select by Company Size
-            </MenuItem>,
-        <MenuItem 
+            </DropdownMenuLabel>
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('enterprise')}
           key="enterprise"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('enterprise')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Enterprise (200+ employees)
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('large')}
           key="large"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('large')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Large (50-199 employees)
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('medium')}
           key="medium"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('medium')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Medium (10-49 employees)
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('small')}
           key="small"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('small')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Small (1-10 employees)
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem disabled key="data-availability-header" sx={{ fontWeight: 700, color: '#0b1957', fontSize: '0.875rem', opacity: 1, bgcolor: 'oklch(0.97 0 0)', mt: 1 }}>
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel key="data-availability-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5 mt-1">
           Select by Data Availability
-        </MenuItem>,
-        <MenuItem 
+        </DropdownMenuLabel>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('with-phone')}
           key="company-with-phone"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('with-phone')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Companies with Phone Number
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('with-linkedin')}
           key="company-with-linkedin"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('with-linkedin')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Companies with LinkedIn
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('with-website')}
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('with-website')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             Companies with Website
-            </Typography>
-          </Box>
-        </MenuItem>,
-        <MenuItem 
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
           onClick={() => handleFilterToggle('with-summary')}
           key="company-with-summary"
-          sx={{
-            '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-            py: 1.5,
-          }}
+          className="hover:bg-gray-50 py-1.5"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <div className="flex items-center w-full">
             <Checkbox 
               checked={selectedFilters.has('with-summary')} 
-              size="small"
-              sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
             />
-            <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+            <span className="text-[#0b1957] font-medium ml-2">
             With Sales Summary
-            </Typography>
-          </Box>
-        </MenuItem>]}
+            </span>
+          </div>
+        </DropdownMenuItem>
+          </>
+        )}
         {/* Employee Filters */}
-        {activeTab === 1 && [<MenuItem disabled key="employee-header" sx={{ fontWeight: 700, color: '#0b1957', fontSize: '0.875rem', opacity: 1, bgcolor: 'oklch(0.97 0 0)' }}>
+        {activeTab === 1 && (
+          <>
+            {[<DropdownMenuLabel key="employee-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
               Filter Employees
-            </MenuItem>,
-            <MenuItem 
+            </DropdownMenuLabel>,
+            <DropdownMenuItem 
               onClick={() => handleFilterToggle('with-linkedin')}
-              sx={{
-                '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-                py: 1.5,
-              }}
+              className="hover:bg-gray-50 py-1.5"
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <div className="flex items-center w-full">
                 <Checkbox 
                   checked={selectedFilters.has('with-linkedin')} 
-                  size="small"
-                  sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
                 />
-                <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+                <span className="text-[#0b1957] font-medium ml-2">
                 With LinkedIn Profile
-                </Typography>
-              </Box>
-            </MenuItem>,
-            <MenuItem 
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
               onClick={() => handleFilterToggle('with-phone')}
               key="employee-with-phone"
-              sx={{
-                '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-                py: 1.5,
-              }}
+              className="hover:bg-gray-50 py-1.5"
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <div className="flex items-center w-full">
                 <Checkbox 
                   checked={selectedFilters.has('with-phone')} 
-                  size="small"
-                  sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
                 />
-                <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Phone Number
-                </Typography>
-              </Box>
-            </MenuItem>,
-            <MenuItem 
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
               onClick={() => handleFilterToggle('with-email')}
               key="employee-with-email"
-              sx={{
-                '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-                py: 1.5,
-              }}
+              className="hover:bg-gray-50 py-1.5"
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <div className="flex items-center w-full">
                 <Checkbox 
                   checked={selectedFilters.has('with-email')} 
-                  size="small"
-                  sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
                 />
-                <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Email Address
-                </Typography>
-              </Box>
-            </MenuItem>,
-            <MenuItem 
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
               onClick={() => handleFilterToggle('with-summary')}
               key="employee-with-summary"
-              sx={{
-                '&:hover': { bgcolor: 'oklch(0.97 0 0)' },
-                py: 1.5,
-              }}
+              className="hover:bg-gray-50 py-1.5"
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <div className="flex items-center w-full">
                 <Checkbox 
                   checked={selectedFilters.has('with-summary')} 
-                  size="small"
-                  sx={{ color: '#0b1957', '&.Mui-checked': { color: '#0b1957' } }}
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
                 />
-                <Typography sx={{ color: '#0b1957', fontWeight: 500 }}>
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Sales Summary
-                </Typography>
-              </Box>
-            </MenuItem>]}
-      </Menu>
+                </span>
+              </div>
+            </DropdownMenuItem>]}
       {/* Companies Tab Content */}
       {(() => {
         return activeTab === 0;
@@ -2541,37 +2337,37 @@ if (!id) return null;
       {/* Companies Tab Content - Always show when tab is active */}
       {/* Grid Layout - Only render company cards from data prop (never employee data) */}
       {isLoading ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(280px, 1fr))' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-2 relative z-[2] items-stretch">
           {[...Array(6)].map((_, index) => (
-            <Card key={index} sx={{ bgcolor: 'oklch(0.985 0 0)', border: '1px solid oklch(0.89 0 0)', borderRadius: 2, overflow: 'hidden' }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                    <Skeleton variant="circular" width={48} height={48} />
-                    <Box sx={{ flex: 1 }}>
-                      <Skeleton variant="text" width="70%" height={24} sx={{ mb: 0.5 }} />
-                      <Skeleton variant="text" width="50%" height={20} />
-                    </Box>
-                  </Box>
-                  <Skeleton variant="circular" width={24} height={24} />
-                </Box>
-                <Box sx={{ mb: 2 }}>
-                  <Skeleton variant="text" width="40%" height={20} sx={{ mb: 1 }} />
-                  <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1 }} />
-                  <Skeleton variant="text" width="50%" height={20} />
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Skeleton variant="rounded" width={80} height={24} />
-                  <Skeleton variant="rounded" width={100} height={24} />
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Skeleton variant="rounded" width="48%" height={36} />
-                  <Skeleton variant="rounded" width="48%" height={36} />
-                </Box>
+            <Card key={index} className="bg-[oklch(0.985_0_0)] border border-[oklch(0.89_0_0)] rounded-lg overflow-hidden">
+              <CardContent className="p-2.5">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Skeleton className="rounded-full w-12 h-12" />
+                    <div className="flex-1">
+                      <Skeleton className="w-[70%] h-6 mb-0.5" />
+                      <Skeleton className="w-[50%] h-5" />
+                    </div>
+                  </div>
+                  <Skeleton className="rounded-full w-6 h-6" />
+                </div>
+                <div className="mb-2">
+                  <Skeleton className="w-[40%] h-5 mb-1" />
+                  <Skeleton className="w-[60%] h-5 mb-1" />
+                  <Skeleton className="w-[50%] h-5" />
+                </div>
+                <div className="flex gap-1 mb-2">
+                  <Skeleton className="rounded w-20 h-6" />
+                  <Skeleton className="rounded w-24 h-6" />
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="rounded w-[48%] h-9" />
+                  <Skeleton className="rounded w-[48%] h-9" />
+                </div>
               </CardContent>
             </Card>
           ))}
-        </Box>
+        </div>
       ) : (
       (() => {
         const filteredCompanies = [...getFilteredData()]
@@ -2597,65 +2393,23 @@ if (!id) return null;
             return 0;
           });
         return filteredCompanies.length > 0 ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
             {filteredCompanies.map((company, index) => (
-          <Box key={company.id || index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <div key={company.id || index} className="flex flex-col items-stretch">
             <Card 
               onClick={() => handleSelectCompany(company.id || index)}
-              sx={{ 
-                width: '100%',
-                height: '100%',
-                display: 'flex', 
-                flexDirection: 'column',
-                minHeight: 0,
-                transition: 'all 0.2s ease',
-                border: selectedCompanies.has(company.id || index) ? '2px solid' : '1px solid',
-                borderColor: selectedCompanies.has(company.id || index) ? '#0b1957' : '#e9ecef',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                position: 'relative',
-                bgcolor: '#ffffff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                cursor: 'pointer',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  borderColor: selectedCompanies.has(company.id || index) ? '#0b1957' : '#dee2e6'
-                },
-                '&::before': selectedCompanies.has(company.id || index) ? {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                  height: '3px',
-                  background: '#0b1957',
-                  zIndex: 1
-                } : {}
-              }}
+              className={`w-full h-full flex flex-col min-h-0 transition-all duration-200 ease-in-out rounded-xl overflow-hidden relative bg-white shadow-sm cursor-pointer
+                ${selectedCompanies.has(company.id || index) ? 'border-2 border-[#0b1957]' : 'border border-[#e9ecef]'}
+                hover:shadow-md ${selectedCompanies.has(company.id || index) ? 'hover:border-[#0b1957]' : 'hover:border-[#dee2e6]'}
+                ${selectedCompanies.has(company.id || index) ? 'before:content-[""] before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-[#0b1957] before:z-[1]' : ''}`}
             >
-              <CardContent sx={{ flexGrow: 1, p: 0, position: 'relative', zIndex: 2 }}>
+              <CardContent className="flex-grow p-0 relative z-[2]">
                 {/* Company Header - Clean White Background */}
-                <Box sx={{ 
-                  bgcolor: '#ffffff',
-                  p: 2.5,
-                  position: 'relative'
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <Box 
-                      sx={{ 
-                        position: 'relative'
-                      }}
-                    >
+                <div className="bg-white p-5 relative">
+                  <div className="flex items-start gap-4">
+                    <div className="relative">
                     <Avatar 
-                      sx={{ 
-                        width: 56, 
-                        height: 56, 
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        border: selectedCompanies.has(company.id || index) ? '3px solid #0b1957' : '2px solid #e9ecef',
-                        flexShrink: 0,
-                        transition: 'all 0.2s ease'
-                      }}
+                      className={`w-14 h-14 flex-shrink-0 transition-all duration-200 ease-in-out ${selectedCompanies.has(company.id || index) ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'}`}
                       src={company.logoUrl || company.logo || company.profileImage || company.companyLogo}
                       alt={`${company.companyName || company.username || 'Company'} logo`}
                     >
@@ -2664,520 +2418,239 @@ if (!id) return null;
                       )}
                     </Avatar>
                       {selectedCompanies.has(company.id || index) && (
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: -4,
-                            right: -4,
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            bgcolor: '#0b1957',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '2px solid white',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                          }}
-                        >
-                          <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
-                        </Box>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
                       )}
-                    </Box>
-                    <Box sx={{ 
-                      flex: 1, 
-                      minWidth: 0,
-                      minHeight: '56px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      <Typography 
-                        variant="h6" 
-                        fontWeight="bold"
+                    </div>
+                    <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
+                      <h3 
+                        className="font-bold text-lg text-black cursor-pointer transition-colors line-clamp-2 hover:text-[#0b1957] hover:underline"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleViewDetails(company);
                         }}
-                        sx={{ 
-                          wordBreak: 'break-word',
-                          lineHeight: 1.3,
-                          fontSize: '1.125rem',
-                          color: '#000000',
-                          cursor: 'pointer',
-                          transition: 'color 0.2s',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          '&:hover': {
-                            color: '#0b1957',
-                            textDecoration: 'underline'
-                          }
-                        }}
                       >
                         {company.companyName || company.username || 'Unknown Company'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
+                      </h3>
+                    </div>
+                  </div>
+                </div>
                 {/* Card Body */}
-                <Box sx={{ 
-                  p: 2.5, 
-                  pt: 0
-                }}>
+                <div className="p-2.5 pt-0">
                 {/* All Variable Content - Each section has fixed height */}
-                <Box sx={{ mb: 0 }}>
+                <div className="mb-0">
                 {/* Industry - Fixed 24px */}
-                <Box sx={{ minHeight: '24px', mb: 0.5 }}>
+                <div className="min-h-[24px] mb-0.5">
                   {company.industry && (
                     <Chip
                       label={company.industry}
                       size="small" 
                       variant="outlined"
-                      sx={{ fontWeight: 'bold', height: 24 }}
+                      className="font-bold h-6"
                     />
                   )}
-                </Box>
+                </div>
                 {/* Decision Maker Contact - Fixed 60px */}
-                <Box sx={{ minHeight: '60px', mb: 0 }}>
+                <div className="min-h-[60px] mb-0">
                 {phoneData[company.id] && (
-                  <Box sx={{ 
-                    mb: 1, 
-                      p: 1.5, 
-                      bgcolor: '#f0fff4', 
-                      borderRadius: 1,
-                      border: '1px solid #28a745'
-                  }}>
-                    <Typography variant="caption" sx={{ 
-                        color: '#28a745', 
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      letterSpacing: '0.5px',
-                      fontSize: '0.7rem',
-                      mb: 1,
-                        display: 'block'
-                    }}>
+                  <div className="mb-1 p-1.5 bg-green-50 rounded border border-green-600">
+                    <p className="text-xs text-green-600 uppercase font-bold tracking-wider mb-1 block">
                       ✓ DECISION MAKER CONTACT
-                    </Typography>
+                    </p>
                     {/* Phone Number */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <Phone sx={{ fontSize: 16, color: '#28a745' }} />
-                        <Typography variant="body2" sx={{ color: '#212529', fontWeight: 700, fontSize: '0.95rem' }}>
+                    <div className="flex items-center gap-1 mb-0.5">
+                        <Phone className="h-4 w-4 text-green-600" />
+                        <p className="text-sm text-gray-900 font-bold">
                         {phoneData[company.id].phone}
-                      </Typography>
-                  <Chip
-                        label={phoneData[company.id].confidence || 'high'} 
-                    size="small"
-                    sx={{
-                            bgcolor: '#28a745', 
-                      color: 'white',
-                          fontSize: '0.65rem',
-                          height: '18px',
-                          fontWeight: 600,
-                            textTransform: 'uppercase'
-                        }} 
-                      />
-                </Box>
+                      </p>
+                  <Badge className="bg-green-600 text-white text-[0.65rem] h-[18px] font-semibold uppercase">
+                        {phoneData[company.id].confidence || 'high'}
+                      </Badge>
+                </div>
                     {/* Contact Name (if available) */}
                     {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Person sx={{ fontSize: 16, color: '#28a745' }} />
-                          <Typography variant="body2" sx={{ color: '#212529', fontWeight: 600, fontSize: '0.85rem' }}>
+                      <div className="flex items-center gap-1">
+                          <Person className="h-4 w-4 text-green-600" />
+                          <p className="text-sm text-gray-900 font-semibold">
                           {phoneData[company.id].name}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
                     {/* Phone Type (if available) */}
                     {phoneData[company.id].type && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="caption" sx={{ color: '#6c757d', textTransform: 'capitalize' }}>
+                      <div className="flex items-center gap-1">
+                          <p className="text-xs text-gray-600 capitalize">
                           Type: {phoneData[company.id].type}
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   )}
-                    </Box>
+                    </div>
                   )}
-                </Box>
+                </div>
                 {/* Phone Number - Fixed 28px */}
-                <Box sx={{ minHeight: '40px', mb: 1 }}>
+                <div className="min-h-[40px] mb-1">
                   {company.phone && !phoneData[company.id] && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Phone sx={{ fontSize: 16, color: '#6c757d' }} />
-                      <Typography variant="body2" sx={{ color: '#212529', fontWeight: 500 }}>
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-900 font-medium">
                         {company.phone}
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   )}
-                </Box>
+                </div>
                 {/* Location - Fixed 48px (allows 2 lines) */}
-                <Box sx={{ minHeight: '40px', mb: 1.5 }}>
+                <div className="min-h-[40px] mb-1.5">
                   {company.location && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOn sx={{ fontSize: 16, color: '#6c757d' }} />
-                      <Typography variant="body2" sx={{ color: '#212529', fontWeight: 500 }}>
+                    <div className="flex items-center gap-1">
+                      <LocationOn className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-900 font-medium">
                         {company.location}
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   )}
-                </Box>
-                  </Box>
+                </div>
+                  </div>
                 {/* Company Scale Section - Always at same position with fixed height */}
-                <Box sx={{ mb: 1.5 }}>
+                <div className="mb-1.5">
                   {/* Headline */}
-                  <Typography variant="caption" sx={{ 
-                    color: '#6c757d', 
-                    textTransform: 'uppercase',
-                    fontWeight: 700,
-                    letterSpacing: '0.5px',
-                    fontSize: '0.7rem',
-                    mb: 1,
-                    display: 'block'
-                  }}>
+                  <p className="text-xs text-gray-600 uppercase font-bold tracking-wider mb-1 block">
                     Company Scale
-                  </Typography>
+                  </p>
                   {/* Circle and Button Row */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    gap: 1,
-                    height: '65px',
-                    flexWrap: 'nowrap',
-                    width: '100%',
-                    minWidth: 0
-                  }}>
+                  <div className="flex items-center justify-between gap-1 h-[65px] flex-nowrap w-full min-w-0">
                     {/* Circular Employee Count - Blue if has employees, Grey if no employees */}
                     {company.employeeCount && parseInt(company.employeeCount) > 0 ? (
-                      <Box
-                        sx={{
-                          width: 65,
-                          height: 65,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-                          flexShrink: 0,
-                          p: '3px'
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: '50%',
-                            bgcolor: 'white',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexDirection: 'column',
-                            gap: 0.3
-                          }}
-                        >
-                          <People 
-                            sx={{ 
-                              color: '#3a7bd5',
-                              fontSize: 22
-                            }} 
-                          />
-                        </Box>
-                      </Box>
+                      <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg flex-shrink-0 p-[3px]">
+                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
+                          <People className="text-blue-500 h-[22px] w-[22px]" />
+                        </div>
+                      </div>
                     ) : (
-                      <Box
-                        sx={{
-                          width: 65,
-                          height: 65,
-                          borderRadius: '50%',
+                      <div
+                        className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
                           background: 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-                          flexShrink: 0
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
                         }}
                       >
-                        <Box
-                          sx={{
-                            width: 55,
-                            height: 55,
-                            borderRadius: '50%',
-                            bgcolor: '#e0e0e0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexDirection: 'column',
-                            gap: 0.3
-                          }}
+                        <div
+                          className="w-[55px] h-[55px] rounded-full bg-[#e0e0e0] flex items-center justify-center flex-col gap-0.5"
                         >
                           <People 
-                            sx={{ 
-                              color: '#757575',
-                              fontSize: 18
-                            }} 
+                            className="text-[#757575] text-lg"
                           />
-                        </Box>
-                      </Box>
+                        </div>
+                      </div>
                     )}
                     {/* View All Employees Button - Blue if has employees, Grey if no employees */}
                     <Button
-                      variant="contained"
+                      variant="default"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleGetEmployees(company);
                       }}
                       disabled={!company.employeeCount || parseInt(company.employeeCount) === 0}
-                      sx={{
-                        background: (company.employeeCount && parseInt(company.employeeCount) > 0) 
-                          ? 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)'
-                          : 'linear-gradient(135deg, #bdbdbd 0%, #9e9e9e 100%)',
-                        color: (company.employeeCount && parseInt(company.employeeCount) > 0) 
-                          ? 'white'
-                          : '#757575',
-                        fontWeight: 700,
-                        fontSize: '1rem',
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1.5,
-                        height: '48px',
-                        minWidth: 0,
-                        maxWidth: '220px',
-                        flex: '0 1 auto',
-                        whiteSpace: 'nowrap',
-                        borderRadius: '50px',
-                        boxShadow: (company.employeeCount && parseInt(company.employeeCount) > 0)
-                          ? '0 4px 12px rgba(0, 210, 255, 0.4)'
-                          : '0 4px 12px rgba(0, 0, 0, 0.25)',
-                        transition: 'all 0.3s ease',
-                        flexShrink: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        '&:hover': {
-                          background: (company.employeeCount && parseInt(company.employeeCount) > 0)
-                            ? 'linear-gradient(135deg, #3a7bd5 0%, #2a5db0 100%)'
-                            : 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
-                          transform: (company.employeeCount && parseInt(company.employeeCount) > 0)
-                            ? 'translateY(-2px)'
-                            : 'none',
-                          boxShadow: (company.employeeCount && parseInt(company.employeeCount) > 0)
-                            ? '0 6px 20px rgba(0, 210, 255, 0.5)'
-                            : '0 4px 12px rgba(0, 0, 0, 0.3)'
-                        },
-                        '&:active': {
-                          transform: 'translateY(0)',
-                          boxShadow: (company.employeeCount && parseInt(company.employeeCount) > 0)
-                            ? '0 3px 10px rgba(0, 210, 255, 0.4)'
-                            : '0 4px 12px rgba(0, 0, 0, 0.25)'
-                        },
-                        '&.Mui-disabled': {
-                          background: 'linear-gradient(135deg, #bdbdbd 0%, #9e9e9e 100%)',
-                          color: '#757575'
+                      className={`font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis
+                        ${(company.employeeCount && parseInt(company.employeeCount) > 0)
+                          ? 'bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white shadow-[0_4px_12px_rgba(0,210,255,0.4)] hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]'
+                          : 'bg-gradient-to-br from-[#bdbdbd] to-[#9e9e9e] text-[#757575] shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:from-[#9e9e9e] hover:to-[#757575] hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] active:shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
                         }
-                      }}
+                        disabled:from-[#bdbdbd] disabled:to-[#9e9e9e] disabled:text-[#757575]`}
                     >
                       View All Employees
                     </Button>
-                  </Box>
-                </Box>
+                  </div>
+                </div>
                 {/* Links Section */}
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="caption" sx={{ 
-                    color: '#6c757d', 
-                    textTransform: 'uppercase',
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                    fontSize: '0.7rem',
-                    mb: 1,
-                    display: 'block'
-                  }}>
+                <div className="mt-8">
+                  <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-xs mb-2 block">
                     LINKS
-                  </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 1, 
-                  flexWrap: 'wrap'
-                }}>
+                  </p>
+                <div className="flex gap-2 flex-wrap">
                   {company.website && (
-                    <Tooltip title="Website" arrow>
-                      <IconButton 
-                        size="small" 
-                        href={company.website} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { color: '#2196f3', bgcolor: 'rgba(33, 150, 243, 0.1)' }
-                          }}
-                        >
-                          <Language sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-blue-500 hover:bg-blue-50">
+                            <Language className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Website</p></TooltipContent>
                     </Tooltip>
                   )}
                   {company.linkedinProfile && (
-                    <Tooltip title="LinkedIn" arrow>
-                      <IconButton 
-                        size="small" 
-                        href={company.linkedinProfile} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { color: '#0077b5', bgcolor: 'rgba(0, 119, 181, 0.1)' }
-                          }}
-                        >
-                          <LinkedInIcon sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#0077b5] hover:bg-blue-50">
+                            <LinkedInIcon className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>LinkedIn</p></TooltipContent>
                     </Tooltip>
                   )}
                     {company.facebookUrl && (
-                      <Tooltip title="Facebook" arrow>
-                      <IconButton 
-                        size="small" 
-                          href={company.facebookUrl} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { color: '#1877f2', bgcolor: 'rgba(24, 119, 242, 0.1)' }
-                          }}
-                        >
-                          <Facebook sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                      </IconButton>
-                    </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={company.facebookUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#1877f2] hover:bg-blue-50">
+                              <Facebook className="h-6 w-6" />
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Facebook</p></TooltipContent>
+                      </Tooltip>
                   )}
                     {company.twitterUrl && (
-                      <Tooltip title="X (Twitter)" arrow>
-                      <IconButton 
-                        size="small" 
-                          href={company.twitterUrl} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { 
-                              color: '#ba68c8', 
-                              background: 'rgba(186, 104, 200, 0.2)',
-                              boxShadow: '0 0 15px rgba(186, 104, 200, 0.4)',
-                              transform: 'scale(1.1)'
-                            }
-                          }}
-                        >
-                          <Box sx={{ 
-                            fontSize: 24, 
-                            fontWeight: 900, 
-                            fontFamily: 'Arial, sans-serif',
-                            lineHeight: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '24px',
-                            width: '24px',
-                            m: 0,
-                            p: 0
-                          }}>
-                            𝕏
-                          </Box>
-                      </IconButton>
-                    </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={company.twitterUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50 hover:shadow-lg hover:scale-110 transition-all">
+                              <span className="text-2xl font-black font-sans leading-6 h-6 w-6 flex items-center justify-center m-0 p-0">𝕏</span>
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>X (Twitter)</p></TooltipContent>
+                      </Tooltip>
                   )}
                   {company.instagramUrl && (
-                    <Tooltip title="Instagram" arrow>
-                      <IconButton 
-                        size="small" 
-                        href={company.instagramUrl} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { 
-                              color: '#E4405F', 
-                              bgcolor: '#ffebef' 
-                            }
-                          }}
-                        >
-                          <Instagram sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#E4405F] hover:bg-pink-50">
+                            <Instagram className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Instagram</p></TooltipContent>
                     </Tooltip>
                   )}
                   {company.blogUrl && (
-                    <Tooltip title="Blog" arrow>
-                      <IconButton 
-                        size="small" 
-                        href={company.blogUrl} 
-                        target="_blank"
-                          onClick={(e) => e.stopPropagation()}
-                        sx={{ 
-                            color: '#6c757d',
-                          width: 36,
-                            height: 36,
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            '&:hover': { color: '#ba68c8', bgcolor: 'rgba(186, 104, 200, 0.1)' }
-                          }}
-                        >
-                          <Article sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.blogUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50">
+                            <Article className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Blog</p></TooltipContent>
                     </Tooltip>
                   )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
                 {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
                 {company.employeeCount !== undefined && company.employeeCount !== null ? (
-                  <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <div className="mt-3 flex flex-wrap gap-1">
                     {parseInt(company.employeeCount) >= 200 && (
                       <Chip
                         label="#enterprise"
                         size="small" 
                         variant="outlined"
-                        sx={{ 
-                          bgcolor: 'transparent',
-                          color: '#6c757d',
-                          borderColor: 'rgba(0, 0, 0, 0.12)',
-                          fontWeight: 500,
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          '& .MuiChip-label': {
-                            px: 1
-                          }
-                        }}
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
                       />
                     )}
                     {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
@@ -3185,17 +2658,7 @@ if (!id) return null;
                         label="#large"
                         size="small" 
                         variant="outlined"
-                        sx={{ 
-                          bgcolor: 'transparent',
-                          color: '#6c757d',
-                          borderColor: 'rgba(0, 0, 0, 0.12)',
-                          fontWeight: 500,
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          '& .MuiChip-label': {
-                            px: 1
-                          }
-                        }}
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
                       />
                     )}
                     {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
@@ -3203,17 +2666,7 @@ if (!id) return null;
                         label="#medium"
                         size="small"
                         variant="outlined"
-                        sx={{
-                          bgcolor: 'transparent',
-                          color: '#6c757d',
-                          borderColor: 'rgba(0, 0, 0, 0.12)',
-                          fontWeight: 500,
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          '& .MuiChip-label': {
-                            px: 1
-                          }
-                        }}
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
                       />
                     )}
                     {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
@@ -3221,37 +2674,27 @@ if (!id) return null;
                         label="#small"
                         size="small"
                         variant="outlined"
-                        sx={{
-                          bgcolor: 'transparent',
-                          color: '#6c757d',
-                          borderColor: 'rgba(0, 0, 0, 0.12)',
-                          fontWeight: 500,
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          '& .MuiChip-label': {
-                            px: 1
-                          }
-                        }}
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
                       />
                     )}
-                  </Box>
+                  </div>
                     ) : null}
-                  </Box>
+                </div>
                 </CardContent>
             </Card>
-        </Box>
+        </div>
             ))}
-          </Box>
+          </div>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Business sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
+          <div className="text-center py-8">
+            <Business className="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
+            <h3 className="text-lg text-muted-foreground">
               0 company data found
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            </h3>
+            <p className="text-sm text-muted-foreground">
               Try searching for companies using keywords like "cleaning services" or "technology companies"
-            </Typography>
-          </Box>  
+            </p>
+          </div>  
         );
       })()
       )}
@@ -3259,40 +2702,40 @@ if (!id) return null;
     )}
       {/* Employees Tab Content */}
       {activeTab === 1 && (
-        <Box sx={{ p: 2 }}>
+        <div className="p-2">
           {/* Employee Cards Grid - Only render employee cards from employeeData prop (never company data) */}
           {employeeSearchLoading ? (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(280px, 1fr))' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
               {[...Array(6)].map((_, index) => (
-                <Card key={index} sx={{ bgcolor: 'oklch(0.985 0 0)', border: '1px solid oklch(0.89 0 0)', borderRadius: 2, overflow: 'hidden' }}>
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <Skeleton variant="circular" width={48} height={48} />
-                        <Box sx={{ flex: 1 }}>
-                          <Skeleton variant="text" width="70%" height={24} sx={{ mb: 0.5 }} />
-                          <Skeleton variant="text" width="50%" height={20} />
-                        </Box>
-                      </Box>
-                      <Skeleton variant="circular" width={24} height={24} />
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                      <Skeleton variant="text" width="80%" height={20} sx={{ mb: 1 }} />
-                      <Skeleton variant="text" width="40%" height={20} sx={{ mb: 1 }} />
-                      <Skeleton variant="text" width="60%" height={20} />
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      <Skeleton variant="rounded" width={90} height={24} />
-                      <Skeleton variant="rounded" width={80} height={24} />
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Skeleton variant="rounded" width={120} height={32} />
-                      <Skeleton variant="rounded" width={120} height={32} />
-                    </Box>
+                <Card key={index} className="bg-[oklch(0.985_0_0)] border border-[oklch(0.89_0_0)] rounded-lg overflow-hidden">
+                  <CardContent className="p-2.5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-4 flex-1">
+                        <Skeleton className="rounded-full w-12 h-12" />
+                        <div className="flex-1">
+                          <Skeleton className="w-[70%] h-6 mb-0.5" />
+                          <Skeleton className="w-[50%] h-5" />
+                        </div>
+                      </div>
+                      <Skeleton className="rounded-full w-6 h-6" />
+                    </div>
+                    <div className="mb-4">
+                      <Skeleton className="w-[80%] h-5 mb-1" />
+                      <Skeleton className="w-[40%] h-5 mb-1" />
+                      <Skeleton className="w-[60%] h-5" />
+                    </div>
+                    <div className="flex gap-1 mb-4">
+                      <Skeleton className="rounded w-[90px] h-6" />
+                      <Skeleton className="rounded w-20 h-6" />
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      <Skeleton className="rounded w-[120px] h-8" />
+                      <Skeleton className="rounded w-[120px] h-8" />
+                    </div>
                   </CardContent>
                 </Card>
               ))}
-            </Box>
+            </div>
           ) : (() => {
             const filteredEmployees = getFilteredEmployeeData()
               // Additional safety check: ensure we're only rendering employee objects, not company objects
@@ -3302,7 +2745,7 @@ if (!id) return null;
                 return isEmployee;
               });
             return filteredEmployees.length > 0 ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2, position: 'relative', zIndex: 2, alignItems: 'stretch' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
               {/* {} */}
             {filteredEmployees
               // Sort employees by company phone number - show companies with phone numbers first
@@ -3460,7 +2903,7 @@ if (!id) return null;
                 }
               }
               return (
-                <Box key={employeeId} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', height: '100%' }}>
+                <div key={employeeId} className="flex flex-col items-stretch h-full">
                   <Card 
                     onClick={() => {
                       if (onEmployeeSelectionChange) {
@@ -3473,55 +2916,29 @@ if (!id) return null;
                         onEmployeeSelectionChange(newSelected);
                       }
                     }}
-                    sx={{ 
-                      width: '100%',
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      minHeight: 0,
-                      transition: 'all 0.2s ease',
-                      border: isSelected ? '2px solid' : '1px solid',
-                      borderColor: isSelected ? '#0b1957' : '#e9ecef',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      position: 'relative',
-                      bgcolor: '#ffffff',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                        borderColor: isSelected ? '#0b1957' : '#dee2e6'
-                      },
-                      '&::before': isSelected ? {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '3px',
-                        background: '#0b1957',
-                        zIndex: 1
-                      } : {}
+                    className={`w-full h-full flex flex-col min-h-0 transition-all cursor-pointer rounded-xl overflow-hidden relative bg-white shadow-sm ${
+                      isSelected 
+                        ? 'border-2 border-[#0b1957] shadow-md' 
+                        : 'border border-[#e9ecef]'
+                    } hover:shadow-lg hover:border-[${isSelected ? '#0b1957' : '#dee2e6'}]`}
+                    style={{
+                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1, p: 0, position: 'relative', zIndex: 2 }}>
+                    {isSelected && (
+                      <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#0b1957] z-[1]" />
+                    )}
+                    <CardContent className="flex-grow p-0 relative z-[2]">
                       {/* Company Header - Clean White Background */}
-                      <Box sx={{ 
-                        bgcolor: '#ffffff',
-                        px: 2.5,
-                        pt: 2.5,
-                        pb: 0,
-                        position: 'relative'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, position: 'relative' }}>
-                          <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                      <div className="bg-white px-5 pt-5 pb-0 relative">
+                        <div className="flex items-start gap-4 relative">
+                          <div className="relative flex-shrink-0">
                           <Avatar 
-                            sx={{ 
-                                width: 48, 
-                                height: 48,
-                              bgcolor: 'primary.main',
-                              flexShrink: 0,
-                                border: isSelected ? '3px solid #0b1957' : '2px solid #e9ecef',
+                            className={`w-12 h-12 flex-shrink-0 ${
+                              isSelected ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'
+                            }`}
+                            style={{
+                              backgroundColor: 'var(--primary)',
                             }}
                               src={companyLogo || company?.logoUrl || company?.logo}
                               alt={`${companyName} logo`}
@@ -3531,180 +2948,96 @@ if (!id) return null;
                               )}
                           </Avatar>
                             {isSelected && (
-                              <Box
-                              sx={{ 
-                                  position: 'absolute',
-                                  top: -4,
-                                  right: -4,
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: '50%',
-                                  bgcolor: '#0b1957',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '2px solid white',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                  zIndex: 3,
-                                }}
-                              >
-                                <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
-                              </Box>
+                              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md z-[3]">
+                                <CheckCircle className="text-white" style={{ fontSize: 16 }} />
+                              </div>
                             )}
-                          </Box>
-                          <Box sx={{ 
-                            flex: 1, 
-                            minWidth: 0,
-                            minHeight: '56px',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            <Typography 
-                              variant="h6" 
-                              fontWeight="bold"
+                          </div>
+                          <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
+                            <h3 
+                              className="font-bold break-words leading-tight text-lg text-black cursor-pointer transition-colors line-clamp-2 overflow-hidden mb-0 hover:text-[#0b1957] hover:underline"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (company) {
                                   handleViewDetails(company);
                                 }
                               }}
-                              sx={{ 
-                                wordBreak: 'break-word',
-                                lineHeight: 1.1,
-                                fontSize: '1.125rem',
-                                color: '#000000',
-                                cursor: company ? 'pointer' : 'default',
-                                transition: 'color 0.2s',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                mb: 0,
-                                '&:hover': {
-                                  color: company ? '#0b1957' : '#000000',
-                                  textDecoration: company ? 'underline' : 'none'
-                                }
-                              }}
                             >
                               {companyName}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
+                            </h3>
+                          </div>
+                        </div>
+                      </div>
                       {/* Card Body */}
-                      <Box sx={{ 
-                        p: 2.5, 
-                        pt: 0,
-                        mt: -1
-                      }}>
+                      <div className="p-5 pt-0 -mt-1">
                         {/* All Variable Content - Each section has fixed height */}
-                        <Box sx={{ mb: 0 }}>
+                        <div className="mb-0">
                         {/* Decision Maker Contact - Fixed 60px */}
-                        <Box sx={{ minHeight: '60px', mb: 0 }}>
+                        <div className="min-h-[60px] mb-0">
                           {company && phoneData[company.id] && (
-                            <Box sx={{ 
-                              mb: 1, 
-                              p: 1.5, 
-                              bgcolor: '#f0fff4', 
-                              borderRadius: 1,
-                              border: '1px solid #28a745'
-                            }}>
-                              <Typography variant="caption" sx={{ 
-                                color: '#28a745', 
-                                textTransform: 'uppercase',
-                                fontWeight: 700,
-                                letterSpacing: '0.5px',
-                                fontSize: '0.7rem',
-                                mb: 1,
-                                display: 'block'
-                              }}>
+                            <div className="mb-2 p-3 bg-[#f0fff4] rounded border border-[#28a745]">
+                              <p className="text-[#28a745] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
                                 ✓ DECISION MAKER CONTACT
-                              </Typography>
+                              </p>
                               {/* Phone Number */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Phone sx={{ fontSize: 16, color: '#28a745' }} />
-                                <Typography variant="body2" sx={{ color: '#212529', fontWeight: 700, fontSize: '0.95rem' }}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Phone className="text-[#28a745]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-bold text-[0.95rem]">
                                   {phoneData[company.id].phone}
-                                </Typography>
-                                <Chip
-                                  label={phoneData[company.id].confidence || 'high'} 
-                                  size="small"
-                              sx={{ 
-                                    bgcolor: '#28a745', 
-                                    color: 'white',
-                                    fontSize: '0.65rem',
-                                    height: '18px',
-                                fontWeight: 600,
-                                    textTransform: 'uppercase'
-                                  }} 
-                                />
-                              </Box>
+                                </p>
+                                <Badge className="bg-[#28a745] text-white text-[0.65rem] h-[18px] font-semibold uppercase">
+                                  {phoneData[company.id].confidence || 'high'}
+                                </Badge>
+                              </div>
                               {/* Contact Name (if available) */}
                               {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                  <Person sx={{ fontSize: 16, color: '#28a745' }} />
-                                  <Typography variant="body2" sx={{ color: '#212529', fontWeight: 600 }}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Person className="text-[#28a745]" style={{ fontSize: 16 }} />
+                                  <p className="text-[#212529] font-semibold text-sm">
                                     {phoneData[company.id].name}
-                            </Typography>
-                                </Box>
+                                  </p>
+                                </div>
                             )}
-                          </Box>
+                          </div>
                           )}
-                        </Box>
+                        </div>
                         {/* Phone Number - Fixed 28px */}
-                        <Box sx={{ minHeight: '40px', mb: 1 }}>
+                        <div className="min-h-[40px] mb-2">
                           {(() => {
                             const displayPhone = (company?.phone && company.phone.trim()) || (companyPhone && companyPhone.trim());
                             return displayPhone && !phoneData[company?.id] ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Phone sx={{ fontSize: 16, color: '#6c757d' }} />
-                                <Typography variant="body2" sx={{ color: '#212529', fontWeight: 500 }}>
+                              <div className="flex items-center gap-2">
+                                <Phone className="text-[#6c757d]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-medium text-sm">
                                   {displayPhone}
-                                </Typography>
-                              </Box>
+                                </p>
+                              </div>
                             ) : null;
                           })()}
-                        </Box>
+                        </div>
                         {/* Location - Fixed 48px (allows 2 lines) */}
-                        <Box sx={{ minHeight: '40px', mb: 1.5 }}>
+                        <div className="min-h-[40px] mb-3">
                           {(() => {
                             const displayLocation = (company?.location && company.location.trim()) || (companyLocation && companyLocation.trim());
                             return displayLocation ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <LocationOn sx={{ fontSize: 16, color: '#6c757d' }} />
-                                <Typography variant="body2" sx={{ color: '#212529', fontWeight: 500 }}>
+                              <div className="flex items-center gap-2">
+                                <LocationOn className="text-[#6c757d]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-medium text-sm">
                                   {displayLocation}
-                                </Typography>
-                              </Box>
+                                </p>
+                              </div>
                             ) : null;
                           })()}
-                        </Box>
-                          </Box>
+                        </div>
+                          </div>
                         {/* Company Scale Section - Always at same position with fixed height */}
-                        <Box sx={{ minHeight: '85px', mb: 1, mt: 0.5 }}>
+                        <div className="min-h-[85px] mb-2 mt-1">
                           {/* Headline */}
-                          <Typography variant="caption" sx={{ 
-                            color: '#6c757d', 
-                            textTransform: 'uppercase',
-                            fontWeight: 700,
-                            letterSpacing: '0.5px',
-                            fontSize: '0.7rem',
-                            mb: 1,
-                            display: 'block'
-                          }}>
+                          <p className="text-[#6c757d] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
                             Company Scale
-                          </Typography>
+                          </p>
                           {/* Circle and Button Row */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between',
-                            gap: 1,
-                            height: '65px',
-                            flexWrap: 'nowrap',
-                            width: '100%',
-                            minWidth: 0
-                          }}>
+                          <div className="flex items-center justify-between gap-2 h-[65px] flex-nowrap w-full min-w-0">
                             {/* Circular Employee Count - Always blue for employee cards */}
                             {(() => {
                               // Get employee count - try multiple sources
@@ -3715,254 +3048,112 @@ if (!id) return null;
                                              '';
                               const hasCount = empCount && parseInt(empCount) > 0;
                               return (
-                                <Box
-                              sx={{ 
-                                    width: 65,
-                                    height: 65,
-                                    borderRadius: '50%',
+                                <div className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0 p-[3px]"
+                                  style={{
                                     background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
                                     boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-                                    flexShrink: 0,
-                                    p: '3px'
                                   }}
                                 >
-                                  <Box
-                                    sx={{
-                                      width: '100%',
-                                      height: '100%',
-                                      borderRadius: '50%',
-                                      bgcolor: 'white',
-                            display: 'flex', 
-                            alignItems: 'center', 
-                                      justifyContent: 'center',
-                                      flexDirection: 'column',
-                                      gap: 0.3
-                                    }}
-                                  >
+                                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
                                     <People 
-                                      sx={{ 
-                                        color: '#3a7bd5',
-                                        fontSize: 22
-                                      }} 
+                                      className="text-[#3a7bd5]"
+                                      style={{ fontSize: 22 }}
                                     />
-                          </Box>
-                                </Box>
+                          </div>
+                                </div>
                               );
                             })()}
                             {/* View Employee Button - Blue gradient */}
                             <Button
-                              variant="contained"
+                              variant="default"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedEmployee(employee);
                                 setEmployeeDetailDialogOpen(true);
                               }}
-                              sx={{
-                                background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                                color: 'white',
-                                fontWeight: 700,
-                                fontSize: '1rem',
-                                textTransform: 'none',
-                                px: 3,
-                                py: 1.5,
-                                height: '48px',
-                                minWidth: 0,
-                                maxWidth: '220px',
-                                flex: '0 1 auto',
-                                whiteSpace: 'nowrap',
-                                borderRadius: '50px',
-                                boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-                                transition: 'all 0.3s ease',
-                                flexShrink: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                '&:hover': {
-                                  background: 'linear-gradient(135deg, #3a7bd5 0%, #2a5db0 100%)',
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: '0 6px 20px rgba(0, 210, 255, 0.5)'
-                                },
-                                '&:active': {
-                                  transform: 'translateY(0)',
-                                  boxShadow: '0 3px 10px rgba(0, 210, 255, 0.4)'
-                                },
-                              }}
+                              className="bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] shadow-[0_4px_12px_rgba(0,210,255,0.4)] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]"
                             >
                               View Employee
                             </Button>
-                          </Box>
-                        </Box>
+                          </div>
+                        </div>
                         {/* Links Section */}
-                        <Box sx={{ mt: 4 }}>
-                          <Typography variant="caption" sx={{ 
-                            color: '#6c757d', 
-                            textTransform: 'uppercase',
-                            fontWeight: 600,
-                            letterSpacing: '0.5px',
-                            fontSize: '0.7rem',
-                            mb: 1,
-                            display: 'block'
-                          }}>
+                        <div className="mt-8">
+                          <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-[0.7rem] mb-2 block">
                             LINKS
-                          </Typography>
-                            <Box sx={{ 
-                              display: 'flex', 
-                              gap: 1, 
-                              flexWrap: 'wrap'
-                            }}>
+                          </p>
+                            <div className="flex gap-2 flex-wrap">
                             {company?.website && (
-                              <Tooltip title="Website" arrow>
-                                <IconButton 
-                                  size="small" 
-                                  href={company.website} 
-                                target="_blank"
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{ 
-                                    color: '#6c757d',
-                                    width: 36,
-                                    height: 36,
-                                    p: 0.75,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
-                                  '&:hover': {
-                                      color: '#1976d2', 
-                                      bgcolor: '#e3f2fd' 
-                                    }
-                                  }}
-                                >
-                                  <Public sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                                </IconButton>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#1976d2] hover:bg-[#e3f2fd]">
+                                      <Language className="h-6 w-6" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Website</p></TooltipContent>
                               </Tooltip>
                             )}
                             {company?.linkedinProfile && (
-                              <Tooltip title="LinkedIn" arrow>
-                                <IconButton 
-                                  size="small" 
-                                  href={company.linkedinProfile} 
-                                  target="_blank"
-                                  onClick={(e) => e.stopPropagation()}
-                                  sx={{ 
-                                    color: '#6c757d',
-                                    width: 36,
-                                    height: 36,
-                                    p: 0.75,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                                    flexShrink: 0,
-                                    '&:hover': { 
-                                      color: '#0077b5', 
-                                      bgcolor: '#e7f3ff' 
-                                    }
-                                  }}
-                                >
-                                  <LinkedInIcon sx={{ fontSize: 24, display: 'block', lineHeight: 0 }} />
-                                </IconButton>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#0077b5] hover:bg-[#e7f3ff]">
+                                      <LinkedInIcon className="h-6 w-6" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>LinkedIn</p></TooltipContent>
                               </Tooltip>
                             )}
-                          </Box>
-                        </Box>
+                          </div>
+                        </div>
                         {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
                         {company?.employeeCount !== undefined && company?.employeeCount !== null ? (
-                          <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          <div className="mt-3 flex flex-wrap gap-1">
                             {parseInt(company.employeeCount) >= 200 && (
-                              <Chip
-                                label="#enterprise"
-                                size="small" 
-                                variant="outlined"
-                                sx={{ 
-                                  bgcolor: 'transparent',
-                                  color: '#6c757d',
-                                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                                  fontWeight: 500,
-                                  fontSize: '0.7rem',
-                                  height: '24px',
-                                  '& .MuiChip-label': {
-                                    px: 1
-                                  }
-                                }}
-                              />
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #enterprise
+                              </Badge>
                             )}
                             {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
-                              <Chip
-                                label="#large"
-                                size="small" 
-                                variant="outlined"
-                                sx={{ 
-                                  bgcolor: 'transparent',
-                                  color: '#6c757d',
-                                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                                  fontWeight: 500,
-                                  fontSize: '0.7rem',
-                                  height: '24px',
-                                  '& .MuiChip-label': {
-                                    px: 1
-                                  }
-                                }}
-                              />
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #large
+                              </Badge>
                             )}
                             {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
-                              <Chip
-                                label="#medium"
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  bgcolor: 'transparent',
-                                  color: '#6c757d',
-                                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                                  fontWeight: 500,
-                                  fontSize: '0.7rem',
-                                  height: '24px',
-                                  '& .MuiChip-label': {
-                                    px: 1
-                                  }
-                                }}
-                              />
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #medium
+                              </Badge>
                             )}
                             {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
-                              <Chip
-                                label="#small"
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  bgcolor: 'transparent',
-                                  color: '#6c757d',
-                                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                                  fontWeight: 500,
-                                  fontSize: '0.7rem',
-                                  height: '24px',
-                                  '& .MuiChip-label': {
-                                    px: 1
-                                  }
-                                }}
-                              />
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #small
+                              </Badge>
                             )}
-                          </Box>
+                          </div>
                         ) : null}
-                      </Box>
+                      </div>
                     </CardContent>
                   </Card>
-                </Box>
+                </div>
               );
             })}
-          </Box>
+          </div>
             ) : (
-            <Box sx={{ textAlign: 'center', py: 8 }}>
-              <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
+            <div className="text-center py-8">
+              <Person className="text-gray-500 mb-4" style={{ fontSize: 64 }} />
+              <h3 className="text-lg text-gray-500">
                 0 employees data found
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              </h3>
+              <p className="text-sm text-gray-500 mt-2">
                 Try searching for employees using the search bar above
-              </Typography>
-            </Box>
+              </p>
+            </div>
           );
         })()}
-        </Box>
+        </div>
       )}
       {/* Phone Reveal Confirmation Dialog */}
       <Dialog
@@ -3971,61 +3162,58 @@ if (!id) return null;
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Phone sx={{ color: '#1976d2' }} />
-            <Typography variant="h6">Phone Reveal</Typography>
-          </Box>
-        </DialogTitle>
+        <DialogHeader>
+          <DialogTitle className="pb-2">
+            <div className="flex items-center gap-2">
+              <Phone className="text-[#1976d2]" />
+              <h3 className="text-lg font-semibold">Phone Reveal</h3>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <div className="flex flex-col gap-4 pt-2">
             {/* Cost */}
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: 'rgba(186, 104, 200, 0.1)', 
-              borderRadius: 1,
-              border: '1px solid #ba68c8'
-            }}>
-              <Typography variant="body1" fontWeight="bold" sx={{ color: '#9c27b0' }}>
+            <div className="p-4 bg-[rgba(186,104,200,0.1)] rounded border border-[#ba68c8]">
+              <p className="font-bold text-[#9c27b0]">
                 Cost: 8 CREDITS
-              </Typography>
-            </Box>
+              </p>
+            </div>
             {/* Employee Details */}
             {phoneConfirmDialog.employee && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="body2" fontWeight="600">
+              <div className="flex flex-col gap-2">
+                <p className="font-semibold text-sm">
                   Employee: {phoneConfirmDialog.employee.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
+                </p>
+                <p className="text-sm text-gray-500">
                   Title: {phoneConfirmDialog.employee.title || 'Senior Business Development Manager'}
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
             {/* Process Info */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Typography sx={{ color: '#4caf50', fontSize: '1.2rem' }}>⚡</Typography>
-                <Typography variant="body2" color="text.secondary">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <span className="text-[#4caf50] text-xl">⚡</span>
+                <p className="text-sm text-gray-500">
                   Checking database first, then API if needed
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Typography sx={{ color: '#ba68c8', fontSize: '1.2rem' }}>⏰</Typography>
-                <Typography variant="body2" color="text.secondary">
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-[#ba68c8] text-xl">⏰</span>
+                <p className="text-sm text-gray-500">
                   Webhook delivery: 2-5 minutes if not cached
-                </Typography>
-              </Box>
-            </Box>
+                </p>
+              </div>
+            </div>
             {/* Confirmation */}
-            <Typography variant="body2" fontWeight="600" sx={{ mt: 1 }}>
+            <p className="font-semibold text-sm mt-2">
               Continue?
-            </Typography>
-          </Box>
+            </p>
+          </div>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogFooter className="px-3 pb-2">
           <Button 
             onClick={() => setPhoneConfirmDialog({ open: false, employee: null })}
-            variant="outlined"
+            variant="outline"
           >
             Cancel
           </Button>
@@ -4035,456 +3223,287 @@ if (!id) return null;
               setPhoneConfirmDialog({ open: false, employee: null });
               processPhoneReveal(employee);
             }}
-            variant="contained"
             autoFocus
+            className="bg-[#0b1957] text-white hover:bg-[#0d1f6f]"
           >
             OK
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
       {/* Detail Dialog */}
       <Dialog 
         open={dialogOpen} 
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: '#ffffff',
-            borderRadius: '20px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-          }
-        }}
+        onOpenChange={(open) => !open && handleCloseDialog()}
       >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar 
-              sx={{ width: 40, height: 40, bgcolor: '#0b1957' }}
-              src={selectedCompany?.logo || selectedCompany?.profileImage || selectedCompany?.companyLogo}
-              alt={`${selectedCompany?.companyName || selectedCompany?.username || 'Company'} logo`}
-            >
-              {!(selectedCompany?.logo || selectedCompany?.profileImage || selectedCompany?.companyLogo) && (
-                <Business sx={{ color: '#ffffff' }} />
-              )}
-            </Avatar>
-            <Typography variant="h6" sx={{ color: '#0b1957' }}>
-              {selectedCompany?.companyName || selectedCompany?.username || 'Company Details'}
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ minHeight: 400 }}>
+        <DialogHeader>
+          <DialogTitle>
+            <div className="flex items-center gap-4">
+              <Avatar 
+                className="w-10 h-10 bg-[#0b1957]"
+                src={selectedCompany?.logo || selectedCompany?.profileImage || selectedCompany?.companyLogo}
+                alt={`${selectedCompany?.companyName || selectedCompany?.username || 'Company'} logo`}
+              >
+                {!(selectedCompany?.logo || selectedCompany?.profileImage || selectedCompany?.companyLogo) && (
+                  <Business className="text-white" />
+                )}
+              </Avatar>
+              <h3 className="text-lg font-semibold text-[#0b1957]">
+                {selectedCompany?.companyName || selectedCompany?.username || 'Company Details'}
+              </h3>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <DialogContent className="min-h-[400px]">
           {selectedCompany && (
-            <Box>
+            <div>
               {/* Debug: Log selectedCompany summary status */}
-              {|| 'none',
-                companyId: selectedCompany.id || selectedCompany.company_id,
-                allKeys: Object.keys(selectedCompany)
-              })}
+              {console.log('Company summary:', selectedCompany.summary || 'none', 
+                'companyId:', selectedCompany.id || selectedCompany.company_id,
+                'allKeys:', Object.keys(selectedCompany)
+              )}
               {/* Basic Company Info - Always Show */}
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'oklch(0.97 0 0)', borderRadius: 2, border: '1px solid oklch(0.922 0 0)' }}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ color: '#0b1957' }}>
+              <div className="mb-6 p-4 bg-[oklch(0.97_0_0)] rounded-lg border border-[oklch(0.922_0_0)]">
+                <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                   Company Information
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                </h4>
+                <div className="flex flex-col gap-3">
                   {selectedCompany.industry && (
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="600" sx={{ minWidth: 120, color: '#0b1957' }}>Industry:</Typography>
-                      <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>{selectedCompany.industry}</Typography>
-                    </Box>
+                    <div className="flex gap-2">
+                      <p className="text-sm font-semibold min-w-[120px] text-[#0b1957]">Industry:</p>
+                      <p className="text-sm text-[oklch(0.145_0_0)]">{selectedCompany.industry}</p>
+                    </div>
                   )}
                   {selectedCompany.phone && (
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="600" sx={{ minWidth: 120, color: '#0b1957' }}>Phone:</Typography>
-                      <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>{selectedCompany.phone}</Typography>
-                    </Box>
+                    <div className="flex gap-2">
+                      <p className="text-sm font-semibold min-w-[120px] text-[#0b1957]">Phone:</p>
+                      <p className="text-sm text-[oklch(0.145_0_0)]">{selectedCompany.phone}</p>
+                    </div>
                   )}
                   {selectedCompany.location && (
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="600" sx={{ minWidth: 120, color: '#0b1957' }}>Location:</Typography>
-                      <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>{selectedCompany.location}</Typography>
-                    </Box>
+                    <div className="flex gap-2">
+                      <p className="text-sm font-semibold min-w-[120px] text-[#0b1957]">Location:</p>
+                      <p className="text-sm text-[oklch(0.145_0_0)]">{selectedCompany.location}</p>
+                    </div>
                   )}
                   {selectedCompany.website && (
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="600" sx={{ minWidth: 120, color: '#0b1957' }}>Website:</Typography>
-                      <Link href={selectedCompany.website} target="_blank" variant="body2" sx={{ color: '#0b1957', '&:hover': { color: '#0d1f6f' } }}>{selectedCompany.website}</Link>
-                    </Box>
+                    <div className="flex gap-2">
+                      <p className="text-sm font-semibold min-w-[120px] text-[#0b1957]">Website:</p>
+                      <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-[#0b1957] hover:text-[#0d1f6f]">{selectedCompany.website}</a>
+                    </div>
                   )}
                   {selectedCompany.employees && (
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="600" sx={{ minWidth: 120, color: '#0b1957' }}>Company Size:</Typography>
-                      <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)' }}>{selectedCompany.employees}</Typography>
-                    </Box>
+                    <div className="flex gap-2">
+                      <p className="text-sm font-semibold min-w-[120px] text-[#0b1957]">Company Size:</p>
+                      <p className="text-sm text-[oklch(0.145_0_0)]">{selectedCompany.employees}</p>
+                    </div>
                   )}
-                </Box>
-              </Box>
+                </div>
+              </div>
               {/* Company Scale Metrics */}
               {selectedCompany.employeeCount && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, color: '#0b1957' }}>
+                <div className="mb-8">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                     Company Scale
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 3, justifyContent: 'space-around', flexWrap: 'wrap', alignItems: 'center' }}>
+                  </h4>
+                  <div className="flex gap-6 justify-around flex-wrap items-center">
                     {/* Company Size - Circular Design */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
-                      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                        <Box
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            borderRadius: '50%',
+                    <div className="flex flex-col items-center min-w-[120px]">
+                      <div className="relative inline-flex mb-2">
+                        <div
+                          className="w-[120px] h-[120px] rounded-full flex items-center justify-center"
+                          style={{
                             background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)'
                           }}
                         >
-                          <Box
-                            sx={{
-                              width: 95,
-                              height: 95,
-                              borderRadius: '50%',
-                              bgcolor: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexDirection: 'column',
-                              gap: 0.5
-                            }}
-                          >
-                            <Business sx={{ 
-                              color: '#0b1957',
-                              fontSize: 32,
-                              mb: 0.5
-                            }} />
-                            <Typography variant="caption" fontWeight="bold" sx={{ 
-                              color: '#0b1957',
-                              fontSize: '0.7rem',
-                              textAlign: 'center',
-                              px: 1
-                            }}>
+                          <div className="w-[95px] h-[95px] rounded-full bg-white flex items-center justify-center flex-col gap-1">
+                            <Business className="text-[#0b1957] mb-1" style={{ fontSize: 32 }} />
+                            <p className="text-[#0b1957] font-bold text-[0.7rem] text-center px-2">
                               {selectedCompany.employeeCount >= 200 ? 'Enterprise' :
                                selectedCompany.employeeCount >= 50 ? 'Medium' :
                                selectedCompany.employeeCount >= 11 ? 'Small' :
                                'Startup'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-                      <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }} fontWeight="600">
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
                         {selectedCompany.employeeCount} Employees
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                     {/* View Employees Button - Circular Design */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 150 }}>
-                      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                        <Box
+                    <div className="flex flex-col items-center min-w-[150px]">
+                      <div className="relative inline-flex mb-2">
+                        <div
                           onClick={() => handleGetEmployees(selectedCompany)}
-                          sx={{
-                            width: 150,
-                            height: 150,
-                            borderRadius: '50%',
+                          className={`w-[150px] h-[150px] rounded-full flex items-center justify-center transition-all ${
+                            employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                              ? 'cursor-not-allowed opacity-60' 
+                              : 'cursor-pointer opacity-100 hover:scale-105'
+                          }`}
+                          style={{
                             background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-                            cursor: employeeLoading[selectedCompany.id || selectedCompany.domain] ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s ease',
-                            opacity: employeeLoading[selectedCompany.id || selectedCompany.domain] ? 0.6 : 1,
-                            '&:hover': {
-                              transform: employeeLoading[selectedCompany.id || selectedCompany.domain] ? 'none' : 'scale(1.05)',
-                              boxShadow: employeeLoading[selectedCompany.id || selectedCompany.domain] ? '0 4px 12px rgba(0, 210, 255, 0.4)' : '0 6px 16px rgba(0, 210, 255, 0.6)',
-                            }
+                            boxShadow: employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                              ? '0 4px 12px rgba(0, 210, 255, 0.4)' 
+                              : '0 4px 12px rgba(0, 210, 255, 0.4)',
                           }}
                         >
-                          <Box
-                            sx={{
-                              width: 120,
-                              height: 120,
-                              borderRadius: '50%',
-                              bgcolor: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexDirection: 'column',
-                              gap: 0.5
-                            }}
-                          >
-                            <People sx={{ color: '#3a7bd5', fontSize: 40, mb: 0.5 }} />
-                            <Typography variant="caption" fontWeight="bold" sx={{ 
-                              color: '#3a7bd5',
-                              fontSize: '0.85rem',
-                              textAlign: 'center',
-                              px: 1
-                            }}>
+                          <div className="w-[120px] h-[120px] rounded-full bg-white flex items-center justify-center flex-col gap-1">
+                            <People className="text-[#3a7bd5] mb-1" style={{ fontSize: 40 }} />
+                            <p className="text-[#3a7bd5] font-bold text-[0.85rem] text-center px-2">
                               {employeeLoading[selectedCompany.id || selectedCompany.domain] 
                                 ? 'Loading' 
                                 : fetchedEmployeeData[selectedCompany.id || selectedCompany.domain]?.length > 0
                                   ? `${fetchedEmployeeData[selectedCompany.id || selectedCompany.domain].length}`
                                   : 'View'
                               }
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-                      <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }} fontWeight="600">
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
                         {employeeLoading[selectedCompany.id || selectedCompany.domain] 
                           ? 'Loading...' 
                           : fetchedEmployeeData[selectedCompany.id || selectedCompany.domain]?.length > 0
                             ? 'Employees Found'
                             : 'View Employees'
                         }
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
               {/* Company Links - Always show if available */}
               {(selectedCompany.linkedinProfile || selectedCompany.website || selectedCompany.twitterUrl || selectedCompany.facebookUrl || selectedCompany.blogUrl) && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, color: '#0b1957' }}>
+                <div className="mb-8">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                     Company Links
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  </h4>
+                  <div className="flex gap-4 flex-wrap">
                     {selectedCompany.website && (
-                      <Chip
-                        icon={<Language />}
-                        label="Website"
-                        component="a"
-                        href={selectedCompany.website}
-                        target="_blank"
-                        clickable
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)',
-                          color: '#0b1957',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': { 
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#0b1957'
-                          }
-                        }}
-                      />
+                      <Badge className="bg-[oklch(0.97_0_0)] text-[#0b1957] border border-[oklch(0.922_0_0)] hover:border-[#0b1957] transition-colors">
+                        <Language className="mr-1" />
+                        <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-[#0b1957]">
+                          Website
+                        </a>
+                      </Badge>
                     )}
                     {selectedCompany.linkedinProfile && (
-                      <Chip
-                        icon={<LinkedInIcon />}
-                        label="LinkedIn"
-                        component="a"
-                        href={selectedCompany.linkedinProfile}
-                        target="_blank"
-                        clickable
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)',
-                          color: '#0077b5',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': { 
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#0077b5'
-                          }
-                        }}
-                      />
+                      <Badge className="bg-[oklch(0.97_0_0)] text-[#0077b5] border border-[oklch(0.922_0_0)] hover:border-[#0077b5] transition-colors">
+                        <LinkedInIcon className="mr-1" />
+                        <a href={selectedCompany.linkedinProfile} target="_blank" rel="noopener noreferrer" className="text-[#0077b5]">
+                          LinkedIn
+                        </a>
+                      </Badge>
                     )}
                     {selectedCompany.facebookUrl && (
-                      <Chip
-                        icon={<Facebook />}
-                        label="Facebook"
-                        component="a"
-                        href={selectedCompany.facebookUrl}
-                        target="_blank"
-                        clickable
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)',
-                          color: '#1877F2',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': { 
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#1877F2'
-                          }
-                        }}
-                      />
+                      <Badge className="bg-[oklch(0.97_0_0)] text-[#1877F2] border border-[oklch(0.922_0_0)] hover:border-[#1877F2] transition-colors">
+                        <Facebook className="mr-1" />
+                        <a href={selectedCompany.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-[#1877F2]">
+                          Facebook
+                        </a>
+                      </Badge>
                     )}
                     {selectedCompany.twitterUrl && (
-                      <Chip
-                        icon={<Box sx={{ fontSize: 16, fontWeight: 900, fontFamily: 'Arial, sans-serif' }}>𝕏</Box>}
-                        label="X (Twitter)"
-                        component="a"
+                      <a
                         href={selectedCompany.twitterUrl}
                         target="_blank"
-                        clickable
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)',
-                          color: '#0b1957',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': { 
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#0b1957'
-                          }
-                        }}
-                      />
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-[#0b1957] border border-gray-200 hover:border-[#0b1957] transition-colors"
+                      >
+                        <span className="text-base font-black font-sans">𝕏</span>
+                        X (Twitter)
+                      </a>
                     )}
                     {selectedCompany.blogUrl && (
-                      <Chip
-                        icon={<Article />}
-                        label="Blog"
-                        component="a"
+                      <a
                         href={selectedCompany.blogUrl}
                         target="_blank"
-                        clickable
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)',
-                          color: '#0b1957',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': { 
-                            bgcolor: 'oklch(0.97 0 0)',
-                            borderColor: '#0b1957'
-                          }
-                        }}
-                      />
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-[#0b1957] border border-gray-200 hover:border-[#0b1957] transition-colors"
+                      >
+                        <Article className="h-4 w-4" />
+                        Blog
+                      </a>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* Full Address */}
               {selectedCompany.rawAddress && (
-                <Box sx={{ mb: 4, p: 2, bgcolor: 'oklch(0.97 0 0)', borderRadius: 2, borderLeft: '4px solid #0b1957', border: '1px solid oklch(0.922 0 0)' }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ color: '#0b1957', display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LocationOn sx={{ color: '#0b1957' }} /> Full Address
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)', textTransform: 'capitalize' }}>
+                <div className="mb-4 p-2 bg-gray-50 rounded-lg border-l-4 border-[#0b1957] border border-gray-200">
+                  <h4 className="font-bold mb-2 text-[#0b1957] flex items-center gap-1">
+                    <LocationOn className="h-4 w-4 text-[#0b1957]" /> Full Address
+                  </h4>
+                  <p className="text-sm text-gray-900 capitalize">
                     {selectedCompany.rawAddress}
-                  </Typography>
-                </Box>
+                  </p>
+                </div>
               )}
               {/* Company Details - Founded Year & Industry Codes */}
               {(selectedCompany.foundingYear || (selectedCompany.naicsCodes && selectedCompany.naicsCodes.length > 0) || (selectedCompany.sicCodes && selectedCompany.sicCodes.length > 0)) && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, color: '#0b1957' }}>
+                <div className="mb-4">
+                  <h4 className="font-bold mb-2 text-[#0b1957]">
                     Company Details
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  </h4>
+                  <div className="flex gap-2 flex-wrap">
                     {selectedCompany.foundingYear && (
-                      <Box sx={{ 
-                        flex: '0 0 auto',
-                        minWidth: 150,
-                        p: 2, 
-                        bgcolor: 'oklch(0.97 0 0)', 
-                        borderRadius: 2,
-                        border: '2px solid #0b1957',
-                        textAlign: 'center'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
-                          <CalendarToday sx={{ fontSize: 20, color: '#0b1957', mr: 0.5 }} />
-                          <Typography variant="caption" fontWeight="600" sx={{ color: '#0b1957' }}>Founded</Typography>
-                        </Box>
-                        <Typography variant="h6" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                      <div className="flex-none min-w-[150px] p-2 bg-gray-50 rounded-lg border-2 border-[#0b1957] text-center">
+                        <div className="flex items-center justify-center mb-0.5">
+                          <CalendarToday className="h-5 w-5 text-[#0b1957] mr-0.5" />
+                          <p className="text-xs font-semibold text-[#0b1957]">Founded</p>
+                        </div>
+                        <h3 className="text-lg font-bold text-[#0b1957]">
                           {selectedCompany.foundingYear}
-                        </Typography>
-                      </Box>
+                        </h3>
+                      </div>
                     )}
                     {selectedCompany.naicsCodes && selectedCompany.naicsCodes.length > 0 && (
-                      <Box sx={{ 
-                        flex: '1 1 auto',
-                        minWidth: 200,
-                        p: 2, 
-                        bgcolor: 'oklch(0.97 0 0)', 
-                        borderRadius: 2,
-                        border: '2px solid #0b1957'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <Code sx={{ fontSize: 20, color: '#0b1957', mr: 0.5 }} />
-                          <Typography variant="caption" fontWeight="600" sx={{ color: '#0b1957' }}>NAICS Codes</Typography>
-                        </Box>
-                        <Typography variant="body2" fontWeight="600" sx={{ color: '#0b1957' }}>
+                      <div className="flex-[1_1_auto] min-w-[200px] p-4 bg-[oklch(0.97_0_0)] rounded-lg border-2 border-[#0b1957]">
+                        <div className="flex items-center mb-1">
+                          <Code className="text-[#0b1957] mr-1" style={{ fontSize: 20 }} />
+                          <p className="text-xs font-semibold text-[#0b1957]">NAICS Codes</p>
+                        </div>
+                        <p className="text-sm font-semibold text-[#0b1957]">
                           {selectedCompany.naicsCodes.join(', ')}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
                     {selectedCompany.sicCodes && selectedCompany.sicCodes.length > 0 && (
-                      <Box sx={{ 
-                        flex: '1 1 auto',
-                        minWidth: 200,
-                        p: 2, 
-                        bgcolor: 'oklch(0.97 0 0)', 
-                        borderRadius: 2,
-                        border: '2px solid #0b1957'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <Tag sx={{ fontSize: 20, color: '#0b1957', mr: 0.5 }} />
-                          <Typography variant="caption" fontWeight="600" sx={{ color: '#0b1957' }}>SIC Codes</Typography>
-                        </Box>
-                        <Typography variant="body2" fontWeight="600" sx={{ color: '#0b1957' }}>
+                      <div className="flex-1 min-w-[200px] p-2 bg-gray-50 rounded-lg border-2 border-[#0b1957]">
+                        <div className="flex items-center mb-0.5">
+                          <Tag className="h-5 w-5 text-[#0b1957] mr-0.5" />
+                          <p className="text-xs font-semibold text-[#0b1957]">SIC Codes</p>
+                        </div>
+                        <p className="text-sm font-semibold text-[#0b1957]">
                           {selectedCompany.sicCodes.join(', ')}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* Sales Summary (from topic filtering) */}
               {selectedCompany.summary && typeof selectedCompany.summary === 'string' && selectedCompany.summary.trim().length > 0 && (
-                <Box sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  background: '#ffffff',
-                  borderRadius: '16px', 
-                  borderLeft: '4px solid #0b1957', 
-                  border: '2px solid #0b1957',
-                  boxShadow: '0 2px 8px rgba(11, 25, 87, 0.15)',
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    fontWeight="bold" 
-                    gutterBottom 
-                    sx={{ 
-                      color: '#0b1957', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      mb: 2
-                    }}
-                  >
-                    <Article sx={{ fontSize: 20, color: '#0b1957' }} />
+                <div className="mb-8 p-6 bg-white rounded-2xl border-l-4 border-2 border-[#0b1957] shadow-md">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957] flex items-center gap-2">
+                    <Article className="text-[#0b1957]" style={{ fontSize: 20 }} />
                     Sales Intelligence Summary
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    component="div"
-                    sx={{ 
-                      lineHeight: 1.8,
-                      whiteSpace: 'pre-wrap',
-                      color: '#212529',
-                      fontSize: '0.95rem',
-                      '& strong': {
-                        fontWeight: 'bold',
-                        color: '#0b1957',
-                      }
-                    }}
-                  >
+                  </h4>
+                  <div className="leading-relaxed whitespace-pre-wrap text-[#212529] text-[0.95rem] [&_strong]:font-bold [&_strong]:text-[#0b1957]">
                     {selectedCompany.summary.split('\n').map((line, idx) => {
                       // Format markdown-style headers
                       if (line.startsWith('##')) {
                         return (
-                          <Typography key={idx} variant="h6" sx={{ 
-                            mt: 2, 
-                            mb: 1, 
-                            color: '#0b1957', 
-                            fontWeight: 'bold',
-                          }}>
+                          <h3 key={idx} className="mt-4 mb-2 text-lg text-[#0b1957] font-bold">
                             {line.replace(/^##+\s*/, '')}
-                          </Typography>
+                          </h3>
                         );
                       } else if (line.startsWith('#')) {
                         return (
-                          <Typography key={idx} variant="h5" sx={{ 
-                            mt: 2, 
-                            mb: 1, 
-                            color: '#0b1957', 
-                            fontWeight: 'bold',
-                          }}>
+                          <h2 key={idx} className="mt-4 mb-2 text-xl text-[#0b1957] font-bold">
                             {line.replace(/^#+\s*/, '')}
-                          </Typography>
+                          </h2>
                         );
                       } else if (line.trim() === '') {
                         return <br key={idx} />;
@@ -4492,447 +3511,330 @@ if (!id) return null;
                         // Format bold text
                         const parts = line.split(/(\*\*.*?\*\*)/g);
                         return (
-                          <Typography key={idx} component="p" sx={{ mb: 1, color: '#212529', fontSize: '0.95rem' }}>
+                          <p key={idx} className="mb-2 text-[#212529] text-[0.95rem]">
                             {parts.map((part, partIdx) => {
                               if (part.startsWith('**') && part.endsWith('**')) {
                                 return <strong key={partIdx}>{part.slice(2, -2)}</strong>;
                               }
                               return <span key={partIdx}>{part}</span>;
                             })}
-                          </Typography>
+                          </p>
                         );
                       }
                     })}
-                  </Typography>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* Company Description */}
               {selectedCompany.companyDescription && (
-                <Box sx={{ mb: 4, p: 2, bgcolor: 'oklch(0.97 0 0)', borderRadius: 2, borderLeft: '4px solid #0b1957', border: '1px solid oklch(0.922 0 0)' }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ color: '#0b1957' }}>
+                <div className="mb-8 p-4 bg-[oklch(0.97_0_0)] rounded-lg border-l-4 border-[#0b1957] border border-[oklch(0.922_0_0)]">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                     About Company
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'oklch(0.145 0 0)', lineHeight: 1.8 }}>
+                  </h4>
+                  <p className="text-sm text-[oklch(0.145_0_0)] leading-relaxed">
                     {selectedCompany.companyDescription}
-                  </Typography>
-                </Box>
+                  </p>
+                </div>
               )}
               {/* Growth Metrics - Circular Progress */}
               {(selectedCompany.growth6M || selectedCompany.growth12M || selectedCompany.growth24M) && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, color: '#0b1957' }}>
+                <div className="mb-8">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                     Growth Analytics
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 3, justifyContent: 'space-around', flexWrap: 'wrap' }}>
+                  </h4>
+                  <div className="flex gap-6 justify-around flex-wrap">
                     {selectedCompany.growth6M && (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
-                        <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                          <Box
-                            sx={{
-                              width: 100,
-                              height: 100,
-                              borderRadius: '50%',
+                      <div className="flex flex-col items-center min-w-[120px]">
+                        <div className="relative inline-flex mb-2">
+                          <div
+                            className="w-[100px] h-[100px] rounded-full flex items-center justify-center"
+                            style={{
                               background: `conic-gradient(#0b1957 ${Math.min(parseFloat(selectedCompany.growth6M) * 100, 100) * 3.6}deg, #e0e0e0 0deg)`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
                             }}
                           >
-                            <Box
-                              sx={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: '50%',
-                                bgcolor: '#ffffff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column'
-                              }}
-                            >
-                              <Typography variant="h6" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                            <div className="w-[80px] h-[80px] rounded-full bg-white flex items-center justify-center flex-col">
+                              <h3 className="text-lg font-bold text-[#0b1957]">
                                 {(parseFloat(selectedCompany.growth6M) * 100).toFixed(1)}%
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                        <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }} fontWeight="600">
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
                           6 Month Growth
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
                     {selectedCompany.growth12M && (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
-                        <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                          <Box
-                            sx={{
-                              width: 100,
-                              height: 100,
-                              borderRadius: '50%',
+                      <div className="flex flex-col items-center min-w-[120px]">
+                        <div className="relative inline-flex mb-2">
+                          <div
+                            className="w-[100px] h-[100px] rounded-full flex items-center justify-center"
+                            style={{
                               background: `conic-gradient(#0b1957 ${Math.min(parseFloat(selectedCompany.growth12M) * 100, 100) * 3.6}deg, #e0e0e0 0deg)`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
                             }}
                           >
-                            <Box
-                              sx={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: '50%',
-                                bgcolor: '#ffffff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column'
-                              }}
-                            >
-                              <Typography variant="h6" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                            <div className="w-[80px] h-[80px] rounded-full bg-white flex items-center justify-center flex-col">
+                              <h3 className="text-lg font-bold text-[#0b1957]">
                                 {(parseFloat(selectedCompany.growth12M) * 100).toFixed(1)}%
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                        <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }} fontWeight="600">
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
                           12 Month Growth
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
                     {selectedCompany.growth24M && (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
-                        <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                          <Box
-                            sx={{
-                              width: 100,
-                              height: 100,
-                              borderRadius: '50%',
+                      <div className="flex flex-col items-center min-w-[120px]">
+                        <div className="relative inline-flex mb-2">
+                          <div
+                            className="w-[100px] h-[100px] rounded-full flex items-center justify-center"
+                            style={{
                               background: `conic-gradient(#0b1957 ${Math.min(parseFloat(selectedCompany.growth24M) * 100, 100) * 3.6}deg, #e0e0e0 0deg)`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
                             }}
                           >
-                            <Box
-                              sx={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: '50%',
-                                bgcolor: '#ffffff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column'
-                              }}
-                            >
-                              <Typography variant="h6" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                            <div className="w-[80px] h-[80px] rounded-full bg-white flex items-center justify-center flex-col">
+                              <h3 className="text-lg font-bold text-[#0b1957]">
                                 {(parseFloat(selectedCompany.growth24M) * 100).toFixed(1)}%
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                        <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }} fontWeight="600">
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
                           24 Month Growth
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* Revenue & Financial Metrics */}
               {(selectedCompany.revenue || selectedCompany.stockInfo || selectedCompany.foundingYear) && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, color: '#0b1957' }}>
+                <div className="mb-8">
+                  <h4 className="text-base font-bold mb-4 text-[#0b1957]">
                     Financial Overview
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  </h4>
+                  <div className="flex gap-4 flex-wrap">
                     {selectedCompany.revenue && (
-                      <Box sx={{ 
-                        flex: 1, 
-                        minWidth: 200, 
-                        p: 2, 
-                        bgcolor: 'oklch(0.97 0 0)', 
-                        borderRadius: 2,
-                        border: '2px solid #0b1957'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <AttachMoney sx={{ color: '#0b1957', fontSize: 28 }} />
-                          <Typography variant="caption" sx={{ color: '#0b1957' }} fontWeight="600" textTransform="uppercase">
+                      <div className="flex-1 min-w-[200px] p-4 bg-[oklch(0.97_0_0)] rounded-lg border-2 border-[#0b1957]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AttachMoney className="text-[#0b1957]" style={{ fontSize: 28 }} />
+                          <p className="text-xs font-semibold text-[#0b1957] uppercase">
                             Annual Revenue
-                          </Typography>
-                        </Box>
-                        <Typography variant="h5" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                          </p>
+                        </div>
+                        <h3 className="text-xl font-bold text-[#0b1957]">
                           {selectedCompany.revenue}
-                        </Typography>
-                      </Box>
+                        </h3>
+                      </div>
                     )}
                     {selectedCompany.stockInfo && (
-                      <Box sx={{ 
-                        flex: 1, 
-                        minWidth: 200, 
-                        p: 2, 
-                        bgcolor: 'oklch(0.97 0 0)', 
-                        borderRadius: 2,
-                        border: '2px solid #0b1957'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <ShowChart sx={{ color: '#0b1957', fontSize: 28 }} />
-                          <Typography variant="caption" sx={{ color: '#0b1957' }} fontWeight="600" textTransform="uppercase">
+                      <div className="flex-1 min-w-[200px] p-4 bg-[oklch(0.97_0_0)] rounded-lg border-2 border-[#0b1957]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ShowChart className="text-[#0b1957]" style={{ fontSize: 28 }} />
+                          <p className="text-xs font-semibold text-[#0b1957] uppercase">
                             Stock Info
-                          </Typography>
-                        </Box>
-                        <Typography variant="h5" fontWeight="bold" sx={{ color: '#0b1957' }}>
+                          </p>
+                        </div>
+                        <h3 className="text-xl font-bold text-[#0b1957]">
                           {selectedCompany.stockInfo}
-                        </Typography>
-                      </Box>
+                        </h3>
+                      </div>
                     )}
                     {selectedCompany.foundingYear && (
-                      <Box sx={{ 
-                        flex: 1, 
-                        minWidth: 200, 
-                        p: 2, 
-                        bgcolor: 'rgba(186, 104, 200, 0.1)', 
-                        borderRadius: 2,
-                        border: '2px solid #ba68c8'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <CalendarToday sx={{ color: '#ba68c8', fontSize: 28 }} />
-                          <Typography variant="caption" color="text.secondary" fontWeight="600" textTransform="uppercase">
+                      <div className="flex-1 min-w-[200px] p-4 bg-[rgba(186,104,200,0.1)] rounded-lg border-2 border-[#ba68c8]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CalendarToday className="text-[#ba68c8]" style={{ fontSize: 28 }} />
+                          <p className="text-xs font-semibold text-gray-500 uppercase">
                             Founded
-                          </Typography>
-                        </Box>
-                        <Typography variant="h5" fontWeight="bold" sx={{ color: '#9c27b0' }}>
+                          </p>
+                        </div>
+                        <h3 className="text-xl font-bold text-[#9c27b0]">
                           {selectedCompany.foundingYear}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        </h3>
+                        <p className="text-xs text-gray-500">
                           {new Date().getFullYear() - parseInt(selectedCompany.foundingYear)} years in business
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* NAICS & SIC Codes */}
               {(selectedCompany.naicsCodes?.length > 0 || selectedCompany.sicCodes?.length > 0) && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                <div className="mb-6">
+                  <h4 className="text-sm font-bold mb-2">
                     Industry Codes:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  </h4>
+                  <div className="flex flex-col gap-2">
                     {selectedCompany.naicsCodes?.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Typography variant="body2" fontWeight="600">NAICS:</Typography>
-                        <Typography variant="body2" color="text.secondary">{selectedCompany.naicsCodes.join(', ')}</Typography>
-                      </Box>
+                      <div className="flex gap-2">
+                        <p className="text-sm font-semibold">NAICS:</p>
+                        <p className="text-sm text-gray-500">{selectedCompany.naicsCodes.join(', ')}</p>
+                      </div>
                     )}
                     {selectedCompany.sicCodes?.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Typography variant="body2" fontWeight="600">SIC:</Typography>
-                        <Typography variant="body2" color="text.secondary">{selectedCompany.sicCodes.join(', ')}</Typography>
-                      </Box>
+                      <div className="flex gap-2">
+                        <p className="text-sm font-semibold">SIC:</p>
+                        <p className="text-sm text-gray-500">{selectedCompany.sicCodes.join(', ')}</p>
+                      </div>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
               {/* Top Employees / Executive Team */}
               {selectedCompany.cLevelExecutives && selectedCompany.cLevelExecutives.length > 0 && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <People sx={{ color: '#1976d2' }} /> Top Employees & Decision Makers
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div className="mb-8">
+                  <h4 className="text-base font-bold mb-4 flex items-center gap-2">
+                    <People className="text-[#1976d2]" /> Top Employees & Decision Makers
+                  </h4>
+                  <div className="flex flex-col gap-4">
                     {selectedCompany.cLevelExecutives.slice(0, 10).map((employee, index) => (
-                      <Box 
+                      <div 
                         key={index}
-                        sx={{ 
-                          p: 2, 
-                          bgcolor: '#f8f9fa', 
-                          borderRadius: 2,
-                          border: '1px solid #e9ecef',
-                          '&:hover': {
-                            bgcolor: '#e9ecef',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                          }
-                        }}
+                        className="p-4 bg-[#f8f9fa] rounded-lg border border-[#e9ecef] hover:bg-[#e9ecef] hover:shadow-md transition-all"
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                        <div className="flex items-start gap-4">
                           {/* Employee Avatar */}
                           <Avatar 
                             src={employee.photo_url} 
                             alt={employee.name}
-                            sx={{ 
-                              width: 48, 
-                              height: 48,
-                              bgcolor: '#1976d2',
-                              fontSize: '1.2rem',
-                              fontWeight: 'bold'
-                            }}
+                            className="w-12 h-12 bg-[#1976d2] text-lg font-bold"
                           >
                             {employee.name ? employee.name.charAt(0).toUpperCase() : '👤'}
                           </Avatar>
                           {/* Employee Details */}
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#ffffff', mb: 0.5, fontSize: '1rem' }}>
+                          <div className="flex-1">
+                            <h5 className="text-base font-bold text-black mb-1">
                               {employee.name || 'Unknown Name'}
-                            </Typography>
+                            </h5>
                             {employee.title && (
-                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
+                              <p className="text-sm text-gray-600 mb-2">
                                 {employee.title}
-                              </Typography>
+                              </p>
                             )}
                             {/* Contact Info */}
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                            <div className="flex flex-wrap gap-4 mt-2">
                               {employee.email && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Email sx={{ fontSize: 16, color: '#ba68c8', filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
-                                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <div className="flex items-center gap-1">
+                                  <Email className="text-[#ba68c8]" style={{ fontSize: 16, filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
+                                  <p className="text-xs text-gray-700">
                                     {employee.email}
-                  </Typography>
-                                </Box>
+                                  </p>
+                                </div>
                               )}
                               {employee.phone && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Phone sx={{ fontSize: 16, color: '#ba68c8', filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
-                                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <div className="flex items-center gap-1">
+                                  <Phone className="text-[#ba68c8]" style={{ fontSize: 16, filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
+                                  <p className="text-xs text-gray-700">
                                     {employee.phone}
-                                  </Typography>
-                                </Box>
+                                  </p>
+                                </div>
                               )}
                               {employee.city && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <LocationOn sx={{ fontSize: 16, color: '#ba68c8', filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
-                                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <div className="flex items-center gap-1">
+                                  <LocationOn className="text-[#ba68c8]" style={{ fontSize: 16, filter: 'drop-shadow(0 0 6px rgba(186, 104, 200, 0.4))' }} />
+                                  <p className="text-xs text-gray-700">
                                     {employee.city}{employee.country ? `, ${employee.country}` : ''}
-                                  </Typography>
-                                </Box>
+                                  </p>
+                                </div>
                               )}
-                            </Box>
+                            </div>
                             {/* LinkedIn Link */}
                             {employee.linkedin_url && (
-                              <Box sx={{ mt: 1 }}>
-                                <Chip
-                                  icon={<LinkedInIcon />}
-                                  label="View LinkedIn Profile"
-                                  component="a"
-                                  href={employee.linkedin_url}
-                                  target="_blank"
-                                  clickable
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: '#e3f2fd',
-                                    color: '#0077b5',
-                                    fontSize: '0.7rem',
-                                    height: '24px',
-                                    '&:hover': { bgcolor: '#bbdefb' }
-                                  }}
-                                />
-                              </Box>
+                              <div className="mt-2">
+                                <Badge className="bg-[#e3f2fd] text-[#0077b5] hover:bg-[#bbdefb] text-[0.7rem] h-6">
+                                  <LinkedInIcon className="mr-1" />
+                                  <a href={employee.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[#0077b5]">
+                                    View LinkedIn Profile
+                                  </a>
+                                </Badge>
+                              </div>
                             )}
-                          </Box>
-                        </Box>
-                      </Box>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </Box>
+                  </div>
                   {/* Show count if more than 10 employees */}
                   {selectedCompany.cLevelExecutives.length > 10 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
+                    <p className="text-xs text-gray-500 mt-4 block text-center">
                       Showing top 10 of {selectedCompany.cLevelExecutives.length} employees
-                    </Typography>
+                    </p>
                   )}
-                </Box>
+                </div>
               )}
               {/* Services Offered */}
               {selectedCompany.servicesOffered && selectedCompany.servicesOffered.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                <div className="mb-6">
+                  <h4 className="text-sm font-bold mb-2">
                     Services Offered:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
                     {selectedCompany.servicesOffered.map((service, index) => (
-                      <Chip key={index} label={service} size="small" variant="outlined" />
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {service}
+                      </Badge>
                     ))}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               )}
-            </Box>
+            </div>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 2 }}>
+        <DialogFooter className="p-3 gap-2">
           <Button 
             onClick={handleCloseDialog} 
-            variant="contained"
-            sx={{
-              background: '#0b1957',
-              color: '#ffffff',
-              borderRadius: '20px',
-              '&:hover': {
-                background: '#0d1f6f',
-              }
-            }}
+            className="bg-[#0b1957] text-white rounded-[20px] hover:bg-[#0d1f6f]"
           >
             Close
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
       {/* Employee List Dialog */}
       <Dialog 
         open={employeeDialogOpen} 
-        onClose={() => {
-          setEmployeeDialogOpen(false);
-          setEmployeeRoleFilter('all'); // Reset filter when closing
-          setSelectedDialogEmployees(new Set()); // Reset selection when closing
-        }}
-        maxWidth={false}
-        PaperProps={{
-          sx: {
-            bgcolor: '#ffffff',
-            borderRadius: '20px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-            maxWidth: '1100px',
-            width: '90%',
-            maxHeight: '90vh'
+        onOpenChange={(open) => {
+          if (!open) {
+            setEmployeeDialogOpen(false);
+            setEmployeeRoleFilter('all'); // Reset filter when closing
+            setSelectedDialogEmployees(new Set()); // Reset selection when closing
           }
         }}
       >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar 
-                sx={{ width: 40, height: 40, bgcolor: '#0b1957' }}
-                src={selectedEmployeeCompany?.logoUrl || selectedEmployeeCompany?.logo}
-                alt={`${selectedEmployeeCompany?.companyName || 'Company'} logo`}
-              >
-                {!(selectedEmployeeCompany?.logoUrl || selectedEmployeeCompany?.logo) && (
-                  <Business />
-                )}
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ color: '#0b1957' }}>
-                  {selectedEmployeeCompany?.companyName || selectedEmployeeCompany?.username || 'Company'} - Team
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="caption" sx={{ color: 'oklch(0.556 0 0)' }}>
-                    {filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain], employeeRoleFilter)?.length || 0} 
-                    {employeeRoleFilter !== 'all' && ` of ${fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.length || 0}`} Employees
-                  </Typography>
-                  {employeeCacheInfo[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.from_cache && (
-                    <Chip 
-                      label={`📦 Cached (${employeeCacheInfo[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.cache_age_days}d old)`}
-                      size="small"
-                      sx={{ 
-                        height: 20,
-                        fontSize: '0.7rem',
-                        bgcolor: 'oklch(0.97 0 0)',
-                        color: '#0b1957',
-                        fontWeight: 600,
-                        border: '1px solid oklch(0.922 0 0)'
-                      }}
-                    />
+        <DialogHeader>
+          <DialogTitle>
+            <div className="flex items-center gap-4 justify-between flex-wrap">
+              <div className="flex items-center gap-4">
+                <Avatar 
+                  className="w-10 h-10 bg-[#0b1957]"
+                  src={selectedEmployeeCompany?.logoUrl || selectedEmployeeCompany?.logo}
+                  alt={`${selectedEmployeeCompany?.companyName || 'Company'} logo`}
+                >
+                  {!(selectedEmployeeCompany?.logoUrl || selectedEmployeeCompany?.logo) && (
+                    <Business />
+                  )}
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#0b1957]">
+                    {selectedEmployeeCompany?.companyName || selectedEmployeeCompany?.username || 'Company'} - Team
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-[oklch(0.556_0_0)]">
+                      {filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain], employeeRoleFilter)?.length || 0} 
+                      {employeeRoleFilter !== 'all' && ` of ${fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.length || 0}`} Employees
+                    </p>
+                    {employeeCacheInfo[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.from_cache && (
+                      <Badge className="h-5 text-[0.7rem] bg-[oklch(0.97_0_0)] text-[#0b1957] font-semibold border border-[oklch(0.922_0_0)]">
+                        📦 Cached ({employeeCacheInfo[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.cache_age_days}d old)
+                      </Badge>
                     )}
-                  </Box>
-                </Box>
-            </Box>
+                  </div>
+                </div>
+              </div>
             {/* Select All on left, Filter/Button/View Toggle on right */}
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', width: '100%' }}>
+            <div className="flex gap-4 items-center justify-between flex-wrap w-full">
               {/* Select All Checkbox - Left side */}
               {(() => {
                 const companyId = selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain;
@@ -4941,189 +3843,109 @@ if (!id) return null;
                 const allSelected = filteredEmployees.length > 0 && selectedDialogEmployees.size === filteredEmployees.length;
                 const someSelected = selectedDialogEmployees.size > 0 && selectedDialogEmployees.size < filteredEmployees.length;
                 return (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={allSelected}
-                        indeterminate={someSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            // Select all filtered employees
-                            const allIndices = new Set(filteredEmployees.map((_, idx) => idx));
-                            setSelectedDialogEmployees(allIndices);
-                          } else {
-                            // Deselect all
-                            setSelectedDialogEmployees(new Set());
-                          }
-                        }}
-                        sx={{
-                          color: '#0b1957',
-                          '&.Mui-checked': {
-                            color: '#0b1957',
-                          }
-                        }}
-                      />
-                    }
-                    label="Select All"
-                    sx={{ color: '#0b1957', mr: 1 }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          // Select all filtered employees
+                          const allIndices = new Set(filteredEmployees.map((_, idx) => idx));
+                          setSelectedDialogEmployees(allIndices);
+                        } else {
+                          // Deselect all
+                          setSelectedDialogEmployees(new Set());
+                        }
+                      }}
+                      className="text-[#0b1957]"
+                    />
+                    <Label className="text-[#0b1957]">Select All</Label>
+                  </div>
                 );
               })()}
               {/* Right side: Filter, Send Connection Button, and View Toggle */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="flex gap-4 items-center flex-wrap">
                 {/* Role Filter Dropdown */}
-                <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel id="employee-role-filter-label">Filter by Role</InputLabel>
-                  <Select
-                    labelId="employee-role-filter-label"
-                    value={employeeRoleFilter}
-                    label="Filter by Role"
-                    onChange={(e) => setEmployeeRoleFilter(e.target.value)}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          bgcolor: '#ffffff',
-                          border: '1px solid oklch(0.922 0 0)',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                          mt: 1,
-                          '& .MuiMenuItem-root': {
-                            color: '#0b1957',
-                            '&:hover': {
-                              bgcolor: 'oklch(0.97 0 0)'
-                            },
-                            '&.Mui-selected': {
-                              bgcolor: '#0b1957',
-                              color: '#ffffff',
-                              '&:hover': {
-                                bgcolor: '#0d1f6f'
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }}
-                    sx={{ 
-                      background: '#ffffff',
-                      border: '1px solid oklch(0.922 0 0)',
-                      borderRadius: '8px',
-                      color: '#0b1957',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'oklch(0.922 0 0)'
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#0b1957'
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#0b1957'
-                      },
-                      '& .MuiSelect-select': {
-                        color: '#0b1957'
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: 'oklch(0.556 0 0)',
-                        '&.Mui-focused': {
-                          color: '#0b1957'
-                        }
-                      }
-                    }}
-                >
-                  <MenuItem value="all">All Employees</MenuItem>
-                  <MenuItem value="executive">Executive (CEO, CTO, CFO)</MenuItem>
-                  <MenuItem value="director">Directors</MenuItem>
-                  <MenuItem value="manager">Managers</MenuItem>
-                  <MenuItem value="hr">HR & Recruitment</MenuItem>
-                  <MenuItem value="sales">Sales & Business Dev</MenuItem>
-                  <MenuItem value="marketing">Marketing</MenuItem>
-                  <MenuItem value="engineering">Engineering & Tech</MenuItem>
-                  <MenuItem value="operations">Operations</MenuItem>
-                  <MenuItem value="finance">Finance & Accounting</MenuItem>
+                <Select value={employeeRoleFilter} onValueChange={setEmployeeRoleFilter}>
+                  <SelectTrigger className="min-w-[180px] bg-white border border-[oklch(0.922_0_0)] rounded-lg text-[#0b1957] hover:border-[#0b1957] focus:border-[#0b1957]">
+                    <SelectValue placeholder="Filter by Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    <SelectItem value="executive">Executive (CEO, CTO, CFO)</SelectItem>
+                    <SelectItem value="director">Directors</SelectItem>
+                    <SelectItem value="manager">Managers</SelectItem>
+                    <SelectItem value="hr">HR & Recruitment</SelectItem>
+                    <SelectItem value="sales">Sales & Business Dev</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="engineering">Engineering & Tech</SelectItem>
+                    <SelectItem value="operations">Operations</SelectItem>
+                    <SelectItem value="finance">Finance & Accounting</SelectItem>
+                  </SelectContent>
                 </Select>
-                </FormControl>
                 {/* Send Connection Button - Always visible */}
                 <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<LinkedInIcon />}
+                  size="sm"
                   onClick={handleSendLinkedInConnectionsFromDialog}
                   disabled={selectedDialogEmployees.size === 0}
-                  sx={{
-                    background: selectedDialogEmployees.size > 0 ? '#0077b5' : '#cccccc',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    borderRadius: '20px',
-                    whiteSpace: 'nowrap',
-                    px: 2,
-                    '&:hover': {
-                      background: selectedDialogEmployees.size > 0 ? '#005885' : '#cccccc',
-                      boxShadow: selectedDialogEmployees.size > 0 ? '0 2px 6px rgba(0, 119, 181, 0.3)' : 'none',
-                      transform: selectedDialogEmployees.size > 0 ? 'translateY(-1px)' : 'none',
-                    },
-                    '&:disabled': {
-                      background: '#cccccc',
-                      color: '#666666',
-                      cursor: 'not-allowed',
-                      opacity: 0.6
-                    },
-                    transition: 'all 0.3s ease-in-out',
-                  }}
+                  className={`rounded-full whitespace-nowrap px-4 font-semibold transition-all ${
+                    selectedDialogEmployees.size > 0 
+                      ? 'bg-[#0077b5] hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5 text-white' 
+                      : 'bg-[#cccccc] text-[#666666] cursor-not-allowed opacity-60'
+                  }`}
                 >
+                  <LinkedInIcon className="mr-2 h-4 w-4" />
                   Send Connection {selectedDialogEmployees.size > 0 ? `(${selectedDialogEmployees.size})` : ''}
                 </Button>
                 {/* View Toggle Button */}
-                <Box sx={{ display: 'flex', gap: 0.5, bgcolor: 'oklch(0.97 0 0)', borderRadius: '8px', p: 0.5, border: '1px solid oklch(0.922 0 0)' }}>
-                <Tooltip title="Grid View" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={() => setEmployeeViewMode('grid')}
-                    sx={{
-                      bgcolor: employeeViewMode === 'grid' ? '#0b1957' : 'transparent',
-                      color: employeeViewMode === 'grid' ? 'white' : '#0b1957',
-                      '&:hover': {
-                        bgcolor: employeeViewMode === 'grid' ? '#0d1f6f' : 'oklch(0.97 0 0)',
-                      },
-                    }}
-                  >
-                    <ViewModule fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="List View" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={() => setEmployeeViewMode('list')}
-                    sx={{
-                      bgcolor: employeeViewMode === 'list' ? '#0b1957' : 'transparent',
-                      color: employeeViewMode === 'list' ? 'white' : '#0b1957',
-                      '&:hover': {
-                        bgcolor: employeeViewMode === 'list' ? '#0d1f6f' : 'oklch(0.97 0 0)',
-                      },
-                    }}
-                  >
-                    <ViewList fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers sx={{ minHeight: '400px', p: 3, width: '100%', maxWidth: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
-          <Box sx={{ 
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(1, 1fr)',
-              sm: employeeViewMode === 'grid' ? 'repeat(2, 1fr)' : 'repeat(1, 1fr)',
-              md: employeeViewMode === 'grid' ? 'repeat(3, 1fr)' : 'repeat(1, 1fr)',
-              lg: employeeViewMode === 'grid' ? 'repeat(3, 1fr)' : 'repeat(1, 1fr)'
-            },
-            gap: 1.5,
-            alignItems: 'stretch',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
+                <div className="flex gap-1 bg-[oklch(0.97_0_0)] rounded-lg p-1 border border-[oklch(0.922_0_0)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEmployeeViewMode('grid')}
+                        className={`${
+                          employeeViewMode === 'grid' 
+                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]' 
+                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
+                        }`}
+                      >
+                        <ViewModule className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Grid View</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEmployeeViewMode('list')}
+                        className={`${
+                          employeeViewMode === 'list' 
+                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]' 
+                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
+                        }`}
+                      >
+                        <ViewList className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>List View</p></TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <DialogContent className="min-h-[400px] p-3 w-full max-w-full overflow-y-auto overflow-x-hidden border-t border-b">
+          <div className={`grid gap-3 items-stretch w-full box-border ${
+            employeeViewMode === 'grid' 
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3' 
+              : 'grid-cols-1'
+          }`}>
             {selectedEmployeeCompany && filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany.domain], employeeRoleFilter)?.map((employee, index) => (
-              <Box key={index} sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', minWidth: 0, maxWidth: '100%' }}>
+              <div key={index} className="flex flex-col h-full w-full min-w-0 max-w-full">
                 <Card 
                   onClick={() => {
                     const newSelected = new Set(selectedDialogEmployees);
@@ -5134,238 +3956,105 @@ if (!id) return null;
                     }
                     setSelectedDialogEmployees(newSelected);
                   }}
-                  sx={{ 
-                    width: '100%',
-                    maxWidth: '100%',
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: selectedDialogEmployees.has(index) ? 'oklch(0.98 0.01 250)' : '#ffffff',
-                    borderRadius: '12px',
-                    border: selectedDialogEmployees.has(index) ? '2px solid #0077b5' : '1px solid oklch(0.922 0 0)',
-                    boxShadow: selectedDialogEmployees.has(index) ? '0 4px 12px rgba(0, 119, 181, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minWidth: 0,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: employeeViewMode === 'grid' ? 'translateY(-4px)' : 'translateY(-2px)',
-                      boxShadow: selectedDialogEmployees.has(index) ? '0 6px 16px rgba(0, 119, 181, 0.4)' : '0 4px 12px rgba(11, 25, 87, 0.15)',
-                      borderColor: selectedDialogEmployees.has(index) ? '#005885' : '#0b1957',
-                    }
+                  className={`w-full max-w-full flex-1 flex flex-col rounded-xl transition-all relative overflow-hidden min-w-0 cursor-pointer ${
+                    selectedDialogEmployees.has(index)
+                      ? 'bg-[oklch(0.98_0.01_250)] border-2 border-[#0077b5] shadow-lg'
+                      : 'bg-white border border-[oklch(0.922_0_0)] shadow-sm'
+                  } ${
+                    employeeViewMode === 'grid' 
+                      ? 'hover:-translate-y-1' 
+                      : 'hover:-translate-y-0.5'
+                  } ${
+                    selectedDialogEmployees.has(index)
+                      ? 'hover:shadow-xl hover:border-[#005885]'
+                      : 'hover:shadow-md hover:border-[#0b1957]'
+                  }`}
+                  style={{
+                    boxShadow: selectedDialogEmployees.has(index) 
+                      ? '0 4px 12px rgba(0, 119, 181, 0.3)' 
+                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
                   }}
                 >
-                  <CardContent sx={{ 
-                    p: employeeViewMode === 'grid' ? 2 : 2.5,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    flex: 1,
-                    width: '100%',
-                    maxWidth: '100%',
-                    minHeight: 0,
-                    boxSizing: 'border-box',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}>
+                  <CardContent className={`${
+                    employeeViewMode === 'grid' ? 'p-4' : 'p-5'
+                  } flex flex-col flex-1 w-full max-w-full min-h-0 box-border min-w-0 overflow-hidden relative`}>
                     {/* Selection Indicator - Top Right */}
                     {selectedDialogEmployees.has(index) && (
-                      <Box sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        zIndex: 10,
-                        bgcolor: '#0077b5',
-                        borderRadius: '50%',
-                        width: 24,
-                        height: 24,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0, 119, 181, 0.3)'
-                      }}>
-                        <Check sx={{ fontSize: 16, color: 'white' }} />
-                      </Box>
+                      <div className="absolute top-2 right-2 z-10 bg-[#0077b5] rounded-full w-6 h-6 flex items-center justify-center shadow-md">
+                        <Check className="text-white" style={{ fontSize: 16 }} />
+                      </div>
                     )}
                     {employeeViewMode === 'grid' ? (
                       <>
                         {/* Avatar - Top */}
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, flexShrink: 0 }}>
+                        <div className="flex justify-center mb-4 flex-shrink-0">
                           <Avatar 
                             src={employee.photo_url}
                             alt={employee.name}
-                            sx={{ 
-                              width: 90,
-                              height: 90,
-                              border: '4px solid',
-                              borderColor: '#0b1957',
-                              boxShadow: 2,
-                            }}
+                            className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md"
                           >
-                            <Person sx={{ fontSize: 50 }} />
+                            <Person style={{ fontSize: 50 }} />
                           </Avatar>
-                        </Box>
+                        </div>
                         {/* Employee Details Wrapper - Fills remaining space */}
-                        <Box sx={{ 
-                          display: 'flex',
-                          flexDirection: 'column', 
-                          alignItems: 'center',
-                          width: '100%',
-                          maxWidth: '100%',
-                          flex: 1,
-                          minHeight: 0,
-                          minWidth: 0,
-                          alignSelf: 'stretch',
-                          justifyContent: 'space-between'
-                        }}>
+                        <div className="flex flex-col items-center w-full max-w-full flex-1 min-h-0 min-w-0 self-stretch justify-between">
                           {/* Top Section: Name, Title, Company */}
-                          <Box sx={{ 
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            width: '100%',
-                            minWidth: 0,
-                            flexShrink: 0
-                          }}>
+                          <div className="flex flex-col items-center gap-3 w-full min-w-0 flex-shrink-0">
                             {/* Employee Name */}
-                            <Typography variant="h6" sx={{ 
-                              fontWeight: 'bold', 
-                              fontSize: '1.1rem',
-                              color: '#0b1957',
-                              width: '100%',
-                              textAlign: 'center',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              px: 1
-                            }}>
+                            <h3 className="font-bold text-lg text-[#0b1957] w-full text-center overflow-hidden text-ellipsis whitespace-nowrap px-2">
                               {employee.name || 'Unknown'}
-                            </Typography>
+                            </h3>
                             {/* Employee Title/Role */}
-                            <Chip 
-                              label={employee.title || 'No Title'} 
-                              size="medium"
-                              sx={{ 
-                                fontWeight: 'bold',
-                                fontSize: '0.85rem',
-                                bgcolor: '#0b1957',
-                                color: '#ffffff',
-                                maxWidth: '100%',
-                                '& .MuiChip-label': {
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  maxWidth: '100%',
-                                  px: 1
-                                }
-                              }}
-                            />
+                            <Badge className="font-bold text-sm bg-[#0b1957] text-white max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-2">
+                              {employee.title || 'No Title'}
+                            </Badge>
                             {/* Company Name */}
                             {employee.company_name && (
-                              <Box sx={{ 
-                                bgcolor: 'oklch(0.97 0 0)', 
-                                px: 1.5, 
-                                py: 0.5, 
-                                borderRadius: 1,
-                                width: '100%',
-                                maxWidth: '100%',
-                                textAlign: 'center',
-                                border: '1px solid oklch(0.922 0 0)',
-                                minWidth: 0,
-                                overflow: 'hidden',
-                                boxSizing: 'border-box'
-                              }}>
-                                <Typography 
-                                  variant="caption" 
-                                  sx={{ 
-                                    fontWeight: 600, 
-                                    color: '#0b1957',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    display: 'block',
-                                    width: '100%',
-                                    maxWidth: '100%',
-                                    boxSizing: 'border-box'
-                                  }}
+                              <div className="bg-[oklch(0.97_0_0)] px-3 py-1 rounded border border-[oklch(0.922_0_0)] w-full max-w-full text-center min-w-0 overflow-hidden box-border">
+                                <p 
+                                  className="font-semibold text-xs text-[#0b1957] overflow-hidden text-ellipsis whitespace-nowrap block w-full max-w-full box-border"
                                   title={`@ ${employee.company_name}`}
                                 >
                                   @ {employee.company_name}
-                                </Typography>
-                              </Box>
+                                </p>
+                              </div>
                             )}
                             {/* Divider */}
-                            <Box sx={{ width: '100%', height: '1px', bgcolor: '#e0e0e0', my: 1.5 }} />
-                          </Box>
+                            <div className="w-full h-px bg-[#e0e0e0] my-3" />
+                          </div>
                           {/* Contact Details List - Bottom */}
-                          <Box sx={{ 
-                            width: '100%', 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: 1.5,
-                            alignItems: 'stretch',
-                            flexShrink: 0
-                          }}>
+                          <div className="w-full flex flex-col gap-3 items-stretch flex-shrink-0">
                         {/* Location */}
                         {(employee.city || employee.country) && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', minWidth: 0, maxWidth: '100%' }}>
-                            <LocationOn sx={{ fontSize: 18, color: '#0b1957', flexShrink: 0 }} />
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                color: 'oklch(0.145 0 0)',
-                                fontSize: '0.8rem',
-                                flex: 1,
-                                minWidth: 0,
-                                maxWidth: '100%',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                display: 'block'
-                              }}
+                          <div className="flex items-center gap-2 w-full min-w-0 max-w-full">
+                            <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 18 }} />
+                            <p 
+                              className="text-[oklch(0.145_0_0)] text-xs flex-1 min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap block"
                               title={[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
                             >
                               {[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
-                            </Typography>
-                          </Box>
+                            </p>
+                          </div>
                         )}
                         {/* LinkedIn */}
                         {employee.linkedin_url && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                            <LinkedInIcon sx={{ fontSize: 18, color: '#0077b5' }} />
-                            <Link
+                          <div className="flex items-center gap-2 w-full">
+                            <LinkedInIcon className="text-[#0077b5]" style={{ fontSize: 18 }} />
+                            <a
                               href={employee.linkedin_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              sx={{ 
-                                color: '#0077b5',
-                                fontSize: '0.8rem',
-                                textDecoration: 'none',
-                                '&:hover': { textDecoration: 'underline' },
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                flex: 1
-                              }}
+                              className="text-[#0077b5] text-xs no-underline hover:underline overflow-hidden text-ellipsis whitespace-nowrap flex-1"
                             >
                               View LinkedIn Profile
-                            </Link>
-                          </Box>
+                            </a>
+                          </div>
                         )}
                         {/* Phone Number (Blurred) */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          <Box sx={{ 
-                            bgcolor: '#0b1957', 
-                            borderRadius: '50%', 
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Phone sx={{ fontSize: 16, color: 'white' }} />
-                          </Box>
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Phone className="text-white" style={{ fontSize: 16 }} />
+                          </div>
                           {(() => {
                             const empId = getEmployeeId(employee);
                             const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
@@ -5379,58 +4068,53 @@ if (!id) return null;
                                 : '+971 50 123 4567';
                             return (
                               <>
-                                <Typography variant="caption" sx={{ 
-                                  color: hasPhone ? '#0b1957' : (phoneNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                                  fontSize: '0.8rem',
-                                  letterSpacing: hasPhone ? 'normal' : '1px',
-                                  filter: hasPhone || phoneNotFound ? 'none' : 'blur(4px)',
-                                  userSelect: hasPhone ? 'text' : 'none',
-                                  flex: 1,
-                                  fontWeight: hasPhone || phoneNotFound ? 600 : 400,
-                                  fontStyle: phoneNotFound ? 'italic' : 'normal'
-                                }}>
+                                <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                  hasPhone 
+                                    ? 'text-[#0b1957] font-semibold' 
+                                    : phoneNotFound 
+                                      ? 'text-[#d32f2f] font-semibold italic' 
+                                      : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                }`}
+                                  style={{
+                                    letterSpacing: hasPhone ? 'normal' : '1px',
+                                  }}
+                                >
                                   {displayPhone}
-                                </Typography>
-                                <Tooltip title={hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"} arrow>
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRevealPhone(employee);
-                                    }}
-                                    disabled={empRevealing?.phone || hasPhone}
-                                    sx={{ 
-                                      bgcolor: 'oklch(0.97 0 0)',
-                                      border: '1px solid oklch(0.922 0 0)',
-                                      '&:hover': { bgcolor: 'oklch(0.97 0 0)', borderColor: '#0b1957' },
-                                      p: 0.5
-                                    }}
-                                  >
-                                    {empRevealing?.phone ? (
-                                        <CircularProgress size={20} sx={{ color: '#0b1957' }} />
-                                    ) : hasPhone ? (
-                                        <CheckCircle sx={{ fontSize: 20, color: '#0b1957' }} />
-                                    ) : (
-                                        <Lock sx={{ fontSize: 20, color: '#0b1957' }} />
-                                    )}
-                                  </IconButton>
+                                </p>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRevealPhone(employee);
+                                      }}
+                                      disabled={empRevealing?.phone || hasPhone}
+                                      className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
+                                    >
+                                      {empRevealing?.phone ? (
+                                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                      ) : hasPhone ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
+                                  </TooltipContent>
                                 </Tooltip>
                               </>
                             );
                           })()}
-                        </Box>
+                        </div>
                         {/* Email (Blurred) */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          <Box sx={{ 
-                            bgcolor: '#0b1957', 
-                            borderRadius: '50%', 
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Email sx={{ fontSize: 16, color: 'white' }} />
-                          </Box>
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Email className="text-white" style={{ fontSize: 16 }} />
+                          </div>
                           {(() => {
                             const empId = getEmployeeId(employee);
                             const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
@@ -5444,178 +4128,107 @@ if (!id) return null;
                                 : 'name@company.com';
                             return (
                               <>
-                                <Typography variant="caption" sx={{ 
-                                  color: hasEmail ? '#0b1957' : (emailNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                                  fontSize: '0.8rem',
-                                  letterSpacing: hasEmail ? 'normal' : '1px',
-                                  filter: hasEmail || emailNotFound ? 'none' : 'blur(4px)',
-                                  userSelect: hasEmail ? 'text' : 'none',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  flex: 1,
-                                  fontWeight: hasEmail || emailNotFound ? 600 : 400,
-                                  fontStyle: emailNotFound ? 'italic' : 'normal'
-                                }}>
+                                <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                  hasEmail 
+                                    ? 'text-[#0b1957] font-semibold' 
+                                    : emailNotFound 
+                                      ? 'text-[#d32f2f] font-semibold italic' 
+                                      : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                }`}
+                                  style={{
+                                    letterSpacing: hasEmail ? 'normal' : '1px',
+                                  }}
+                                >
                                   {displayEmail}
-                                </Typography>
-                                <Tooltip title={hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"} arrow>
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRevealEmail(employee);
-                                    }}
-                                    disabled={empRevealing?.email || hasEmail}
-                                    sx={{ 
-                                      bgcolor: 'oklch(0.97 0 0)',
-                                      border: '1px solid oklch(0.922 0 0)',
-                                      '&:hover': { bgcolor: 'oklch(0.97 0 0)', borderColor: '#0b1957' },
-                                      p: 0.5
-                                    }}
-                                  >
-                                    {empRevealing?.email ? (
-                                        <CircularProgress size={20} sx={{ color: '#0b1957' }} />
-                                    ) : hasEmail ? (
-                                        <CheckCircle sx={{ fontSize: 20, color: '#0b1957' }} />
-                                    ) : (
-                                        <Lock sx={{ fontSize: 20, color: '#0b1957' }} />
-                                    )}
-                                  </IconButton>
+                                </p>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRevealEmail(employee);
+                                      }}
+                                      disabled={empRevealing?.email || hasEmail}
+                                      className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
+                                    >
+                                      {empRevealing?.email ? (
+                                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                      ) : hasEmail ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
+                                  </TooltipContent>
                                 </Tooltip>
                               </>
                             );
                           })()}
-                        </Box>
-                          </Box>
-                        </Box>
+                        </div>
+                          </div>
+                        </div>
                       </>
                     ) : (
                       <>
                         {/* List View Layout */}
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          justifyContent: 'space-between',
-                          flex: 1,
-                          width: '100%'
-                        }}>
+                        <div className="flex flex-row items-center gap-4 justify-between flex-1 w-full">
                           {/* Left Section: Photo + Basic Info */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 3,
-                            flex: '0 0 auto'
-                          }}>
+                          <div className="flex flex-row items-center gap-3 flex-[0_0_auto]">
                             <Avatar 
                               src={employee.photo_url}
                               alt={employee.name}
-                              sx={{ 
-                                width: 80,
-                                height: 80,
-                                border: '3px solid',
-                                borderColor: '#0b1957',
-                                boxShadow: 3,
-                                flexShrink: 0
-                              }}
+                              className="w-20 h-20 border-[3px] border-[#0b1957] shadow-lg flex-shrink-0"
                             >
-                              <Person sx={{ fontSize: 40 }} />
+                              <Person style={{ fontSize: 40 }} />
                             </Avatar>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, minWidth: 200, maxWidth: 300 }}>
-                              <Typography variant="h6" sx={{ 
-                                fontWeight: 700, 
-                                fontSize: '1.05rem',
-                                color: '#0b1957',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1.2
-                              }}>
+                            <div className="flex flex-col gap-2 min-w-[200px] max-w-[300px]">
+                              <h3 className="font-bold text-base text-[#0b1957] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                                 {employee.name || 'Unknown'}
-                              </Typography>
-                              <Chip 
-                                label={employee.title || 'No Title'} 
-                                size="small"
-                                color="primary"
-                                sx={{ 
-                                  fontWeight: 600,
-                                  fontSize: '0.8rem',
-                                  maxWidth: 'fit-content',
-                                  height: 26,
-                                  '& .MuiChip-label': {
-                                    px: 1.5
-                                  }
-                                }}
-                              />
+                              </h3>
+                              <Badge className="font-semibold text-xs max-w-fit h-[26px] bg-[#0b1957] text-white">
+                                {employee.title || 'No Title'}
+                              </Badge>
                               {employee.company_name && (
-                                <Typography variant="caption" sx={{ 
-                                  color: 'oklch(0.556 0 0)', 
-                                  fontSize: '0.8rem',
-                                  fontWeight: 500
-                                }}>
+                                <p className="text-[oklch(0.556_0_0)] text-xs font-medium">
                                   @ {employee.company_name}
-                                </Typography>
+                                </p>
                               )}
-                            </Box>
-                          </Box>
+                            </div>
+                          </div>
                           {/* Middle Section: Contact Details (List View) */}
                           {employeeViewMode === 'list' && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center',
-                          gap: 5,
-                          flex: 1,
-                          minWidth: 0,
-                          pl: 2
-                        }}>
+                        <div className="flex items-center gap-5 flex-1 min-w-0 pl-4">
                           {/* Location */}
                           {(employee.city || employee.country) && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                              <LocationOn sx={{ fontSize: 22, color: '#0b1957', flexShrink: 0 }} />
-                              <Typography variant="body2" sx={{ 
-                                color: 'oklch(0.145 0 0)',
-                                fontSize: '0.875rem',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                fontWeight: 500
-                              }}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 22 }} />
+                              <p className="text-[oklch(0.145_0_0)] text-sm whitespace-nowrap overflow-hidden text-ellipsis font-medium">
                                 {employee.city || employee.country}
-                              </Typography>
-                            </Box>
+                              </p>
+                            </div>
                           )}
                           {/* LinkedIn */}
                           {employee.linkedin_url && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                              <LinkedInIcon sx={{ fontSize: 22, color: '#0077b5', flexShrink: 0 }} />
-                              <Link
+                            <div className="flex items-center gap-3 min-w-0">
+                              <LinkedInIcon className="text-[#0077b5] flex-shrink-0" style={{ fontSize: 22 }} />
+                              <a
                                 href={employee.linkedin_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                sx={{ 
-                                  color: '#0077b5',
-                                  fontSize: '0.875rem',
-                                  textDecoration: 'none',
-                                  fontWeight: 500,
-                                  '&:hover': { 
-                                    textDecoration: 'underline',
-                                    color: '#005582'
-                                  },
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}
+                                className="text-[#0077b5] text-sm no-underline font-medium hover:underline hover:text-[#005582] whitespace-nowrap overflow-hidden text-ellipsis"
                               >
                                 LinkedIn
-                              </Link>
-                            </Box>
+                              </a>
+                            </div>
                           )}
                           {/* Phone with Lock */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                            <Phone sx={{ fontSize: 22, color: '#0b1957' }} />
+                          <div className="flex items-center gap-3">
+                            <Phone className="text-[#0b1957]" style={{ fontSize: 22 }} />
                             {(() => {
                                 const empId = getEmployeeId(employee);
                                 const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
@@ -5625,51 +4238,55 @@ if (!id) return null;
                                 const displayPhone = hasPhone ? empRevealed.phone : (phoneNotFound ? 'Number not found' : '+971 50 123 4567');
                                 return (
                                   <>
-                                    <Typography variant="caption" sx={{ 
-                                      color: hasPhone ? '#0b1957' : (phoneNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                                      fontSize: '0.875rem',
-                                      fontWeight: hasPhone || phoneNotFound ? 600 : 400,
-                                      letterSpacing: hasPhone ? 'normal' : '1px',
-                                      filter: hasPhone || phoneNotFound ? 'none' : 'blur(4px)',
-                                      userSelect: hasPhone ? 'text' : 'none',
-                                      flex: 1,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      fontStyle: phoneNotFound ? 'italic' : 'normal'
-                                    }}>
+                                    <p className={`text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                      hasPhone 
+                                        ? 'text-[#0b1957] font-semibold' 
+                                        : phoneNotFound 
+                                          ? 'text-[#d32f2f] font-semibold italic' 
+                                          : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                    }`}
+                                      style={{
+                                        letterSpacing: hasPhone ? 'normal' : '1px',
+                                      }}
+                                    >
                                       {displayPhone}
-                                    </Typography>
-                                    <Tooltip title={hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"} arrow>
-                                      <IconButton 
-                                        size="small"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRevealPhone(employee);
-                                        }}
-                                        disabled={empRevealing?.phone || hasPhone}
-                                        sx={{ 
-                                          p: 0.5,
-                                          bgcolor: hasPhone ? '#c8e6c9' : '#e3f2fd',
-                                          '&:hover': { bgcolor: hasPhone ? '#c8e6c9' : '#bbdefb' }
-                                        }}
-                                      >
-                                        {empRevealing?.phone ? (
-                                          <CircularProgress size={16} sx={{ color: '#0b1957' }} />
-                                        ) : hasPhone ? (
-                                          <CheckCircle sx={{ fontSize: 16, color: '#0b1957' }} />
-                                        ) : (
-                                          <Lock sx={{ fontSize: 16, color: '#0b1957' }} />
-                                        )}
-                                      </IconButton>
+                                    </p>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRevealPhone(employee);
+                                          }}
+                                          disabled={empRevealing?.phone || hasPhone}
+                                          className={`p-1 ${
+                                            hasPhone 
+                                              ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]' 
+                                              : 'bg-[#e3f2fd] hover:bg-[#bbdefb]'
+                                          }`}
+                                        >
+                                          {empRevealing?.phone ? (
+                                            <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
+                                          ) : hasPhone ? (
+                                            <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                          ) : (
+                                            <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
+                                      </TooltipContent>
                                     </Tooltip>
                                   </>
                                 );
                               })()}
-                          </Box>
+                          </div>
                           {/* Email with Lock */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                            <Email sx={{ fontSize: 22, color: '#0b1957' }} />
+                          <div className="flex items-center gap-3">
+                            <Email className="text-[#0b1957]" style={{ fontSize: 22 }} />
                             {(() => {
                               const empId = getEmployeeId(employee);
                               const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
@@ -5679,88 +4296,91 @@ if (!id) return null;
                               const displayEmail = hasEmail ? empRevealed.email : (emailNotFound ? 'Email not found' : 'name@company.com');
                               return (
                                 <>
-                                  <Typography variant="caption" sx={{ 
-                                    color: hasEmail ? '#0b1957' : (emailNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                                    fontSize: '0.875rem',
-                                    fontWeight: hasEmail || emailNotFound ? 600 : 400,
-                                    letterSpacing: hasEmail ? 'normal' : '1px',
-                                    filter: hasEmail || emailNotFound ? 'none' : 'blur(4px)',
-                                    userSelect: hasEmail ? 'text' : 'none',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    maxWidth: '200px',
-                                    flex: 1,
-                                    fontStyle: emailNotFound ? 'italic' : 'normal'
-                                  }}>
+                                  <p className={`text-sm max-w-[200px] flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                    hasEmail 
+                                      ? 'text-[#0b1957] font-semibold' 
+                                      : emailNotFound 
+                                        ? 'text-[#d32f2f] font-semibold italic' 
+                                        : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                  }`}
+                                    style={{
+                                      letterSpacing: hasEmail ? 'normal' : '1px',
+                                    }}
+                                  >
                                     {displayEmail}
-                                  </Typography>
-                                  <Tooltip title={hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"} arrow>
-                                    <IconButton 
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRevealEmail(employee);
-                                      }}
-                                      disabled={empRevealing?.email || hasEmail}
-                                      sx={{ 
-                                        p: 0.5,
-                                        bgcolor: hasEmail ? '#c8e6c9' : '#e8f5e9',
-                                        '&:hover': { bgcolor: hasEmail ? '#c8e6c9' : '#c8e6c9' }
-                                      }}
-                                    >
-                                      {empRevealing?.email ? (
-                                        <CircularProgress size={16} sx={{ color: '#0b1957' }} />
-                                      ) : hasEmail ? (
-                                        <CheckCircle sx={{ fontSize: 16, color: '#0b1957' }} />
-                                      ) : (
-                                        <Lock sx={{ fontSize: 16, color: '#0b1957' }} />
-                                      )}
-                                    </IconButton>
+                                  </p>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRevealEmail(employee);
+                                        }}
+                                        disabled={empRevealing?.email || hasEmail}
+                                        className={`p-1 ${
+                                          hasEmail 
+                                            ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]' 
+                                            : 'bg-[#e8f5e9] hover:bg-[#c8e6c9]'
+                                        }`}
+                                      >
+                                        {empRevealing?.email ? (
+                                          <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
+                                        ) : hasEmail ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                        ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
+                                    </TooltipContent>
                                   </Tooltip>
                                 </>
                               );
                             })()}
-                          </Box>
-                        </Box>
+                          </div>
+                        </div>
                       )}
-                        </Box>
+                        </div>
                       </>
                     )}
                   </CardContent>
                 </Card>
-              </Box>
+              </div>
             ))}
-          </Box>
+          </div>
           {/* Error Message (shows even when loading if it's an Apollo fetching message) */}
           {selectedEmployeeCompany && 
            employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
+            <div className="text-center py-12">
               {(employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') || 
                 employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')) && (
-                <CircularProgress size={60} sx={{ mb: 2 }} />
+                <Loader2 className="h-15 w-15 text-[#0b1957] animate-spin mb-4" />
               )}
-              <Typography variant="h6" color="text.secondary" fontWeight="600" gutterBottom>
+              <h3 className="text-lg text-gray-500 font-semibold mb-2">
                 {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') || 
                  employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')
                   ? 'Fetching from Apollo API...'
                   : 'Error Loading Employees'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: '500px', mx: 'auto' }}>
+              </h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-[500px] mx-auto">
                 {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]}
-              </Typography>
-            </Box>
+              </p>
+            </div>
           )}
           {/* Loading State (only show if no error message or error is not Apollo fetching) */}
           {selectedEmployeeCompany && 
            employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
            !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <CircularProgress size={60} sx={{ mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
+            <div className="text-center py-12">
+              <Loader2 className="h-15 w-15 text-[#0b1957] animate-spin mb-4" />
+              <h3 className="text-lg text-gray-500">
                 Loading employees...
-              </Typography>
-            </Box>
+              </h3>
+            </div>
           )}
           {/* No Employees Message */}
           {selectedEmployeeCompany && 
@@ -5768,111 +4388,64 @@ if (!id) return null;
            !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
            (!fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] || 
             filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain], employeeRoleFilter)?.length === 0) && (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <People sx={{ fontSize: 80, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-              <Typography variant="h5" color="text.secondary" fontWeight="600" gutterBottom>
+            <div className="text-center py-12">
+              <People className="text-gray-400 mb-4 opacity-50" style={{ fontSize: 80 }} />
+              <h2 className="text-xl text-gray-500 font-semibold mb-2">
                 {employeeRoleFilter !== 'all' 
                   ? `No ${employeeRoleFilter} employees found` 
                   : 'No employees found'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              </h2>
+              <p className="text-sm text-gray-500 mt-2">
                 This company doesn't have any employees in the database.
-              </Typography>
-            </Box>
+              </p>
+            </div>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogFooter className="p-2">
           <Button 
             onClick={() => {
               setEmployeeDialogOpen(false);
               setEmployeeRoleFilter('all'); // Reset filter when closing
             }} 
-            variant="contained"
-            sx={{
-              background: '#0b1957',
-              color: '#ffffff',
-              borderRadius: '20px',
-              '&:hover': {
-                background: '#0d1f6f',
-              }
-            }}
+            className="bg-[#0b1957] text-white rounded-full hover:bg-[#0d1f6f]"
           >
             Close
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
       {/* Employee Detail Dialog */}
       <Dialog
         open={employeeDetailDialogOpen}
-        onClose={() => {
-          setEmployeeDetailDialogOpen(false);
-          setSelectedEmployee(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: '#ffffff',
-            borderRadius: '20px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+        onOpenChange={(open) => {
+          if (!open) {
+            setEmployeeDetailDialogOpen(false);
+            setSelectedEmployee(null);
           }
         }}
       >
-        <DialogContent sx={{ p: 0 }}>
+        <DialogContent className="p-0">
           {selectedEmployee && (
             <Card 
-              sx={{
-                background: '#ffffff',
-                borderRadius: '20px',
-                border: '1px solid oklch(0.922 0 0)',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                overflow: 'hidden',
-              }}
+              className="bg-white rounded-[20px] border border-[oklch(0.922_0_0)] shadow-sm overflow-hidden"
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  width: '100%'
-                }}>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center gap-3 w-full">
                   {/* Employee Photo */}
                   <Avatar 
                     src={selectedEmployee.photo_url}
                     alt={selectedEmployee.name}
-                    sx={{ 
-                      width: 90,
-                      height: 90,
-                      border: '4px solid',
-                      borderColor: '#0b1957',
-                      boxShadow: 2,
-                      flexShrink: 0
-                    }}
+                    className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md flex-shrink-0"
                   >
-                    <Person sx={{ fontSize: 50 }} />
+                    <Person className="h-[50px] w-[50px]" />
                   </Avatar>
                   {/* Employee Name */}
-                  <Typography variant="h6" align="center" sx={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.1rem',
-                    color: '#0b1957',
-                    mt: 1
-                  }}>
+                  <h3 className="font-bold text-lg text-[#0b1957] mt-2 text-center">
                     {selectedEmployee.name || 'Unknown'}
-                  </Typography>
+                  </h3>
                   {/* Employee Title/Role */}
-                  <Chip 
-                    label={selectedEmployee.title || 'No Title'} 
-                    size="medium"
-                    sx={{ 
-                      maxWidth: '100%',
-                      fontWeight: 'bold',
-                      fontSize: '0.85rem',
-                      bgcolor: '#0b1957',
-                      color: '#ffffff'
-                    }}
-                  />
+                  <Badge className="max-w-full font-bold text-sm bg-[#0b1957] text-white">
+                    {selectedEmployee.title || 'No Title'}
+                  </Badge>
                   {/* Company Name with Logo - Clickable */}
                   {(() => {
                     const org = selectedEmployee.organization || {};
@@ -5884,7 +4457,7 @@ if (!id) return null;
                       return cId && empCompanyId && cId === empCompanyId;
                     });
                     return empCompanyName && (
-                      <Box 
+                      <div 
                         onClick={(e) => {
                           e.stopPropagation();
                           if (empCompany) {
@@ -5892,84 +4465,51 @@ if (!id) return null;
                             setEmployeeDetailDialogOpen(false);
                           }
                         }}
-                        sx={{ 
-                          bgcolor: 'oklch(0.97 0 0)', 
-                          px: 2, 
-                          py: 0.5, 
-                          borderRadius: 1,
-                          width: '100%',
-                          textAlign: 'center',
-                          cursor: empCompany ? 'pointer' : 'default',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1,
-                          transition: 'all 0.2s ease',
-                          border: '1px solid oklch(0.922 0 0)',
-                          '&:hover': {
-                            bgcolor: empCompany ? 'oklch(0.97 0 0)' : 'oklch(0.97 0 0)',
-                            borderColor: empCompany ? '#0b1957' : 'oklch(0.922 0 0)',
-                            transform: empCompany ? 'scale(1.02)' : 'none'
-                          }
-                        }}
+                        className={`bg-[oklch(0.97_0_0)] px-4 py-1 rounded border border-[oklch(0.922_0_0)] w-full text-center flex items-center justify-center gap-2 transition-all ${
+                          empCompany ? 'cursor-pointer hover:border-[#0b1957] hover:scale-[1.02]' : 'cursor-default'
+                        }`}
                       >
                         {empCompanyLogo && (
                           <Avatar 
                             src={empCompanyLogo}
-                            sx={{ width: 20, height: 20, flexShrink: 0 }}
+                            className="w-5 h-5 flex-shrink-0"
                           >
-                            <Business sx={{ fontSize: 12 }} />
+                            <Business style={{ fontSize: 12 }} />
                           </Avatar>
                         )}
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#0b1957', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p className="font-semibold text-xs text-[#0b1957] overflow-hidden text-ellipsis whitespace-nowrap">
                           @ {empCompanyName}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     );
                   })()}
                   {/* Divider */}
-                  <Box sx={{ width: '100%', height: '1px', bgcolor: 'oklch(0.922 0 0)', my: 1.5 }} />
+                  <div className="w-full h-px bg-[oklch(0.922_0_0)] my-3" />
                   {/* Contact Details List */}
-                  <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <div className="w-full flex flex-col gap-3">
                     {/* Location */}
                     {(selectedEmployee.city || selectedEmployee.country) && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LocationOn sx={{ fontSize: 18, color: '#0b1957' }} />
-                        <Typography variant="caption" sx={{ 
-                          color: 'oklch(0.145 0 0)',
-                          fontSize: '0.8rem',
-                          flex: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
+                      <div className="flex items-center gap-2">
+                        <LocationOn className="text-[#0b1957]" style={{ fontSize: 18 }} />
+                        <p className="text-[oklch(0.145_0_0)] text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                           {[selectedEmployee.city, selectedEmployee.state, selectedEmployee.country].filter(Boolean).join(', ')}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     )}
                     {/* LinkedIn */}
                     {selectedEmployee.linkedin_url && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LinkedInIcon sx={{ fontSize: 18, color: '#0077b5' }} />
-                        <Link
+                      <div className="flex items-center gap-2">
+                        <LinkedInIcon className="text-[#0077b5]" style={{ fontSize: 18 }} />
+                        <a
                           href={selectedEmployee.linkedin_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          sx={{ 
-                            color: '#0077b5',
-                            fontSize: '0.8rem',
-                            textDecoration: 'none',
-                            '&:hover': { textDecoration: 'underline' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            flex: 1
-                          }}
+                          className="text-[#0077b5] text-xs no-underline hover:underline overflow-hidden text-ellipsis whitespace-nowrap flex-1"
                         >
                           View LinkedIn Profile
-                        </Link>
-                      </Box>
+                        </a>
+                      </div>
                     )}
                     {/* Phone Number (Blurred) */}
                     {(() => {
@@ -5985,54 +4525,49 @@ if (!id) return null;
                           ? 'Number not found' 
                           : (selectedEmployee.phone_number || '+971 50 123 4567');
                       return (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ 
-                            bgcolor: '#0b1957', 
-                            borderRadius: '50%', 
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Phone sx={{ fontSize: 16, color: 'white' }} />
-                          </Box>
-                          <Typography variant="caption" sx={{ 
-                            color: hasPhone ? '#0b1957' : (phoneNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                            fontSize: '0.8rem',
-                            letterSpacing: hasPhone ? 'normal' : '1px',
-                            filter: hasPhone || phoneNotFound ? 'none' : 'blur(4px)',
-                            userSelect: hasPhone ? 'text' : 'none',
-                            flex: 1,
-                            fontWeight: hasPhone || phoneNotFound ? 600 : 400,
-                            fontStyle: phoneNotFound ? 'italic' : 'normal'
-                          }}>
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Phone className="text-white" style={{ fontSize: 16 }} />
+                          </div>
+                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                            hasPhone 
+                              ? 'text-[#0b1957] font-semibold' 
+                              : phoneNotFound 
+                                ? 'text-[#d32f2f] font-semibold italic' 
+                                : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                          }`}
+                            style={{
+                              letterSpacing: hasPhone ? 'normal' : '1px',
+                            }}
+                          >
                             {displayPhone}
-                          </Typography>
-                          <Tooltip title={hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"} arrow>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRevealPhone(selectedEmployee);
-                              }}
-                              disabled={empRevealing?.phone || hasPhone}
-                              sx={{ 
-                                bgcolor: 'oklch(0.97 0 0)',
-                                border: '1px solid oklch(0.922 0 0)',
-                                '&:hover': { bgcolor: 'oklch(0.97 0 0)', borderColor: '#0b1957' },
-                                p: 0.5
-                              }}
-                            >
-                              {empRevealing?.phone ? (
-                                <CircularProgress size={20} sx={{ color: '#0b1957' }} />
-                              ) : hasPhone ? (
-                                <CheckCircle sx={{ fontSize: 20, color: '#0b1957' }} />
-                              ) : (
-                                <Lock sx={{ fontSize: 20, color: '#0b1957' }} />
-                              )}
-                            </IconButton>
+                          </p>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRevealPhone(selectedEmployee);
+                                }}
+                                disabled={empRevealing?.phone || hasPhone}
+                                className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
+                              >
+                                {empRevealing?.phone ? (
+                                  <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                ) : hasPhone ? (
+                                  <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                ) : (
+                                  <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
+                            </TooltipContent>
                           </Tooltip>
-                        </Box>
+                        </div>
                       );
                     })()}
                     {/* Email (Blurred) */}
@@ -6049,85 +4584,69 @@ if (!id) return null;
                           ? 'Email not found' 
                           : (selectedEmployee.email || 'name@company.com');
                       return (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ 
-                            bgcolor: '#0b1957', 
-                            borderRadius: '50%', 
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Email sx={{ fontSize: 16, color: 'white' }} />
-                          </Box>
-                          <Typography variant="caption" sx={{ 
-                            color: hasEmail ? '#0b1957' : (emailNotFound ? '#d32f2f' : 'oklch(0.556 0 0)'),
-                            fontSize: '0.8rem',
-                            letterSpacing: hasEmail ? 'normal' : '1px',
-                            filter: hasEmail || emailNotFound ? 'none' : 'blur(4px)',
-                            userSelect: hasEmail ? 'text' : 'none',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            flex: 1,
-                            fontWeight: hasEmail || emailNotFound ? 600 : 400,
-                            fontStyle: emailNotFound ? 'italic' : 'normal'
-                          }}>
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Email className="text-white" style={{ fontSize: 16 }} />
+                          </div>
+                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                            hasEmail 
+                              ? 'text-[#0b1957] font-semibold' 
+                              : emailNotFound 
+                                ? 'text-[#d32f2f] font-semibold italic' 
+                                : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                          }`}
+                            style={{
+                              letterSpacing: hasEmail ? 'normal' : '1px',
+                            }}
+                          >
                             {displayEmail}
-                          </Typography>
-                          <Tooltip title={hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"} arrow>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRevealEmail(selectedEmployee);
-                              }}
-                              disabled={empRevealing?.email || hasEmail}
-                              sx={{ 
-                                bgcolor: 'oklch(0.97 0 0)',
-                                border: '1px solid oklch(0.922 0 0)',
-                                '&:hover': { bgcolor: 'oklch(0.97 0 0)', borderColor: '#0b1957' },
-                                p: 0.5
-                              }}
-                            >
-                              {empRevealing?.email ? (
-                                <CircularProgress size={20} sx={{ color: '#0b1957' }} />
-                              ) : hasEmail ? (
-                                <CheckCircle sx={{ fontSize: 20, color: '#0b1957' }} />
-                              ) : (
-                                <Lock sx={{ fontSize: 20, color: '#0b1957' }} />
-                              )}
-                            </IconButton>
+                          </p>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRevealEmail(selectedEmployee);
+                                }}
+                                disabled={empRevealing?.email || hasEmail}
+                                className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
+                              >
+                                {empRevealing?.email ? (
+                                  <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                ) : hasEmail ? (
+                                  <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                ) : (
+                                  <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
+                            </TooltipContent>
                           </Tooltip>
-                        </Box>
+                        </div>
                       );
                     })()}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogFooter className="p-2">
           <Button 
             onClick={() => {
               setEmployeeDetailDialogOpen(false);
               setSelectedEmployee(null);
             }} 
-            variant="contained"
-            sx={{
-              background: '#0b1957',
-              color: '#ffffff',
-              borderRadius: '20px',
-              '&:hover': {
-                background: '#0d1f6f',
-              }
-            }}
+            className="bg-[#0b1957] text-white rounded-[20px] hover:bg-[#0d1f6f]"
           >
             Close
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
-    </Box>
+    </div>
   );
-}
+}

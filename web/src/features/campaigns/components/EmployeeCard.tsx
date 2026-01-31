@@ -1,28 +1,27 @@
 'use client';
 import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Card,
-  CardContent,
-  Avatar,
-  Typography,
-  Chip,
-  IconButton,
   Tooltip,
-  CircularProgress,
-} from '@mui/material';
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
-  Person,
-  Email,
+  User,
+  Mail,
   Phone,
   Lock,
   CheckCircle,
-  Description,
-  ExpandMore,
-  ExpandLess,
-  LinkedIn,
-} from '@mui/icons-material';
-import { Button, Collapse } from '@mui/material';
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Linkedin,
+  Loader2,
+} from 'lucide-react';
 interface EmployeeCardProps {
   employee: {
     id?: string;
@@ -84,524 +83,304 @@ export default function EmployeeCard({
   const shouldHideUnlock = hideUnlockFeatures || employee.is_inbound === true;
   return (
     <Card
-      sx={{
-        flex: 1,
-        minHeight: '100%',
-        background: '#ffffff',
-        borderRadius: '12px',
-        border: '1px solid oklch(0.922 0 0)',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.3s ease',
-        position: 'relative',
-        overflow: 'hidden',
-        '&:hover': {
-          transform:
-            employeeViewMode === 'grid'
-              ? 'translateY(-4px)'
-              : 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(11, 25, 87, 0.15)',
-          borderColor: '#0b1957',
-        },
-      }}
+      className={`
+        flex-1 min-h-full bg-white rounded-xl border border-gray-200 shadow-sm
+        transition-all duration-300 ease-in-out relative overflow-hidden
+        hover:shadow-lg hover:border-[#0b1957]
+        ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
+      `}
     >
-      <CardContent sx={{ p: employeeViewMode === 'grid' ? 3 : 2.5 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection:
-              employeeViewMode === 'grid' ? 'column' : 'row',
-            alignItems: 'center',
-            gap: employeeViewMode === 'grid' ? 1.5 : 4,
-            justifyContent:
-              employeeViewMode === 'list'
-                ? 'space-between'
-                : 'center',
-            width: '100%',
-          }}
+      <CardContent className={employeeViewMode === 'grid' ? 'p-6' : 'p-5'}>
+        <div
+          className={`
+            flex items-center w-full
+            ${employeeViewMode === 'grid' 
+              ? 'flex-col gap-3 justify-center' 
+              : 'flex-row gap-8 justify-between'
+            }
+          `}
         >
           {/* Avatar - Top (for grid view) */}
           {employeeViewMode === 'grid' && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, width: '100%' }}>
-              <Avatar
-                src={employee.photo_url}
-                alt={employeeName}
-                sx={{
-                  width: 90,
-                  height: 90,
-                  border: '4px solid',
-                  borderColor: '#0b1957',
-                  boxShadow: 2,
-                  flexShrink: 0,
-                }}
-              >
-                <Person sx={{ fontSize: 50 }} />
+            <div className="flex justify-center mb-4 w-full">
+              <Avatar className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md flex-shrink-0">
+                <AvatarImage src={employee.photo_url} alt={employeeName} />
+                <AvatarFallback className="bg-gray-200">
+                  <User className="w-12 h-12 text-gray-500" />
+                </AvatarFallback>
               </Avatar>
-            </Box>
+            </div>
           )}
           {/* Name & Title - Center aligned for grid */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 0.8,
-              width: '100%',
-              alignItems: employeeViewMode === 'grid' ? 'center' : 'flex-start',
-              textAlign: employeeViewMode === 'grid' ? 'center' : 'left',
-            }}
+          <div
+            className={`
+              flex flex-col gap-2 w-full
+              ${employeeViewMode === 'grid' ? 'items-center text-center' : 'items-start text-left'}
+            `}
           >
             {/* Avatar for list view */}
             {employeeViewMode === 'list' && (
-              <Avatar
-                src={employee.photo_url}
-                alt={employeeName}
-                sx={{
-                  width: 80,
-                  height: 80,
-                  border: '3px solid',
-                  borderColor: '#0b1957',
-                  boxShadow: 3,
-                  flexShrink: 0,
-                  mb: 1,
-                }}
-              >
-                <Person sx={{ fontSize: 40 }} />
+              <Avatar className="w-20 h-20 border-3 border-[#0b1957] shadow-lg flex-shrink-0 mb-2">
+                <AvatarImage src={employee.photo_url} alt={employeeName} />
+                <AvatarFallback className="bg-gray-200">
+                  <User className="w-10 h-10 text-gray-500" />
+                </AvatarFallback>
               </Avatar>
             )}
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                fontSize: '1.05rem',
-                color: '#0b1957',
-                whiteSpace:
-                  employeeViewMode === 'grid'
-                    ? 'normal'
-                    : 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                lineHeight: 1.2,
-                width: '100%',
-              }}
+            <h3
+              className={`
+                font-bold text-[1.05rem] text-[#0b1957] leading-tight w-full
+                ${employeeViewMode === 'grid' ? 'break-words' : 'whitespace-nowrap overflow-hidden text-ellipsis'}
+              `}
             >
               {employeeName}
-            </Typography>
+            </h3>
             {employee.title && (
-              <Chip
-                label={employee.title}
-                size="small"
-                color="primary"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  maxWidth: 'fit-content',
-                  height: 26,
-                  alignSelf: employeeViewMode === 'grid' ? 'center' : 'flex-start',
-                  '& .MuiChip-label': {
-                    px: 1.5,
-                  },
-                }}
-              />
+              <Badge
+                variant="default"
+                className={`
+                  font-semibold text-xs h-[26px] max-w-fit px-3
+                  ${employeeViewMode === 'grid' ? 'self-center' : 'self-start'}
+                `}
+              >
+                {employee.title}
+              </Badge>
             )}
-          </Box>
+          </div>
           {/* Contact info - Below name/title for grid */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1.2,
-              width: '100%',
-              alignItems: employeeViewMode === 'grid' ? 'flex-start' : 'flex-start',
-              mt: employeeViewMode === 'grid' ? 1 : 0,
-            }}
+          <div
+            className={`
+              flex flex-col gap-3 w-full items-start
+              ${employeeViewMode === 'grid' ? 'mt-2' : ''}
+            `}
           >
             {/* Phone */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                width: '100%',
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: '#0b1957',
-                  borderRadius: '50%',
-                  p: 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Phone sx={{ fontSize: 16, color: 'white' }} />
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: shouldHideUnlock || phoneRevealed
-                    ? '#0b1957'
-                    : 'oklch(0.556 0 0)',
-                  fontSize: '0.8rem',
-                  letterSpacing: shouldHideUnlock || phoneRevealed
-                    ? 'normal'
-                    : '1px',
-                  filter: shouldHideUnlock || phoneRevealed ? 'none' : 'blur(4px)',
-                  userSelect: shouldHideUnlock || phoneRevealed ? 'text' : 'none',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  fontWeight: shouldHideUnlock || phoneRevealed ? 600 : 400,
-                }}
+            <div className="flex items-center gap-2 w-full">
+              <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
+                <Phone className="w-4 h-4 text-white" />
+              </div>
+              <span
+                className={`
+                  text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
+                  ${shouldHideUnlock || phoneRevealed 
+                    ? 'text-[#0b1957] font-semibold select-text' 
+                    : 'text-gray-600 tracking-wide blur-sm select-none'
+                  }
+                `}
               >
                 {shouldHideUnlock ? (employee.phone || 'Not provided') : (phoneRevealed ? (employee.phone || '+971 50 123 4567') : '+971 50 123 4567')}
-              </Typography>
+              </span>
               {!shouldHideUnlock && handleRevealPhone && (
-                <Tooltip
-                  title={
-                    phoneRevealed
-                      ? 'Phone number revealed'
-                      : 'Click to reveal phone number'
-                  }
-                  arrow
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (handleRevealPhone) {
-                          handleRevealPhone(employee);
-                        }
-                      }}
-                      disabled={phoneLoading || phoneRevealed}
-                      sx={{
-                        bgcolor: 'oklch(0.97 0 0)',
-                        border: '1px solid oklch(0.922 0 0)',
-                        '&:hover': {
-                          bgcolor: 'oklch(0.97 0 0)',
-                          borderColor: '#0b1957',
-                        },
-                        p: 0.5,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {phoneLoading ? (
-                        <CircularProgress
-                          size={20}
-                          sx={{ color: '#0b1957' }}
-                        />
-                      ) : phoneRevealed ? (
-                        <CheckCircle
-                          sx={{
-                            fontSize: 20,
-                            color: '#0b1957',
-                          }}
-                        />
-                      ) : (
-                        <Lock
-                          sx={{ fontSize: 20, color: '#0b1957' }}
-                        />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (handleRevealPhone) {
+                            handleRevealPhone(employee);
+                          }
+                        }}
+                        disabled={phoneLoading || phoneRevealed}
+                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
+                      >
+                        {phoneLoading ? (
+                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                        ) : phoneRevealed ? (
+                          <CheckCircle className="h-5 w-5 text-[#0b1957]" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-[#0b1957]" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {phoneRevealed
+                          ? 'Phone number revealed'
+                          : 'Click to reveal phone number'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-            </Box>
+            </div>
             {/* Email */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                width: '100%',
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: '#0b1957',
-                  borderRadius: '50%',
-                  p: 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Email sx={{ fontSize: 16, color: 'white' }} />
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: shouldHideUnlock || emailRevealed
-                    ? '#0b1957'
-                    : 'oklch(0.556 0 0)',
-                  fontSize: '0.8rem',
-                  letterSpacing: shouldHideUnlock || emailRevealed
-                    ? 'normal'
-                    : '1px',
-                  filter: shouldHideUnlock || emailRevealed ? 'none' : 'blur(4px)',
-                  userSelect: shouldHideUnlock || emailRevealed ? 'text' : 'none',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  fontWeight: shouldHideUnlock || emailRevealed ? 600 : 400,
-                }}
+            <div className="flex items-center gap-2 w-full">
+              <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
+                <Mail className="w-4 h-4 text-white" />
+              </div>
+              <span
+                className={`
+                  text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
+                  ${shouldHideUnlock || emailRevealed 
+                    ? 'text-[#0b1957] font-semibold select-text' 
+                    : 'text-gray-600 tracking-wide blur-sm select-none'
+                  }
+                `}
               >
                 {shouldHideUnlock ? (displayEmail || 'Not provided') : (emailRevealed ? (displayEmail || 'name@company.com') : 'name@company.com')}
-              </Typography>
+              </span>
               {!shouldHideUnlock && handleRevealEmail && (
-                <Tooltip
-                  title={
-                    emailRevealed
-                      ? 'Email address revealed'
-                      : 'Click to reveal email address'
-                  }
-                  arrow
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (handleRevealEmail) {
-                          handleRevealEmail(employee);
-                        }
-                      }}
-                      disabled={emailLoading || emailRevealed}
-                      sx={{
-                        bgcolor: 'oklch(0.97 0 0)',
-                        border: '1px solid oklch(0.922 0 0)',
-                        '&:hover': {
-                          bgcolor: 'oklch(0.97 0 0)',
-                          borderColor: '#0b1957',
-                        },
-                        p: 0.5,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {emailLoading ? (
-                        <CircularProgress
-                          size={20}
-                          sx={{ color: '#0b1957' }}
-                        />
-                      ) : emailRevealed ? (
-                        <CheckCircle
-                          sx={{
-                            fontSize: 20,
-                            color: '#0b1957',
-                          }}
-                        />
-                      ) : (
-                        <Lock
-                          sx={{ fontSize: 20, color: '#0b1957' }}
-                        />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (handleRevealEmail) {
+                            handleRevealEmail(employee);
+                          }
+                        }}
+                        disabled={emailLoading || emailRevealed}
+                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
+                      >
+                        {emailLoading ? (
+                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                        ) : emailRevealed ? (
+                          <CheckCircle className="h-5 w-5 text-[#0b1957]" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-[#0b1957]" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {emailRevealed
+                          ? 'Email address revealed'
+                          : 'Click to reveal email address'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-            </Box>
+            </div>
 
             {/* LinkedIn */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                width: '100%',
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: '#0077b5',
-                  borderRadius: '50%',
-                  p: 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <LinkedIn sx={{ fontSize: 16, color: 'white' }} />
-              </Box>
-              <Typography
-                variant="caption"
-                component={shouldHideUnlock || linkedinRevealed ? 'a' : 'span'}
-                href={
-                  shouldHideUnlock || linkedinRevealed
-                    ? ((displayLinkedIn || '').startsWith('http')
-                        ? displayLinkedIn
-                        : `https://${displayLinkedIn}`)
-                    : undefined
-                }
-                target={shouldHideUnlock || linkedinRevealed ? '_blank' : undefined}
-                rel={shouldHideUnlock || linkedinRevealed ? 'noopener noreferrer' : undefined}
-                sx={{
-                  color: shouldHideUnlock || linkedinRevealed
-                    ? '#0077b5'
-                    : 'oklch(0.556 0 0)',
-                  fontSize: '0.8rem',
-                  letterSpacing: shouldHideUnlock || linkedinRevealed
-                    ? 'normal'
-                    : '1px',
-                  filter: shouldHideUnlock || linkedinRevealed ? 'none' : 'blur(4px)',
-                  userSelect: shouldHideUnlock || linkedinRevealed ? 'text' : 'none',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  fontWeight: shouldHideUnlock || linkedinRevealed ? 600 : 400,
-                  textDecoration: shouldHideUnlock || linkedinRevealed ? 'none' : 'none',
-                  cursor: shouldHideUnlock || linkedinRevealed ? 'pointer' : 'default',
-                  '&:hover': {
-                    textDecoration: shouldHideUnlock || linkedinRevealed ? 'underline' : 'none',
-                  },
-                }}
-              >
-                {shouldHideUnlock 
-                  ? (displayLinkedIn ? 'LinkedIn Profile' : 'Not provided')
-                  : (linkedinRevealed 
-                      ? 'LinkedIn Profile'
-                      : 'linkedin.com/in/...')}
-              </Typography>
-              {!shouldHideUnlock && handleRevealLinkedIn && (
-                <Tooltip
-                  title={
-                    linkedinRevealed
-                      ? 'LinkedIn profile revealed'
-                      : 'Click to reveal LinkedIn profile'
+            <div className="flex items-center gap-2 w-full">
+              <div className="bg-[#0077b5] rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
+                <Linkedin className="w-4 h-4 text-white" />
+              </div>
+              {(shouldHideUnlock || linkedinRevealed) ? (
+                <a
+                  href={
+                    (displayLinkedIn || '').startsWith('http')
+                      ? displayLinkedIn
+                      : `https://${displayLinkedIn}`
                   }
-                  arrow
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`
+                    text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
+                    text-[#0077b5] font-semibold select-text cursor-pointer
+                    no-underline hover:underline
+                  `}
                 >
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (handleRevealLinkedIn) {
-                          handleRevealLinkedIn(employee);
-                        }
-                      }}
-                      disabled={linkedinLoading || linkedinRevealed}
-                      sx={{
-                        bgcolor: 'oklch(0.97 0 0)',
-                        border: '1px solid oklch(0.922 0 0)',
-                        '&:hover': {
-                          bgcolor: 'oklch(0.97 0 0)',
-                          borderColor: '#0077b5',
-                        },
-                        p: 0.5,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {linkedinLoading ? (
-                        <CircularProgress
-                          size={20}
-                          sx={{ color: '#0077b5' }}
-                        />
-                      ) : linkedinRevealed ? (
-                        <CheckCircle
-                          sx={{
-                            fontSize: 20,
-                            color: '#0077b5',
-                          }}
-                        />
-                      ) : (
-                        <Lock
-                          sx={{ fontSize: 20, color: '#0077b5' }}
-                        />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                  {shouldHideUnlock 
+                    ? (displayLinkedIn ? 'LinkedIn Profile' : 'Not provided')
+                    : 'LinkedIn Profile'}
+                </a>
+              ) : (
+                <span
+                  className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 tracking-wide blur-sm select-none"
+                >
+                  linkedin.com/in/...
+                </span>
               )}
-            </Box>
-          </Box>
+              {!shouldHideUnlock && handleRevealLinkedIn && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (handleRevealLinkedIn) {
+                            handleRevealLinkedIn(employee);
+                          }
+                        }}
+                        disabled={linkedinLoading || linkedinRevealed}
+                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0077b5] p-1.5 h-7 w-7 flex-shrink-0"
+                      >
+                        {linkedinLoading ? (
+                          <Loader2 className="h-5 w-5 text-[#0077b5] animate-spin" />
+                        ) : linkedinRevealed ? (
+                          <CheckCircle className="h-5 w-5 text-[#0077b5]" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-[#0077b5]" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {linkedinRevealed
+                          ? 'LinkedIn profile revealed'
+                          : 'Click to reveal LinkedIn profile'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          </div>
           {/* Profile Summary Section */}
           {profileSummary && (
-            <Box sx={{ width: '100%', mt: 2 }}>
+            <div className="w-full mt-4">
               <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<Description />}
-                endIcon={summaryExpanded ? <ExpandLess /> : <ExpandMore />}
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
                   setSummaryExpanded(!summaryExpanded);
                 }}
-                sx={{
-                  borderColor: '#0b1957',
-                  color: '#0b1957',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  py: 1,
-                  mb: summaryExpanded ? 1 : 0,
-                  '&:hover': {
-                    borderColor: '#0b1957',
-                    bgcolor: 'rgba(11, 25, 87, 0.04)',
-                  },
-                }}
+                className={`
+                  w-full border-[#0b1957] text-[#0b1957] font-semibold text-sm py-2
+                  hover:border-[#0b1957] hover:bg-[#0b1957]/5
+                  ${summaryExpanded ? 'mb-2' : ''}
+                `}
               >
+                <FileText className="w-4 h-4 mr-2" />
                 {summaryExpanded ? 'Hide Summary' : 'View Summary'}
+                {summaryExpanded ? (
+                  <ChevronUp className="w-4 h-4 ml-2" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                )}
               </Button>
-              <Collapse in={summaryExpanded}>
-                <Box
-                  sx={{
-                    mt: 1,
-                    p: 2,
-                    bgcolor: '#F8F9FE',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#475569',
-                      lineHeight: 1.7,
-                      whiteSpace: 'pre-wrap',
-                      fontSize: '0.875rem',
-                    }}
-                  >
+              <div
+                className={`
+                  overflow-hidden transition-all duration-300 ease-in-out
+                  ${summaryExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}
+                `}
+              >
+                <div className="p-4 bg-[#F8F9FE] rounded-lg border border-[#E2E8F0]">
+                  <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
                     {profileSummary}
-                  </Typography>
-                </Box>
-              </Collapse>
-            </Box>
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
           {/* View Summary Button (if no summary available yet) */}
           {!profileSummary && onViewSummary && (
-            <Box sx={{ width: '100%', mt: 2 }}>
+            <div className="w-full mt-4">
               <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<Description />}
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewSummary(employee);
                 }}
-                sx={{
-                  borderColor: '#0b1957',
-                  color: '#0b1957',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  py: 1,
-                  '&:hover': {
-                    borderColor: '#0b1957',
-                    bgcolor: 'rgba(11, 25, 87, 0.04)',
-                  },
-                }}
+                className="w-full border-[#0b1957] text-[#0b1957] font-semibold text-sm py-2 hover:border-[#0b1957] hover:bg-[#0b1957]/5"
               >
+                <FileText className="w-4 h-4 mr-2" />
                 Generate Summary
               </Button>
-            </Box>
+            </div>
           )}
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );

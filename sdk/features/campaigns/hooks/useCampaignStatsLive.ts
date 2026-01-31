@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../../../shared/apiClient';
+import { logger } from '@/lib/logger';
 interface PlatformMetrics {
   linkedin: { sent: number; connected: number; replied: number };
   email: { sent: number; connected: number; replied: number };
@@ -67,15 +68,28 @@ export function useCampaignStatsLive({
   const connectSSE = useCallback(() => {
     if (!enabled || !campaignId) return;
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || localStorage.getItem('token');
+      // Get auth token from cookies (EventSource doesn't support custom headers)
+      let token: string | null = null;
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        for (const cookie of cookies) {
+          const [rawName, ...rawValueParts] = cookie.trim().split('=');
+          const name = rawName?.trim();
+          const value = rawValueParts.join('=');
+          if (!name) continue;
+          if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
+            token = decodeURIComponent(value || '');
+            break;
+          }
+        }
+      }
       if (!token) {
         setError(new Error('Authentication required'));
         return;
       }
       // Ensure URL includes /api prefix
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
-      const baseUrl = backendUrl ? `${backendUrl}/api` : '/api';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL ;
+      const baseUrl = backendUrl ? `${backendUrl}/api` : undefined;
       // Construct SSE URL with auth token
       const sseUrl = `${baseUrl}/campaigns/${campaignId}/events?token=${encodeURIComponent(token)}`;
       const eventSource = new EventSource(sseUrl);
@@ -108,7 +122,19 @@ export function useCampaignStatsLive({
         setIsConnected(false);
         eventSource.close();
         eventSourceRef.current = null;
-        // Exponential backoff reconnection
+        
+        // If readyState is 2 (CLOSED), it means the connection was closed, likely due to:
+        // - MIME type error (backend returned JSON instead of text/event-stream)
+        // - Authentication error
+        // - Endpoint doesn't exist
+        // In these cases, immediately fall back to polling instead of retrying SSE
+        if (eventSource.readyState === 2) {
+          logger.warn('[CampaignStatsLive] SSE connection closed (likely MIME type error or auth issue). Falling back to polling.');
+          startFallbackPolling();
+          return;
+        }
+        
+        // Exponential backoff reconnection for other errors
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
@@ -118,6 +144,7 @@ export function useCampaignStatsLive({
           }, delay);
         } else {
           // Fall back to polling after max reconnect attempts
+          logger.warn('[CampaignStatsLive] Max reconnect attempts reached. Falling back to polling.');
           startFallbackPolling();
         }
       };

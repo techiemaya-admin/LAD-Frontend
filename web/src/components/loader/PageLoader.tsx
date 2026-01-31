@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { LoadingContext } from '@/components/providers/loading-provider';
 
 interface PageLoaderProps {
@@ -30,6 +31,16 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
   message = 'Loading...',
   showMessage = true,
 }) => {
+  const pathname = usePathname();
+
+  // Disable the page loader for specific routes
+  const isCampaignsListPage = pathname === '/campaigns';
+  const isCampaignAnalyticsPage = /^\/campaigns\/[^/]+\/analytics\/?$/.test(pathname);
+
+  if (isCampaignsListPage || isCampaignAnalyticsPage) {
+    return null;
+  }
+
   const loadingState = React.useContext(LoadingContext);
   const isVisible = loadingState.activeCount > 0;
   const hasMinVisibleTime = loadingState.nextHideAt !== null && Date.now() < loadingState.nextHideAt;
