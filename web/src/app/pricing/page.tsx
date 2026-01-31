@@ -3,6 +3,9 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { UsageCalculator } from '@/components/UsageCalculator';
 import { Shield, Zap, Users, Check } from 'lucide-react';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+
 export default function PricingPage() {
   const router = useRouter();
   const handleGetStarted = () => {
@@ -17,9 +20,12 @@ export default function PricingPage() {
     }
   };
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#0b1957]">
+      {/* Header */}
+      <Header />
+
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white py-16">
+      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0b1957] dark:to-[#0b1957] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
             Simple, credit-based
@@ -635,6 +641,9 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

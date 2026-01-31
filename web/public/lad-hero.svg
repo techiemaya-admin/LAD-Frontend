@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0%" stop-color="#0b1957" stop-opacity="1" />
+      <stop offset="100%" stop-color="#153a74" stop-opacity="1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#g)" rx="40" />
+  <g transform="translate(80,80)">
+    <rect x="0" y="0" width="520" height="520" rx="28" fill="#ffffff10" />
+    <circle cx="380" cy="120" r="80" fill="#ffd54a" opacity="0.95" />
+    <rect x="40" y="220" width="420" height="220" rx="18" fill="#ffffff20" />
+    <text x="60" y="320" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="#fff">LAD — Let Agent Deal</text>
+    <text x="60" y="360" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#e6eefc">AI agents that negotiate, qualify and close deals.</text>
+  </g>
+</svg>

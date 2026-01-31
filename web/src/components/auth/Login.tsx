@@ -232,8 +232,6 @@ const Login: React.FC = () => {
     }
   };
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#dbeafe] to-[#f1f5f9] p-4">
-      {/* CARD */}
       <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-white/60 border-gray-200">
         {/* Logo */}
         <img
@@ -333,10 +331,10 @@ const Login: React.FC = () => {
           <Button
             type="submit"
             className="
-              w-full py-3 rounded-xl text-lg font-semibold
-              bg-gradient-to-r from-[#172560] to-[#1e3a8a]
-              text-white shadow-lg hover:shadow-xl hover:scale-[1.02]
-              transition-all
+              w-full p-6 rounded-lg text-lg font-semibold
+              bg-[#0b1957] text-white
+              hover:shadow-lg transition-shadow
+
             "
           >
             {loading ? "⏳ Signing in..." : "🚀 Sign In"}
@@ -347,7 +345,7 @@ const Login: React.FC = () => {
           Need help? <span className="text-blue-700 font-semibold cursor-pointer">Contact Support</span>
         </p> */}
       </div>
-    </div>
+    
   );
 };
 export default Login;

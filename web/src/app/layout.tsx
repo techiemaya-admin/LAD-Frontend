@@ -31,6 +31,10 @@ export default function RootLayout({
   return (
         <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        
         <script
           dangerouslySetInnerHTML={{
             __html: `
