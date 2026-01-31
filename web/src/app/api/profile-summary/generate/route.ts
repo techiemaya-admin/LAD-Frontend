@@ -21,8 +21,6 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
     const token = 
       (authHeader && authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null) ||
-      req.cookies.get('access_token')?.value || 
-      req.cookies.get('auth_token')?.value ||
       req.cookies.get('token')?.value;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -52,4 +50,4 @@ export async function POST(req: NextRequest) {
       details: e?.message
     }, { status: 500 });
   }
-}
+}

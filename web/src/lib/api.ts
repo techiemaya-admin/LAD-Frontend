@@ -17,7 +17,7 @@ function authHeaders() {
     const name = rawName?.trim();
     const value = rawValueParts.join("=");
     if (!name) continue;
-    if (name === "auth_token" || name === "token") {
+    if (name === "token") {
       token = decodeURIComponent(value || "");
       break;
     }

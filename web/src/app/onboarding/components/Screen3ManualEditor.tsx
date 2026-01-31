@@ -19,9 +19,9 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import StepLibrary from '../../features/campaigns/components/StepLibrary';
-import StepSettings from '../../features/campaigns/components/StepSettings';
-import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
+import StepLibrary from '../../../features/campaigns/components/StepLibrary';
+import StepSettings from '../../../features/campaigns/components/StepSettings';
+import CustomNode from '../../../features/campaigns/components/nodes/CustomNode';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
 // Register node types (defined outside component to prevent recreation on each render)
 const NODE_TYPES: NodeTypes = {

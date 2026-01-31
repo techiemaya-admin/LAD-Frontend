@@ -184,7 +184,7 @@ export function useCampaignLiveUpdates() {
         const name = rawName?.trim();
         const value = rawValueParts.join('=');
         if (!name) continue;
-        if (name === 'auth_token' || name === 'token' || name === 'access_token' || name === 'auth') {
+        if (name === 'token' || name === 'access_token' || name === 'auth') {
           token = decodeURIComponent(value || '');
           break;
         }

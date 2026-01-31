@@ -31,7 +31,6 @@ export async function login(payload: LoginPayload): Promise<void> {
     const data = await res.json().catch(() => null);
     const token = data?.token as string | undefined;
     if (token) {
-      safeStorage.setItem("auth_token", token);
       safeStorage.setItem("token", token);
     }
   } catch {
@@ -56,7 +55,7 @@ export async function getCurrentUser(): Promise<User> {
             const name = rawName?.trim();
             const value = rawValueParts.join("=");
             if (!name) continue;
-            if (name === "auth_token" || name === "token") {
+            if (name === "token") {
               return decodeURIComponent(value || "");
             }
           }

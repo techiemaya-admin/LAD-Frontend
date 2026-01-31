@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
 import { WidgetLibrary } from '@/components/dashboard/WidgetLibrary';
-const Index: React.FC = () => {
+const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f6ff] via-[#f5f9ff] to-[#f0f6ff]">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px]">
@@ -30,4 +30,4 @@ const Index: React.FC = () => {
     </div>
   );
 };
-export default Index;
+export default Dashboard;

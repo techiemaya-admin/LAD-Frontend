@@ -1,9 +1,11 @@
 // Using UI proxy routes that set/read httpOnly cookies
 import { safeStorage } from '../utils/storage';
+
 export type Credentials = {
   email: string;
   password: string;
 };
+
 export type AuthUser = {
   id: string;
   name?: string;
@@ -17,18 +19,8 @@ export type LoginResponse = {
   token?: string; // optional for backward compat, but not used
   [key: string]: unknown;
 };
-// Helper to set cookie
-function setCookie(name: string, value: string, days: number = 7) {
-  if (typeof window === 'undefined') return;
-  const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
-}
-// Helper to delete cookie
-function deleteCookie(name: string) {
-  if (typeof window === 'undefined') return;
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-}
+
+
 const authService = {
   login: async (credentials: Credentials): Promise<LoginResponse> => {
     // Call frontend API route which will set httpOnly cookies
@@ -38,6 +30,7 @@ const authService = {
       body: JSON.stringify(credentials),
       credentials: 'include', // Important: send and receive cookies
     });
+
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || 'Invalid credentials');
@@ -46,10 +39,10 @@ const authService = {
     const data: LoginResponse = await response.json();
     if (typeof window !== 'undefined' && data.token) {
       safeStorage.setItem('token', data.token);
-      safeStorage.setItem('auth_token', data.token);
     }
     return data;
   },
+  
   logout: async (): Promise<unknown> => {
     // Call frontend API route to clear cookie
     const response = await fetch('/api/auth/logout', { 
@@ -61,12 +54,12 @@ const authService = {
     }
     if (typeof window !== 'undefined') {
       safeStorage.removeItem('token');
-      safeStorage.removeItem('auth_token');
     }
     return await response.json();
   },
+  
   getCurrentUser: async (): Promise<AuthUser> => {
-    const token = safeStorage.getItem('auth_token');
+    const token = safeStorage.getItem('token');
     const response = await fetch('/api/auth/me', { 
       cache: 'no-store',
       credentials: 'include',

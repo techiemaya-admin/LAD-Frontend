@@ -67,13 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(user);
       } else {
         // Token is invalid, clear it
-        safeStorage.removeItem('auth_token');
+        safeStorage.removeItem('token');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
-      safeStorage.removeItem('auth_token');
+      safeStorage.removeItem('token');
       setToken(null);
       setUser(null);
     } finally {
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       const authToken = data.token;
       // Store token
-      safeStorage.setItem('auth_token', authToken);
+      safeStorage.setItem('token', authToken);
       setToken(authToken);
       // Fetch user data
       await fetchCurrentUser(authToken);
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   const logout = () => {
-    safeStorage.removeItem('auth_token');
+    safeStorage.removeItem('token');
     setToken(null);
     setUser(null);
     router.push('/login');
@@ -149,4 +149,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+}

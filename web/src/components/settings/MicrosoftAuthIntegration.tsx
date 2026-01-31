@@ -26,7 +26,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
         setTimeout(() => reject({ timeout: true }), 15000) // 15 seconds timeout
       );
       // Check if user has Microsoft Calendar connected
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const mePromise = fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -63,7 +63,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
   };
   const handleOAuthCallback = async () => {
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -92,7 +92,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
     setIsLoading(true);
     try {
       // Get the logged-in user's id
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -133,7 +133,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
   const disconnectMicrosoft = async () => {
     setIsLoading(true);
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -237,4 +237,4 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+};

@@ -20,7 +20,7 @@ function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') {
     return {};
   }
-  const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+  const token = safeStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 /**
@@ -142,4 +142,4 @@ export async function processICPAnswer(
       error: error.message || 'Failed to process answer',
     };
   }
-}
+}

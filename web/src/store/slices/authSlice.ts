@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { safeStorage } from '../../utils/storage';
+
 export type AuthUser = {
   id?: string;
   name?: string;
@@ -41,6 +42,7 @@ const getInitialState = (): AuthState => {
     theme: 'light',
   };
 };
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: getInitialState(),
@@ -49,12 +51,14 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
+
     loginSuccess: (state, action: PayloadAction<NonNullable<AuthUser>>) => {
       state.isAuthenticated = true;
       state.user = action.payload;
       state.loading = false;
       state.error = null;
       try {
+        debugger;
         if (typeof window !== 'undefined') {
           safeStorage.setItem(
             'auth',
@@ -63,10 +67,12 @@ const authSlice = createSlice({
         }
       } catch {}
     },
+
     loginFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
       state.error = action.payload;
     },
+    
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
@@ -106,4 +112,4 @@ const authSlice = createSlice({
 export const { loginStart, loginSuccess, loginFailure, logout, clearError, toggleTheme, updateUserProfile } = authSlice.actions;
 export const selectUser = (state: any) => state.auth.user;
 export const selectIsAuthenticated = (state: any) => state.auth.isAuthenticated;
-export default authSlice.reducer;
+export default authSlice.reducer;

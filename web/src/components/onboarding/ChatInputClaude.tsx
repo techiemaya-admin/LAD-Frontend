@@ -71,7 +71,7 @@ export default function ChatInputClaude({
     >
       <div
         className={cn(
-          'relative flex items-end gap-2 px-4 py-3 bg-white border rounded-2xl shadow-sm transition-all',
+          'relative flex items-center justify-center gap-2 px-4 py-3 bg-white border rounded-2xl shadow-sm transition-all',
           isFocused
             ? 'border-gray-400 shadow-md'
             : 'border-gray-200 hover:border-gray-300',
@@ -95,13 +95,6 @@ export default function ChatInputClaude({
               <Library className="w-4 h-4" />
             </button>
           )}
-          <button
-            type="button"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Attach file"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
         </div>
         {/* Text Input */}
         <textarea
@@ -137,21 +130,8 @@ export default function ChatInputClaude({
           tabIndex={disabled ? -1 : 0}
         />
         {/* Right Icons */}
-        <div className="flex items-center gap-1 mb-1">
-          <button
-            type="button"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Timer"
-          >
-            <Clock className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-1">
+     
           <button
             type="submit"
             disabled={!input.trim() || disabled}
@@ -169,4 +149,4 @@ export default function ChatInputClaude({
       </div>
     </form>
   );
-}
+}

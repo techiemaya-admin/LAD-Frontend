@@ -1,155 +1,3 @@
-
-// "use client";
-// import React, { useState, useEffect } from "react";
-// import { useDispatch, useSelector } from "react-redux";
-// import { useRouter } from "next/navigation";
-// import { Button } from "@/components/ui/button";
-// import { Eye, EyeOff } from "lucide-react";
-// import {
-//   loginStart,
-//   loginSuccess,
-//   loginFailure,
-//   clearError,
-//   logout,
-// } from "../../store/slices/authSlice";
-// import authService from "../../services/authService";
-// import { validateEmail, validatePassword } from "../../utils/validation";
-// type RootState = any;
-// const Login: React.FC = () => {
-//   const dispatch = useDispatch();
-//   const router = useRouter();
-//   const [formData, setFormData] = useState({ email: "", password: "" });
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-//   const auth = useSelector((state: RootState) => state.auth);
-//   const { isAuthenticated, loading, error } = auth || {
-//     isAuthenticated: false,
-//     loading: false,
-//     error: null,
-//   };
-//   useEffect(() => {
-//     if (error) {
-//       setFormErrors((prev) => ({ ...prev, submit: error }));
-//     }
-//     return () => {
-//       if (error) dispatch(clearError());
-//     };
-//   }, [error, dispatch]);
-//   const validateForm = () => {
-//     const errors: Record<string, string> = {};
-//     const emailError = validateEmail(formData.email);
-//     if (emailError) errors.email = emailError;
-//     const passwordError = validatePassword(formData.password);
-//     if (passwordError) errors.password = passwordError;
-//     return errors;
-//   };
-//   const handleChange = (e: any) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({ ...prev, [name]: value }));
-//     setFormErrors((prev) => ({ ...prev, [name]: "", submit: "" }));
-//   };
-//   const handleSubmit = async (e: any) => {
-//     e.preventDefault();
-//     const errors = validateForm();
-//     if (Object.keys(errors).length > 0) return setFormErrors(errors);
-//     dispatch(loginStart());
-//     try {
-//       await authService.login(formData);
-//       const user = await authService.getCurrentUser();
-//       dispatch(loginSuccess(user));
-//       router.push("/dashboard");
-//     } catch (err: any) {
-//       dispatch(loginFailure(err.message));
-//     }
-//   };
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-white p-4">
-//       {/* CARD */}
-//       <div className="w-full max-w-[420px] p-8 bg-white rounded-[15px] shadow-lg border border-gray-200">
-//         {/* Logo */}
-//         <img
-//           src="/logo.png"
-//           className="w-24 mx-auto mb-4 opacity-90"
-//           alt="logo"
-//         />
-//         {/* Title */}
-//         <h2 className="text-center text-xl font-semibold text-gray-800 mb-6">
-//           Welcome Back
-//         </h2>
-//         {formErrors.submit && (
-//           <div className="mb-3 rounded-md border border-red-300 bg-red-100 text-red-700 text-sm px-3 py-2">
-//             {formErrors.submit}
-//           </div>
-//         )}
-//         <form onSubmit={handleSubmit} className="space-y-5">
-//           {/* Email */}
-//           <div>
-//             <label className="text-gray-700 text-sm font-medium">Email</label>
-//             <input
-//               name="email"
-//               value={formData.email}
-//               onChange={handleChange}
-//               disabled={loading}
-//               className="
-//                 mt-1 w-full rounded-full px-4 py-3
-//                 bg-[#f1f3f5] border border-gray-300
-//                 text-gray-800 placeholder-gray-500
-//                 focus:outline-none focus:ring-2 focus:ring-blue-400
-//                 transition
-//               "
-//               type="email"
-//             />
-//             {formErrors.email && (
-//               <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>
-//             )}
-//           </div>
-//           {/* Password */}
-//           <div>
-//             <label className="text-gray-700 text-sm font-medium">
-//               Password
-//             </label>
-//             <div className="relative mt-1">
-//               <input
-//                 name="password"
-//                 type={showPassword ? "text" : "password"}
-//                 value={formData.password}
-//                 onChange={handleChange}
-//                 disabled={loading}
-//                 className="
-//                   w-full rounded-full px-4 py-3 pr-10
-//                   bg-[#f1f3f5] border border-gray-300
-//                   text-gray-800 placeholder-gray-500
-//                   focus:outline-none focus:ring-2 focus:ring-blue-400
-//                   transition
-//                 "
-//               />
-//               <button
-//                 type="button"
-//                 onClick={() => setShowPassword(!showPassword)}
-//                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-//               >
-//                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-//               </button>
-//             </div>
-//             {formErrors.password && (
-//               <p className="text-xs text-red-500 mt-1">
-//                 {formErrors.password}
-//               </p>
-//             )}
-//           </div>
-//           {/* Button */}
-//           <Button
-//             type="submit"
-//             className="w-full py-3 rounded-full bg-[#172560] text-white text-lg hover:bg-blue-700 transition"
-//           >
-//             {loading ? "Signing in..." : "Sign In"}
-//           </Button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-// export default Login;
 "use client";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -165,8 +13,10 @@ import {
 import authService from "@/services/authService";
 import { validateEmail, validatePassword } from "../../utils/validation";
 type RootState = any;
+
 const Login: React.FC = () => {
   const dispatch = useDispatch();
+
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -174,6 +24,7 @@ const Login: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const auth = useSelector((state: RootState) => state.auth);
   const { loading, error } = auth || { loading: false, error: null };
+
   useEffect(() => {
     // Load saved credentials
     const savedEmail = localStorage.getItem('savedEmail');
@@ -183,6 +34,7 @@ const Login: React.FC = () => {
       setRememberMe(true);
     }
   }, []);
+
   useEffect(() => {
     if (error) {
       setFormErrors((prev) => ({ ...prev, submit: error }));
@@ -191,6 +43,7 @@ const Login: React.FC = () => {
       if (error) dispatch(clearError());
     };
   }, [error, dispatch]);
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
     const emailError = validateEmail(formData.email);
@@ -199,38 +52,30 @@ const Login: React.FC = () => {
     if (passwordError) errors.password = passwordError;
     return errors;
   };
+
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setFormErrors((prev) => ({ ...prev, [name]: "", submit: "" }));
   };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     const errors = validateForm();
     if (Object.keys(errors).length > 0) return setFormErrors(errors);
     dispatch(loginStart());
     try {
-      // Save or clear credentials based on Remember Me
-      if (rememberMe) {
-        localStorage.setItem('savedEmail', formData.email);
-        localStorage.setItem('savedPassword', formData.password);
-      } else {
-        localStorage.removeItem('savedEmail');
-        localStorage.removeItem('savedPassword');
-      }
-      const loginResponse = await authService.login(formData);
+      await authService.login(formData);
       const user = await authService.getCurrentUser();
       dispatch(loginSuccess(user));
       // Verify token is stored before redirecting (use safeStorage, not direct localStorage)
-      const { safeStorage } = await import('@/utils/storage');
-      const storedToken = safeStorage.getItem('token');
-      console.debug('[Login] Token stored:', storedToken ? 'Yes' : 'No');
       router.push("/dashboard");
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
       dispatch(loginFailure(err.message));
     }
   };
+
   return (
       <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-white/60 border-gray-200">
         {/* Logo */}
@@ -324,7 +169,7 @@ const Login: React.FC = () => {
               htmlFor="rememberMe"
               className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
             >
-              💾 Remember my credentials
+              Remember
             </label>
           </div>
           {/* Login Button */}
@@ -337,13 +182,10 @@ const Login: React.FC = () => {
 
             "
           >
-            {loading ? "⏳ Signing in..." : "🚀 Sign In"}
+            {loading ? "⏳ Signing in..." : "Sign In"}
           </Button>
         </form>
         {/* Footer */}
-        {/* <p className="text-center text-gray-600 text-sm mt-5">
-          Need help? <span className="text-blue-700 font-semibold cursor-pointer">Contact Support</span>
-        </p> */}
       </div>
     
   );

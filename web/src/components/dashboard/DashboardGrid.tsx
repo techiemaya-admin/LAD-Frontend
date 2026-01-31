@@ -99,7 +99,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   // Fetch credits data
   const fetchCredits = useCallback(async () => {
     try {
-      const token = safeStorage.getItem('auth_token') || safeStorage.getItem('token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       if (!token) return;
 
       const userData = await apiGet<{

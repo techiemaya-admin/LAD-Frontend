@@ -75,8 +75,8 @@ export const TeamManagement: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
-      console.debug('[TeamManagement] Token source:', safeStorage.getItem('token') ? 'token' : safeStorage.getItem('auth_token') ? 'auth_token' : 'none');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
+      console.debug('[TeamManagement] Token source:', safeStorage.getItem('token') ? 'token' : safeStorage.getItem('token') ? 'token' : 'none');
       if (!token) {
         // Redirect to login instead of showing error
         console.warn('[TeamManagement] No token found, redirecting to login');
@@ -113,7 +113,7 @@ export const TeamManagement: React.FC = () => {
   };
   const handleAddUser = async () => {
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token')
       const response = await fetch(`${getApiBaseUrl()}/api/users`, {
         method: 'POST',
         headers: {
@@ -137,7 +137,7 @@ export const TeamManagement: React.FC = () => {
   };
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/role`, {
         method: 'PUT',
         headers: {
@@ -161,7 +161,7 @@ export const TeamManagement: React.FC = () => {
       ? currentCapabilities.filter(c => c !== capabilityKey)
       : [...currentCapabilities, capabilityKey];
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/capabilities`, {
         method: 'PUT',
         headers: {
@@ -183,7 +183,7 @@ export const TeamManagement: React.FC = () => {
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {

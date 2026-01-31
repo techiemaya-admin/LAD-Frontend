@@ -83,7 +83,7 @@ export const GoogleAuthIntegration: React.FC = () => {
     setIsLoading(true);
     try {
       // Get the logged-in user's id
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -125,7 +125,7 @@ export const GoogleAuthIntegration: React.FC = () => {
   const disconnectGoogle = async () => {
     setIsLoading(true);
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
       const meRes = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -266,4 +266,4 @@ export const GoogleAuthIntegration: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+};

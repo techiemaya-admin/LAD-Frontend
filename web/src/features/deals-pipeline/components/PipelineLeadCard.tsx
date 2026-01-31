@@ -427,7 +427,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   // Get current user from token or auth context
   const getCurrentUserId = () => {
     try {
-      const token = safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token');
       if (!token) return null;
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.userId || payload.id;
@@ -538,7 +538,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     const attachmentId = rawAttachment?.id ?? rawAttachment?.db?.id ?? null;
     setDownloadingAttachmentId(attachmentId);
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token') || '';
+      const token = safeStorage.getItem('token') || safeStorage.getItem('token') || '';
       const response = await fetch(url, {
         method: 'GET',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,

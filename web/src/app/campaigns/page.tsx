@@ -1,6 +1,5 @@
 'use client';
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import CampaignsList from '../../features/campaigns/components/CampaignsList';
 /**
  * Campaigns Page - follows LAD architecture pattern
@@ -14,11 +13,6 @@ import CampaignsList from '../../features/campaigns/components/CampaignsList';
  * is in the CampaignsList feature component.
  */
 export default function CampaignsPage() {
-  // TODO: Add authentication check when auth system is available
-  // const session = await getServerSession();
-  // if (!session) {
-  //   redirect('/login');
-  // }
   return (
     <Suspense fallback={<div>Loading campaigns...</div>}>
       <CampaignsList />

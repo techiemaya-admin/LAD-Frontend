@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ArrowLeft, Save, Play, Loader2 } from 'lucide-react';
 import { useCampaign, updateCampaign } from '@/features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
-import Screen3ManualEditor from '@/app/onboarding/Screen3ManualEditor';
+import Screen3ManualEditor from '@/app/onboarding/components/Screen3ManualEditor';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { logger } from '@/lib/logger';
 import type { StepType, FlowNode, FlowEdge, StepData } from '@/types/campaign';

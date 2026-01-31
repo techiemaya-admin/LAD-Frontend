@@ -10,7 +10,7 @@ const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost
 // Helper function to get userId from auth token
 const getUserId = () => {
   try {
-    const token = safeStorage.getItem('auth_token');
+    const token = safeStorage.getItem('token');
     if (!token) return 'demo_user_123';
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.userId || payload.id || 'demo_user_123';

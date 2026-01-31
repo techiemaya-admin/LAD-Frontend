@@ -24,7 +24,7 @@ export function VoiceAgentHighlights() {
         // This allows showing the "View more" button even without access
         const res = await fetch(`${getApiBaseUrl()}/api/voice-agent/settings`, {
           headers: {
-            "Authorization": `Bearer ${safeStorage.getItem("auth_token")}`
+            "Authorization": `Bearer ${safeStorage.getItem("token")}`
           }
         });
         if (res.ok) {
@@ -132,4 +132,4 @@ export function VoiceAgentHighlights() {
       </CardContent>
     </Card>
   );
-}
+}

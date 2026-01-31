@@ -22,7 +22,7 @@ class SafeStorage {
   getItem(key: string): string | null {
     try {
       // Use cookies for auth keys
-      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+      if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
         return cookieStorage.getItem(key);
       }
       if (this.isStorageAvailable()) {
@@ -37,7 +37,7 @@ class SafeStorage {
   setItem(key: string, value: string): void {
     try {
       // Use cookies for auth keys
-      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+      if (key === 'token'|| key.startsWith('user:') || key.includes('auth')) {
         cookieStorage.setItem(key, value);
         return;
       }
@@ -67,7 +67,7 @@ class SafeStorage {
   removeItem(key: string): void {
     try {
       // Use cookies for auth keys
-      if (key === 'token' || key === 'auth_token' || key.startsWith('user:') || key.includes('auth')) {
+      if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
         cookieStorage.removeItem(key);
         return;
       }

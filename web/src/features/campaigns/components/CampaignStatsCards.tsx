@@ -43,7 +43,7 @@ interface CampaignStatsCardsProps {
 }
 export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
   return (
-    <div className="flex gap-4 mb-6 flex-wrap md:flex-nowrap items-stretch">
+    <div className="flex gap-6 mb-8 flex-wrap md:flex-nowrap items-stretch">
       <div className="flex-1 min-w-0 w-full sm:w-[calc(50%-8px)] md:w-auto flex">
         <Card className="rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col">
           <CardContent className="flex-1 flex flex-col p-4">
@@ -53,7 +53,7 @@ export default function CampaignStatsCards({ stats }: CampaignStatsCardsProps) {
                   Total Campaigns
                 </p>
                 <h5 className="text-2xl font-bold text-slate-800">
-                  {stats.total_campaigns}
+                  {stats?.total_campaigns}
                 </h5>
               </div>
               <Avatar className="bg-blue-500 w-12 h-12">

@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 // Remove mockUserSettings, use API for user preferences
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+  return safeStorage.getItem('token') || safeStorage.getItem('token');
 }
 const DEFAULT_FETCH_TIMEOUT_MS = 20000;
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS): Promise<Response> {
@@ -543,4 +543,4 @@ export function autoSavePipelinePreferences(preferences: PipelinePreferences, de
         logger.error('Auto-save pipeline preferences failed:', error);
       });
   }, delay);
-}
+}

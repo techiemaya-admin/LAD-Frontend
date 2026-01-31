@@ -9,8 +9,6 @@ import { motion } from 'framer-motion';
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0b1957] flex flex-col">
-      <Header />
-
       <main className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4 py-12">
           {/* Left: Hero / Illustration + marketing */}
@@ -25,10 +23,10 @@ export default function LoginPage() {
             </div>
 
             {/* <h2 className="text-4xl font-bold text-[#0b1957] dark:text-white">LAD — Let Agent Deal</h2> */}
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md">
+            {/* <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md">
               AI agents that autonomously handle sales — qualify leads, negotiate and close
               deals across voice, chat, email and social channels.
-            </p>
+            </p> */}
 
           </motion.div>
 
@@ -43,8 +41,6 @@ export default function LoginPage() {
           </motion.div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
