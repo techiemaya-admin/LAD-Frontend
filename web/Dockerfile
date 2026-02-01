@@ -26,6 +26,10 @@ COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 # Copy source code
 COPY . .
 
+# Verify critical config files are present in build context
+RUN test -f /app/web/next.config.mjs && echo "✅ next.config.mjs present" || (echo "❌ next.config.mjs missing" && exit 1)
+RUN test -f /app/web/tsconfig.json && echo "✅ tsconfig.json present" || (echo "❌ tsconfig.json missing" && exit 1)
+
 # Build Next.js app from web workspace
 WORKDIR /app/web
 
@@ -48,6 +52,10 @@ ENV NODE_ENV=production
 
 # Generate Prisma client if prisma directory exists
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
+
+# Verify React Query package resolution
+RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
+ && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
 RUN npm run build
 
