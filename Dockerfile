@@ -1,35 +1,42 @@
-# Multi-stage build for Next.js production deployment with monorepo workspaces
-FROM node:20-alpine AS base
+# Multi-stage build for Next.js production deployment (monorepo-safe)
+# Fixes missing native optional deps (lightningcss / tailwindcss-oxide) on Linux by using npm install in web workspace.
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
+FROM node:20-slim AS base
 
-# Copy package files for monorepo workspaces
-COPY package*.json ./
-COPY web/package*.json ./web/
-COPY sdk/package*.json ./sdk/
+# System deps (Prisma warning + native deps friendliness)
+RUN apt-get update -y \
+  && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies using npm workspaces
-RUN npm ci --ignore-scripts
-
-# Rebuild the source code only when needed
+# -------------------------
+# Builder
+# -------------------------
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/web/node_modules ./web/node_modules
-COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
+# Build tools needed for native module compilation (node-gyp for lightningcss, etc.)
+RUN apt-get update -y \
+  && apt-get install -y python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
+# Copy full source
 COPY . .
 
-# Build Next.js app from web workspace
+# Install deps in the web workspace so Linux native optional deps are resolved correctly
 WORKDIR /app/web
 
-# Accept build arguments for API URL
+# IMPORTANT:
+# - npm ci is lockfile-strict and can miss linux optional deps if lockfile was generated on mac/windows.
+# - npm install will resolve the correct platform optional deps and write a linux-correct lock in the container.
+# - --foreground-scripts: Ensure npm scripts run even if ignore-scripts was set globally in CI
+RUN rm -rf node_modules package-lock.json \
+  && npm install --include=optional --foreground-scripts --no-audit --fund=false
+
+# Fail fast if native bindings are missing (saves time vs failing inside next build)
+RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
+  && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')"
+
+# Build args
 ARG VITE_BACKEND_URL
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_API_BASE
@@ -38,6 +45,7 @@ ARG NEXT_PUBLIC_ICP_BACKEND_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_DISABLE_VAPI
 
+# Runtime/build envs (Next reads NEXT_PUBLIC_* at build-time)
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
 ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
@@ -45,21 +53,23 @@ ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backe
 ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Set NODE_ENV only after install (avoid npm skipping optional/dev during install)
 ENV NODE_ENV=production
 
-# Generate Prisma client if prisma directory exists
+# Prisma generate (prisma folder is at repo root)
+WORKDIR /app
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
 
-# Build with environment variables explicitly set
-RUN NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
-    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-    NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-${NEXT_PUBLIC_BACKEND_URL}} \
-    NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL} \
-    NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL} \
-    NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI} \
-    npm run build
+# Build Next.js app
+WORKDIR /app/web
+RUN npm run build && \
+  echo "✅ Build completed successfully" && \
+  ls -la /app/web/.next/standalone/server.js
 
-# Production image, copy all the files and run next
+# -------------------------
+# Runner
+# -------------------------
 FROM base AS runner
 WORKDIR /app
 
@@ -68,7 +78,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+  adduser --system --uid 1001 nextjs
 
 # Copy standalone output (server.js at root)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
@@ -81,11 +91,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 
 USER nextjs
 
-# Expose port
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
 
 # Start the application
 CMD ["node", "server.js"]
