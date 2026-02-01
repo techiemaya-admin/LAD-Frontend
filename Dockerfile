@@ -1,31 +1,60 @@
 # Multi-stage build for Next.js production deployment
-FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+FROM node:20-slim AS base
+
+# System deps (Prisma/OpenSSL + TLS). Keep this in base so builder/runner have it.
+RUN apt-get update -y \
+  && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# -------------------------
+# deps: install node_modules in a linux environment
+# -------------------------
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+
+# Build tools only needed for native modules (node-gyp)
+RUN apt-get update -y \
+  && apt-get install -y python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files for web and sdk
 COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
-# Install dependencies
-RUN cd web && npm ci && \
-    (cd ../sdk && npm ci || mkdir -p ../sdk/node_modules)
+# IMPORTANT:
+# - Use npm install (not npm ci) so linux optional/platform deps (lightningcss/oxide) can be resolved.
+# - Force scripts ON in case CI sets ignore-scripts=true.
+RUN set -eux; \
+  npm config set ignore-scripts false; \
+  npm config set optional true; \
+  cd web; \
+  rm -rf node_modules package-lock.json; \
+  npm install --include=optional --no-audit --fund=false --foreground-scripts; \
+  node -e "require('lightningcss'); console.log('✅ lightningcss ok (deps)')"; \
+  node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok (deps)')"; \
+  cd /app; \
+  ( cd sdk && rm -rf node_modules package-lock.json && npm install --include=optional --no-audit --fund=false --foreground-scripts ) \
+    || mkdir -p /app/sdk/node_modules
 
-# Rebuild the source code only when needed
+# -------------------------
+# builder: compile Next.js
+# -------------------------
 FROM base AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 
 # Copy source code
 COPY web ./web
 COPY sdk ./sdk
+# If prisma exists at repo root, you must copy it too; otherwise prisma generate won't find schema.
+# (This line is safe even if prisma/ doesn't exist if you add it to your repo; Docker COPY fails if missing.)
+COPY prisma ./prisma
 
-# Build Next.js app
 WORKDIR /app/web
 
 # Accept build arguments for API URL
@@ -44,12 +73,17 @@ ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backe
 ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Set NODE_ENV after deps are installed (we're not installing here, but keep it sane)
 ENV NODE_ENV=production
 
 # Generate Prisma client if prisma directory exists
+# NOTE: this runs from /app/web currently, so we switch to /app to match prisma/ location.
+WORKDIR /app
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
 
-# Build with environment variables explicitly set
+# Build Next.js app
+WORKDIR /app/web
 RUN NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
     NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
     NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-${NEXT_PUBLIC_BACKEND_URL}} \
@@ -58,7 +92,9 @@ RUN NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
     NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI} \
     npm run build
 
-# Production image, copy all the files and run next
+# -------------------------
+# runner: minimal runtime
+# -------------------------
 FROM base AS runner
 WORKDIR /app
 
@@ -80,11 +116,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 
 USER nextjs
 
-# Expose port
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
 CMD ["node", "server.js"]
