@@ -29,13 +29,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logout as logoutAction } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
-import logo from "../assets/logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import LAD3DShowcase from "@/app/page";
 type RootState = {
   auth: {
     user: {
@@ -66,6 +66,7 @@ export function Sidebar() {
   const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
+  const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayName, setDisplayName] = useState("User");
   const [isHydrated, setIsHydrated] = useState(false);
@@ -187,7 +188,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <img
-            src="/logo.png"
+            src="/MrLAD-logo.svg"
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -211,12 +212,15 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <img
-              src="/logo.png"
+              src="/MrLAD-logo.svg" 
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
               decoding="async"
               className="w-8 h-8 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
+              }}
             />
             <span className="text-sm font-semibold text-sidebar-foreground">
               LAD
@@ -311,15 +315,18 @@ export function Sidebar() {
           )}
         >
           <img
-            src="/logo.png"
+            src="/MrLAD-logo.svg"
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
             decoding="async"
             className={cn(
               "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
-              isExpanded ? "w-24 h-24" : "w-10 h-10",
+              isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
+            }}
           />
         </div>
         {/* Navigation */}
@@ -473,7 +480,7 @@ export function Sidebar() {
               side="top"
               className="w-56 mb-2 ml-2"
             >
-              <DropdownMenuItem asChild>
+              {/* <DropdownMenuItem asChild>
                 <NavLink
                   href="/pricing"
                   className="flex items-center cursor-pointer"
@@ -481,7 +488,7 @@ export function Sidebar() {
                   <DollarSign className="mr-2 h-4 w-4" />
                   <span>Pricing</span>
                 </NavLink>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem asChild>
                 <NavLink
                   href="/settings"

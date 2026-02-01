@@ -11,20 +11,14 @@ const nextConfig = {
     externalDir: true,
   },
 
-  // ✅ Force single React Query instance
+  // ✅ Use webpack instead - it handles file: protocol packages correctly
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
     };
-    
-    // Ensure node_modules is in resolve modules
-    config.resolve.modules = [
-      path.resolve(__dirname, 'node_modules'),
-      'node_modules',
-    ];
-    
+
     return config;
   },
 
@@ -45,10 +39,6 @@ const nextConfig = {
 
   typescript: {
     ignoreBuildErrors: true,
-  },
-
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 
   output: "standalone",

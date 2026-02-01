@@ -27,17 +27,35 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
   }, []);
   const fetchCreditBalance = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/billing/wallet`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch credit balance');
+        // Fall back to legacy endpoint
+        const legacyResponse = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!legacyResponse.ok) {
+          throw new Error('Failed to fetch credit balance');
+        }
+        const legacyData = await legacyResponse.json();
+        setBalance({
+          credits: legacyData.credits || legacyData.balance || 0,
+          lastRecharge: legacyData.lastRecharge || null,
+          monthlyUsage: legacyData.monthlyUsage || 0,
+          totalSpent: legacyData.totalSpent || 0
+        });
+        setLoading(false);
+        return;
       }
       const data = await response.json();
+      // Transform new API response to balance data
       setBalance({
-        credits: data.credits || 0,
+        credits: data.wallet?.availableBalance || data.wallet?.currentBalance || 0,
         lastRecharge: data.lastRecharge || null,
         monthlyUsage: data.monthlyUsage || 0,
         totalSpent: data.totalSpent || 0

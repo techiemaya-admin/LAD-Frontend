@@ -1,6 +1,6 @@
 "use client";
 import React, { JSX } from 'react';
-import { PipelineBoard } from '@/features/deals-pipeline/components';
+import { PipelineBoard } from '@/components/deals-pipeline';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';

@@ -14,13 +14,31 @@ import {
   UpdateLeadBookingParams
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api/dashboard';
+// Support both React (REACT_APP_) and Next.js (NEXT_PUBLIC_) environment variable conventions
+const getApiBaseUrl = (): string => {
+  // Next.js client-side env variables
+  if (typeof window !== 'undefined') {
+    return (window as any).NEXT_PUBLIC_API_BASE_URL || 
+           (window as any).NEXT_PUBLIC_BACKEND_URL ||
+           process.env.NEXT_PUBLIC_API_BASE_URL ||
+           process.env.NEXT_PUBLIC_BACKEND_URL ||
+           process.env.REACT_APP_API_BASE_URL ||
+           '/api/dashboard';
+  }
+  // Server-side fallback
+  return process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '/api/dashboard';
+};
 
 class DashboardApiService {
   private token: string | null = null;
+  private apiBaseUrl: string = getApiBaseUrl();
 
   setToken(token: string) {
     this.token = token;
+  }
+
+  setApiBaseUrl(url: string) {
+    this.apiBaseUrl = url;
   }
 
   private getHeaders() {
@@ -34,7 +52,7 @@ class DashboardApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${this.apiBaseUrl}${endpoint}`;
     
     try {
       const response = await fetch(url, {
@@ -45,8 +63,14 @@ class DashboardApiService {
         }
       });
 
+      // Handle 401/403 auth errors gracefully - return empty response instead of throwing
+      if (response.status === 401 || response.status === 403) {
+        console.warn(`Auth error [${response.status}] on ${endpoint} - returning empty data`);
+        return { success: false, data: [], error: 'Authentication required' } as any;
+      }
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
         throw new Error(error.message || `HTTP ${response.status}`);
       }
 

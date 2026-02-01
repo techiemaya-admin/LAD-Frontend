@@ -35,6 +35,7 @@ const SettingsPage: React.FC = () => {
   const companyLogo = useSelector((state: any) => state.settings.companyLogo);
   const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [renewalDate, setRenewalDate] = useState<string>('');
+  const [logoError, setLogoError] = useState(false);
   useEffect(() => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
@@ -89,11 +90,16 @@ const SettingsPage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-md flex items-center justify-center border-2 border-white">
-                <img
-                  src={companyLogo}
-                  alt="Company Logo"
-                  className="w-full h-full object-cover"
-                />
+                {logoError || !companyLogo ? (
+                  <Building2 className="w-8 h-8 text-gray-400" />
+                ) : (
+                  <img
+                    src={companyLogo}
+                    alt="Company Logo"
+                    className="w-full h-full object-cover"
+                    onError={() => setLogoError(true)}
+                  />
+                )}
               </div>
               <div>
                 <h1 className="text-gray-900 font-semibold text-xl">{companyName}</h1>

@@ -2,9 +2,9 @@
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
-import { WidgetLibrary } from '@/components/dashboard/WidgetLibrary';
+import { DashboardHeader } from '@/components/overview/DashboardHeader';
+import { DashboardGrid } from '@/components/overview/DashboardGrid';
+import { WidgetLibrary } from '@/components/overview/WidgetLibrary';
 const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f6ff] via-[#f5f9ff] to-[#f0f6ff]">

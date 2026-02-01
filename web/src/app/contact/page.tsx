@@ -74,7 +74,7 @@ const ContactPage = memo(function ContactPage() {
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Email</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">support@lad.com</p>
+            <p className="text-gray-600 dark:text-gray-300">support@techiemaya.com</p>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">We'll get back to you within 24 hours</p>
           </motion.div>
 
@@ -90,8 +90,8 @@ const ContactPage = memo(function ContactPage() {
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Phone</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">+1 (555) 123-4567</p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Monday to Friday, 9am to 6pm EST</p>
+            <p className="text-gray-600 dark:text-gray-300">+971 (506) 34-1191</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Monday to Friday, 8am to 11pm GST</p>
           </motion.div>
 
           <motion.div
@@ -106,8 +106,8 @@ const ContactPage = memo(function ContactPage() {
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Location</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">123 Business Street</p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">New York, NY 10001</p>
+            <p className="text-gray-600 dark:text-gray-300">IDS Business Center, Al Karama</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Dubai, UAE</p>
           </motion.div>
         </div>
 

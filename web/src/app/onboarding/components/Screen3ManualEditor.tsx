@@ -19,10 +19,16 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import StepLibrary from '../../../features/campaigns/components/StepLibrary';
-import StepSettings from '../../../features/campaigns/components/StepSettings';
-import CustomNode from '../../../features/campaigns/components/nodes/CustomNode';
+// TODO: Import from campaigns feature once available in SDK
+// import StepLibrary from '../../../features/campaigns/components/StepLibrary';
+// import StepSettings from '../../../features/campaigns/components/StepSettings';
+// import CustomNode from '../../../features/campaigns/components/nodes/CustomNode';
 import { FlowNode, FlowEdge, StepType } from '@/types/campaign';
+
+// Placeholder components
+const StepLibrary = () => <div className="p-4 bg-gray-100 rounded">Step Library (Coming Soon)</div>;
+const StepSettings = () => <div className="p-4 bg-gray-100 rounded">Step Settings (Coming Soon)</div>;
+const CustomNode = () => <div className="p-4 bg-gray-100 rounded">Custom Node (Coming Soon)</div>;
 // Register node types (defined outside component to prevent recreation on each render)
 const NODE_TYPES: NodeTypes = {
   start: CustomNode,

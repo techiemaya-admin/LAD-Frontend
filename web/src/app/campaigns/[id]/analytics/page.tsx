@@ -12,11 +12,10 @@ import {
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
   Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff, Loader2
 } from 'lucide-react';
-import { useCampaignAnalytics } from '@sdk/features/campaigns/hooks/useCampaignAnalytics';
-import { useCampaignStatsLive } from '@sdk/features/campaigns/hooks/useCampaignStatsLive';
+import { useCampaignAnalytics } from '@/features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
-import { LiveActivityTable } from '@/features/campaigns/components/LiveActivityTable';
+import { LiveActivityTable } from '@/components/campaigns';
 
 const platformConfig = {
   linkedin: {
@@ -52,11 +51,8 @@ export default function CampaignAnalyticsPage() {
   const { push } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { analytics, loading, error } = useCampaignAnalytics(campaignId);
-  // Real-time stats
-  const { stats: liveStats, isConnected, error: statsError } = useCampaignStatsLive({ 
-    campaignId,
-    enabled: true 
-  });
+  // Use analytics data directly, no real-time stats hook available
+  const isConnected = analytics?.campaign?.status === 'running';
 
   useEffect(() => {
     if (error) {
@@ -99,47 +95,47 @@ export default function CampaignAnalyticsPage() {
   // Calculate the primary sent count based on campaign type
   const analyticsAny = analytics as any;
   const primarySentCount = hasLinkedIn 
-    ? (liveStats?.platform_metrics?.linkedin?.sent ?? analyticsAny?.platform_metrics?.linkedin?.sent ?? 0)
+    ? (analyticsAny?.platform_metrics?.linkedin?.sent ?? 0)
     : hasEmail 
-    ? (liveStats?.platform_metrics?.email?.sent ?? analyticsAny?.platform_metrics?.email?.sent ?? 0)
+    ? (analyticsAny?.platform_metrics?.email?.sent ?? 0)
     : hasWhatsApp
-    ? (liveStats?.platform_metrics?.whatsapp?.sent ?? analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
+    ? (analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
     : hasVoice
-    ? (liveStats?.platform_metrics?.voice?.sent ?? analyticsAny?.platform_metrics?.voice?.sent ?? 0)
-    : (liveStats?.sent_count ?? analytics.overview.sent);
+    ? (analyticsAny?.platform_metrics?.voice?.sent ?? 0)
+    : (analytics.overview.sent);
 
   const platformAnalytics = [
     hasLinkedIn && { 
       platform: 'linkedin', 
-      actions: liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0, 
-      replied: liveStats?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0, 
-      rate: liveStats?.platform_metrics?.linkedin?.sent ? ((liveStats.platform_metrics.linkedin.connected / liveStats.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0) 
+      actions: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0, 
+      sent: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0, 
+      connected: analyticsAny?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0, 
+      replied: analyticsAny?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0, 
+      rate: analyticsAny?.platform_metrics?.linkedin?.sent ? ((analyticsAny.platform_metrics.linkedin.connected / analyticsAny.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0) 
     },
     hasEmail && { 
       platform: 'email', 
-      actions: liveStats?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0, 
-      replied: liveStats?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0, 
-      rate: liveStats?.platform_metrics?.email?.sent ? ((liveStats.platform_metrics.email.replied / liveStats.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0) 
+      actions: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
+      sent: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
+      connected: analyticsAny?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0, 
+      replied: analyticsAny?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0, 
+      rate: analyticsAny?.platform_metrics?.email?.sent ? ((analyticsAny.platform_metrics.email.replied / analyticsAny.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0) 
     },
     hasWhatsApp && { 
       platform: 'whatsapp', 
-      actions: liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      sent: liveStats?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      connected: liveStats?.platform_metrics?.whatsapp?.connected ?? 0, 
-      replied: liveStats?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0, 
-      rate: liveStats?.platform_metrics?.whatsapp?.sent ? ((liveStats.platform_metrics.whatsapp.replied / liveStats.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0) 
+      actions: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
+      sent: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
+      connected: analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0, 
+      replied: analyticsAny?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0, 
+      rate: analyticsAny?.platform_metrics?.whatsapp?.sent ? ((analyticsAny.platform_metrics.whatsapp.replied / analyticsAny.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0) 
     },
     hasVoice && { 
       platform: 'voice', 
-      actions: liveStats?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      sent: liveStats?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      connected: liveStats?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0, 
-      replied: liveStats?.platform_metrics?.voice?.replied ?? 0, 
-      rate: liveStats?.platform_metrics?.voice?.sent ? ((liveStats.platform_metrics.voice.connected / liveStats.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
+      actions: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
+      sent: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
+      connected: analyticsAny?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0, 
+      replied: analyticsAny?.platform_metrics?.voice?.replied ?? 0, 
+      rate: analyticsAny?.platform_metrics?.voice?.sent ? ((analyticsAny.platform_metrics.voice.connected / analyticsAny.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
     },
   ].filter(Boolean);
 
@@ -155,9 +151,9 @@ export default function CampaignAnalyticsPage() {
   const channelBreakdownRaw = extendedAnalytics?.charts?.channel_breakdown?.length
     ? extendedAnalytics.charts.channel_breakdown
     : [
-        { name: 'LinkedIn', value: liveStats?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
-        { name: 'Email', value: liveStats?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
-        { name: 'Voice', value: liveStats?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
+        { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
+        { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
+        { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
       ];
 
   const channelBreakdownFiltered = channelBreakdownRaw.filter((c: any) => c.value > 0);
@@ -167,21 +163,21 @@ export default function CampaignAnalyticsPage() {
   // Dynamic funnel stage label based on campaign type
   const funnelStageLabel = hasLinkedIn ? 'Connected' : hasEmail ? 'Delivered' : hasWhatsApp ? 'Delivered' : hasVoice ? 'Answered' : 'Messaged';
   const funnelStageCount = hasLinkedIn 
-    ? (liveStats?.connected_count ?? analytics?.overview?.connected ?? 0)
+    ? (analytics?.overview?.connected ?? 0)
     : hasEmail
-    ? (liveStats?.delivered_count ?? analytics?.overview?.delivered ?? 0)
+    ? (analytics?.overview?.delivered ?? 0)
     : hasWhatsApp
-    ? (liveStats?.delivered_count ?? analytics?.overview?.delivered ?? 0)
+    ? (analytics?.overview?.delivered ?? 0)
     : hasVoice
-    ? (liveStats?.connected_count ?? analytics?.overview?.connected ?? 0)
-    : (liveStats?.sent_count ?? analytics?.metrics?.linkedin_messages_sent ?? 0);
+    ? (analytics?.overview?.connected ?? 0)
+    : (analytics?.metrics?.linkedin_messages_sent ?? 0);
 
   const funnel = extendedAnalytics?.charts?.funnel?.length
     ? extendedAnalytics.charts.funnel
     : [
-        { stage: 'Leads', count: liveStats?.leads_count ?? analytics?.overview?.total_leads ?? 0 },
+        { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
         { stage: funnelStageLabel, count: funnelStageCount },
-        { stage: 'Replied', count: liveStats?.replied_count ?? analytics?.overview?.replied ?? 0 },
+        { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
       ];
 
   // Theme colors
@@ -251,7 +247,7 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Total Leads</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{liveStats?.leads_count ?? analytics.overview.total_leads}</h3>
+          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.total_leads}</h3>
           <div className="flex items-center gap-1 mt-2">
             <TrendingUp className="w-4 h-4 text-green-500" />
             <p className="text-xs font-semibold text-green-500">Active Campaign</p>
@@ -269,25 +265,25 @@ export default function CampaignAnalyticsPage() {
             {hasLinkedIn && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
                 <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {liveStats?.platform_metrics?.linkedin?.sent ?? analyticsAny?.platform_metrics?.linkedin?.sent ?? 0}
+                {analyticsAny?.platform_metrics?.linkedin?.sent ?? 0}
               </Badge>
             )}
             {hasEmail && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
                 <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {liveStats?.platform_metrics?.email?.sent ?? analyticsAny?.platform_metrics?.email?.sent ?? 0}
+                {analyticsAny?.platform_metrics?.email?.sent ?? 0}
               </Badge>
             )}
             {hasWhatsApp && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
                 <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {liveStats?.platform_metrics?.whatsapp?.sent ?? analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0}
+                {analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0}
               </Badge>
             )}
             {hasVoice && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
                 <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {liveStats?.platform_metrics?.voice?.sent ?? analyticsAny?.platform_metrics?.voice?.sent ?? 0}
+                {analyticsAny?.platform_metrics?.voice?.sent ?? 0}
               </Badge>
             )}
             {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
@@ -305,30 +301,30 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Connected</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{liveStats?.connected_count ?? analytics.overview.connected}</h3>
+          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.connected}</h3>
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {hasLinkedIn && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
                 <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {liveStats?.platform_metrics?.linkedin?.connected ?? 0}
+                {analyticsAny?.platform_metrics?.linkedin?.connected ?? 0}
               </Badge>
             )}
             {hasEmail && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
                 <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {liveStats?.platform_metrics?.email?.connected ?? 0}
+                {analyticsAny?.platform_metrics?.email?.connected ?? 0}
               </Badge>
             )}
             {hasWhatsApp && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
                 <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {liveStats?.platform_metrics?.whatsapp?.connected ?? 0}
+                {analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0}
               </Badge>
             )}
             {hasVoice && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
                 <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {liveStats?.platform_metrics?.voice?.connected ?? 0}
+                {analyticsAny?.platform_metrics?.voice?.connected ?? 0}
               </Badge>
             )}
             {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
@@ -346,30 +342,30 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Replied</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{liveStats?.replied_count ?? analytics.overview.replied}</h3>
+          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.replied}</h3>
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {hasLinkedIn && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
                 <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {liveStats?.platform_metrics?.linkedin?.replied ?? 0}
+                {analyticsAny?.platform_metrics?.linkedin?.replied ?? 0}
               </Badge>
             )}
             {hasEmail && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
                 <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {liveStats?.platform_metrics?.email?.replied ?? 0}
+                {analyticsAny?.platform_metrics?.email?.replied ?? 0}
               </Badge>
             )}
             {hasWhatsApp && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
                 <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {liveStats?.platform_metrics?.whatsapp?.replied ?? 0}
+                {analyticsAny?.platform_metrics?.whatsapp?.replied ?? 0}
               </Badge>
             )}
             {hasVoice && (
               <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
                 <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {liveStats?.platform_metrics?.voice?.replied ?? 0}
+                {analyticsAny?.platform_metrics?.voice?.replied ?? 0}
               </Badge>
             )}
             {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
@@ -492,12 +488,12 @@ export default function CampaignAnalyticsPage() {
             </div>
             <div className="flex flex-col gap-5">
               {[
-                { label: 'Sent', value: liveStats?.sent_count ?? analytics.overview.sent, icon: Send, color: '#6366F1' },
-                { label: 'Delivered', value: liveStats?.delivered_count ?? analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
-                { label: 'Opened', value: liveStats?.opened_count ?? analytics.overview.opened, icon: ExternalLink, color: '#8B5CF6' },
-                { label: 'Clicked', value: liveStats?.clicked_count ?? analytics.overview.clicked, icon: MousePointerClick, color: '#EC4899' },
-                { label: 'Connected', value: liveStats?.connected_count ?? analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
-                { label: 'Replied', value: liveStats?.replied_count ?? analytics.overview.replied, icon: Reply, color: '#F59E0B' },
+                { label: 'Sent', value: analytics.overview.sent, icon: Send, color: '#6366F1' },
+                { label: 'Delivered', value: analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
+                { label: 'Opened', value: analytics.overview.opened, icon: ExternalLink, color: '#8B5CF6' },
+                { label: 'Clicked', value: analytics.overview.clicked, icon: MousePointerClick, color: '#EC4899' },
+                { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
+                { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
               ].map((metric) => (
                 <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
                   <div className="flex items-center gap-4">
@@ -522,11 +518,11 @@ export default function CampaignAnalyticsPage() {
             </div>
             <div className="flex flex-col gap-6">
               {[
-                { label: 'Delivery Rate', value: liveStats?.sent_count ? ((liveStats.delivered_count / liveStats.sent_count) * 100) : (analytics.metrics.delivery_rate ?? 0), color: '#10B981' },
-                { label: 'Open Rate', value: liveStats?.delivered_count ? ((liveStats.opened_count / liveStats.delivered_count) * 100) : (analytics.metrics.open_rate ?? 0), color: '#8B5CF6' },
-                { label: 'Click Rate', value: liveStats?.opened_count ? ((liveStats.clicked_count / liveStats.opened_count) * 100) : (analytics.metrics.click_rate ?? 0), color: '#EC4899' },
-                { label: 'Connection Rate', value: liveStats?.sent_count ? ((liveStats.connected_count / liveStats.sent_count) * 100) : (analytics.metrics.connection_rate ?? 0), color: '#0A66C2' },
-                { label: 'Reply Rate', value: liveStats?.connected_count ? ((liveStats.replied_count / liveStats.connected_count) * 100) : (analytics.metrics.reply_rate ?? 0), color: '#F59E0B' },
+                { label: 'Delivery Rate', value: analytics.overview.sent ? ((analytics.overview.delivered / analytics.overview.sent) * 100) : (analytics.metrics.delivery_rate ?? 0), color: '#10B981' },
+                { label: 'Open Rate', value: analytics.overview.delivered ? ((analytics.overview.opened / analytics.overview.delivered) * 100) : (analytics.metrics.open_rate ?? 0), color: '#8B5CF6' },
+                { label: 'Click Rate', value: analytics.overview.opened ? ((analytics.overview.clicked / analytics.overview.opened) * 100) : (analytics.metrics.click_rate ?? 0), color: '#EC4899' },
+                { label: 'Connection Rate', value: analytics.overview.sent ? ((analytics.overview.connected / analytics.overview.sent) * 100) : (analytics.metrics.connection_rate ?? 0), color: '#0A66C2' },
+                { label: 'Reply Rate', value: analytics.overview.connected ? ((analytics.overview.replied / analytics.overview.connected) * 100) : (analytics.metrics.reply_rate ?? 0), color: '#F59E0B' },
               ].map((rate) => (
                 <div key={rate.label}>
                   <div className="flex justify-between mb-2">

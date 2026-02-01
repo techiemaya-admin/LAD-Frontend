@@ -18,8 +18,8 @@ export default function LoginPage() {
             transition={{ duration: 0.7 }}
             className="hidden md:flex flex-col gap-6 items-start justify-center"
           >
-            <div className="relative w-full h-[600px] rounded-2xl overflow-hidden">
-              <Image src="/LAD-Image.png" alt="LAD hero" fill style={{ objectFit: 'cover' }} priority={false} />
+            <div className="relative w-full h-[720px]">
+              <Image src="/LAD-Image.svg" alt="LAD hero" fill style={{ objectFit: 'cover' }} priority={false} />
             </div>
 
             {/* <h2 className="text-4xl font-bold text-[#0b1957] dark:text-white">LAD — Let Agent Deal</h2> */}

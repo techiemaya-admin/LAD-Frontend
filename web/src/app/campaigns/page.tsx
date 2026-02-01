@@ -1,6 +1,6 @@
 'use client';
 import { Suspense } from 'react';
-import CampaignsList from '../../features/campaigns/components/CampaignsList';
+import { CampaignsList } from '@/components/campaigns';
 /**
  * Campaigns Page - follows LAD architecture pattern
  * 

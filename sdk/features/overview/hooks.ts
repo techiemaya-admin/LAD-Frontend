@@ -27,10 +27,15 @@ export function useLeadBookings(params?: GetLeadBookingsParams) {
       if (response.success && response.data) {
         setBookings(response.data);
       } else {
-        throw new Error(response.error || 'Failed to fetch bookings');
+        // Silently handle API not available - return empty bookings
+        setBookings([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      // Silently handle errors - don't block UI
+      const errorObj = err instanceof Error ? err : new Error('Unknown error');
+      setError(errorObj);
+      setBookings([]);
+      console.warn('Failed to fetch bookings:', errorObj.message);
     } finally {
       setLoading(false);
     }
@@ -141,10 +146,15 @@ export function useTenantUsers() {
       if (response.success && response.data) {
         setUsers(response.data);
       } else {
-        throw new Error(response.error || 'Failed to fetch users');
+        // Silently handle API not available - return empty users
+        setUsers([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      // Silently handle errors - don't block UI
+      const errorObj = err instanceof Error ? err : new Error('Unknown error');
+      setError(errorObj);
+      setUsers([]);
+      console.warn('Failed to fetch users:', errorObj.message);
     } finally {
       setLoading(false);
     }

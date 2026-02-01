@@ -12,9 +12,9 @@ export default function AuthLayout({
 }) {
   // Public pages (landing, login, pricing, etc.) get full width layout
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className="flex h-screen bg-white">
       <Sidebar />
-      <main className="flex-1 overflow-hidden ml-0 md:ml-16 pt-14 md:pt-0">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden ml-0 md:ml-16 pt-14 md:pt-0">
         {children}
       </main>
     </div>

@@ -139,7 +139,7 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
           >
             <AnimatePresence mode="wait">
               <motion.div
-                key={mobileView}
+                key={`initial-view-${mobileView}`}
                 initial={{ opacity: 0, x: mobileView === 'chat' ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: mobileView === 'chat' ? 20 : -20 }}
@@ -237,7 +237,7 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
         >
           <AnimatePresence mode="wait">
             <motion.div
-              key={mobileView}
+              key={`layout-view-${mobileView}`}
               initial={{ opacity: 0, x: mobileView === 'chat' ? -20 : 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: mobileView === 'chat' ? 20 : -20 }}

@@ -7,10 +7,14 @@ import { mayaAI, type MayaMessage, type MayaResponse, type OnboardingContext } f
 export type GeminiMessage = MayaMessage;
 export type GeminiResponse = MayaResponse;
 export type { OnboardingContext };
-// Re-export functions with legacy names
-export const sendGeminiPrompt = mayaAI.sendMessage.bind(mayaAI);
-export const askPlatformFeatures = mayaAI.askPlatformFeatures.bind(mayaAI);
-export const askFeatureUtilities = mayaAI.askFeatureUtilities.bind(mayaAI);
-export const buildWorkflowNode = mayaAI.buildWorkflowNode.bind(mayaAI);
+// Re-export functions with legacy names (use wrapper functions to defer binding)
+export const sendGeminiPrompt = (...args: Parameters<typeof mayaAI.sendMessage>) => 
+  mayaAI.sendMessage(...args);
+export const askPlatformFeatures = (...args: Parameters<typeof mayaAI.askPlatformFeatures>) => 
+  mayaAI.askPlatformFeatures(...args);
+export const askFeatureUtilities = (...args: Parameters<typeof mayaAI.askFeatureUtilities>) => 
+  mayaAI.askFeatureUtilities(...args);
+export const buildWorkflowNode = (...args: Parameters<typeof mayaAI.buildWorkflowNode>) => 
+  mayaAI.buildWorkflowNode(...args);
 // Export service instance
-export { mayaAI };
+export { mayaAI };

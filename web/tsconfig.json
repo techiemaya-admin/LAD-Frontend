@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "baseUrl": ".",
     "plugins": [
@@ -20,11 +24,57 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/features/*": ["./src/features/*", "../sdk/features/*"],
-      "@sdk/*": ["../sdk/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/features/*": [
+        "./src/features/*",
+        "../sdk/features/*"
+      ],
+      "@sdk/campaigns": [
+        "../sdk/features/campaigns"
+      ],
+      "@sdk/campaigns/*": [
+        "../sdk/features/campaigns/*"
+      ],
+      "@sdk/features/campaigns": [
+        "../sdk/features/campaigns"
+      ],
+      "@sdk/features/campaigns/*": [
+        "../sdk/features/campaigns/*"
+      ],
+      "@sdk/dashboard": [
+        "../sdk/features/dashboard"
+      ],
+      "@sdk/features/dashboard": [
+        "../sdk/features/dashboard"
+      ],
+      "@sdk/overview": [
+        "../sdk/features/overview"
+      ],
+      "@sdk/features/overview": [
+        "../sdk/features/overview"
+      ],
+      "@sdk/overview": [
+        "../sdk/features/overview"
+      ],
+      "@sdk/features/overview": [
+        "../sdk/features/overview"
+      ],
+      "@sdk/*": [
+        "../sdk/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/phone-numbers/page.jsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/app/phone-numbers/page.jsx",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

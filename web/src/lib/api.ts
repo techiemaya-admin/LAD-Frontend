@@ -11,19 +11,25 @@ function authHeaders() {
 
   let token: string | null = null;
 
-  const cookies = document.cookie ? document.cookie.split(";") : [];
-  for (const cookie of cookies) {
-    const [rawName, ...rawValueParts] = cookie.trim().split("=");
-    const name = rawName?.trim();
-    const value = rawValueParts.join("=");
-    if (!name) continue;
-    if (name === "token") {
-      token = decodeURIComponent(value || "");
-      break;
+  // First try to get token from safeStorage (handles cookies, localStorage, and memory)
+  token = safeStorage.getItem('token');
+  
+  // Fallback: try to parse from document.cookie if safeStorage returns null
+  if (!token) {
+    const cookies = document.cookie ? document.cookie.split(";") : [];
+    for (const cookie of cookies) {
+      const [rawName, ...rawValueParts] = cookie.trim().split("=");
+      const name = rawName?.trim();
+      const value = rawValueParts.join("=");
+      if (!name) continue;
+      if (name === "token") {
+        token = decodeURIComponent(value || "");
+        break;
+      }
     }
   }
 
-  logger.debug('[API] authHeaders: Token present (from cookies):', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
+  logger.debug('[API] authHeaders: Token present:', { hasToken: !!token, preview: token ? `(${token.substring(0, 30)}...)` : '(none)' });
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 function handleAuthError(status: number, path: string) {

@@ -246,9 +246,9 @@ export default function MakeCallContent() {
         }
         setLoading(true);
         // Use SDK service directly for resolvePhones
-        const voiceAgentService = (
-          await import("@sdk/features/voice-agent/features/voice-agent/services/voiceAgentService")
-        ).default;
+        const { voiceAgentService } = (
+          await import("@sdk/features/voice-agent/features/voice-agent")
+        );
         const json = await voiceAgentService.resolvePhones(idsPayload, qpType as 'company' | 'employee');
         const totalResolved = Array.isArray(json)
           ? json.length

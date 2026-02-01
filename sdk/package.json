@@ -15,16 +15,28 @@
       "default": "./features/campaigns/index.ts"
     },
     "./deals-pipeline": {
-      "types": "./features/deals-pipeline/index.ts",
-      "default": "./features/deals-pipeline/index.ts"
+      "types": "./features/deals-pipeline/features/deals-pipeline/index.ts",
+      "default": "./features/deals-pipeline/features/deals-pipeline/index.ts"
     },
     "./apollo-leads": {
       "types": "./features/apollo-leads/index.ts",
       "default": "./features/apollo-leads/index.ts"
     },
     "./voice-agent": {
-      "types": "./features/voice-agent/index.ts",
-      "default": "./features/voice-agent/index.ts"
+      "types": "./features/voice-agent/features/voice-agent/index.ts",
+      "default": "./features/voice-agent/features/voice-agent/index.ts"
+    },
+    "./social-integration": {
+      "types": "./features/social-integration/features/social-integration/index.ts",
+      "default": "./features/social-integration/features/social-integration/index.ts"
+    },
+    "./dashboard": {
+      "types": "./features/dashboard/index.ts",
+      "default": "./features/dashboard/index.ts"
+    },
+    "./overview": {
+      "types": "./features/overview/index.ts",
+      "default": "./features/overview/index.ts"
     }
   },
   "scripts": {

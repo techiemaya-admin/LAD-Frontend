@@ -8,8 +8,7 @@ import { ArrowLeft, Users, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
-import EmployeeCard from '../../../../../features/campaigns/components/EmployeeCard';
-import ProfileSummaryDialog from '../../../../../features/campaigns/components/ProfileSummaryDialog';
+import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
 import { safeStorage } from '@/utils/storage';
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
