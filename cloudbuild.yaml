@@ -45,14 +45,13 @@ steps:
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
-          --port 3000 \
           --memory 2Gi \
           --cpu 2 \
           --min-instances 0 \
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --update-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
+          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
 
 images:
   - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
