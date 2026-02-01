@@ -18,6 +18,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
+      '@tanstack/query-core': path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
       '@lad/frontend-features': path.resolve(__dirname, '../sdk'),
       '@lad/frontend-features/ai-icp-assistant': path.resolve(__dirname, '../sdk/features/ai-icp-assistant'),

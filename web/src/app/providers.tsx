@@ -43,11 +43,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     },
   }));
 
+  // Track mounted state to ensure proper client-side hydration
+  const [isMounted, setIsMounted] = React.useState(false);
+
   // Rehydrate Redux state from localStorage on client-side mount
   React.useEffect(() => {
+    setIsMounted(true);
     store.dispatch(rehydrateAuth());
     store.dispatch(rehydrateSettings());
   }, []);
+
+  // Don't render providers until mounted on client to prevent hydration mismatches
+  // This ensures QueryClient context is properly established before components try to use it
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
