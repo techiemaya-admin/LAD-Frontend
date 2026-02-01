@@ -42,9 +42,34 @@ class DashboardApiService {
   }
 
   private getHeaders() {
+    // Try to get token from this.token first, then fall back to browser storage
+    let token = this.token;
+    
+    if (!token && typeof window !== 'undefined') {
+      // Try cookies first (primary storage for tokens)
+      const cookies = document.cookie ? document.cookie.split(";") : [];
+      for (const cookie of cookies) {
+        const [rawName, ...rawValueParts] = cookie.trim().split("=");
+        const name = rawName?.trim();
+        if (name === "token") {
+          token = decodeURIComponent(rawValueParts.join("=") || "");
+          break;
+        }
+      }
+      
+      // Fallback to localStorage if cookie not found
+      if (!token) {
+        try {
+          token = localStorage.getItem('token');
+        } catch (e) {
+          // Silent fail
+        }
+      }
+    }
+    
     return {
       'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` })
+      ...(token && { Authorization: `Bearer ${token}` })
     };
   }
 

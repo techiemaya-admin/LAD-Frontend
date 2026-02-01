@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const queryString = searchParams.toString();
     const url = `${backend}/api/users${queryString ? `?${queryString}` : ''}`;
-    const token = req.cookies.get('access_token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
+    const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -57,4 +57,4 @@ export async function POST(req: NextRequest) {
     logger.error('[/api/users] POST Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
-}
+}

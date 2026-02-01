@@ -58,7 +58,6 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
       try {
-        debugger;
         if (typeof window !== 'undefined') {
           safeStorage.setItem(
             'auth',

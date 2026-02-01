@@ -21,10 +21,12 @@ class SafeStorage {
   }
   getItem(key: string): string | null {
     try {
-      // Use cookies for auth keys
+      // Use cookies for auth keys (primary storage for tokens)
       if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
-        return cookieStorage.getItem(key);
+        const cookieValue = cookieStorage.getItem(key);
+        if (cookieValue) return cookieValue;
       }
+      // Fallback to localStorage for non-auth keys or if cookies fail
       if (this.isStorageAvailable()) {
         return localStorage.getItem(key);
       }
@@ -36,15 +38,15 @@ class SafeStorage {
   }
   setItem(key: string, value: string): void {
     try {
-      // Use cookies for auth keys
-      if (key === 'token'|| key.startsWith('user:') || key.includes('auth')) {
-        cookieStorage.setItem(key, value);
-        return;
-      }
       const storageAvailable = this.isStorageAvailable();
       if (process.env.NODE_ENV === 'development') {
         logger.debug('[SafeStorage] setItem', { key, storageAvailable });
       }
+      // Use cookies for auth keys (primary storage)
+      if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
+        cookieStorage.setItem(key, value);
+      }
+      // Also save to localStorage as backup
       if (storageAvailable) {
         localStorage.setItem(key, value);
         if (process.env.NODE_ENV === 'development') {
@@ -66,13 +68,12 @@ class SafeStorage {
   }
   removeItem(key: string): void {
     try {
-      // Use cookies for auth keys
-      if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
-        cookieStorage.removeItem(key);
-        return;
-      }
+      // Remove from both localStorage and cookies for auth keys
       if (this.isStorageAvailable()) {
         localStorage.removeItem(key);
+      }
+      if (key === 'token' || key.startsWith('user:') || key.includes('auth')) {
+        cookieStorage.removeItem(key);
       }
       this.memoryStore.delete(key);
     } catch (e) {

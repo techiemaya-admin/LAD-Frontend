@@ -8,10 +8,15 @@ export const cookieStorage = {
   setItem(key: string, value: string): void {
     // Use sameSite: 'none' for cross-site requests (frontend -> backend on different domains)
     // secure: true is required when using sameSite: 'none'
-    Cookies.set(key, value, { sameSite: 'none', secure: true });
+    // Set path to '/' to ensure cookie is available across all routes
+    Cookies.set(key, value, { 
+      sameSite: 'none', 
+      secure: true,
+      path: '/'
+    });
   },
   removeItem(key: string): void {
-    Cookies.remove(key);
+    Cookies.remove(key, { path: '/' });
   },
   clear(): void {
     // No direct clear for all cookies, must remove known keys
