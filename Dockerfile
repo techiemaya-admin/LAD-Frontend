@@ -80,8 +80,8 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
   adduser --system --uid 1001 nextjs
 
-# Copy standalone server and dependencies
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Copy standalone server and dependencies (monorepo nested under web/)
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone/web ./
 # Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
 # Copy public directory
@@ -96,8 +96,18 @@ RUN printf '%s\n' \
   'set -e' \
   'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
   'export PORT="${PORT:-8080}"' \
-  'echo "Starting Next standalone on ${HOSTNAME}:${PORT}"' \
-  'exec node server.js' \
+  'if [ -f /app/server.js ]; then' \
+  '  echo "Starting /app/server.js on ${HOSTNAME}:${PORT}"' \
+  '  exec node /app/server.js' \
+  'elif [ -f /app/web/server.js ]; then' \
+  '  echo "Starting /app/web/server.js on ${HOSTNAME}:${PORT}"' \
+  '  exec node /app/web/server.js' \
+  'else' \
+  '  echo "ERROR: No server.js found in /app or /app/web"' \
+  '  ls -la /app || true' \
+  '  ls -la /app/web || true' \
+  '  exit 1' \
+  'fi' \
   > /app/start.sh \
   && chmod +x /app/start.sh \
   && chown nextjs:nodejs /app/start.sh
