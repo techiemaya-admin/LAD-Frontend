@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   BarChart3, Play, Linkedin, Mail, Phone, Video, Users, MessageCircle
 } from 'lucide-react';
-import type { CampaignStats } from '@/features/campaigns';
+import type { CampaignStats } from '@lad/frontend-features/campaigns';
 
 interface StatCardProps {
   title: string;

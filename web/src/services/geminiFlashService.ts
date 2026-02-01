@@ -1,8 +1,8 @@
 /**
- * @deprecated Import from '@/features/ai-icp-assistant' instead
+ * @deprecated Import from '@lad/frontend-features/ai-icp-assistant' instead
  * This file is kept for backward compatibility
  */
-import { mayaAI, type MayaMessage, type MayaResponse, type OnboardingContext } from '@/features/ai-icp-assistant';
+import { mayaAI, type MayaMessage, type MayaResponse, type OnboardingContext } from '@lad/frontend-features/ai-icp-assistant';
 // Export types with legacy names
 export type GeminiMessage = MayaMessage;
 export type GeminiResponse = MayaResponse;

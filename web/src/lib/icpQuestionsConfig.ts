@@ -13,9 +13,9 @@ import type {
   ICPQuestionsResponse as ICPQuestionsResponseType,
   ICPAnswerRequest as ICPAnswerRequestType,
   ICPAnswerResponse as ICPAnswerResponseType
-} from '@/features/ai-icp-assistant';
-export type { ICPQuestion as APIICPQuestion } from '@/features/ai-icp-assistant';
-export type { ICPQuestionsResponse, ICPAnswerRequest, ICPAnswerResponse } from '@/features/ai-icp-assistant';
+} from '@lad/frontend-features/ai-icp-assistant';
+export type { ICPQuestion as APIICPQuestion } from '@lad/frontend-features/ai-icp-assistant';
+export type { ICPQuestionsResponse, ICPAnswerRequest, ICPAnswerResponse } from '@lad/frontend-features/ai-icp-assistant';
 // Legacy interface (deprecated - use API types)
 export interface ICPQuestion {
   id: string;
@@ -138,4 +138,4 @@ export function parseAnswer(question: ICPQuestion, userInput: string): any {
 export function validateAnswer(question: ICPQuestion, answer: any): boolean {
   if (!question.validation) return true;
   return question.validation(answer);
-}
+}

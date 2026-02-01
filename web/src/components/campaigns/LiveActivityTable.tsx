@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RefreshCw, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useCampaignActivityFeed } from '@sdk/features/campaigns/hooks/useCampaignActivityFeed';
+import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;

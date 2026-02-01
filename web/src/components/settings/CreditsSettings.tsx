@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, X, Loader2 } from 'lucide-react';
-import { useCreditsBalance, useStripeCheckout } from '@/features/billing';
+import { useCreditsBalance, useStripeCheckout } from '@lad/frontend-features/billing';
 import { logger } from '@/lib/logger';
 import { safeStorage } from '@/utils/storage';
 export const CreditsSettings: React.FC = () => {

@@ -11,16 +11,29 @@ const nextConfig = {
     externalDir: true,
   },
 
-  // ✅ Use webpack instead - it handles file: protocol packages correctly
+  // ✅ Use webpack instead - it handles monorepo workspace packages correctly
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
+      '@lad/frontend-features': path.resolve(__dirname, '../sdk'),
+      '@lad/frontend-features/ai-icp-assistant': path.resolve(__dirname, '../sdk/features/ai-icp-assistant'),
+      '@lad/frontend-features/billing': path.resolve(__dirname, '../sdk/features/billing'),
+      '@lad/frontend-features/campaigns': path.resolve(__dirname, '../sdk/features/campaigns'),
+      '@lad/frontend-features/conversations': path.resolve(__dirname, '../sdk/features/conversations'),
+      '@lad/frontend-features/overview': path.resolve(__dirname, '../sdk/features/overview'),
+      '@lad/frontend-features/voice-agent': path.resolve(__dirname, '../sdk/features/voice-agent'),
+      '@lad/frontend-features/deals-pipeline': path.resolve(__dirname, '../sdk/features/deals-pipeline'),
+      '@lad/frontend-features/apollo-leads': path.resolve(__dirname, '../sdk/features/apollo-leads'),
+      '@lad/frontend-features/dashboard': path.resolve(__dirname, '../sdk/features/dashboard'),
     };
 
     return config;
   },
+
+  // Allow Turbopack build (will use webpack aliases)
+  turbopack: {},
 
   async headers() {
     return [

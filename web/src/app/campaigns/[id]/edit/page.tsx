@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Play, Loader2 } from 'lucide-react';
-import { useCampaign, updateCampaign } from '@/features/campaigns';
+import { useCampaign, updateCampaign } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import Screen3ManualEditor from '@/app/onboarding/components/Screen3ManualEditor';
 import { useOnboardingStore } from '@/store/onboardingStore';

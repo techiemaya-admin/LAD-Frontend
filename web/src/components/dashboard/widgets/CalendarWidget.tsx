@@ -24,7 +24,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 
 import { CalendarEvent } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
-import { useDashboardUsers, useBookings } from '@/features/dashboard';
+import { useDashboardUsers, useBookings } from '@lad/frontend-features/dashboard';
 
 interface CalendarWidgetProps {
   id: string;

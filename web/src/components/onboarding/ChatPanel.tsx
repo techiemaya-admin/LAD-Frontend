@@ -12,13 +12,13 @@ import { useChatStepController } from '@/components/onboarding/ChatStepControlle
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
-import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@/features/campaigns';
+import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import { getCampaign } from '@/features/campaigns';
+import { getCampaign } from '@lad/frontend-features/campaigns';
 type FlowState =
   | 'initial'
   | 'platform_selection'

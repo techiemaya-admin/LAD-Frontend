@@ -13,7 +13,7 @@ import {
   useUserAvailableNumbers, 
   useAvailableAgents, 
   useResolvePhones 
-} from "@sdk/features/voice-agent/features/voice-agent";
+} from "@lad/frontend-features/voice-agent";
 type NumberItem = {
   id: string;
   phone_number: string;
@@ -247,7 +247,7 @@ export default function MakeCallContent() {
         setLoading(true);
         // Use SDK service directly for resolvePhones
         const { voiceAgentService } = (
-          await import("@sdk/features/voice-agent/features/voice-agent")
+          await import("@lad/frontend-features/voice-agent")
         );
         const json = await voiceAgentService.resolvePhones(idsPayload, qpType as 'company' | 'employee');
         const totalResolved = Array.isArray(json)

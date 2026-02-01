@@ -10,7 +10,7 @@
  * USAGE:
  * ```typescript
  * import { ApolloLeadsSearch } from '@/components/apollo-leads';
- * import { searchApolloLeads, type ApolloLead } from '@/features/apollo-leads'; // SDK imports
+ * import { searchApolloLeads, type ApolloLead } from '@lad/frontend-features/apollo-leads'; // SDK imports
  * ```
  */
 

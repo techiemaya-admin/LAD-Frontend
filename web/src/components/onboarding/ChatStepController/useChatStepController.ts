@@ -13,7 +13,7 @@ import {
   processICPAnswer,
   type ICPQuestion as APIICPQuestion,
   type ICPAnswerResponse,
-} from '@/features/ai-icp-assistant';
+} from '@lad/frontend-features/ai-icp-assistant';
 import {
   formatQuestionForChat,
   convertAPIQuestionToLegacy,
@@ -589,4 +589,4 @@ export function useChatStepController(
     answers,
     isLoadingQuestions,
   };
-}
+}

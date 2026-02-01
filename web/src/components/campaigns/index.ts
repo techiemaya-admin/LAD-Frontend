@@ -10,7 +10,7 @@
  * USAGE:
  * ```typescript
  * import { CampaignsList, CampaignsTable } from '@/components/campaigns';
- * import { useCampaigns, type Campaign } from '@/features/campaigns'; // SDK imports
+ * import { useCampaigns, type Campaign } from '@lad/frontend-features/campaigns'; // SDK imports
  * ```
  */
 

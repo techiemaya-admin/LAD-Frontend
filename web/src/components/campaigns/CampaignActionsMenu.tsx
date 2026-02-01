@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
-import type { Campaign } from '@/features/campaigns';
+import type { Campaign } from '@lad/frontend-features/campaigns';
 interface CampaignActionsMenuProps {
   anchorEl: HTMLElement | null;
   selectedCampaign: Campaign | null;

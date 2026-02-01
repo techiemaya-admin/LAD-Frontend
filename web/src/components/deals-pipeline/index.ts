@@ -10,7 +10,7 @@
  * USAGE:
  * ```typescript
  * import { PipelineBoard, PipelineKanbanView } from '@/components/deals-pipeline';
- * import { usePipeline, type Pipeline } from '@/features/deals-pipeline'; // SDK imports
+ * import { usePipeline, type Pipeline } from '@lad/frontend-features/deals-pipeline'; // SDK imports
  * ```
  */
 

@@ -4,8 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Save, Play, Eye, Pause, Loader2 } from 'lucide-react';
-import { useCampaignStore } from '@/features/campaigns';
-import { useCampaign, updateCampaign, createCampaign, pauseCampaign } from '@/features/campaigns';
+import { useCampaignStore } from '@/store/campaignStore';
+import { useCampaign, updateCampaign, createCampaign, pauseCampaign } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import { StepLibrary, FlowCanvas, StepSettings } from '@/components/campaigns';
 export default function CampaignDetailPage() {

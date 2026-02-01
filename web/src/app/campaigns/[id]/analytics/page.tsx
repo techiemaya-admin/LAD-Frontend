@@ -12,7 +12,7 @@ import {
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
   Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff, Loader2
 } from 'lucide-react';
-import { useCampaignAnalytics } from '@/features/campaigns';
+import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';

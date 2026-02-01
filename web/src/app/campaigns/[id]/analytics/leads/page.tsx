@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Users, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
-import { useCampaignLeads, type CampaignLead, useCampaign } from '@/features/campaigns';
+import { useCampaignLeads, type CampaignLead, useCampaign } from '@lad/frontend-features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
 import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
 import { safeStorage } from '@/utils/storage';

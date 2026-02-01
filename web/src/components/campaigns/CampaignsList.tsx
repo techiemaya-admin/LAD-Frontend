@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter } from 'next/navigation';
-import { useCampaigns, useCampaignStats, type Campaign } from '@/features/campaigns';
+import { useCampaigns, useCampaignStats, type Campaign } from '@lad/frontend-features/campaigns';
 import CampaignStatsCards from './CampaignStatsCards';
 import CampaignFilters from './CampaignFilters';
 import CampaignsTable from './CampaignsTable';

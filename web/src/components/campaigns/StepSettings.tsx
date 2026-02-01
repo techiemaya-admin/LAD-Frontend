@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { useCampaignStore } from '@/features/campaigns';
+import { useCampaignStore } from '@/store/campaignStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { StepType } from '@/types/campaign';
 import { Button } from '@/components/ui/button';

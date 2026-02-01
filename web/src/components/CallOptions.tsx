@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
 import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
-import { useMakeCall } from "@sdk/features/voice-agent/features/voice-agent";
+import { useMakeCall } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
 import { apiPost } from "@/lib/api";
 type BulkEntry = {

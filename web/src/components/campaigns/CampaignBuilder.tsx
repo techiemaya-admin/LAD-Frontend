@@ -25,7 +25,7 @@ import {
   updateCampaign, 
   startCampaign,
   type Campaign 
-} from '@/features/campaigns';
+} from '@lad/frontend-features/campaigns';
 import { StepType, StepData, FlowNode as FlowNodeType } from '@/types/campaign';
 import StepLibrary from './StepLibrary';
 import StepSettings from './StepSettings';

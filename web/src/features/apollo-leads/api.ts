@@ -11,7 +11,7 @@
  * USAGE:
  * Import SDK types and hooks from here:
  * ```typescript
- * import { searchApolloLeads, type ApolloLead } from '@/features/apollo-leads';
+ * import { searchApolloLeads, type ApolloLead } from '@lad/frontend-features/apollo-leads';
  * ```
  * 
  * Import UI components from web/src/components/apollo-leads directly:

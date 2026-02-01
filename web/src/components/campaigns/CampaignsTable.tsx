@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
-import type { Campaign, CampaignStatus } from '@/features/campaigns';
+import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
 import { getStatusColor, renderChannelIcons, renderActionChips, getChannelsUsed, PLATFORM_CONFIG, renderPlatformMetrics } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];

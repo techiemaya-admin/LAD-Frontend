@@ -20,7 +20,7 @@ import {
   UserSearch
 } from 'lucide-react';
 import { StepDefinition } from '@/types/campaign';
-import { useCampaignStore } from '@/features/campaigns';
+import { useCampaignStore } from '@/store/campaignStore';
 const STEP_DEFINITIONS: StepDefinition[] = [
   {
     type: 'linkedin_visit',

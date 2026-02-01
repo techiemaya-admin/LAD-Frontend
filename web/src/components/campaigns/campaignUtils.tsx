@@ -2,9 +2,9 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Linkedin, Mail, Phone, Eye, UserPlus, MessageSquare, Send } from 'lucide-react';
-import type { Campaign, CampaignStatus } from '@/features/campaigns';
+import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
 // Re-export types from SDK for convenience
-export type { Campaign, CampaignStatus } from '@/features/campaigns';
+export type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
 // Channel/Platform configuration with icons and colors
 export const PLATFORM_CONFIG = {
   linkedin: {
