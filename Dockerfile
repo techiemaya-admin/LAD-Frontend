@@ -30,7 +30,8 @@ WORKDIR /app/web
 # - npm install will resolve the correct platform optional deps and write a linux-correct lock in the container.
 # - --foreground-scripts: Ensure npm scripts run even if ignore-scripts was set globally in CI
 RUN rm -rf node_modules package-lock.json \
-  && npm install --include=optional --foreground-scripts --no-audit --fund=false
+  && npm install --include=optional --foreground-scripts --no-audit --fund=false \
+  && npm rebuild
 
 # Fail fast if native bindings are missing (saves time vs failing inside next build)
 RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
