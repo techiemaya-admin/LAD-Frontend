@@ -3,7 +3,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import PublicLayout from "./public-layout";
 import AuthLayout from "./auth-layout";
-import { isOpenRoute } from "@/middleware";
+import { isOpenRoute } from "@/lib/routes";
 
 export default function LayoutHandler({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
