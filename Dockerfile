@@ -74,18 +74,23 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs && \
   adduser --system --uid 1001 nextjs
 
+# Copy standalone server and dependencies
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+# Copy public directory
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+
+# Verify server.js exists before running
+RUN test -f server.js || (echo "ERROR: server.js not found!" && ls -la && exit 1)
 
 USER nextjs
 EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
