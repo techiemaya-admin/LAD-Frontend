@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "LAD Frontend Monorepo - SDK + Web",
   "private": true,
+  "packageManager": "npm@10.2.0",
   "workspaces": [
     "sdk",
     "web"
