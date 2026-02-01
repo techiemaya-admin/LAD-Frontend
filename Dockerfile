@@ -1,4 +1,4 @@
-# Multi-stage build for Next.js production deployment
+# Multi-stage build for Next.js production deployment with monorepo workspaces
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -6,26 +6,27 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files for web and sdk
+# Copy package files for monorepo workspaces
+COPY package*.json ./
 COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
-# Install dependencies
-RUN cd web && npm ci && \
-    (cd ../sdk && npm ci || mkdir -p ../sdk/node_modules)
+# Install dependencies using npm workspaces
+RUN npm ci --ignore-scripts
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 
 # Copy source code
-COPY web ./web
-COPY sdk ./sdk
+COPY . .
 
-# Build Next.js app
+# Build Next.js app from web workspace
 WORKDIR /app/web
 
 # Accept build arguments for API URL
