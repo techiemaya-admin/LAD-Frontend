@@ -1,101 +1,54 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, X, Loader2 } from 'lucide-react';
-import { getApiBaseUrl } from '@/lib/api-utils';
+import { useCreditsBalance, useStripeCheckout } from '@lad/frontend-features/billing';
+import { logger } from '@/lib/logger';
+import { safeStorage } from '@/utils/storage';
 export const CreditsSettings: React.FC = () => {
   const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [balance, setBalance] = useState<number>(0);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<string>('Just now');
+
+  // SDK hooks for wallet and payment
+  const { data: creditsData, isLoading: isLoadingBalance } = useCreditsBalance();
+  const { mutate: createCheckout, isPending: isProcessing } = useStripeCheckout();
+
   const presetAmounts = [
     { value: 99, credits: 1000, label: 'Starter' },
     { value: 199, credits: 3000, label: 'Professional' },
     { value: 499, credits: 12000, label: 'Business' },
     { value: 999, credits: 12000, label: 'Enterprise' },
   ];
-  // Fetch wallet balance on component mount
-  useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setIsLoadingBalance(false);
-          return;
-        }
-        const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setBalance(data.balance || 0);
-          setLastUpdated('Just now');
-        } else {
-          setBalance(0);
-        }
-      } catch (error) {
-        console.error('Error fetching balance:', error);
-        setBalance(0);
-      } finally {
-        setIsLoadingBalance(false);
-      }
-    };
-    fetchBalance();
-    // Check URL parameters to auto-open Add Credits modal
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('action') === 'add') {
-        setShowAddCreditsModal(true);
-        // Clean URL after opening modal
-        window.history.replaceState({}, '', window.location.pathname + '?tab=credits');
-      }
-    }
-  }, []);
+
+  // Extract balance from SDK response  
+  const balance = creditsData?.availableBalance ?? creditsData?.currentBalance ?? 0;
+  const lastUpdated = 'Just now';
   const handleProceedToPayment = async () => {
     const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
     if (!amount || amount <= 0) {
       alert('Please select or enter a valid amount');
       return;
     }
-    setIsProcessing(true);
+
     try {
-      const token = localStorage.getItem('token');
+      const token = safeStorage.getItem('token');
       if (!token) {
         alert('Please log in to proceed with payment');
-        setIsProcessing(false);
         return;
       }
-      // Create Stripe checkout session for credit purchase
-      const response = await fetch(`${getApiBaseUrl()}/api/stripe/create-credits-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+
+      // Call SDK hook to create Stripe checkout session
+      createCheckout({
+        amount,
+        successUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/settings?tab=credits&payment=success`,
+        cancelUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/settings?tab=credits&payment=cancelled`,
+        metadata: {
+          credits: amount,
         },
-        body: JSON.stringify({
-          amount: amount,
-          successUrl: `${window.location.origin}/settings?tab=credits&payment=success`,
-          cancelUrl: `${window.location.origin}/settings?tab=credits&payment=cancelled`,
-          metadata: {
-            credits: amount,
-          },
-        }),
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-      const { url } = await response.json();
-      // Redirect to Stripe Checkout
-      window.location.href = url;
     } catch (error) {
-      console.error('Error processing payment:', error);
+      logger.error('Error processing payment', { error: error instanceof Error ? error.message : 'Unknown error' });
       alert(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsProcessing(false);
     }
   };
   const handleSelectAmount = (amount: number) => {
@@ -106,6 +59,18 @@ export const CreditsSettings: React.FC = () => {
     setCustomAmount(value);
     setSelectedAmount(null); // Clear preset selection when custom amount is entered
   };
+
+  // Check URL parameters to auto-open Add Credits modal
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'add') {
+        setShowAddCreditsModal(true);
+        // Clean URL after opening modal
+        window.history.replaceState({}, '', window.location.pathname + '?tab=credits');
+      }
+    }
+  }, []);
   return (
     <div className="space-y-6">
       {/* Wallet Balance Card */}
@@ -190,7 +155,8 @@ export const CreditsSettings: React.FC = () => {
                   <p className="text-sm text-blue-800">
                     <span className="font-semibold">You'll receive: </span>
                     {(() => {
-                      const amount = parseFloat(customAmount) || selectedAmount;
+                      const amount = parseFloat(customAmount) || selectedAmount || 0;
+                      if (!amount || amount <= 0) return 'Select an amount';
                       const preset = presetAmounts.find(p => p.value === amount);
                       const credits = preset ? preset.credits : Math.round(amount * 10.1); // Approximate for custom amounts
                       return `${credits.toLocaleString()} credits for $${amount}`;

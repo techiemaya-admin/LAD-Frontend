@@ -600,7 +600,7 @@ export const LinkedInIntegration: React.FC = () => {
           </div>
         )}
         <div className="space-y-4">
-          <div className="border-t border-gray-200 pt-4">
+          {/* <div className="border-t border-gray-200 pt-4">
             <h4 className="font-medium text-gray-900 mb-3">Features</h4>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start">
@@ -624,7 +624,7 @@ export const LinkedInIntegration: React.FC = () => {
                 <span>Track engagement and response rates</span>
               </li>
             </ul>
-          </div>
+          </div> */}
           <div className="border-t border-gray-200 pt-4 space-y-3">
             {/* Always show "Add Account" button to allow multiple connections */}
             <button

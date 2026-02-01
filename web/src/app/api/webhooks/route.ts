@@ -3,11 +3,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import type { WebhookEvent } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
-import { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/logger';
-const prisma = new PrismaClient();
+
+// Conditional Prisma import to avoid build errors
+let PrismaClient: any = null;
+let prisma: any = null;
+
+try {
+  ({ PrismaClient } = require('@prisma/client'));
+  prisma = new PrismaClient();
+} catch (error) {
+  logger.warn('Prisma client not available, webhooks will not work properly');
+}
 export async function POST(req: NextRequest) {
   try {
+    // Check if Prisma client is available
+    if (!prisma) {
+      logger.error('Prisma client not available');
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
     const payload = await req.text();
     const headerPayload = headers();
     const svixId = (await headerPayload).get('svix-id');

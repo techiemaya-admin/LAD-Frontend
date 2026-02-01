@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, ArrowRight, Building2, Briefcase, MapPin, Users, Smartphone, MessageSquare, Phone, Linkedin, Mail, Zap, Calendar, TrendingUp, Shield, AlertTriangle, Loader2 } from 'lucide-react';
-import { fetchICPQuestions } from '@/features/ai-icp-assistant/api';
+import { fetchICPQuestions } from '@lad/frontend-features/ai-icp-assistant';
 import { StepType } from '@/types/campaign';
 import StepLayout from './StepLayout';
 import { apiPost } from '@/lib/api';

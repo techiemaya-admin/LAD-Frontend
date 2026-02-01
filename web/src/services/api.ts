@@ -15,7 +15,7 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('auth_token');
+      const token = safeStorage.getItem('token');
       if (token) {
         (config.headers as any).Authorization = `Bearer ${token}`;
       }
@@ -36,4 +36,4 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-export default api;
+export default api;

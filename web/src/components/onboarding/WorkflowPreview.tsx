@@ -13,7 +13,7 @@ import ReactFlow, {
   NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import CustomNode from '../../features/campaigns/components/nodes/CustomNode';
+import { CustomNode } from '@/components/campaigns';
 import { StepType } from '@/types/campaign';
 import { CheckCircle2, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -369,4 +369,4 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
       )}
     </div>
   );
-}
+}

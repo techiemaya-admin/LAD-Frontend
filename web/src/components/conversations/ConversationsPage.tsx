@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';

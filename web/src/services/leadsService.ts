@@ -49,7 +49,7 @@ const fetchDealsPipelineLeadSubresource = async (
   if (response.status !== 404) return response;
   return fetch(legacy, init);
 };
-const getAuthToken = () => safeStorage.getItem('auth_token') || safeStorage.getItem('token') || '';
+const getAuthToken = () => safeStorage.getItem('token') || safeStorage.getItem('token') || '';
 const leadsService = {
   // Get all leads with optional filters
   async getAllLeads(filters: LeadFilters = {}): Promise<Lead[]> {
@@ -454,4 +454,4 @@ const leadsService = {
            (Date.now() - cache.lastFetch) < cache.cacheDuration;
   }
 };
-export default leadsService;
+export default leadsService;

@@ -4,6 +4,6 @@ export const getApiUrl = (path) => `${API_BASE_URL}${path}`;
 export const defaultFetchOptions = () => ({
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${safeStorage.getItem('auth_token')}`,
+    'Authorization': `Bearer ${safeStorage.getItem('token')}`,
   },
-});
+});

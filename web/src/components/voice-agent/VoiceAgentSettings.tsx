@@ -35,7 +35,7 @@ export function VoiceAgentSettings() {
       setIsLoadingAgents(true);
       try {
         // Get token using existing pattern from auth.ts
-        const token = safeStorage.getItem("auth_token") || safeStorage.getItem("token");
+        const token = safeStorage.getItem("token") || safeStorage.getItem("token");
         
         logger.debug('[VoiceAgentSettings] Token presence check', { hasToken: !!token });
 

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
 import { logger } from '@/lib/logger';
 interface CampaignActivity {
   id: string;
@@ -78,14 +77,19 @@ export function useCampaignActivityFeed(
         }
       }
       
-      const response = await axios.get(url, {
+      const response = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-        withCredentials: true
+        credentials: 'include'
       });
       
-      if (response.data?.success) {
-        setActivities(response.data.data.activities || []);
-        setTotal(response.data.data.total || 0);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch activity feed');
+      }
+      
+      if (data?.success) {
+        setActivities(data.data.activities || []);
+        setTotal(data.data.total || 0);
       } else {
         throw new Error('Failed to fetch activity feed');
       }

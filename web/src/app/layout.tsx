@@ -1,26 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import AppShell from "@/components/clients/app-shell";
 import { AppToasterProvider } from "@/components/ui/app-toaster";
 import { LoadingProvider } from "@/components/providers/loading-provider";
-import ContentGate from "@/components/clients/content-gate";
-import PageLoader from '@/components/loader/PageLoader';
 import Providers from "./providers";
+import LayoutHandler from "@/components/layout/layout-handler";
 // Import VAPI error suppression (temporarily disable VAPI errors)
 import "@/utils/suppressVAPIErrors";
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+
 export const metadata: Metadata = {
   title: "LAD",
   description: "LAD - AI-Powered Sales Platform",
 };
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export default function RootLayout({
@@ -29,8 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-        <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -58,12 +53,10 @@ export default function RootLayout({
         <Providers>
           <LoadingProvider>
             <AppToasterProvider>
-              <PageLoader />
-              <AppShell>
-                <ContentGate>
-                  {children}
-                </ContentGate>
-              </AppShell>
+              {/* <PageLoader /> */}
+              <LayoutHandler>
+                {children}
+              </LayoutHandler>
             </AppToasterProvider>
           </LoadingProvider>
         </Providers>

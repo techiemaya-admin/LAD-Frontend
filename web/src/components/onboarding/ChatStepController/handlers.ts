@@ -9,7 +9,7 @@ import {
   processICPAnswer,
   type ICPQuestion as APIICPQuestion,
   type ICPAnswerResponse,
-} from '@/features/ai-icp-assistant';
+} from '@lad/frontend-features/ai-icp-assistant';
 import {
   parseAnswer,
   validateAnswer,
@@ -217,4 +217,4 @@ function getCompletedDelayPlatforms(allCollectedAnswers: Record<string, any>, cu
     }
   }
   return completedDelayPlatforms;
-}
+}

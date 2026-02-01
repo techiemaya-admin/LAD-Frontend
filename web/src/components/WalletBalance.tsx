@@ -42,19 +42,35 @@ export const WalletBalance: React.FC = () => {
   }, []);
   const fetchWalletData = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/billing/wallet`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch wallet data');
+        // Fall back to legacy endpoint if new endpoint not available
+        const legacyResponse = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!legacyResponse.ok) {
+          throw new Error('Failed to fetch wallet data');
+        }
+        const legacyData = await legacyResponse.json();
+        setWallet({
+          balance: legacyData.balance || 0,
+          currency: legacyData.currency || 'USD',
+          transactions: legacyData.transactions || []
+        });
+        return;
       }
       const data = await response.json();
-      // Transform backend response to wallet data
+      // Transform new API response to wallet data
+      // The new endpoint returns { wallet: { availableBalance, ... } }
       setWallet({
-        balance: data.balance || 0,
-        currency: data.currency || 'credits',
+        balance: data.wallet?.availableBalance || data.wallet?.currentBalance || data.balance || 0,
+        currency: data.wallet?.currency || data.currency || 'USD',
         transactions: data.transactions || []
       });
     } catch (error) {
@@ -62,7 +78,7 @@ export const WalletBalance: React.FC = () => {
       // Show zero balance on error
       setWallet({
         balance: 0,
-        currency: 'credits',
+        currency: 'USD',
         transactions: []
       });
     } finally {
@@ -139,7 +155,7 @@ export const WalletBalance: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Wallet className="h-8 w-8 mr-3" />
-            <h2 className="text-2xl font-bold">Wallet Balance</h2>
+            <h2 className="text-2xl font-bold">Wallet Balance1</h2>
           </div>
           <button
             onClick={() => setShowRechargeModal(true)}

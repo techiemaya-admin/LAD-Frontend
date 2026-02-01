@@ -4,7 +4,7 @@
  * Handles option selection and parsing logic
  */
 import { logger } from '@/lib/logger';
-import type { ICPQuestion as APIICPQuestion } from '@/features/ai-icp-assistant';
+import type { ICPQuestion as APIICPQuestion } from '@lad/frontend-features/ai-icp-assistant';
 /**
  * Handle option selection and convert to answer format
  */
@@ -47,4 +47,4 @@ export async function handleOptionSelection(
   // For other options, convert to comma-separated string
   const answerText = selectedValues.join(', ');
   await handleAnswer(answerText);
-}
+}

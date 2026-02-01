@@ -3,7 +3,7 @@
  * Custom hooks for billing operations with automatic refetching and state management
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as billingApi from '../api';
+import * as billingApi from './api';
 /**
  * Hook to get credits balance
  * Auto-refetches on window focus
@@ -144,4 +144,23 @@ export function useCreditPackages() {
     queryFn: billingApi.getCreditPackages,
     staleTime: 3600000, // Cache for 1 hour
   });
-}
+}
+
+/**
+ * Hook to create Stripe checkout session for credit purchase
+ * Automatically redirects to Stripe checkout on success
+ */
+export function useStripeCheckout() {
+  type CheckoutParams = Parameters<typeof billingApi.createStripeCheckoutSession>[0];
+  type CheckoutResponse = Awaited<ReturnType<typeof billingApi.createStripeCheckoutSession>>;
+  
+  return useMutation<CheckoutResponse, Error, CheckoutParams>({
+    mutationFn: billingApi.createStripeCheckoutSession,
+    onSuccess: (data: CheckoutResponse) => {
+      // Redirect to Stripe checkout
+      if (data.url && typeof window !== 'undefined') {
+        window.location.href = data.url;
+      }
+    },
+  });
+}

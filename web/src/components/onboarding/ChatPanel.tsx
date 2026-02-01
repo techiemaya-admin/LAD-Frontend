@@ -11,15 +11,14 @@ import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
 import { useChatStepController } from '@/components/onboarding/ChatStepController';
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
-import { mayaAI } from '@/features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
-import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@sdk/features/campaigns';
+import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import { getCampaign } from '@/features/campaigns';
+import { getCampaign } from '@lad/frontend-features/campaigns';
 type FlowState =
   | 'initial'
   | 'platform_selection'
@@ -119,8 +118,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         setHasSelectedOption(true);
         setSelectedPath('automation');
         setIsAIChatActive(true);
-        const response = await getCampaign(campaignId);
-        const campaign = response.data;
+        const campaign = await getCampaign(campaignId);
         // Convert campaign steps to workflow preview format
         if (campaign.steps && campaign.steps.length > 0) {
           const workflowSteps: WorkflowPreviewStep[] = campaign.steps.map((step: any, index: number) => ({
@@ -412,7 +410,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             if (saveResult.data?.leadIds && saveResult.data.leadIds.length > 0) {
               data.leadIds = saveResult.data.leadIds;
               setInboundLeadData({ ...data, leadIds: saveResult.data.leadIds }); // Update store
-              logger.info('✅ Stored lead IDs in inbound data', { count: data.leadIds.length });
+              logger.info('✅ Stored lead IDs in inbound data', { count: saveResult.data.leadIds.length });
             } else {
               logger.warn('❌ No lead IDs returned from server', {
                 hasData: !!saveResult.data,
@@ -867,7 +865,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       setFlowState('initial');
       // Get initial greeting from backend AI instead of hardcoded message
       try {
-        const response = await mayaAI.sendMessage(
+        const response = await sendGeminiPrompt(
           'START', // Special message to trigger initial greeting
           [],
           null,
@@ -2213,12 +2211,12 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                   {message.isInboundPlatformSelection ? (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        {message.options.map((option) => {
+                        {message.options.map((option, index) => {
                           const isSelected = selectedPlatforms.includes(option.value);
                           const platformValue = option.value === 'voice' ? 'voice' : option.value;
                           return (
                             <button
-                              key={option.value}
+                              key={option.value || `option-${index}`}
                               onClick={() => {
                                 // Handle disabled platform click - show notification
                                 if (option.disabled) {
@@ -2282,9 +2280,9 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                     </>
                   ) : (
                     /* Regular options - Use ICP flow if active, otherwise old handlers */
-                    message.options.map((option) => (
+                    message.options.map((option, index) => (
                       <button
-                        key={option.value}
+                        key={option.value || `option-${index}`}
                         onClick={() => {
                           // If ICP flow is active and we have the controller, use it
                           if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
@@ -2378,11 +2376,11 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               {flowState === 'platform_features' ? (
                 <>
                   <div className="space-y-2">
-                    {currentQuestionOptions.map((option) => {
+                    {currentQuestionOptions.map((option, index) => {
                       const isSelected = (platformFeatures[currentPlatform || ''] || []).includes(option.value);
                       return (
                         <button
-                          key={option.value}
+                          key={option.value || `option-${index}`}
                           onClick={() => {
                             const currentFeatures = platformFeatures[currentPlatform || ''] || [];
                             const newFeatures = isSelected
@@ -2430,9 +2428,9 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 </>
               ) : (
                 /* Regular single-select options */
-                currentQuestionOptions.map((option) => (
+                currentQuestionOptions.map((option, index) => (
                   <button
-                    key={option.value}
+                    key={option.value || `option-${index}`}
                     onClick={() => {
                       let questionKey = 'unknown';
                       if (flowState === 'platform_selection') {

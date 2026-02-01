@@ -1,5 +1,5 @@
 "use client";
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@lad/frontend-features/conversations';
 import { NotificationBell } from './conversations/NotificationBell';
 import { useEffect, useState } from 'react';
 

@@ -26,16 +26,6 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('Authorization');
     let token = authHeader?.replace('Bearer ', '');
     
-    // Try multiple cookie names
-    if (!token) {
-      token = req.cookies.get('access_token')?.value;
-    }
-    if (!token) {
-      token = req.cookies.get('accessToken')?.value;
-    }
-    if (!token) {
-      token = req.cookies.get('auth_token')?.value;
-    }
     if (!token) {
       token = req.cookies.get('token')?.value;
     }

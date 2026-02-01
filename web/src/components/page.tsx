@@ -12,8 +12,8 @@ import {
   Reply, Hand, BarChart3, Timeline, TrendingDown, Rocket, Zap, Lightbulb, 
   Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff
 } from 'lucide-react';
-import { useCampaignAnalytics } from '@sdk/features/campaigns/hooks/useCampaignAnalytics';
-import { useCampaignStatsLive } from '@sdk/features/campaigns/hooks/useCampaignStatsLive';
+import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
+import { useCampaignStatsLive } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { Loader2 } from 'lucide-react';

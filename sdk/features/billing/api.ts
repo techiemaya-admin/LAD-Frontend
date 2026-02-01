@@ -3,7 +3,7 @@
  * All API calls for billing operations
  * This is the only place that makes direct HTTP calls for billing
  */
-import { getApiClient } from '../../shared/apiClient';
+import { apiClient } from '../../shared/apiClient';
 export interface CreditsBalance {
   walletId: string;
   tenantId: string;
@@ -82,8 +82,7 @@ export interface UsageSummary {
  * Get current credits balance
  */
 export async function getCreditsBalance(): Promise<CreditsBalance> {
-  const api = await getApiClient();
-  const response = await api.get('/api/billing/wallet');
+  const response = await apiClient.get<{ wallet: CreditsBalance }>('/api/billing/wallet');
   return response.data.wallet;
 }
 // Backward compatibility alias
@@ -97,16 +96,14 @@ export async function getPricing(params: {
   model: string;
   unit: string;
 }): Promise<PricingItem> {
-  const api = await getApiClient();
-  const response = await api.get('/api/billing/pricing', { params });
+  const response = await apiClient.get('/api/billing/pricing', { params });
   return response.data.price;
 }
 /**
  * Get cost quote before charging
  */
 export async function getQuote(items: QuoteItem[]): Promise<QuoteResponse> {
-  const api = await getApiClient();
-  const response = await api.post('/api/billing/quote', { items });
+  const response = await apiClient.post('/api/billing/quote', { items });
   return response.data.quote;
 }
 /**
@@ -116,8 +113,7 @@ export async function chargeUsage(request: ChargeRequest): Promise<{
   usageEvent: UsageEvent;
   transaction: LedgerTransaction;
 }> {
-  const api = await getApiClient();
-  const response = await api.post('/api/billing/charge', request);
+  const response = await apiClient.post('/api/billing/charge', request);
   return response.data;
 }
 /**
@@ -128,8 +124,7 @@ export async function topUpCredits(params: {
   description?: string;
   idempotencyKey: string;
 }): Promise<LedgerTransaction> {
-  const api = await getApiClient();
-  const response = await api.post('/api/billing/topup', params);
+  const response = await apiClient.post('/api/billing/topup', params);
   return response.data.transaction;
 }
 /**
@@ -146,8 +141,7 @@ export async function listUsage(params?: {
   events: UsageEvent[];
   summary: UsageSummary;
 }> {
-  const api = await getApiClient();
-  const response = await api.get('/api/billing/usage', { params });
+  const response = await apiClient.get('/api/billing/usage', { params });
   return response.data.usage;
 }
 /**
@@ -158,8 +152,7 @@ export async function getUsageAggregation(params?: {
   to?: string;
   featureKey?: string;
 }): Promise<UsageAggregation[]> {
-  const api = await getApiClient();
-  const response = await api.get('/api/billing/usage/aggregation', { params });
+  const response = await apiClient.get('/api/billing/usage/aggregation', { params });
   return response.data.aggregation;
 }
 /**
@@ -171,8 +164,7 @@ export async function listTransactions(params?: {
   limit?: number;
   offset?: number;
 }): Promise<LedgerTransaction[]> {
-  const api = await getApiClient();
-  const response = await api.get('/api/billing/transactions', { params });
+  const response = await apiClient.get('/api/billing/transactions', { params });
   return response.data.transactions;
 }
 /**
@@ -192,8 +184,7 @@ export async function getCreditsBalanceLegacy(): Promise<{
   totalSpent: number;
   transactions?: any[];
 }> {
-  const api = await getApiClient();
-  const response = await api.get('/api/wallet/balance');
+  const response = await apiClient.get('/api/wallet/balance');
   return response.data;
 }
 // Backward compatibility alias
@@ -203,7 +194,24 @@ export const getWalletBalanceLegacy = getCreditsBalanceLegacy;
  * Get credit packages
  */
 export async function getCreditPackages(): Promise<any[]> {
-  const api = await getApiClient();
-  const response = await api.get('/api/wallet/packages');
+  const response = await apiClient.get('/api/wallet/packages');
   return response.data.packages;
-}
+}
+
+/**
+ * Create Stripe checkout session for credit purchase
+ */
+export async function createStripeCheckoutSession(params: {
+  amount: number;
+  successUrl: string;
+  cancelUrl: string;
+  metadata?: Record<string, any>;
+}): Promise<{ url: string; sessionId: string }> {
+  const response = await apiClient.post('/api/stripe/create-credits-checkout', {
+    amount: params.amount,
+    successUrl: params.successUrl,
+    cancelUrl: params.cancelUrl,
+    metadata: params.metadata,
+  });
+  return response.data;
+}

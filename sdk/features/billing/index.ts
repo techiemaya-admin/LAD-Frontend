@@ -36,6 +36,7 @@ export {
   listTransactions,
   getCreditsBalanceLegacy,
   getCreditPackages,
+  createStripeCheckoutSession,
   // Backward compatibility aliases
   getWalletBalance,
   getWalletBalanceLegacy,
@@ -55,6 +56,7 @@ export {
   useTransactions,
   useCreditsBalanceLegacy,
   useCreditPackages,
+  useStripeCheckout,
   // Backward compatibility aliases
   useWalletBalance,
   useWalletBalanceLegacy,
@@ -83,4 +85,4 @@ export type {
   LegacyWalletBalance,
   LegacyTransaction,
   CreditPackage,
-} from './types';
+} from './types';

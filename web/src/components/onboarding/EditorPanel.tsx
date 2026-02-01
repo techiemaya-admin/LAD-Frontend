@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import OnboardingStepLibrary from '@/components/onboarding/OnboardingStepLibrary';
-import StepSettings from '../../features/campaigns/components/StepSettings';
+import { StepSettings } from '@/components/campaigns';
 import { Save, BookOpen, Settings, Undo2, Redo2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
@@ -171,4 +171,4 @@ export default function EditorPanel() {
       </div>
     </div>
   );
-}
+}

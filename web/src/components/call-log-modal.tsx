@@ -27,7 +27,9 @@ import {
   Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/components/ui/app-toaster";
 import { apiGet } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
 import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
@@ -547,6 +549,7 @@ export function CallLogModal({
   const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<any | null>(null);
   const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
+  const { push } = useToast();
 
   useEffect(() => {
     async function load() {
@@ -615,28 +618,52 @@ export function CallLogModal({
           if (callId) {
             try {
               // Using voice-agent API for recording URL (VAPI integration disabled in backend)
-              const signedRes = await apiGet<{ success: boolean; signed_url?: string }>(
+              logger.debug(`Fetching signed recording URL for callId: ${callId}`);
+              const signedRes = await apiGet<{ success: boolean; signed_url?: string; data?: { signed_url?: string } }>(
                 `/api/voice-agent/calls/${callId}/recording-signed-url`
               );
-              if (signedRes?.success && signedRes?.signed_url) {
-                audioUrl = signedRes.signed_url;
+              
+              // Log the full response for debugging - check both response structures (cloud vs localhost)
+              logger.debug(`API response check: success=${signedRes?.success}, direct_url=${!!signedRes?.signed_url}, data_url=${!!signedRes?.data?.signed_url}`);
+              
+              // Handle both response structures: direct signed_url OR nested in data
+              const signedUrl = signedRes?.signed_url || signedRes?.data?.signed_url;
+              
+              if (signedRes?.success && signedUrl) {
+                logger.debug(`Successfully retrieved signed URL. First 100 chars: ${signedUrl.substring(0, 100)}...`);
+                audioUrl = signedUrl;
+              } else {
+                logger.warn(`Signed URL not found. Response structure: ${JSON.stringify({ success: signedRes?.success, hasDirect: !!signedRes?.signed_url, hasData: !!signedRes?.data, dataKeys: Object.keys(signedRes?.data || {}) })}`);
               }
             } catch (apiError) {
-              console.warn("Failed to fetch signed recording URL, using fallback:", apiError);
+              logger.warn(`Failed to fetch signed recording URL from API (${apiError}), trying fallbacks`);
             }
           }
+          
+          // Try fallback URLs in order
           if (!audioUrl && l?.signed_recording_url) {
+            logger.debug("Using signed_recording_url from log data");
             audioUrl = l.signed_recording_url;
           }
           if (!audioUrl && l?.recording_url) {
+            logger.debug("Using recording_url from log data");
             audioUrl = l.recording_url;
           }
           if (!audioUrl && l?.call_recording_url) {
+            logger.debug("Using call_recording_url from log data");
             audioUrl = l.call_recording_url;
           }
+          
+          if (audioUrl) {
+            logger.debug(`Recording URL set. Type: ${audioUrl.includes('signed') ? 'signed' : 'direct'}. First 100 chars: ${audioUrl.substring(0, 100)}...`);
+          } else {
+            logger.warn("No recording URL found in response or fallbacks");
+          }
+          
           setSignedRecordingUrl(audioUrl);
         } catch (signErr) {
           // Fallback to direct URLs if signed URL fetch fails
+          logger.error(`Unexpected error while fetching recording URL: ${signErr}`);
           setSignedRecordingUrl(l?.signed_recording_url || l?.recording_url || l?.call_recording_url);
         }
 
@@ -688,9 +715,21 @@ export function CallLogModal({
         .filter(Boolean)
         .join(' ') || '';
       const filename = generateRecordingFilename(leadName, log?.started_at);
+      logger.debug("Starting recording download with URL:", signedRecordingUrl.substring(0, 100) + "...");
       await downloadRecording(signedRecordingUrl, filename);
+      // Success - the download will happen in the browser
     } catch (error) {
-      console.error("Failed to download recording:", error);
+      logger.error("Failed to download recording:", error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      const description = errorMsg.includes('CORS') 
+        ? "Recording downloads work in production. This is a localhost development limitation."
+        : `Could not download recording: ${errorMsg}`;
+      
+      push({
+        variant: 'error',
+        title: 'Download Failed',
+        description,
+      });
     } finally {
       setIsDownloadingRecording(false);
     }

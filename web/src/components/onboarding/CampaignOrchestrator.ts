@@ -11,7 +11,7 @@ import {
   processICPAnswer,
   type ICPQuestion as APIICPQuestion,
   type ICPAnswerResponse,
-} from '@/features/ai-icp-assistant';
+} from '@lad/frontend-features/ai-icp-assistant';
 import { logger } from '@/lib/logger';
 export interface CampaignState {
   step: number; // 1-7
@@ -394,4 +394,4 @@ function getNextStep(currentStep: number, state: CampaignState): number {
     return 7; // Completion
   }
   return currentStep + 1;
-}
+}

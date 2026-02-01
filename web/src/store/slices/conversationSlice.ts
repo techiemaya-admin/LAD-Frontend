@@ -2,11 +2,13 @@ import { createSlice, createSelector, createAsyncThunk, PayloadAction } from '@r
 import { markConversationAsRead } from './notificationSlice';
 import { AppDispatch, RootState } from '../store';
 import { logger } from '@/lib/logger';
-interface Message {
+
+export interface Message {
   id?: string | number;
   [key: string]: unknown;
 }
-interface Conversation {
+
+export interface Conversation {
   id: string | number;
   leadId?: string | number;
   unread?: number;
@@ -274,4 +276,4 @@ export const markConversationAsReadUnified = createAsyncThunk(
     return conversationId;
   }
 );
-export default conversationSlice.reducer;
+export default conversationSlice.reducer;
