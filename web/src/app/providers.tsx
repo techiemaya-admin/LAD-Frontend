@@ -6,6 +6,18 @@ import { StripeProvider } from '../contexts/StripeContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+// Create QueryClient outside component to ensure it's only created once
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 // Suppress Chrome extension message passing errors
 if (typeof window !== 'undefined') {
   // Handle console errors
@@ -28,17 +40,6 @@ if (typeof window !== 'undefined') {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  // Single QueryClient instance for the app
-  const [queryClient] = React.useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
