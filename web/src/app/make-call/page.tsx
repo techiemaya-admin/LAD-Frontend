@@ -6,9 +6,16 @@ import MakeCallContent from "./make-call-content";
 
 export default function MakeCallPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     (async () => {
       try {
         await getCurrentUser();
@@ -19,9 +26,10 @@ export default function MakeCallPage() {
         router.replace(`/login?redirect_url=${redirect}`);
       }
     })();
-  }, [router]);
+  }, [router, mounted]);
 
-  if (!authed) return <></>;
+  // Prevent hydration mismatch - don't render until client-side
+  if (!mounted || !authed) return <></>;
 
   return <MakeCallContent />;
 }
