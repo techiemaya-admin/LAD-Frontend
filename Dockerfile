@@ -74,7 +74,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+# IMPORTANT: do NOT set PORT here — Cloud Run provides it (often 8080)
 ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs && \
@@ -90,7 +90,19 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 # Verify server.js exists before running
 RUN test -f server.js || (echo "ERROR: server.js not found!" && ls -la && exit 1)
 
+# Cloud Run-friendly start script: always bind HOSTNAME and PORT
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'set -e' \
+  'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
+  'export PORT="${PORT:-8080}"' \
+  'echo "Starting Next standalone on ${HOSTNAME}:${PORT}"' \
+  'exec node server.js' \
+  > /app/start.sh \
+  && chmod +x /app/start.sh \
+  && chown nextjs:nodejs /app/start.sh
+
 USER nextjs
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["/app/start.sh"]
