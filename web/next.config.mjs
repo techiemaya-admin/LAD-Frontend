@@ -13,6 +13,8 @@ const nextConfig = {
 
   // ✅ Use webpack instead - it handles monorepo workspace packages correctly
   webpack: (config, { isServer }) => {
+    // Force all @tanstack/react-query imports to use web's node_modules
+    // This prevents duplicate React Query instances in the bundle (monorepo issue)
     config.resolve.alias = {
       ...config.resolve.alias,
       '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),

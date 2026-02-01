@@ -42,8 +42,8 @@ docs/
 # Config files not needed in container
 .eslintrc.json
 .prettierrc
-tsconfig.json
-next.config.mjs
+# tsconfig.json     <-- KEEP THIS (needed for path aliases and type checking)
+# next.config.mjs   <-- KEEP THIS (required for Next.js build)
 
 # Test files
 **/*.test.ts
