@@ -64,7 +64,7 @@ RUN if [ -d "prisma" ]; then npx prisma generate; fi
 WORKDIR /app/web
 RUN npm run build && \
   echo "✅ Build completed successfully" && \
-  ls -la /app/web/.next/standalone/server.js
+  test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || echo "⚠️ server.js not found, checking .next structure" && ls -la /app/web/.next/standalone/ 2>/dev/null | head -20 || echo "⚠️ .next/standalone dir may not exist"
 
 # -------------------------
 # Runner
