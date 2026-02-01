@@ -17,23 +17,8 @@ export type AuthState = {
   theme: 'light' | 'dark';
 };
 const getInitialState = (): AuthState => {
-  try {
-    if (typeof window !== 'undefined') {
-      const storedAuth = safeStorage.getItem('auth');
-      if (storedAuth) {
-        const parsedAuth = JSON.parse(storedAuth);
-        return {
-          user: parsedAuth.user ?? null,
-          isAuthenticated: Boolean(parsedAuth.isAuthenticated),
-          loading: false,
-          error: null,
-          theme: (parsedAuth.theme as 'light' | 'dark') ?? 'light',
-        };
-      }
-    }
-  } catch {
-    // ignore and fall back to defaults
-  }
+  // Always return default state during initial render to avoid hydration mismatch
+  // The actual auth state will be rehydrated in the AuthProvider's useEffect
   return {
     user: null,
     isAuthenticated: false,
@@ -47,6 +32,22 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: getInitialState(),
   reducers: {
+    // Rehydrate auth state from storage (called client-side only)
+    rehydrateAuth: (state) => {
+      try {
+        if (typeof window !== 'undefined') {
+          const storedAuth = safeStorage.getItem('auth');
+          if (storedAuth) {
+            const parsedAuth = JSON.parse(storedAuth);
+            state.user = parsedAuth.user ?? null;
+            state.isAuthenticated = Boolean(parsedAuth.isAuthenticated);
+            state.theme = (parsedAuth.theme as 'light' | 'dark') ?? 'light';
+          }
+        }
+      } catch {
+        // ignore errors during rehydration
+      }
+    },
     loginStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -108,7 +109,7 @@ const authSlice = createSlice({
     },
   },
 });
-export const { loginStart, loginSuccess, loginFailure, logout, clearError, toggleTheme, updateUserProfile } = authSlice.actions;
+export const { rehydrateAuth, loginStart, loginSuccess, loginFailure, logout, clearError, toggleTheme, updateUserProfile } = authSlice.actions;
 export const selectUser = (state: any) => state.auth.user;
 export const selectIsAuthenticated = (state: any) => state.auth.isAuthenticated;
 export default authSlice.reducer;

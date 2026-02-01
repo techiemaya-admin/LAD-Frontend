@@ -2,6 +2,8 @@
 import React from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store/store';
+import { rehydrateAuth } from '@/store/slices/authSlice';
+import { rehydrateSettings } from '@/store/slices/settingsSlice';
 import { StripeProvider } from '../contexts/StripeContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -63,6 +65,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   //       suspend because React will throw away the client on the initial
   //       render if it suspends and there is no boundary
   const queryClient = React.useMemo(() => getQueryClient(), []);
+
+  // Rehydrate Redux state from localStorage on client-side mount
+  React.useEffect(() => {
+    store.dispatch(rehydrateAuth());
+    store.dispatch(rehydrateSettings());
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

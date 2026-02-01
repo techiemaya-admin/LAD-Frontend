@@ -90,14 +90,20 @@ const defaultState: SettingsState = {
   companyLogo: 'https://agent.techiemaya.com/assets/logo-DtZyzd-3.png',
   // ...other settings as needed
 };
-const initialState: SettingsState = {
-  ...defaultState,
-  ...loadSettingsFromStorage()
-};
+
+// Always use default state during initial render to avoid hydration mismatch
+const initialState: SettingsState = { ...defaultState };
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    // Rehydrate settings from storage (called client-side only)
+    rehydrateSettings(state) {
+      if (typeof window !== 'undefined') {
+        const stored = loadSettingsFromStorage();
+        Object.assign(state, stored);
+      }
+    },
     // Set the theme (light/dark)
     setTheme(state, action: PayloadAction<'light' | 'dark'>) {
       state.theme = action.payload;
@@ -126,7 +132,7 @@ const settingsSlice = createSlice({
   },
 });
 // Export actions for use in components
-export const { setTheme, setLanguage, setCompanyName, setCompanyLogo, setUserSettings } = settingsSlice.actions;
+export const { rehydrateSettings, setTheme, setLanguage, setCompanyName, setCompanyLogo, setUserSettings } = settingsSlice.actions;
 export default settingsSlice.reducer;
 // Selector to get the settings object from state
 export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;
