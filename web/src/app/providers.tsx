@@ -51,13 +51,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Provider store={store}>
+      <Provider store={store}>
+        <AuthProvider>
           <StripeProvider>
             {children}
           </StripeProvider>
-        </Provider>
-      </AuthProvider>
+        </AuthProvider>
+      </Provider>
     </QueryClientProvider>
   );
 }
