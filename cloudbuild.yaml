@@ -1,22 +1,22 @@
 steps:
-  # Build Docker image
+  # Build Docker image for PRODUCTION
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/lad-frontend:latest'
+      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
       - '--build-arg'
-      - 'VITE_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'VITE_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_API_URL=https://lad-backend-741719885039.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_API_BASE=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-741719885039.us-central1.run.app'
       - '--build-arg'
       - 'NEXT_PUBLIC_DISABLE_VAPI=false'
       - '-f'
@@ -27,35 +27,37 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/lad-frontend:latest'
+      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
 
-  # Deploy to Cloud Run
+  # Deploy to Cloud Run (PRODUCTION)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        gcloud run deploy lad-frontend \
-          --image gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA \
+        gcloud run deploy lad-frontend-prod \
+          --image gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
           --memory 2Gi \
           --cpu 2 \
-          --min-instances 0 \
+          --min-instances 1 \
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
+          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-741719885039.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
+        
+        echo "✅ Production deployment completed successfully"
 
 images:
-  - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
-  - 'gcr.io/$PROJECT_ID/lad-frontend:latest'
+  - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
