@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@/lib/logger';
+import { safeStorage } from '../../../shared/storage';
 interface CampaignActivity {
   id: string;
   campaign_id: string;
@@ -61,21 +62,8 @@ export function useCampaignActivityFeed(
       const baseUrl = backendUrl.includes('/api') ? backendUrl : `${backendUrl}/api`;
       const url = `${baseUrl}/campaigns/${campaignId}/analytics?${params.toString()}`;
       
-      // Get auth token for the request from cookies
-      let token: string | null = null;
-      if (typeof document !== 'undefined') {
-        const cookies = document.cookie ? document.cookie.split(';') : [];
-        for (const cookie of cookies) {
-          const [rawName, ...rawValueParts] = cookie.trim().split('=');
-          const name = rawName?.trim();
-          const value = rawValueParts.join('=');
-          if (!name) continue;
-          if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
-            token = decodeURIComponent(value || '');
-            break;
-          }
-        }
-      }
+      // Get auth token from SafeStorage
+      const token = typeof window !== 'undefined' ? safeStorage.getItem('token') : null;
       
       const response = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -112,21 +100,9 @@ export function useCampaignActivityFeed(
     // Connect to SSE for live updates using the /events endpoint
     const connectSSE = () => {
       try {
-        // Get auth token from cookies (EventSource doesn't support custom headers)
-        let token: string | null = null;
-        if (typeof document !== 'undefined') {
-          const cookies = document.cookie ? document.cookie.split(';') : [];
-          for (const cookie of cookies) {
-            const [rawName, ...rawValueParts] = cookie.trim().split('=');
-            const name = rawName?.trim();
-            const value = rawValueParts.join('=');
-            if (!name) continue;
-            if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
-              token = decodeURIComponent(value || '');
-              break;
-            }
-          }
-        }
+        // Get auth token from SafeStorage (EventSource doesn't support custom headers)
+        const token = typeof window !== 'undefined' ? safeStorage.getItem('token') : null;
+        
         if (!token) {
           logger.warn('[ActivityFeed] No auth token found, cannot connect to SSE');
           setIsConnected(false);

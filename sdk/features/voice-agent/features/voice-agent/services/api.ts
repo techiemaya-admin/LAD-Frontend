@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { safeStorage } from '../../../../../shared/storage';
 
 /**
  * Shared API Client for Voice Agent SDK
@@ -25,21 +26,8 @@ class APIClient {
     // Request interceptor for auth token
     this.instance.interceptors.request.use(
       (config) => {
-        let token: string | null = null;
-
-        if (typeof document !== 'undefined') {
-          const cookies = document.cookie ? document.cookie.split(';') : [];
-          for (const cookie of cookies) {
-            const [rawName, ...rawValueParts] = cookie.trim().split('=');
-            const name = rawName?.trim();
-            const value = rawValueParts.join('=');
-            if (!name) continue;
-            if (name === 'auth_token' || name === 'token') {
-              token = decodeURIComponent(value || '');
-              break;
-            }
-          }
-        }
+        // Get token from SafeStorage
+        const token = typeof window !== 'undefined' ? safeStorage.getItem('token') : null;
 
         if (token) {
           config.headers = config.headers || {};
