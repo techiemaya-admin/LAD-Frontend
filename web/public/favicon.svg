@@ -1,0 +1,13 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="#0b1957"/>
+  
+  <!-- Glow effect -->
+  <circle cx="96" cy="96" r="90" fill="none" stroke="#0b1957" stroke-width="2" opacity="0.2"/>
+  
+  <!-- LAD Text -->
+  <text x="96" y="120" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="2">LAD</text>
+  
+  <!-- Accent line -->
+  <line x1="36" y1="142" x2="156" y2="142" stroke="white" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+</svg>

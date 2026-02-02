@@ -1,0 +1,55 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "baseUrl": ".",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@lad/frontend-features": ["../sdk"],
+      "@lad/frontend-features/ai-icp-assistant": ["../sdk/features/ai-icp-assistant"],
+      "@lad/frontend-features/billing": ["../sdk/features/billing"],
+      "@lad/frontend-features/campaigns": ["../sdk/features/campaigns"],
+      "@lad/frontend-features/conversations": ["../sdk/features/conversations"],
+      "@lad/frontend-features/overview": ["../sdk/features/overview"],
+      "@lad/frontend-features/voice-agent": ["../sdk/features/voice-agent"],
+      "@lad/frontend-features/deals-pipeline": ["../sdk/features/deals-pipeline"],
+      "@lad/frontend-features/apollo-leads": ["../sdk/features/apollo-leads"],
+      "@lad/frontend-features/dashboard": ["../sdk/features/dashboard"],
+      "@lad/frontend-features/bookings": ["../sdk/features/bookings"],
+      "@lad/frontend-features/social-integration": ["../sdk/features/social-integration"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/app/phone-numbers/page.jsx",
+    ".next/dev/types/**/*.ts",
+    "../sdk/**/*.ts",
+    "../sdk/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
