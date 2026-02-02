@@ -4,6 +4,8 @@
  * This is the centralized HTTP client used by all feature SDKs.
  * It handles authentication, base URL, and common request/response logic.
  */
+import { safeStorage } from './storage';
+
 type ApiResponse<T = any> = {
   data: T;
   status: number;
@@ -51,20 +53,10 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...options?.headers,
     };
-    // Add auth token from cookies if available
-    if (typeof document !== 'undefined') {
-      let token: string | null = null;
-      const cookies = document.cookie ? document.cookie.split(';') : [];
-      for (const cookie of cookies) {
-        const [rawName, ...rawValueParts] = cookie.trim().split('=');
-        const name = rawName?.trim();
-        const value = rawValueParts.join('=');
-        if (!name) continue;
-        if (name === 'auth_token' || name === 'authToken' || name === 'token' || name === 'access_token' || name === 'auth') {
-          token = decodeURIComponent(value || '');
-          break;
-        }
-      }
+    
+    // Add auth token from SafeStorage
+    if (typeof window !== 'undefined') {
+      const token = safeStorage.getItem('token');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }

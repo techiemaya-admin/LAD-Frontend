@@ -19,8 +19,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Get authentication token from cookies
-  const token = req.cookies.get('token')?.value || '';
+  // 2. Get authentication token from cookies (check both 'token' and 'access_token' for backward compatibility)
+  const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value || '';
 
   // 3. For protected routes, check if user has token
   if (!token) {

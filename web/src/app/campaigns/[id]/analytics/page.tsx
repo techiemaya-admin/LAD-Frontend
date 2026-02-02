@@ -63,7 +63,7 @@ export default function CampaignAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="h-screen flex items-center justify-center bg-background">
         <Card className="p-8 rounded-2xl text-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mx-auto" />
           <p className="mt-4 font-semibold">Loading Advanced Analytics...</p>

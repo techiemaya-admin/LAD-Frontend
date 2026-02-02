@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
     // Set cookie with production-safe settings
     const isProduction = process.env.NODE_ENV === 'production';
-    res.cookies.set('access_token', token, {
+    res.cookies.set('token', token, {
       httpOnly: true,
       secure: isProduction, // Only require HTTPS in production
       sameSite: 'lax',
@@ -71,4 +71,4 @@ export async function POST(req: NextRequest) {
     logger.error('Login endpoint error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
-}
+}

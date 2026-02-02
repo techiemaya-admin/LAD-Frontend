@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get("Authorization");
     let token = authHeader?.replace("Bearer ", "");
     if (!token) {
-      token = req.cookies.get("access_token")?.value;
+      token = req.cookies.get("token")?.value || req.cookies.get("access_token")?.value;
     }
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

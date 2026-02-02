@@ -1,14 +1,12 @@
 /**
- * Safe storage utilities that handle Safari's strict privacy mode
- * where localStorage/sessionStorage might be blocked
- * 
- * Uses localStorage as primary storage with memory fallback.
- * Cookie storage has been deprecated.
+ * Safe Storage utilities for SDK
+ * Handles localStorage with fallback to memory storage
+ * Used for token storage across the SDK
  */
-import { logger } from '@/lib/logger';
 
 class SafeStorage {
   private memoryStore: Map<string, string> = new Map();
+
   private isStorageAvailable(): boolean {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -22,64 +20,50 @@ class SafeStorage {
       return false;
     }
   }
+
   getItem(key: string): string | null {
     try {
-      // Primary: localStorage
+      // Try localStorage first
       if (this.isStorageAvailable()) {
         const value = localStorage.getItem(key);
         if (value) return value;
       }
       
-      // Fallback: memory store
+      // Fallback to memory store
       return this.memoryStore.get(key) || null;
     } catch (e) {
-      logger.warn('Storage getItem failed', e);
+      console.warn('[SafeStorage] getItem failed', e);
       return this.memoryStore.get(key) || null;
     }
   }
+
   setItem(key: string, value: string): void {
     try {
-      const storageAvailable = this.isStorageAvailable();
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('[SafeStorage] setItem', { key, storageAvailable });
-      }
-      
-      // Primary: localStorage
-      if (storageAvailable) {
+      // Save to localStorage if available
+      if (this.isStorageAvailable()) {
         localStorage.setItem(key, value);
-        if (process.env.NODE_ENV === 'development') {
-          logger.debug('[SafeStorage] Saved to localStorage', { key, valueLength: value.length });
-        }
-        // Verify it was actually saved
-        const retrieved = localStorage.getItem(key);
-        if (process.env.NODE_ENV === 'development') {
-          logger.debug('[SafeStorage] Verified retrieval', { key, retrieved: !!retrieved });
-        }
-      } else {
-        logger.warn('[SafeStorage] localStorage not available, using memory store', { key });
       }
       
       // Always save to memory store as backup
       this.memoryStore.set(key, value);
     } catch (e) {
-      logger.error('[SafeStorage] setItem failed', e);
+      console.error('[SafeStorage] setItem failed', e);
       this.memoryStore.set(key, value);
     }
   }
+
   removeItem(key: string): void {
     try {
-      // Remove from localStorage
       if (this.isStorageAvailable()) {
         localStorage.removeItem(key);
       }
-      
-      // Remove from memory store
       this.memoryStore.delete(key);
     } catch (e) {
-      logger.warn('Storage removeItem failed', e);
+      console.warn('[SafeStorage] removeItem failed', e);
       this.memoryStore.delete(key);
     }
   }
+
   clear(): void {
     try {
       if (this.isStorageAvailable()) {
@@ -87,10 +71,11 @@ class SafeStorage {
       }
       this.memoryStore.clear();
     } catch (e) {
-      logger.warn('Storage clear failed', e);
+      console.warn('[SafeStorage] clear failed', e);
       this.memoryStore.clear();
     }
   }
 }
-// Export a singleton instance
+
+// Export singleton instance
 export const safeStorage = new SafeStorage();
