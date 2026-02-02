@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackendUrl } from '../../utils/backend';
 import { logger } from '@/lib/logger';
+import { getApiUrl } from '@/config/api';
 export async function POST(req: NextRequest) {
   try {
     logger.debug('[/api/auth/login] Login attempt started');
@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
       logger.warn('[/api/auth/login] Missing email or password');
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
-    const backend = getBackendUrl();
-    logger.debug('[/api/auth/login] Forwarding to backend API', { backend });
-    const resp = await fetch(`${backend}/api/auth/login`, {
+    const backend = getApiUrl('/auth/login');
+    logger.debug('orwarding to backend API', { backend });
+    const resp = await fetch(`${backend}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Fetch user capabilities
     let capabilities = [];
     try {
-      const capabilitiesResponse = await fetch(`${backend}/api/user-capabilities/${user.id}`, {
+      const capabilitiesResponse = await fetch(getApiUrl(`/user-capabilities/${user.id}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

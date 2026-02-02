@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "../../utils/backend";
+import { getURL } from "next/dist/shared/lib/utils";
+import { getApiUrl } from "@/config/api";
 export async function GET(req: NextRequest) {
   try {
     // Try to get token from Authorization header first, then fall back to cookies
@@ -11,8 +13,8 @@ export async function GET(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    const backend = getBackendUrl();
-    const resp = await fetch(`${backend}/api/auth/me`, {
+  ;
+    const resp = await fetch(`${getApiUrl('/auth/me')}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

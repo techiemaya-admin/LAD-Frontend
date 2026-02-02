@@ -5,6 +5,7 @@
  * It handles authentication, base URL, and common request/response logic.
  */
 import { safeStorage } from './storage';
+import { envConfig } from './config';
 
 type ApiResponse<T = any> = {
   data: T;
@@ -18,21 +19,8 @@ type RequestOptions = {
 class ApiClient {
   private baseURL: string;
   constructor() {
-    // Use NEXT_PUBLIC_BACKEND_URL (preferred) or NEXT_PUBLIC_API_URL (legacy fallback)
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-    
-    if (!backendUrl && process.env.NODE_ENV === 'production') {
-      throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
-    }
-    
-    // If backend URL is provided, append /api; otherwise use production backend as default
-    if (backendUrl) {
-      // Check if URL already contains /api suffix
-      this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
-    } else {
-      // Default to production backend instead of localhost
-      this.baseURL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
-    }
+    // Use the unified environment configuration
+    this.baseURL = envConfig.API_URL;
   }
   private async request<T>(
     method: string,
