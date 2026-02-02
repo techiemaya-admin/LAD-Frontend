@@ -44,7 +44,8 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
 RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
  && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')"
 
-# Copy source code after deps are installed
+# Copy source code after deps are installed (back to /app root for correct structure)
+WORKDIR /app
 COPY . .
 
 # Verify critical config files are present in build context
