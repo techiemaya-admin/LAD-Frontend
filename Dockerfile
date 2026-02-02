@@ -58,7 +58,7 @@ WORKDIR /app/web
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
-# Build args
+# Build args - these MUST be provided via --build-arg in cloudbuild
 ARG VITE_BACKEND_URL
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_API_BASE
@@ -67,13 +67,16 @@ ARG NEXT_PUBLIC_ICP_BACKEND_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_DISABLE_VAPI
 
-ENV VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
-ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
-ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backend-develop-741719885039.us-central1.run.app}
+# Set environment variables from build args
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL}
 ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
-ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+ENV NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+# NODE_ENV=production enables Next.js optimizations (minification, tree-shaking)
+# This should be 'production' for ALL environments (dev/stage/prod)
 ENV NODE_ENV=production
 
 WORKDIR /app
