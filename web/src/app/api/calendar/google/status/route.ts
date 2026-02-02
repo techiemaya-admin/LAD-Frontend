@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const resp = await fetch(`${backend}/api/calender/google/status`, {
+    const resp = await fetch(`${backend}/api/calendar/google/status`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ user_id: userId }),
@@ -58,4 +58,4 @@ export async function GET(req: NextRequest) {
     console.error('[/api/calendar/google/status] GET Error:', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
-}
+}
