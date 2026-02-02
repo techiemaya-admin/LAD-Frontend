@@ -81,10 +81,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
 
 USER nextjs
 
-# Expose port
-EXPOSE 3000
+# Expose port (Cloud Run uses PORT env variable, typically 8080)
+EXPOSE 8080
 
-ENV PORT=3000
+ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
 # Start the application

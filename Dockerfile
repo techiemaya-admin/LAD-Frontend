@@ -16,11 +16,15 @@ RUN apt-get update -y \
   && apt-get install -y python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+# Copy only package files first for better caching
+COPY package*.json ./
+COPY web/package*.json ./web/
+COPY sdk/package*.json ./sdk/
 
 WORKDIR /app/web
 
-RUN rm -rf node_modules package-lock.json \
+# Install dependencies (keep package-lock.json for reproducible builds)
+RUN rm -rf node_modules \
   && npm install --include=optional --foreground-scripts --no-audit --fund=false
 
 # Force-install native linux bindings (deterministic)
@@ -39,6 +43,19 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
 # Fail fast checks
 RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
  && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')"
+
+# Copy source code after deps are installed
+COPY . .
+
+# Verify critical config files are present in build context
+RUN test -f /app/web/next.config.mjs && echo "✅ next.config.mjs present" || (echo "❌ next.config.mjs missing" && exit 1)
+RUN test -f /app/web/tsconfig.json && echo "✅ tsconfig.json present" || (echo "❌ tsconfig.json missing" && exit 1)
+
+WORKDIR /app/web
+
+# Verify React Query package resolution
+RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
+ && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
 # Build args
 ARG VITE_BACKEND_URL
@@ -60,6 +77,11 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
+
+# Verify React Query package resolution
+WORKDIR /app/web
+RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
+ && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
 WORKDIR /app/web
 RUN npm run build && \

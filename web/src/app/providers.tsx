@@ -1,11 +1,12 @@
 "use client";
-import React from 'react';
-import { Provider } from 'react-redux';
-import { store } from '@/store/store';
-import { rehydrateAuth } from '@/store/slices/authSlice';
-import { rehydrateSettings } from '@/store/slices/settingsSlice';
-import { StripeProvider } from '../contexts/StripeContext';
-import { AuthProvider } from '../contexts/AuthContext';
+
+import React from "react";
+import { Provider as ReduxProvider } from "react-redux";
+import { store } from "@/store/store";
+import { rehydrateAuth } from "@/store/slices/authSlice";
+import { rehydrateSettings } from "@/store/slices/settingsSlice";
+import { StripeProvider } from "../contexts/StripeContext";
+import { AuthProvider } from "../contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Suppress Chrome extension message passing errors
@@ -29,45 +30,43 @@ if (typeof window !== 'undefined') {
   });
 }
 
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Render children only after mount, but DO NOT block provider tree.
+  return mounted ? <>{children}</> : null;
+}
+
 export default function Providers({ children }: { children: React.ReactNode }) {
-  // Create a stable QueryClient instance that persists across renders
-  // Using useState ensures the same instance is used for the lifetime of the component
-  const [queryClient] = React.useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
+  const [queryClient] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+            gcTime: 5 * 60 * 1000,
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
 
-  // Track mounted state to ensure proper client-side hydration
-  const [isMounted, setIsMounted] = React.useState(false);
-
-  // Rehydrate Redux state from localStorage on client-side mount
   React.useEffect(() => {
-    setIsMounted(true);
     store.dispatch(rehydrateAuth());
     store.dispatch(rehydrateSettings());
   }, []);
 
-  // Don't render providers until mounted on client to prevent hydration mismatches
-  // This ensures QueryClient context is properly established before components try to use it
-  if (!isMounted) {
-    return null;
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
+      <ReduxProvider store={store}>
         <AuthProvider>
-          <StripeProvider>
-            {children}
-          </StripeProvider>
+          {/* Stripe often touches window; gate Stripe only if needed */}
+          <ClientOnly>
+            <StripeProvider>{children}</StripeProvider>
+          </ClientOnly>
         </AuthProvider>
-      </Provider>
+      </ReduxProvider>
     </QueryClientProvider>
   );
 }
