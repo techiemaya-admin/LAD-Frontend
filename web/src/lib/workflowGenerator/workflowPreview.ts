@@ -136,10 +136,10 @@ export function generateProgressiveWorkflowPreview(
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('visit') || actionStr === 'visit_profile';
       });
-      const hasFollow = linkedinActions.some((action: string) => {
-        const actionStr = String(action).toLowerCase();
-        return actionStr.includes('follow') && !actionStr.includes('message');
-      });
+      // const hasFollow = linkedinActions.some((action: string) => {
+      //   const actionStr = String(action).toLowerCase();
+      //   return actionStr.includes('follow') && !actionStr.includes('message');
+      // });
       const hasConnect = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
@@ -159,15 +159,15 @@ export function generateProgressiveWorkflowPreview(
         });
       }
       // Add follow step
-      if (hasFollow) {
-        steps.push({
-          id: `step_${stepId++}`,
-          type: 'linkedin_follow',
-          title: 'Follow LinkedIn Profile',
-          description: 'Follow the profile',
-          channel: 'linkedin',
-        });
-      }
+      // if (hasFollow) {
+      //   steps.push({
+      //     id: `step_${stepId++}`,
+      //     type: 'linkedin_follow',
+      //     title: 'Follow LinkedIn Profile',
+      //     description: 'Follow the profile',
+      //     channel: 'linkedin',
+      //   });
+      // }
       // Add connection step
       if (hasConnect) {
         steps.push({
@@ -624,4 +624,4 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
   }
   logger.debug('Generated workflow steps', { stepCount: steps.length });
   return steps;
-}
+}

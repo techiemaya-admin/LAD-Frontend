@@ -145,7 +145,7 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
                 exit={{ opacity: 0, x: mobileView === 'chat' ? 20 : -20 }}
                 transition={{ duration: 0.3 }}
               >
-                {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel />}
+                {mobileView === 'chat' ? <ChatPanel /> : <WorkflowPreviewPanel campaignId={campaignId} />}
               </motion.div>
             </AnimatePresence>
           </motion.div>
@@ -243,7 +243,7 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
               exit={{ opacity: 0, x: mobileView === 'chat' ? 20 : -20 }}
               transition={{ duration: 0.3 }}
             >
-              {mobileView === 'chat' ? <ChatPanel campaignId={campaignId} /> : <WorkflowPreviewPanel />}
+              {mobileView === 'chat' ? <ChatPanel campaignId={campaignId} /> : <WorkflowPreviewPanel campaignId={campaignId} />}
             </motion.div>
           </AnimatePresence>
         </motion.div>
@@ -283,7 +283,7 @@ export default function Onboarding3Panel({ campaignId }: Onboarding3PanelProps) 
             maxWidth: isEditorPanelCollapsed ? '85%' : '70%'
           }}
         >
-          <WorkflowPreviewPanel />
+          <WorkflowPreviewPanel campaignId={campaignId} />
         {/* Show Editor Button - only appears when user has clicked Edit AND panel is collapsed */}
         <AnimatePresence>
           {isEditorPanelCollapsed && hasRequestedEditor && (

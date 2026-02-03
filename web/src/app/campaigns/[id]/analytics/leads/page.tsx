@@ -21,6 +21,9 @@ interface ExtendedCampaignLead extends CampaignLead {
   company?: string;
   photo_url?: string;
   is_inbound?: boolean;
+  apollo_person_id?: string;
+  enriched_email?: string | null;
+  enriched_linkedin_url?: string | null;
 }
 export default function CampaignLeadsPage() {
   const params = useParams();
@@ -31,7 +34,7 @@ export default function CampaignLeadsPage() {
   const [page, setPage] = useState(1);
   
   // Fetch campaign to get campaign_type
-  const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId);
+  const { campaign, loading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
   
   // Use SDK hook for leads
@@ -296,7 +299,7 @@ export default function CampaignLeadsPage() {
             </Button>
             <div>
               <h4 className="text-2xl font-bold text-slate-800 mb-1">
-                Campaign Leads
+                {campaign?.name || 'Campaign Leads'}
               </h4>
               <p className="text-sm text-slate-500">
                 {filteredLeads.length} leads
@@ -342,6 +345,7 @@ export default function CampaignLeadsPage() {
                     first_name: lead.first_name,
                     last_name: lead.last_name,
                     title: lead.title,
+                    company: lead.lead_data?.company_name || lead.lead_data?._full_data?.company_name,
                     email: lead.email,
                     phone: lead.phone,
                     linkedin_url: lead.linkedin_url,

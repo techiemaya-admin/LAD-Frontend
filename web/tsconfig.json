@@ -29,6 +29,7 @@
       "@lad/frontend-features/ai-icp-assistant": ["../sdk/features/ai-icp-assistant"],
       "@lad/frontend-features/billing": ["../sdk/features/billing"],
       "@lad/frontend-features/campaigns": ["../sdk/features/campaigns"],
+      "@lad/sdk/features/ai-icp-assistant": ["../sdk/features/ai-icp-assistant"],
       "@lad/frontend-features/conversations": ["../sdk/features/conversations"],
       "@lad/frontend-features/overview": ["../sdk/features/overview"],
       "@lad/frontend-features/voice-agent": ["../sdk/features/voice-agent"],
