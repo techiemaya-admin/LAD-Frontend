@@ -2,6 +2,9 @@
  * Chat Step Controller - Main Hook
  * 
  * Main hook for managing conversational ICP onboarding flow
+ * 
+ * LAD Architecture: This is a thin UI hook that calls SDK functions.
+ * Business logic lives in @lad/frontend-features/ai-icp-assistant
  */
 'use client';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -11,8 +14,12 @@ import {
   fetchICPQuestions,
   fetchICPQuestionByStep,
   processICPAnswer,
+  getBufferedConversation,
+  getCurrentStepFromBuffer,
+  hasBufferedMessages,
   type ICPQuestion as APIICPQuestion,
   type ICPAnswerResponse,
+  type BufferedMessage,
 } from '@lad/frontend-features/ai-icp-assistant';
 import {
   formatQuestionForChat,
@@ -27,7 +34,7 @@ export function useChatStepController(
   onComplete: (answers: Record<string, any>) => void,
   onUpdatePreview?: (stepIndex: number, answer: any) => void
 ) {
-  const { addAIMessage, setIsProcessingAI, aiMessages, isICPFlowStarted, setIsICPFlowStarted } = useOnboardingStore();
+  const { addAIMessage, clearAIMessages, setIsProcessingAI, aiMessages, isICPFlowStarted, setIsICPFlowStarted } = useOnboardingStore();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +86,67 @@ export function useChatStepController(
       logger.debug('Flow is currently starting - module lock active, skipping');
       return;
     }
+
+    // CRITICAL: Check for buffered messages in localStorage FIRST (before any other checks)
+    // This takes precedence over store persistence because SDK buffer is the source of truth
+    const sessionId = 'default_session'; // Must match the sessionId used in processICPAnswer
+    logger.debug('[ICP Flow] Checking for buffered messages', { sessionId, aiMessagesLength: aiMessages.length, isICPFlowStarted });
+    
+    if (hasBufferedMessages(sessionId)) {
+      logger.debug('[ICP Flow] Found buffered messages in localStorage, restoring conversation');
+      
+      const bufferedMessages = getBufferedConversation(sessionId);
+      const currentStep = getCurrentStepFromBuffer(sessionId);
+      
+      logger.debug('[ICP Flow] Restoring conversation state', {
+        messageCount: bufferedMessages.length,
+        currentStep,
+        firstMessage: bufferedMessages[0]?.content.substring(0, 50),
+        lastMessage: bufferedMessages[bufferedMessages.length - 1]?.content.substring(0, 50),
+      });
+
+      // Clear any existing messages in store before restoring from buffer
+      clearAIMessages();
+
+      // Restore all messages to chat UI
+      bufferedMessages.forEach((msg: BufferedMessage, index: number) => {
+        addAIMessage({
+          role: msg.role === 'user' ? 'user' : 'ai',
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        });
+        logger.debug('[ICP Flow] Restored message', { 
+          index, 
+          role: msg.role, 
+          stepIndex: msg.stepIndex,
+          contentPreview: msg.content.substring(0, 50) 
+        });
+      });
+
+      // Restore collected answers from the last user message with collectedAnswers
+      const restoredAnswers: Record<string, any> = {};
+      for (let i = bufferedMessages.length - 1; i >= 0; i--) {
+        const msg = bufferedMessages[i];
+        if (msg.role === 'user' && msg.messageData?.collectedAnswers) {
+          Object.assign(restoredAnswers, msg.messageData.collectedAnswers);
+          break; // Use the most recent collectedAnswers
+        }
+      }
+      
+      setAnswers(restoredAnswers);
+      setCurrentStepIndex(currentStep);
+      hasStartedRef.current = true;
+      setIsICPFlowStarted(true);
+      
+      logger.debug('[ICP Flow] Successfully restored conversation from localStorage', {
+        messageCount: bufferedMessages.length,
+        currentStep,
+        answersCount: Object.keys(restoredAnswers).length,
+      });
+      
+      return;
+    }
+
     // Check global flag first - most reliable
     if (isICPFlowStarted) {
       logger.debug('Flow already started - global flag is true, skipping');
@@ -95,6 +163,7 @@ export function useChatStepController(
       setIsICPFlowStarted(true);
       return;
     }
+
     const hasFirstQuestion = aiMessages.some(
       (msg: any) => msg.role === 'ai' && msg.content.includes("Let's get started")
     );

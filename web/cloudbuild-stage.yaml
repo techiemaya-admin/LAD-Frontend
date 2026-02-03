@@ -60,6 +60,29 @@ steps:
       - '-c'
       - |
         BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
+        
+        # Create env-vars file with proper YAML format
+        cat > /workspace/env-vars.yaml << 'EOF'
+        NODE_ENV: "staging"
+        ENVIRONMENT: "staging"
+        BRANCH: "${BRANCH_NAME}"
+        COMMIT_SHA: "${SHORT_SHA}"
+        BUILD_ID: "${BUILD_ID}"
+        NEXT_PUBLIC_BACKEND_URL: "${_API_URL}"
+        NEXT_PUBLIC_ICP_BACKEND_URL: "${_API_URL}"
+        NEXT_PUBLIC_SOCKET_URL: "${_NEXT_PUBLIC_SOCKET_URL}"
+        NEXT_PUBLIC_DISABLE_VAPI: "false"
+        EOF
+        
+        # Substitute environment variables in the YAML file
+        eval "cat <<EOF
+        $(cat /workspace/env-vars.yaml)
+        EOF" > /workspace/env-vars-final.yaml
+        
+        echo "=== Environment Variables File ==="
+        cat /workspace/env-vars-final.yaml
+        echo "=== End File ==="
+        
         gcloud run deploy $_SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/lad-frontend-stage:$COMMIT_SHA \
           --region $_REGION \
@@ -72,8 +95,10 @@ steps:
           --max-instances 5 \
           --concurrency 80 \
           --timeout 300 \
-          --update-env-vars NODE_ENV=staging,ENVIRONMENT=staging,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,BUILD_ID=$BUILD_ID,NEXT_PUBLIC_BACKEND_URL=$_API_URL,NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL,NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL,NEXT_PUBLIC_DISABLE_VAPI=false \
+          --env-vars-file /workspace/env-vars-final.yaml \
           --update-labels environment=staging,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
+        
+        echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
 
 # Images to be pushed to Container Registry
 images:
