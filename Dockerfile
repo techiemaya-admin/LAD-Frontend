@@ -37,7 +37,10 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
       echo "⚠️ lightningcss binding missing; searching..."; \
       f="$(find node_modules -maxdepth 6 -name 'lightningcss.linux-x64-*.node' | head -n 1 || true)"; \
       echo "Found: $f"; \
-      if [ -n "$f" ]; then cp "$f" node_modules/lightningcss/lightningcss.linux-x64-gnu.node; fi; \
+      if [ -n "$f" ]; then \
+        mkdir -p node_modules/lightningcss && \
+        cp "$f" node_modules/lightningcss/lightningcss.linux-x64-gnu.node; \
+      fi; \
     fi
 
 # Fail fast checks
