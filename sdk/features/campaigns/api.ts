@@ -1,0 +1,264 @@
+/**
+ * Campaigns Feature - API Functions
+ * 
+ * All HTTP API calls for the campaigns feature.
+ * Uses the shared apiClient for consistent request handling.
+ */
+import { apiClient } from '../../shared/apiClient';
+import type {
+  Campaign,
+  CampaignStats,
+  CampaignFilters,
+  CreateCampaignRequest,
+  UpdateCampaignRequest,
+  CampaignAnalytics,
+  CampaignLead,
+} from './types';
+/**
+ * Get all campaigns with optional filters
+ */
+export async function getCampaigns(filters?: CampaignFilters): Promise<Campaign[]> {
+  const params: Record<string, string> = {};
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status && filters.status !== 'all') params.status = filters.status;
+  const response = await apiClient.get<{ data: Campaign[] }>('/api/campaigns', { params });
+  return response.data.data || [];
+}
+/**
+ * Get a single campaign by ID
+ */
+export async function getCampaign(campaignId: string): Promise<Campaign> {
+  const response = await apiClient.get<{ data: Campaign }>(`/api/campaigns/${campaignId}`);
+  return response.data.data;
+}
+/**
+ * Get campaign statistics
+ */
+export async function getCampaignStats(): Promise<CampaignStats> {
+  const response = await apiClient.get<{ data: CampaignStats }>('/api/campaigns/stats');
+  return response.data.data;
+}
+/**
+ * Create a new campaign
+ */
+export async function createCampaign(data: CreateCampaignRequest): Promise<Campaign> {
+  const response = await apiClient.post<{ data: Campaign }>('/api/campaigns', data);
+  return response.data.data;
+}
+/**
+ * Update an existing campaign
+ */
+export async function updateCampaign(
+  campaignId: string,
+  data: UpdateCampaignRequest
+): Promise<Campaign> {
+  const response = await apiClient.put<{ data: Campaign }>(`/api/campaigns/${campaignId}`, data);
+  return response.data.data;
+}
+/**
+ * Delete a campaign
+ */
+export async function deleteCampaign(campaignId: string): Promise<void> {
+  await apiClient.delete(`/api/campaigns/${campaignId}`);
+}
+/**
+ * Start a campaign
+ */
+export async function startCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/start`, {});
+}
+/**
+ * Pause a campaign
+ */
+export async function pauseCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/pause`, {});
+}
+/**
+ * Stop a campaign
+ */
+export async function stopCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/stop`, {});
+}
+/**
+ * Get campaign analytics
+ */
+export async function getCampaignAnalytics(campaignId: string): Promise<CampaignAnalytics> {
+  const response = await apiClient.get<{ data: CampaignAnalytics }>(
+    `/api/campaigns/${campaignId}/analytics`
+  );
+  return response.data.data;
+}
+/**
+ * Get campaign leads
+ */
+export async function getCampaignLeads(
+  campaignId: string,
+  filters?: { search?: string }
+): Promise<CampaignLead[]> {
+  const params: Record<string, string> = {};
+  if (filters?.search) params.search = filters.search;
+  const response = await apiClient.get<{ data: CampaignLead[] }>(
+    `/api/campaigns/${campaignId}/leads`,
+    { params }
+  );
+  return response.data.data || [];
+}
+/**
+ * Get or generate lead profile summary
+ */
+export async function getLeadProfileSummary(
+  campaignId: string,
+  leadId: string
+): Promise<{ summary: string | null; exists: boolean }> {
+  const response = await apiClient.get<{ success: boolean; summary: string | null; exists: boolean }>(
+    `/api/campaigns/${campaignId}/leads/${leadId}/summary`
+  );
+  return {
+    summary: response.data.summary || null,
+    exists: response.data.exists || false,
+  };
+}
+/**
+ * Generate lead profile summary
+ */
+export async function generateLeadProfileSummary(
+  campaignId: string,
+  leadId: string
+): Promise<{ summary: string }> {
+  const response = await apiClient.post<{ success: boolean; summary: string }>(
+    `/api/campaigns/${campaignId}/leads/${leadId}/summary`,
+    {}
+  );
+  return { summary: response.data.summary };
+}
+/**
+ * Reveal email for a campaign lead
+ * Calls campaigns API which proxies to Apollo Leads API
+ */
+export async function revealLeadEmail(
+  campaignId: string,
+  leadId: string,
+  apolloPersonId: string
+): Promise<{ email: string; from_cache: boolean; credits_used: number }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    email: string;
+    from_cache: boolean;
+    credits_used: number;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-email`, {
+    apollo_person_id: apolloPersonId
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal email');
+  }
+  return {
+    email: response.data.email,
+    from_cache: response.data.from_cache,
+    credits_used: response.data.credits_used
+  };
+}
+/**
+ * Reveal phone for a campaign lead
+ * Calls campaigns API which proxies to Apollo Leads API
+ */
+export async function revealLeadPhone(
+  campaignId: string,
+  leadId: string,
+  apolloPersonId: string
+): Promise<{ phone: string; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    phone: string | null;
+    from_cache: boolean;
+    credits_used: number;
+    processing?: boolean;
+    message?: string;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-phone`, {
+    apollo_person_id: apolloPersonId
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal phone');
+  }
+  return {
+    phone: response.data.phone || null,
+    from_cache: response.data.from_cache,
+    credits_used: response.data.credits_used,
+    processing: response.data.processing,
+    message: response.data.message
+  };
+}
+
+/**
+ * Save inbound leads
+ */
+export async function saveInboundLeads(data: {
+  leads: any[];
+  skipDuplicates?: boolean;
+}): Promise<{
+  success: boolean;
+  duplicatesFound: boolean;
+  data: {
+    saved?: number;
+    total?: number;
+    skippedDuplicates?: number;
+    leads?: any[];
+    leadIds?: string[];
+    errors?: any[];
+    duplicates?: any[];
+    duplicateCount?: number;
+    newLeadsCount?: number;
+    totalUploaded?: number;
+  };
+  message: string;
+}> {
+  const response = await apiClient.post<{
+    success: boolean;
+    duplicatesFound: boolean;
+    data: any;
+    message: string;
+  }>('/api/inbound-leads', data);
+  return response.data;
+}
+
+/**
+ * Get inbound leads
+ */
+export async function getInboundLeads(filters?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}): Promise<any[]> {
+  const params: Record<string, string> = {};
+  if (filters?.limit) params.limit = String(filters.limit);
+  if (filters?.offset) params.offset = String(filters.offset);
+  if (filters?.search) params.search = filters.search;
+  
+  const response = await apiClient.get<{ success: boolean; data: any[] }>(
+    '/api/inbound-leads',
+    { params }
+  );
+  return response.data.data || [];
+}
+
+/**
+ * Cancel bookings for leads to re-nurture them
+ */
+export async function cancelLeadBookingsForReNurturing(leadIds: string[]): Promise<{
+  success: boolean;
+  data: {
+    cancelledBookings: number;
+    leadIds: string[];
+  };
+  message: string;
+}> {
+  const response = await apiClient.post<{
+    success: boolean;
+    data: {
+      cancelledBookings: number;
+      leadIds: string[];
+    };
+    message: string;
+  }>('/api/inbound-leads/cancel-bookings', { leadIds });
+  return response.data;
+}
+
