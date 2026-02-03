@@ -253,7 +253,7 @@ export async function processICPAnswer(
   request: ICPAnswerRequest
 ): Promise<ICPAnswerResponse> {
   const baseUrl = getBackendUrl();
-  const url = `http://localhost:3004/api/ai-icp-assistant/onboarding/icp-answer`;
+  const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-answer`;
 
   // Buffer user message in localStorage
   const sessionId = request.sessionId || 'default_session';
