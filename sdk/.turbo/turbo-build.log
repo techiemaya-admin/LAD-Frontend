@@ -2,11 +2,3 @@
 > @lad/frontend-features@1.0.0 build
 > tsc
 
-sh: tsc: command not found
-npm error Lifecycle script `build` failed with error:
-npm error code 127
-npm error path /Users/naveenreddy/Desktop/AI-Maya/LAD/LAD-Web/LAD-Frontend/sdk
-npm error workspace @lad/frontend-features@1.0.0
-npm error location /Users/naveenreddy/Desktop/AI-Maya/LAD/LAD-Web/LAD-Frontend/sdk
-npm error command failed
-npm error command sh -c tsc

@@ -21,9 +21,12 @@ COPY package*.json ./
 COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
+# Install root dependencies first (monorepo dependencies like @tanstack/react-query)
+RUN npm install --include=optional --foreground-scripts --no-audit --fund=false
+
 WORKDIR /app/web
 
-# Install dependencies (keep package-lock.json for reproducible builds)
+# Install web workspace dependencies
 RUN rm -rf node_modules \
   && npm install --include=optional --foreground-scripts --no-audit --fund=false
 
