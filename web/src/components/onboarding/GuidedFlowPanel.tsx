@@ -404,8 +404,8 @@ export default function GuidedFlowPanel() {
       // Use user-configured connection message (from Step 4) - only if enabled
       const userEnableConnectionMessage = answers.enableConnectionMessage !== undefined ? answers.enableConnectionMessage : enableConnectionMessage;
       const userConnectionMessage = userEnableConnectionMessage 
-        ? (answers.linkedinConnectionMessage || linkedinConnectionMessage || 'Hi {{first_name}}, I\'d like to connect with you.')
-        : '';
+        ? (answers.linkedinConnectionMessage || linkedinConnectionMessage || null)
+        : null;
       const nodeId = `linkedin_connect_${Date.now()}`;
       nodes.push({
         id: nodeId,
@@ -2439,7 +2439,7 @@ export default function GuidedFlowPanel() {
         delayMinutes,
         conditionType,
         enableConnectionMessage,
-        linkedinConnectionMessage: enableConnectionMessage ? linkedinConnectionMessage : '',
+        linkedinConnectionMessage: enableConnectionMessage ? linkedinConnectionMessage : null,
         linkedinMessage,
       });
     }
