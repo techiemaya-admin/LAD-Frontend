@@ -1,54 +1,40 @@
 /**
  * Campaigns Feature - useCampaignAnalytics Hook
  * 
- * React hook for fetching campaign analytics.
+ * React hook for fetching campaign analytics using TanStack Query.
  * Framework-independent (no Next.js imports).
  */
-import { useState, useCallback, useEffect } from 'react';
-import { getCampaignAnalytics } from '../api';
+import { useQuery } from '@tanstack/react-query';
+import { getCampaignAnalyticsOptions } from '../api';
 import type { CampaignAnalytics } from '../types';
+
 export interface UseCampaignAnalyticsReturn {
-  analytics: CampaignAnalytics | null;
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  clearError: () => void;
+  data: CampaignAnalytics | undefined;
+  analytics: CampaignAnalytics | undefined; // Alias for backward compatibility
+  isLoading: boolean;
+  loading: boolean; // Alias for backward compatibility
+  error: Error | null;
+  isError: boolean;
+  refetch: () => void;
+  isFetching: boolean;
+  isStale: boolean;
 }
-export function useCampaignAnalytics(campaignId: string | null): UseCampaignAnalyticsReturn {
-  const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const fetchAnalytics = useCallback(async () => {
-    if (!campaignId) {
-      setAnalytics(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCampaignAnalytics(campaignId);
-      setAnalytics(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load campaign analytics';
-      setError(errorMessage);
-      // Log error for debugging but don't expose to console in production
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[campaigns] Failed to load analytics:', err);
-      }
-      // TODO: Replace with proper error reporting service
-    } finally {
-      setLoading(false);
-    }
-  }, [campaignId]);
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+
+/**
+ * Hook to get campaign analytics with TanStack Query
+ */
+export function useCampaignAnalytics(campaignId: string): UseCampaignAnalyticsReturn {
+  const query = useQuery(getCampaignAnalyticsOptions(campaignId));
+  
   return {
-    analytics,
-    loading,
-    error,
-    refetch: fetchAnalytics,
-    clearError: () => setError(null),
+    data: query.data,
+    analytics: query.data, // Backward compatibility alias
+    isLoading: query.isLoading,
+    loading: query.isLoading, // Backward compatibility alias
+    error: query.error,
+    isError: query.isError,
+    refetch: query.refetch,
+    isFetching: query.isFetching,
+    isStale: query.isStale,
   };
-}
+}

@@ -156,13 +156,13 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && activities.length === 0 ? (
+            {isLoading && activities?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
-            ) : activities.length === 0 ? (
+            ) : activities?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <p className="text-muted-foreground">
@@ -171,7 +171,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              activities.map((activity, index) => (
+              activities?.map((activity, index) => (
                 <TableRow 
                   key={activity.id || index}
                   className="hover:bg-[#F8F9FE] transition-colors"

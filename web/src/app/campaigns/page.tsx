@@ -1,6 +1,9 @@
 'use client';
-import { Suspense } from 'react';
-import { CampaignsList } from '@/components/campaigns';
+import { Suspense, lazy } from 'react';
+import PageSkeleton from './components/PageSkeleton';
+
+// Lazy load the main component
+const CampaignsListPage = lazy(() => import('./components/CampaignsListPage'));
 /**
  * Campaigns Page - follows LAD architecture pattern
  * 
@@ -14,8 +17,8 @@ import { CampaignsList } from '@/components/campaigns';
  */
 export default function CampaignsPage() {
   return (
-    <Suspense fallback={<div>Loading campaigns...</div>}>
-      <CampaignsList />
+    <Suspense fallback={<PageSkeleton />}>
+      <CampaignsListPage />
     </Suspense>
   );
 }

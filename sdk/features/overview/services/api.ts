@@ -94,10 +94,10 @@ class DashboardApiService {
         return { success: false, data: [], error: 'Authentication required' } as any;
       }
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
-        throw new Error(error.message || `HTTP ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   const error = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+      //   throw new Error(error.message || `HTTP ${response.status}`);
+      // }
 
       return await response.json();
     } catch (error) {

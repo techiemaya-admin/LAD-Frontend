@@ -237,7 +237,7 @@ export function Sidebar() {
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
           {nav.map((n) => {
             const Icon = n.icon;
-            const isActive = pathname === n.href;
+            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
             return (
               <div key={n.href} className="relative group">
                 <NavLink
@@ -315,7 +315,7 @@ export function Sidebar() {
           )}
         >
           <img
-            src="/MrLAD-logo.svg"
+            src={isExpanded ? "/MrLAD-logo.svg" : "/logo.svg"}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -325,7 +325,7 @@ export function Sidebar() {
               isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
+              (e.target as HTMLImageElement).src = isExpanded ? "/MrLAD-logo.svg" : "/logo.svg";
             }}
           />
         </div>
@@ -333,7 +333,7 @@ export function Sidebar() {
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
           {nav.map((n) => {
             const Icon = n.icon;
-            const isActive = pathname === n.href;
+            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
             return (
               <div key={n.href} className="relative group">
                 <NavLink
