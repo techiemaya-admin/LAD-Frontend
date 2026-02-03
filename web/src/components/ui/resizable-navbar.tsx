@@ -146,7 +146,7 @@ export const NavItems = ({ items, className, onItemClick, activePath }: NavItems
                 className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
               />
             )}
-            <span className="relative z-20">{item.name}</span>
+            <span className="relative z-20 text-lg">{item.name}</span>
           </Link>
         );
       })}
@@ -243,9 +243,9 @@ export const NavbarLogo = () => {
   return (
     <Link
       href="/"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-4 flex h-12 w-32 items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
     >
-      <Image src="/MrLAD-logo.svg" alt="LAD hero" width={120} height={80}/>
+      <Image className="absolute" src="/MrLAD-logo.svg" alt="LAD hero" fill />
     </Link>
   );
 };
@@ -268,7 +268,7 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"button">
 )) => {
   const baseStyles =
-    "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
+    "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center text-lg";
 
   const variantStyles = {
     primary:

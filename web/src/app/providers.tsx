@@ -8,7 +8,6 @@ import { rehydrateSettings } from "@/store/slices/settingsSlice";
 import { StripeProvider } from "../contexts/StripeContext";
 import { AuthProvider } from "../contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import EnsureRQ from "./EnsureRQ";
 
 // Suppress Chrome extension message passing errors
 if (typeof window !== 'undefined') {
@@ -60,7 +59,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <EnsureRQ />
       <ReduxProvider store={store}>
         <AuthProvider>
           {/* Stripe often touches window; gate Stripe only if needed */}

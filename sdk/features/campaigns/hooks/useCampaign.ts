@@ -1,74 +1,40 @@
 /**
  * Campaigns Feature - useCampaign Hook
  * 
- * React hook for fetching and managing a single campaign.
+ * React hook for fetching a single campaign using TanStack Query.
  * Framework-independent (no Next.js imports).
  */
-import { useState, useCallback, useEffect } from 'react';
-import { getCampaign, updateCampaign } from '../api';
-import type { Campaign, UpdateCampaignRequest } from '../types';
+import { useQuery } from '@tanstack/react-query';
+import { getCampaignOptions } from '../api';
+import type { Campaign } from '../types';
+
 export interface UseCampaignReturn {
-  campaign: Campaign | null;
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  update: (data: UpdateCampaignRequest) => Promise<Campaign>;
-  clearError: () => void;
+  data: Campaign | undefined;
+  campaign: Campaign | undefined; // Alias for backward compatibility
+  isLoading: boolean;
+  loading: boolean; // Alias for backward compatibility
+  error: Error | null;
+  isError: boolean;
+  refetch: () => void;
+  isFetching: boolean;
+  isStale: boolean;
 }
-export function useCampaign(campaignId: string | null): UseCampaignReturn {
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const fetchCampaign = useCallback(async () => {
-    if (!campaignId) {
-      setCampaign(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCampaign(campaignId);
-      setCampaign(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load campaign';
-      setError(errorMessage);
-      // Log error for debugging but don't expose to console in production
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[campaigns] Failed to load campaign:', err);
-      }
-      // TODO: Replace with proper error reporting service
-    } finally {
-      setLoading(false);
-    }
-  }, [campaignId]);
-  useEffect(() => {
-    fetchCampaign();
-  }, [fetchCampaign]);
-  const update = useCallback(
-    async (data: UpdateCampaignRequest): Promise<Campaign> => {
-      if (!campaignId) {
-        throw new Error('Campaign ID is required');
-      }
-      try {
-        setError(null);
-        const updatedCampaign = await updateCampaign(campaignId, data);
-        setCampaign(updatedCampaign);
-        return updatedCampaign;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to update campaign';
-        setError(errorMessage);
-        throw err;
-      }
-    },
-    [campaignId]
-  );
+
+/**
+ * Hook to get a single campaign with TanStack Query
+ */
+export function useCampaign(campaignId: string): UseCampaignReturn {
+  const query = useQuery(getCampaignOptions(campaignId));
+  
   return {
-    campaign,
-    loading,
-    error,
-    refetch: fetchCampaign,
-    update,
-    clearError: () => setError(null),
+    data: query.data,
+    campaign: query.data, // Backward compatibility alias
+    isLoading: query.isLoading,
+    loading: query.isLoading, // Backward compatibility alias
+    error: query.error,
+    isError: query.isError,
+    refetch: query.refetch,
+    isFetching: query.isFetching,
+    isStale: query.isStale,
   };
-}
+}
