@@ -1129,10 +1129,10 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     // Convert utility answers to node settings
     const schedule = currentUtilityAnswers.schedule || 'immediate';
     const delayType = currentUtilityAnswers.delay || 'none';
-    const delay: { days?: number; hours?: number } | undefined = delayType === 'hours'
-      ? { hours: currentUtilityAnswers.delayHours || 0 }
+    const delay: { type: string; value?: number } | undefined = delayType === 'hours'
+      ? { type: 'hours', value: currentUtilityAnswers.delayHours || 0 }
       : delayType === 'days'
-        ? { days: currentUtilityAnswers.delayDays || 0 }
+        ? { type: 'days', value: currentUtilityAnswers.delayDays || 0 }
         : undefined;
     const condition = currentUtilityAnswers.condition === 'none' ? null : currentUtilityAnswers.condition;
     const variables = Array.isArray(currentUtilityAnswers.variables)

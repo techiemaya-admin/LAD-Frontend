@@ -17,7 +17,17 @@ import type {
   ParsedLead,
   PlatformDetection,
 } from './types';
-import { logger } from '@/lib/logger';
+
+// Re-export types that are used by hooks
+export type { ICPQuestion, ICPQuestionsResponse, ICPAnswerRequest, ICPAnswerResponse };
+
+// Simple logger for SDK - avoids Next.js dependency
+const logger = {
+  debug: (...args: any[]) => console.debug('[ICP-SDK]', ...args),
+  info: (...args: any[]) => console.info('[ICP-SDK]', ...args),
+  warn: (...args: any[]) => console.warn('[ICP-SDK]', ...args),
+  error: (...args: any[]) => console.error('[ICP-SDK]', ...args),
+};
 /**
  * Get the backend API URL from environment variables
  * PRODUCTION: Fails if no env var set
@@ -301,7 +311,6 @@ export async function processICPAnswer(
       messageData: {
         intentKey: responseData.nextQuestion.intentKey,
         options: responseData.nextQuestion.options,
-        inputType: responseData.nextQuestion.inputType,
         clarificationNeeded: responseData.clarificationNeeded,
         completed: responseData.completed,
       },
