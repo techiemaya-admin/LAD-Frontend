@@ -44,7 +44,7 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       const platformKey = platformMatch ? platformMatch[1].toLowerCase() : '';
       // Known platform actions (from backend GeminiIntentService.js)
       const platformActionsMap: Record<string, string[]> = {
-        linkedin: ['Visit profile', 'Follow profile', 'Send connection request', 'Send message (after accepted)'],
+        linkedin: ['Visit profile', 'Send connection request (with message)', 'Send connection request (without message)', 'Send message (after accepted)'],
         email: ['Send email', 'Email follow-up sequence', 'Track opens/clicks', 'Bounce detection'],
         whatsapp: ['Send broadcast', 'Send 1:1 message', 'Follow-up message', 'Template message'],
         voice: ['Trigger call', 'Use call script'],
@@ -99,7 +99,7 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
           platformName: platformKey,
           platformIndex,
           totalPlatforms,
-          preSelectedOptions: isPreSelected ? options : undefined, // Pre-select all if mentioned
+          preSelectedOptions: undefined, // Don't pre-select - let user choose
         };
       }
     }
@@ -108,7 +108,24 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
   }
   // Split message into question and options sections
   const optionsIndex = message.indexOf(optionsMatch[0]);
-  const questionText = message.substring(0, optionsIndex).trim();
+  
+  // Clean questionText: remove literal \n strings, remove ** and * markdown, and extra whitespace
+  let questionText = message.substring(0, optionsIndex)
+    .replace(/\\r\\n/g, ' ')  // Remove literal \r\n (Windows line endings)
+    .replace(/\\n/g, ' ')     // Remove literal \n strings (backslash + n)
+    .replace(/\\r/g, ' ')     // Remove literal \r
+    .replace(/\n/g, ' ')      // Remove actual newlines
+    .replace(/\r/g, ' ')      // Remove actual carriage returns
+    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove ** markdown, keep content
+    .replace(/\*(.*?)\*/g, '$1')    // Remove single * markdown, keep content
+    .replace(/\s+/g, ' ')  // Collapse multiple spaces
+    .trim();
+
+  // If questionText is empty or just whitespace, don't show it
+  if (!questionText || questionText.length < 2) {
+    questionText = '';
+  }
+
   const optionsSection = message.substring(optionsIndex + optionsMatch[0].length).trim();
   // Extract options (support bullet points: •, *, -, or numbered)
   const optionLines = optionsSection
@@ -119,8 +136,15 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       return /^[•\*\-]\s+/.test(line) || /^\d+\.\s+/.test(line);
     })
     .map(line => {
-      // Remove bullet point markers
-      return line.replace(/^[•\*\-]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+      // Remove bullet point markers, literal \n, ** markdown, and clean up
+      return line
+        .replace(/^[•\*\-]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .replace(/\\n/g, '')   // Remove literal \n strings from options
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove ** markdown from options
+        .replace(/\*(.*?)\*/g, '$1')    // Remove single * markdown from options
+        .replace(/\s+/g, ' ')  // Collapse multiple spaces
+        .trim();
     })
     .filter(line => line.length > 0 && !line.toLowerCase().includes('modify your selection')); // Filter out helper text
   // Check for multi-select hint
@@ -159,13 +183,14 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       totalPlatforms = parseInt(platformIndexMatch[2], 10);
     }
     // Check if message says "pre-selected" or "all actions are pre-selected"
-    const isPreSelected = messageLower.includes('pre-selected') || 
-                         messageLower.includes('all actions are pre-selected') ||
-                         (messageLower.includes('all') && messageLower.includes('pre-selected'));
-    // If pre-selected, pre-select ALL options
-    if (isPreSelected && optionLines.length > 0) {
-      preSelectedOptions = [...optionLines]; // Pre-select all extracted options
-    }
+    // Don't pre-select options - let user choose
+    // const isPreSelected = messageLower.includes('pre-selected') || 
+    //                      messageLower.includes('all actions are pre-selected') ||
+    //                      (messageLower.includes('all') && messageLower.includes('pre-selected'));
+    // // If pre-selected, pre-select ALL options
+    // if (isPreSelected && optionLines.length > 0) {
+    //   preSelectedOptions = [...optionLines]; // Pre-select all extracted options
+    // }
   }
   // Delay (Step 6)
   else if (messageLower.includes('delay') || messageLower.includes('wait time') || (messageLower.includes('how long') && messageLower.includes('delay'))) {
@@ -209,4 +234,4 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     subStepType,
     preSelectedOptions,
   };
-}
+}

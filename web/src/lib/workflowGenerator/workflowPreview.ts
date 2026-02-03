@@ -131,24 +131,24 @@ export function generateProgressiveWorkflowPreview(
         linkedinActions,
         linkedinActionsLength: linkedinActions.length
       });
-      // Normalize actions for flexible matching
+      // Normalize actions for flexible matching (UPDATED: removed Follow, split Connection)
       const hasVisit = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
         return actionStr.includes('visit') || actionStr === 'visit_profile';
       });
-      const hasFollow = linkedinActions.some((action: string) => {
+      const hasConnectWithMessage = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
-        return actionStr.includes('follow') && !actionStr.includes('message');
+        return (actionStr.includes('connection') || actionStr.includes('connect')) && actionStr.includes('with message');
       });
-      const hasConnect = linkedinActions.some((action: string) => {
+      const hasConnectWithoutMessage = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
-        return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
+        return (actionStr.includes('connection') || actionStr.includes('connect')) && actionStr.includes('without message');
       });
       const hasMessage = linkedinActions.some((action: string) => {
         const actionStr = String(action).toLowerCase();
-        return actionStr.includes('message');
+        return actionStr.includes('message') && actionStr.includes('after accepted');
       });
-      // Add visit step
+      // Visit profile
       if (hasVisit || linkedinActions.length > 0) {
         steps.push({
           id: `step_${stepId++}`,
@@ -158,34 +158,36 @@ export function generateProgressiveWorkflowPreview(
           channel: 'linkedin',
         });
       }
-      // Add follow step
-      if (hasFollow) {
-        steps.push({
-          id: `step_${stepId++}`,
-          type: 'linkedin_follow',
-          title: 'Follow LinkedIn Profile',
-          description: 'Follow the profile',
-          channel: 'linkedin',
-        });
-      }
-      // Add connection step
-      if (hasConnect) {
+      // Send connection request (with message)
+      if (hasConnectWithMessage) {
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_connect',
+          title: 'Send Connection Request (With Message)',
+          description: icpAnswers.linkedinConnectionMessage || icpAnswers.linkedin_connection_message || 'Connect with personalized message',
+          channel: 'linkedin',
+          requiresInput: true, // Mark as requiring message input
+        });
+      }
+      // Send connection request (without message)
+      if (hasConnectWithoutMessage) {
+        steps.push({
+          id: `step_${stepId++}`,
+          type: 'linkedin_connect_simple',
           title: 'Send Connection Request',
-          description: 'Connect with personalized message',
+          description: 'Connect without message',
           channel: 'linkedin',
         });
       }
-      // Add message step
+      // Send message (after connection accepted)
       if (hasMessage) {
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_message',
-          title: 'Send LinkedIn Message',
-          description: icpAnswers.linkedin_template || 'Send personalized message',
+          title: 'Send LinkedIn Message (After Accepted)',
+          description: icpAnswers.linkedin_template || icpAnswers.linkedinMessage || 'Send personalized message',
           channel: 'linkedin',
+          requiresInput: true, // Mark as requiring message input
         });
       }
     } else if (platform === 'whatsapp') {
@@ -406,17 +408,17 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       const actionStr = String(action).toLowerCase();
       return actionStr.includes('visit') || actionStr === 'visit_profile';
     });
-    const hasFollow = linkedinActions.some((action: string) => {
+    const hasConnectWithMessage = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
-      return actionStr.includes('follow') && !actionStr.includes('message');
+      return (actionStr.includes('connection') || actionStr.includes('connect')) && actionStr.includes('with message');
     });
-    const hasConnect = linkedinActions.some((action: string) => {
+    const hasConnectWithoutMessage = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
-      return actionStr.includes('connection') || actionStr.includes('connect') || actionStr === 'send_connection';
+      return (actionStr.includes('connection') || actionStr.includes('connect')) && actionStr.includes('without message');
     });
     const hasMessage = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
-      return actionStr.includes('message');
+      return actionStr.includes('message') && actionStr.includes('after accepted');
     });
     // Visit profile
     if (hasVisit || linkedinActions.length > 0) {
@@ -428,23 +430,24 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
         channel: 'linkedin',
       });
     }
-    // Follow profile
-    if (hasFollow) {
-      steps.push({
-        id: `step_${stepId++}`,
-        type: 'linkedin_follow',
-        title: 'Follow LinkedIn Profile',
-        description: 'Follow the profile',
-        channel: 'linkedin',
-      });
-    }
-    // Send connection request
-    if (hasConnect) {
+    // Send connection request (with message)
+    if (hasConnectWithMessage) {
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_connect',
-        title: 'Send Connection Request',
+        title: 'Send Connection Request (With Message)',
         description: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || 'Connect with personalized message',
+        channel: 'linkedin',
+        requiresInput: true, // Mark as requiring message input
+      });
+    }
+    // Send connection request (without message)
+    if (hasConnectWithoutMessage) {
+      steps.push({
+        id: `step_${stepId++}`,
+        type: 'linkedin_connect_simple',
+        title: 'Send Connection Request',
+        description: 'Connect without message',
         channel: 'linkedin',
       });
     }
@@ -453,9 +456,10 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_message',
-        title: 'Send LinkedIn Message',
+        title: 'Send LinkedIn Message (After Accepted)',
         description: mappedAnswers.linkedinMessage || mappedAnswers.linkedin_message || 'Send personalized message',
         channel: 'linkedin',
+        requiresInput: true, // Mark as requiring message input
       });
     }
     } else if (platform === 'whatsapp') {
@@ -624,4 +628,4 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
   }
   logger.debug('Generated workflow steps', { stepCount: steps.length });
   return steps;
-}
+}

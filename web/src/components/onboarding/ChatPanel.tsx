@@ -2138,8 +2138,10 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 missing={message.missing}
                 searchResults={message.searchResults}
                 workflow={message.workflow}
-                isLastMessage={index === aiMessages.length - 1}
+                // Parse options for the last 3 AI messages (in case backend sends multiple questions at once)
+                isLastMessage={index >= aiMessages.length - 3}
                 onOptionSubmit={
+                  // Only the absolute last message can submit options
                   index === aiMessages.length - 1 &&
                     selectedPath === 'leads' &&
                     onboardingMode === 'CHAT' &&
