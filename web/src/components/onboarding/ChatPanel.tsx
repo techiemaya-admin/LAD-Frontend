@@ -683,7 +683,6 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         if (conversationId) {
           campaignData.conversationId = conversationId;
         }
-        debugger
         const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
         if (createResponse.success) {
           const campaignId = createResponse.data.id || createResponse.data.data?.id;
