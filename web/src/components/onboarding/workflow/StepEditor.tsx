@@ -1,17 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
-import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle, Loader2 } from 'lucide-react';
-import { apiPost, apiPatch } from '@/lib/api';
-import { logger } from '@/lib/logger';
+import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle } from 'lucide-react';
 interface StepEditorProps {
   step: WorkflowPreviewStep;
   onClose: () => void;
-  campaignId?: string | null;
 }
-export default function StepEditor({ step, onClose, campaignId }: StepEditorProps) {
-  const { updateWorkflowStep, workflowPreview } = useOnboardingStore();
-  const [isSaving, setIsSaving] = useState(false);
+export default function StepEditor({ step, onClose }: StepEditorProps) {
+  const { updateWorkflowStep } = useOnboardingStore();
   // Parse delay values from step title/description if not set
   const parseDelayFromTitle = () => {
     const title = step.title?.toLowerCase() || '';
@@ -57,10 +53,116 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
     if (step.type === 'delay') return 'bg-gray-500';
     return 'bg-blue-500';
   };
-  const handleSave = async () => {
-    setIsSaving(true);
+
+  /**
+   * Update localStorage icp_buffered_messages_default_session with workflow step changes
+   * This syncs workflow edits back to the chat panel's data source
+   */
+  const updateBufferedMessages = (updatedData: Partial<typeof formData>) => {
+    if (typeof window === 'undefined') return;
     
-    let updatedData: Partial<WorkflowPreviewStep>;
+    try {
+      const sessionId = 'default_session';
+      const key = `icp_buffered_messages_${sessionId}`;
+      const data = localStorage.getItem(key);
+      const messages: any[] = data ? JSON.parse(data) : [];
+      
+      if (messages.length === 0) return;
+      
+      // Update messages based on step type
+      if (step.type === 'lead_generation') {
+        // Parse description for targeting info
+        const description = updatedData.description || formData.description || '';
+        const parts = description.split('|').map((p: string) => p.trim());
+        
+        const updates: Record<string, string> = {};
+        for (const part of parts) {
+          if (part.toLowerCase().startsWith('roles:')) {
+            updates.icp_roles = part.replace(/^roles:\s*/i, '').trim();
+          } else if (part.toLowerCase().startsWith('industries:')) {
+            updates.icp_industries = part.replace(/^industries:\s*/i, '').trim();
+          } else if (part.toLowerCase().startsWith('location:')) {
+            updates.icp_location = part.replace(/^location:\s*/i, '').trim();
+          }
+        }
+        
+        // Update relevant messages in buffer
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            // Update messageData with new values
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, ...updates }
+            };
+          }
+          return msg;
+        });
+        
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+        console.log('[StepEditor] Updated buffered messages with lead generation changes', updates);
+      }
+      
+      // For message templates, update the corresponding message data
+      if (step.type === 'linkedin_connect' && updatedData.message) {
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, linkedin_connection_message: updatedData.message }
+            };
+          }
+          return msg;
+        });
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+      }
+      
+      if (step.type === 'linkedin_message' && updatedData.message) {
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, linkedin_message_template: updatedData.message }
+            };
+          }
+          return msg;
+        });
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+      }
+      
+      // Also update window.__icpAnswers for immediate effect
+      if ((window as any).__icpAnswers) {
+        const currentAnswers = (window as any).__icpAnswers;
+        if (step.type === 'lead_generation') {
+          const description = updatedData.description || formData.description || '';
+          const parts = description.split('|').map((p: string) => p.trim());
+          for (const part of parts) {
+            if (part.toLowerCase().startsWith('roles:')) {
+              currentAnswers.icp_roles = part.replace(/^roles:\s*/i, '').trim();
+            } else if (part.toLowerCase().startsWith('industries:')) {
+              currentAnswers.icp_industries = part.replace(/^industries:\s*/i, '').trim();
+            } else if (part.toLowerCase().startsWith('location:')) {
+              currentAnswers.icp_location = part.replace(/^location:\s*/i, '').trim();
+            }
+          }
+        }
+        if (updatedData.leadLimit) {
+          currentAnswers.leads_per_day = updatedData.leadLimit;
+        }
+        (window as any).__icpAnswers = currentAnswers;
+      }
+      
+      // Dispatch event to notify chat panel of update
+      window.dispatchEvent(new CustomEvent('workflowStepUpdated', { 
+        detail: { stepId: step.id, stepType: step.type, updatedData } 
+      }));
+      
+    } catch (e) {
+      console.error('[StepEditor] Error updating buffered messages', e);
+    }
+  };
+
+  const handleSave = () => {
+    let updatedData: Partial<typeof formData>;
     
     // For delay steps, update title and description based on days/hours values
     if (step.type === 'delay') {
@@ -73,6 +175,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
       if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
       if (parts.length === 0) parts.push('0 hours');
       delayTitle += parts.join(' ');
+      
       updatedData = {
         ...formData,
         title: delayTitle,
@@ -80,74 +183,15 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
         delayDays: days,
         delayHours: hours,
       };
+      updateWorkflowStep(step.id, updatedData);
     } else {
-      updatedData = {
-        ...formData,
-      };
+      updatedData = { ...formData };
+      updateWorkflowStep(step.id, updatedData);
     }
     
-    // Update local state first
-    updateWorkflowStep(step.id, updatedData);
+    // Sync changes to localStorage buffered messages
+    updateBufferedMessages(updatedData);
     
-    // If campaign exists, save to backend
-    if (campaignId) {
-      try {
-        // Get the updated workflow steps
-        const updatedSteps = workflowPreview.map((s) => {
-          if (s.id === step.id) {
-            return { ...s, ...updatedData };
-          }
-          return s;
-        });
-        
-        // For linkedin_connect steps, also update campaign config with connection message
-        if (step.type === 'linkedin_connect' && formData.message) {
-          try {
-            await apiPatch(`/api/campaigns/${campaignId}`, {
-              config: {
-                connectionMessage: formData.message,
-              },
-            });
-            logger.debug('Updated campaign config with connection message');
-          } catch (configError) {
-            logger.error('Failed to update campaign config', { configError });
-          }
-        }
-        
-        // Convert workflow preview steps to backend format
-        const backendSteps = updatedSteps
-          .filter((s) => s.type !== 'start' && s.type !== 'end')
-          .map((s, index) => ({
-            id: s.id,
-            type: s.type,
-            order: index,
-            title: s.title || s.type,
-            description: s.description || '',
-            config: {
-              message: s.message,
-              subject: s.subject,
-              body: s.message,
-              delay_hours: s.delayHours,
-              delay_days: s.delayDays,
-              leadGenerationLimit: s.leadLimit,
-              leadGenerationQuery: s.description,
-            },
-          }));
-        
-        logger.debug('Saving campaign steps to backend', { campaignId, stepCount: backendSteps.length });
-        
-        // Save to backend
-        await apiPost(`/api/campaigns/${campaignId}/steps`, { steps: backendSteps });
-        
-        logger.info('Campaign steps saved successfully');
-      } catch (error) {
-        logger.error('Failed to save campaign steps', { error });
-        // Show error to user but don't prevent closing modal
-        alert('Warning: Changes saved locally but failed to sync with server. Please refresh the page.');
-      }
-    }
-    
-    setIsSaving(false);
     onClose();
   };
   const renderFields = () => {
@@ -219,7 +263,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 placeholder="Hi {{first_name}}, I'd like to connect..."
               />
               <p className="mt-1 text-xs text-gray-500">
-                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}, {'{{industry}}'}
+                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}
               </p>
             </div>
           </div>
@@ -239,7 +283,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 placeholder="Hi {{first_name}}, I noticed your work at {{company_name}}..."
               />
               <p className="mt-1 text-xs text-gray-500">
-                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}, {'{{industry}}'}
+                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}
               </p>
             </div>
           </div>
@@ -448,20 +492,10 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving}
-            className={`px-4 py-2 text-sm font-medium text-white ${getStepColor()} hover:opacity-90 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-4 py-2 text-sm font-medium text-white ${getStepColor()} hover:opacity-90 rounded-lg transition-all flex items-center gap-2`}
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save Changes
-              </>
-            )}
+            <Save className="w-4 h-4" />
+            Save Changes
           </button>
         </div>
       </div>

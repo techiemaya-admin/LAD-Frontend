@@ -466,7 +466,7 @@ export default function PricingPage() {
                 <div className="text-2xl">🎯</div>
               </div>
               <div className="mb-4">
-                <div className="text-3xl font-bold text-orange-600">2-17</div>
+                <div className="text-3xl font-bold text-orange-600">1-10</div>
                 <div className="text-sm text-gray-600">credits per lead</div>
               </div>
               <div className="space-y-2 text-sm text-gray-700">
@@ -475,21 +475,21 @@ export default function PricingPage() {
                   <span className="font-medium">2 credits</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Phone Reveal</span>
-                  <span className="font-medium">+10 credits</span>
+                  <span>LinkedIn Connection</span>
+                  <span className="font-medium">1 credit</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Profile Summary</span>
+                  <span>Template Message</span>
                   <span className="font-medium">5 credits</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Complete Data</span>
-                  <span className="font-medium">17 credits</span>
+                  <span>Phone Reveal</span>
+                  <span className="font-medium">10 credits</span>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-orange-200">
                 <div className="text-xs text-gray-600">
-                  100 leads with phones ≈ 1,700 credits
+                  100 leads with phones ≈ 1,000 credits
                 </div>
               </div>
             </div>
@@ -590,9 +590,9 @@ export default function PricingPage() {
                 How much do specific features cost?
               </h3>
               <p className="text-gray-600">
-                Voice calls: 3 cr/min (Cartesia) or 4 cr/min (ElevenLabs) • Lead with email: 5 credits • 
-                Phone reveal: 10 credits • Profile summary: 5 credits • Platform connections: LinkedIn 50 cr/mo, 
-                Google/Outlook 20 cr/mo. See detailed pricing above.
+                Voice calls: 3 cr/min (Cartesia) or 4 cr/min (ElevenLabs) • Email + LinkedIn URL: 2 credits • 
+                LinkedIn Connection: 1 credit • Template Message: 5 credits • Phone reveal: 10 credits • 
+                Platform connections: LinkedIn 50 cr/mo, Google/Outlook 20 cr/mo. See detailed pricing above.
               </p>
             </div>
             <div>

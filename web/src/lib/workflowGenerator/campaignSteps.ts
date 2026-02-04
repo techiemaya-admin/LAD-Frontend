@@ -113,13 +113,18 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
              actionStr === 'send_connection';
     });
     if (hasConnectionAction) {
+      // Get connection message from any available source (linkedin_template is from ICP flow)
+      const connectionMessage = mappedAnswers.linkedinConnectionMessage || 
+                                mappedAnswers.linkedin_connection_message || 
+                                mappedAnswers.linkedin_template || 
+                                null;
       steps.push({
         type: 'linkedin_connect',
         order: order++,
         title: 'Send Connection Request',
-        description: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || 'Connect with personalized message',
+        description: connectionMessage || 'Connect with personalized message',
         config: {
-          message: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || null,
+          message: connectionMessage,
         },
       });
       // Add delay after connection if configured

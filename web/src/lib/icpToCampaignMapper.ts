@@ -182,9 +182,27 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
   if (icpAnswers.voice_actions) {
     mapped.voice_actions = normalizeToArray(icpAnswers.voice_actions);
   }
+  
+  // Map linkedin_connection_message from top-level message_data (set by StepEditor)
+  if (icpAnswers.linkedin_connection_message) {
+    const connectionMessage = String(icpAnswers.linkedin_connection_message).trim();
+    if (connectionMessage.toLowerCase() !== 'skip' && connectionMessage.length > 0) {
+      mapped.linkedinConnectionMessage = connectionMessage;
+      mapped.linkedin_connection_message = connectionMessage;
+    }
+  }
+  
   // Map platform templates (keep as strings)
   if (icpAnswers.linkedin_template) {
-    mapped.linkedin_template = String(icpAnswers.linkedin_template).trim();
+    const linkedinTemplate = String(icpAnswers.linkedin_template).trim();
+    // Skip if user typed "skip" - they want connection without message
+    if (linkedinTemplate.toLowerCase() !== 'skip') {
+      mapped.linkedin_template = linkedinTemplate;
+      // Also set as connection message for linkedin_connect step (if not already set)
+      if (!mapped.linkedinConnectionMessage) {
+        mapped.linkedinConnectionMessage = linkedinTemplate;
+      }
+    }
   }
   if (icpAnswers.whatsapp_template) {
     mapped.whatsapp_template = String(icpAnswers.whatsapp_template).trim();
@@ -240,4 +258,4 @@ export function buildLeadGenerationFilters(mappedAnswers: CampaignFormattedAnswe
     filters.location = mappedAnswers.location;
   }
   return filters;
-}
+}

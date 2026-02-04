@@ -129,6 +129,13 @@ export function useChatStepController(
         const msg = bufferedMessages[i];
         if (msg.role === 'user' && msg.messageData?.collectedAnswers) {
           Object.assign(restoredAnswers, msg.messageData.collectedAnswers);
+          // Also include top-level message data properties like linkedin_connection_message
+          if (msg.messageData.linkedin_connection_message) {
+            restoredAnswers.linkedin_connection_message = msg.messageData.linkedin_connection_message;
+          }
+          if (msg.messageData.linkedin_message_template) {
+            restoredAnswers.linkedin_message_template = msg.messageData.linkedin_message_template;
+          }
           break; // Use the most recent collectedAnswers
         }
       }

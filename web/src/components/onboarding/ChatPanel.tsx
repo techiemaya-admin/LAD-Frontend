@@ -585,7 +585,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             leads_per_day: mappedAnswers.leads_per_day || 10,
             lead_gen_offset: 0,
             last_lead_gen_date: null,
-            connectionMessage: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || null,
+            // Get connection message from any of these sources (linkedin_template is from ICP flow)
+            connectionMessage: mappedAnswers.linkedinConnectionMessage || 
+                              mappedAnswers.linkedin_connection_message || 
+                              mappedAnswers.linkedin_template || 
+                              null,
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
