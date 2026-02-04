@@ -81,12 +81,8 @@ export function CallLogsTable({
         return normalized;
       }
     }
-    // Fallback to calculated categorization
-    return categorizeLead({
-      status: item.status,
-      duration: item.duration,
-      type: item.type,
-    });
+    // Return unknown if no lead_category found in API
+    return "unknown";
   }, []);
   // Handle recording download with error handling
   const handleDownloadRecording = useCallback(

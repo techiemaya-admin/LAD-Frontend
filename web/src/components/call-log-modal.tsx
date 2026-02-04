@@ -735,13 +735,13 @@ export function CallLogModal({
     }
   };
 
-  // Get lead category from API response or categorize
+  // Get lead category from API response or show unknown
   const leadCategory = (() => {
     if (log?.lead_category) {
       const normalized = normalizeLeadCategory(log.lead_category);
       if (normalized) return normalized;
     }
-    return categorizeLead(log || {});
+    return "unknown";
   })();
   const tagConfig = getTagConfig(leadCategory);
 
