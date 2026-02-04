@@ -40,8 +40,10 @@ export interface UseCampaignActivityFeedReturn {
   error: Error | null;
   isError: boolean;
   refetch: () => void;
+  refresh: () => void; // Alias for refetch
   isFetching: boolean;
   isStale: boolean;
+  isConnected: boolean; // REST API polling status
 }
 /**
  * Hook to get campaign activity feed with TanStack Query
@@ -61,7 +63,9 @@ export function useCampaignActivityFeed(
     error: query.error,
     isError: query.isError,
     refetch: query.refetch,
+    refresh: query.refetch, // Alias for backward compatibility
     isFetching: query.isFetching,
     isStale: query.isStale,
+    isConnected: !query.isError && query.dataUpdatedAt > 0, // Connected if no error and data has been fetched at least once
   };
 }
