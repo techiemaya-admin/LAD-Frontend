@@ -112,39 +112,29 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
   adduser --system --uid 1001 nextjs
 
-# Copy standalone server and dependencies (monorepo nested under web/)
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone/web ./
-# Copy static assets
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+# Copy the entire standalone output (includes monorepo structure)
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Copy static assets to the correct location
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 # Copy public directory
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
-# Verify server.js exists before running
-RUN test -f server.js || (echo "ERROR: server.js not found!" && ls -la && exit 1)
+# Verify server.js exists at the correct path
+RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || (echo "❌ server.js not found!" && ls -la /app && ls -la /app/web 2>/dev/null && exit 1)
 
-# Cloud Run-friendly start script: always bind HOSTNAME and PORT
+# Cloud Run-friendly start script
 RUN printf '%s\n' \
   '#!/bin/sh' \
   'set -e' \
   'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
   'export PORT="${PORT:-8080}"' \
-  'if [ -f /app/server.js ]; then' \
-  '  echo "Starting /app/server.js on ${HOSTNAME}:${PORT}"' \
-  '  exec node /app/server.js' \
-  'elif [ -f /app/web/server.js ]; then' \
-  '  echo "Starting /app/web/server.js on ${HOSTNAME}:${PORT}"' \
-  '  exec node /app/web/server.js' \
-  'else' \
-  '  echo "ERROR: No server.js found in /app or /app/web"' \
-  '  ls -la /app || true' \
-  '  ls -la /app/web || true' \
-  '  exit 1' \
-  'fi' \
+  'echo "Starting Next.js server on ${HOSTNAME}:${PORT}"' \
+  'cd /app/web && exec node server.js' \
   > /app/start.sh \
   && chmod +x /app/start.sh \
   && chown nextjs:nodejs /app/start.sh
 
 USER nextjs
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["/app/start.sh"]
