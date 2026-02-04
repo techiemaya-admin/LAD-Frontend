@@ -30,7 +30,9 @@ class APIClient {
         const token = typeof window !== 'undefined' ? safeStorage.getItem('token') : null;
 
         if (token) {
-          config.headers = config.headers || {};
+          if (!config.headers) {
+            config.headers = {} as any;
+          }
           config.headers.Authorization = `Bearer ${token}`;
         }
         

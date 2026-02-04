@@ -17,6 +17,17 @@ import type {
   ParsedLead,
   PlatformDetection,
 } from './types';
+
+// Re-export types that are used by hooks
+export type { ICPQuestion, ICPQuestionsResponse, ICPAnswerRequest, ICPAnswerResponse };
+
+// Simple logger for SDK - avoids Next.js dependency
+const logger = {
+  debug: (...args: any[]) => console.debug('[ICP-SDK]', ...args),
+  info: (...args: any[]) => console.info('[ICP-SDK]', ...args),
+  warn: (...args: any[]) => console.warn('[ICP-SDK]', ...args),
+  error: (...args: any[]) => console.error('[ICP-SDK]', ...args),
+};
 /**
  * Get the backend API URL from environment variables
  * PRODUCTION: Fails if no env var set
@@ -49,6 +60,154 @@ function getAuthHeaders(): Record<string, string> {
   } catch (e) {
     return {};
   }
+}
+
+/**
+ * Buffer request/response data in localStorage
+ */
+interface BufferedMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  messageData?: any;
+  timestamp: string;
+  stepIndex: number;
+}
+
+export type { BufferedMessage };
+
+function getBufferedMessages(sessionId: string): BufferedMessage[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const key = `icp_buffered_messages_${sessionId}`;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    logger.error('[ICP Buffer] Error reading buffered messages', e);
+    return [];
+  }
+}
+
+function addBufferedMessage(sessionId: string, message: BufferedMessage): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = `icp_buffered_messages_${sessionId}`;
+    const messages = getBufferedMessages(sessionId);
+    messages.push(message);
+    localStorage.setItem(key, JSON.stringify(messages));
+    logger.debug('[ICP Buffer] Stored message', { sessionId, role: message.role, stepIndex: message.stepIndex, totalBuffered: messages.length });
+  } catch (e) {
+    logger.error('[ICP Buffer] Error storing message', e);
+  }
+}
+
+function clearBufferedMessages(sessionId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = `icp_buffered_messages_${sessionId}`;
+    localStorage.removeItem(key);
+    logger.debug('[ICP Buffer] Cleared buffered messages for session', { sessionId });
+  } catch (e) {
+    logger.error('[ICP Buffer] Error clearing buffered messages', e);
+  }
+}
+
+/**
+ * Get buffered messages for display after page refresh
+ * Exported for UI components to restore conversation state
+ */
+export function getBufferedConversation(sessionId: string): BufferedMessage[] {
+  return getBufferedMessages(sessionId);
+}
+
+/**
+ * Get current step index from buffered messages
+ */
+export function getCurrentStepFromBuffer(sessionId: string): number {
+  const messages = getBufferedMessages(sessionId);
+  if (messages.length === 0) return 0;
+  
+  // Get the last message's step index
+  const lastMessage = messages[messages.length - 1];
+  return lastMessage.stepIndex;
+}
+
+/**
+ * Check if there are buffered messages for a session
+ */
+export function hasBufferedMessages(sessionId: string): boolean {
+  return getBufferedMessages(sessionId).length > 0;
+}
+
+async function saveBufferedMessagesToBackend(sessionId: string, messages: BufferedMessage[]): Promise<void> {
+  if (messages.length === 0) return;
+  
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/messages/batch-save`;
+  
+  try {
+    logger.debug('[ICP Buffer] Saving buffered messages to backend', { sessionId, count: messages.length });
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        sessionId,
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save buffered messages: ${response.statusText}`);
+    }
+
+    logger.debug('[ICP Buffer] Successfully saved all buffered messages to backend');
+  } catch (error) {
+    logger.error('[ICP Buffer] Failed to save buffered messages to backend', error);
+    throw error;
+  }
+}
+
+/**
+ * Save chat messages in batch to backend
+ * Public API for saving conversation history
+ */
+export async function saveChatMessagesBatch(
+  sessionId: string,
+  messages: BufferedMessage[],
+  conversationId?: string
+): Promise<{
+  success: boolean;
+  conversationId: string;
+  savedCount: number;
+  messages: any[];
+}> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/ai-icp-assistant/messages/batch-save`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      sessionId,
+      messages,
+      conversationId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to save messages: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 /**
  * Fetch all ICP questions for a category
@@ -105,6 +264,21 @@ export async function processICPAnswer(
 ): Promise<ICPAnswerResponse> {
   const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/ai-icp-assistant/onboarding/icp-answer`;
+
+  // Buffer user message in localStorage
+  const sessionId = request.sessionId || 'default_session';
+  addBufferedMessage(sessionId, {
+    role: 'user',
+    content: request.userAnswer,
+    messageData: {
+      currentIntentKey: request.currentIntentKey,
+      category: request.category,
+      collectedAnswers: request.collectedAnswers,
+    },
+    timestamp: new Date().toISOString(),
+    stepIndex: request.currentStepIndex,
+  });
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -121,11 +295,54 @@ export async function processICPAnswer(
       collectedAnswers: request.collectedAnswers || {},
     }),
   });
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to process answer: ${response.statusText}`);
   }
-  return response.json();
+
+  const responseData: ICPAnswerResponse = await response.json();
+
+  // Buffer assistant response in localStorage
+  if (responseData.nextQuestion) {
+    addBufferedMessage(sessionId, {
+      role: 'assistant',
+      content: responseData.nextQuestion.question,
+      messageData: {
+        intentKey: responseData.nextQuestion.intentKey,
+        options: responseData.nextQuestion.options,
+        clarificationNeeded: responseData.clarificationNeeded,
+        completed: responseData.completed,
+      },
+      timestamp: new Date().toISOString(),
+      stepIndex: responseData.nextStepIndex || request.currentStepIndex + 1,
+    });
+  }
+
+  // Check if this is the last step
+  const isLastStep = responseData.completed === true || 
+                     responseData.nextStepIndex === null ||
+                     responseData.nextStepIndex === -1;
+
+  // If last step, save all buffered messages to backend and clear localStorage
+  if (isLastStep) {
+    const bufferedMessages = getBufferedMessages(sessionId);
+    logger.debug('[ICP] Last step reached, saving buffered messages', {
+      sessionId,
+      messageCount: bufferedMessages.length,
+      completed: responseData.completed,
+    });
+
+    try {
+      await saveBufferedMessagesToBackend(sessionId, bufferedMessages);
+      clearBufferedMessages(sessionId);
+    } catch (error) {
+      logger.error('[ICP] Failed to save buffered messages, keeping in localStorage', error);
+      // Keep messages in localStorage for manual retry/debugging
+    }
+  }
+
+  return responseData;
 }
 // ============================================================================
 // Leads Upload API
@@ -283,4 +500,4 @@ export async function validateLeadsForExecution(
     throw new Error(errorData.error || `Failed to validate leads: ${response.statusText}`);
   }
   return response.json();
-}
+}

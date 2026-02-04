@@ -47,7 +47,7 @@ export { useCampaign } from './hooks/useCampaign';
 export { useCampaignStats } from './hooks/useCampaignStats';
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 export { useCampaignLeads } from './hooks/useCampaignLeads';
-export { useSaveInboundLeads, useInboundLeads, useCancelLeadBookings } from './hooks/useInboundLeads';
+export { useSaveInboundLeads, useInboundLeads } from './hooks/useInboundLeads';
 export { useCampaignActivityFeed } from './hooks/useCampaignActivityFeed';
 // ============================================================================
 // TYPES

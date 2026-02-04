@@ -1,13 +1,17 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
-import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle } from 'lucide-react';
+import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { apiPost, apiPatch } from '@/lib/api';
+import { logger } from '@/lib/logger';
 interface StepEditorProps {
   step: WorkflowPreviewStep;
   onClose: () => void;
+  campaignId?: string | null;
 }
-export default function StepEditor({ step, onClose }: StepEditorProps) {
-  const { updateWorkflowStep } = useOnboardingStore();
+export default function StepEditor({ step, onClose, campaignId }: StepEditorProps) {
+  const { updateWorkflowStep, workflowPreview } = useOnboardingStore();
+  const [isSaving, setIsSaving] = useState(false);
   // Parse delay values from step title/description if not set
   const parseDelayFromTitle = () => {
     const title = step.title?.toLowerCase() || '';
@@ -53,7 +57,11 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     if (step.type === 'delay') return 'bg-gray-500';
     return 'bg-blue-500';
   };
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    let updatedData: Partial<WorkflowPreviewStep>;
+    
     // For delay steps, update title and description based on days/hours values
     if (step.type === 'delay') {
       const days = formData.delayDays || 0;
@@ -65,18 +73,81 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
       if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
       if (parts.length === 0) parts.push('0 hours');
       delayTitle += parts.join(' ');
-      updateWorkflowStep(step.id, {
+      updatedData = {
         ...formData,
         title: delayTitle,
         description: formData.description || `Delay: ${parts.join(' ')}`,
         delayDays: days,
         delayHours: hours,
-      });
+      };
     } else {
-      updateWorkflowStep(step.id, {
+      updatedData = {
         ...formData,
-      });
+      };
     }
+    
+    // Update local state first
+    updateWorkflowStep(step.id, updatedData);
+    
+    // If campaign exists, save to backend
+    if (campaignId) {
+      try {
+        // Get the updated workflow steps
+        const updatedSteps = workflowPreview.map((s) => {
+          if (s.id === step.id) {
+            return { ...s, ...updatedData };
+          }
+          return s;
+        });
+        
+        // For linkedin_connect steps, also update campaign config with connection message
+        if (step.type === 'linkedin_connect' && formData.message) {
+          try {
+            await apiPatch(`/api/campaigns/${campaignId}`, {
+              config: {
+                connectionMessage: formData.message,
+              },
+            });
+            logger.debug('Updated campaign config with connection message');
+          } catch (configError) {
+            logger.error('Failed to update campaign config', { configError });
+          }
+        }
+        
+        // Convert workflow preview steps to backend format
+        const backendSteps = updatedSteps
+          .filter((s) => s.type !== 'start' && s.type !== 'end')
+          .map((s, index) => ({
+            id: s.id,
+            type: s.type,
+            order: index,
+            title: s.title || s.type,
+            description: s.description || '',
+            config: {
+              message: s.message,
+              subject: s.subject,
+              body: s.message,
+              delay_hours: s.delayHours,
+              delay_days: s.delayDays,
+              leadGenerationLimit: s.leadLimit,
+              leadGenerationQuery: s.description,
+            },
+          }));
+        
+        logger.debug('Saving campaign steps to backend', { campaignId, stepCount: backendSteps.length });
+        
+        // Save to backend
+        await apiPost(`/api/campaigns/${campaignId}/steps`, { steps: backendSteps });
+        
+        logger.info('Campaign steps saved successfully');
+      } catch (error) {
+        logger.error('Failed to save campaign steps', { error });
+        // Show error to user but don't prevent closing modal
+        alert('Warning: Changes saved locally but failed to sync with server. Please refresh the page.');
+      }
+    }
+    
+    setIsSaving(false);
     onClose();
   };
   const renderFields = () => {
@@ -148,7 +219,7 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
                 placeholder="Hi {{first_name}}, I'd like to connect..."
               />
               <p className="mt-1 text-xs text-gray-500">
-                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}
+                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}, {'{{industry}}'}
               </p>
             </div>
           </div>
@@ -168,7 +239,7 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
                 placeholder="Hi {{first_name}}, I noticed your work at {{company_name}}..."
               />
               <p className="mt-1 text-xs text-gray-500">
-                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}
+                Use variables: {'{{first_name}}'}, {'{{company_name}}'}, {'{{job_title}}'}, {'{{industry}}'}
               </p>
             </div>
           </div>
@@ -377,10 +448,20 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
           </button>
           <button
             onClick={handleSave}
-            className={`px-4 py-2 text-sm font-medium text-white ${getStepColor()} hover:opacity-90 rounded-lg transition-all flex items-center gap-2`}
+            disabled={isSaving}
+            className={`px-4 py-2 text-sm font-medium text-white ${getStepColor()} hover:opacity-90 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <Save className="w-4 h-4" />
-            Save Changes
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save Changes
+              </>
+            )}
           </button>
         </div>
       </div>

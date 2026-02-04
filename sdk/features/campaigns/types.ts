@@ -9,6 +9,7 @@ export interface Campaign {
   id: string;
   name: string;
   status: CampaignStatus;
+  campaign_type?: string;
   leads_count: number;
   sent_count: number;
   delivered_count: number;
@@ -114,12 +115,21 @@ export interface CampaignLead {
   id: string;
   campaign_id: string;
   name: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
   email?: string;
   phone?: string;
   linkedin_url?: string;
+  enriched_email?: string | null;
+  enriched_linkedin_url?: string | null;
+  photo_url?: string;
   status: string;
   connected: boolean;
   replied: boolean;
+  is_inbound?: boolean;
+  lead_data?: any;
+  profile_summary?: string;
   created_at: string;
   updated_at: string;
-}
+}

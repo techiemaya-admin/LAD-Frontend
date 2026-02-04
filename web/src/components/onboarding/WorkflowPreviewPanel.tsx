@@ -25,6 +25,7 @@ interface WorkflowPreviewPanelProps {
   campaignName?: string;
   campaignDays?: string;
   workingDays?: string;
+  campaignId?: string | null;
 }
 const platformIcons: Record<string, React.ReactNode> = {
   linkedin: <Linkedin className="w-4 h-4" />,
@@ -41,6 +42,7 @@ export default function WorkflowPreviewPanel({
   campaignName: propsCampaignName,
   campaignDays: propsCampaignDays,
   workingDays: propsWorkingDays,
+  campaignId,
 }: WorkflowPreviewPanelProps = {}) {
   // Read from store if no props provided
   const workflowPreview = useOnboardingStore((state) => state.workflowPreview);
@@ -77,49 +79,6 @@ export default function WorkflowPreviewPanel({
   const hasContent = hasPropsContent || hasStoreWorkflow;
   // State for step editor
   const [editingStep, setEditingStep] = useState<WorkflowPreviewStep | null>(null);
-  const [autoOpenedSteps, setAutoOpenedSteps] = useState<Set<string>>(new Set());
-
-  // Reset auto-opened steps when workflow changes significantly
-  useEffect(() => {
-    if (!workflowPreview || workflowPreview.length === 0) {
-      setAutoOpenedSteps(new Set());
-      return;
-    }
-    
-    // Keep only step IDs that still exist in the workflow
-    const currentStepIds = new Set(workflowPreview.map(s => s.id));
-    setAutoOpenedSteps(prev => {
-      const filtered = new Set<string>();
-      prev.forEach(id => {
-        if (currentStepIds.has(id)) {
-          filtered.add(id);
-        }
-      });
-      return filtered;
-    });
-  }, [workflowPreview]);
-
-  // DISABLED: Delayed auto-open (now we open immediately on action selection)
-  // Auto-open template editor ONLY after all chat questions are answered
-  // Check if user is currently answering questions by looking for active option questions
-  // useEffect(() => {
-  //   if (!workflowPreview || workflowPreview.length === 0) return;
-  //   const hasActiveQuestion = (window as any).__hasActiveOptionsQuestion;
-  //   if (!hasActiveQuestion) {
-  //     const stepRequiringInput = workflowPreview.find(step => 
-  //       step.requiresInput === true && 
-  //       !autoOpenedSteps.has(step.id)
-  //     );
-  //     if (stepRequiringInput) {
-  //       const timer = setTimeout(() => {
-  //         setAutoOpenedSteps(prev => new Set(prev).add(stepRequiringInput.id));
-  //         setEditingStep(stepRequiringInput);
-  //       }, 500);
-  //       return () => clearTimeout(timer);
-  //     }
-  //   }
-  // }, [workflowPreview, autoOpenedSteps]);
-
   // Listen for openStepEditor events from CustomWorkflowNode
   useEffect(() => {
     const handleOpenEditor = (event: CustomEvent) => {
@@ -136,36 +95,6 @@ export default function WorkflowPreviewPanel({
       window.removeEventListener('openStepEditor', handleOpenEditor as EventListener);
     };
   }, [workflowPreview]);
-
-  // Listen for immediate template modal open requests (when action is selected)
-  useEffect(() => {
-    const handleWorkflowUpdate = (event: CustomEvent) => {
-      const { openTemplateModal } = event.detail || {};
-      if (openTemplateModal && workflowPreview && workflowPreview.length > 0) {
-        // Find the most recent step that requires input and hasn't been opened yet
-        const stepRequiringInput = workflowPreview.find(step => 
-          step.requiresInput === true && 
-          !autoOpenedSteps.has(step.id)
-        );
-        
-        if (stepRequiringInput) {
-          // Open immediately when action is selected
-          setTimeout(() => {
-            setAutoOpenedSteps(prev => new Set(prev).add(stepRequiringInput.id));
-            setEditingStep(stepRequiringInput);
-            logger.debug('Opening template modal immediately on action selection', { 
-              stepId: stepRequiringInput.id,
-              step: stepRequiringInput 
-            });
-          }, 200);
-        }
-      }
-    };
-    window.addEventListener('workflowUpdate', handleWorkflowUpdate as EventListener);
-    return () => {
-      window.removeEventListener('workflowUpdate', handleWorkflowUpdate as EventListener);
-    };
-  }, [workflowPreview, autoOpenedSteps]);
   // Handle edit button click - show editor panel instead of full screen
   const handleEditClick = () => {
     setIsEditorPanelCollapsed(false); // Show the editor panel
@@ -252,6 +181,7 @@ export default function WorkflowPreviewPanel({
         <StepEditor
           step={editingStep}
           onClose={() => setEditingStep(null)}
+          campaignId={campaignId}
         />
       )}
     </div>

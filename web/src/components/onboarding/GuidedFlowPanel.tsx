@@ -209,7 +209,6 @@ const PLATFORM_OPTIONS = [
 // Add recommended property for actions
 const LINKEDIN_ACTIONS = [
   { value: 'visit_profile', label: 'Visit profile', recommended: true },
-  { value: 'follow_profile', label: 'Follow profile', recommended: false },
   { value: 'send_connection', label: 'Send connection request', recommended: true },
   { value: 'send_message', label: 'Send message (after accepted)', recommended: true },
 ];
@@ -383,22 +382,7 @@ export default function GuidedFlowPanel() {
       });
       currentNodeId = nodeId;
     }
-    // Follow profile
-    if (answers.linkedinActions.includes('follow_profile')) {
-      const nodeId = `linkedin_follow_${Date.now()}`;
-      nodes.push({
-        id: nodeId,
-        type: 'linkedin_follow',
-        position: { x: 50, y: nodes.length * 120 + 150 },
-        data: { title: 'Follow LinkedIn Profile' },
-      });
-      edges.push({
-        id: `edge-${currentNodeId}-${nodeId}`,
-        source: currentNodeId,
-        target: nodeId,
-      });
-      currentNodeId = nodeId;
-    }
+
     // Send connection
     if (answers.linkedinActions.includes('send_connection')) {
       // Use user-configured connection message (from Step 4) - only if enabled
@@ -3019,11 +3003,22 @@ export default function GuidedFlowPanel() {
         setIsCreatingCampaign(false);
         return;
       }
-      // Prepare campaign config
+      // Prepare campaign config with all settings
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + campaignDuration);
+      
       const campaignConfig = {
         leads_per_day: dailyLeadVolume,
         lead_gen_offset: 0,
         last_lead_gen_date: null,
+        // Campaign scheduling
+        campaign_start_date: today.toISOString(),
+        campaign_end_date: endDate.toISOString(),
+        working_days: workingDays,
+        smart_throttling: smartThrottling,
+        // Connection message (if enabled)
+        connectionMessage: enableConnectionMessage ? linkedinConnectionMessage : null,
       };
       const campaignData = {
         name: campaignName.trim(),
@@ -3031,6 +3026,9 @@ export default function GuidedFlowPanel() {
         steps: steps,
         config: campaignConfig,
         leads_per_day: dailyLeadVolume, // Also include for backwards compatibility
+        // Add date fields at campaign level for Cloud Tasks
+        campaign_start_date: today.toISOString(),
+        campaign_end_date: endDate.toISOString(),
       };
       logger.debug('Creating campaign with data', { campaignData });
       const response = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);

@@ -7,7 +7,13 @@ export {
   fetchICPQuestions,
   fetchICPQuestionByStep,
   processICPAnswer,
+  getBufferedConversation,
+  getCurrentStepFromBuffer,
+  hasBufferedMessages,
 } from './api';
+
+// Export BufferedMessage type
+export type { BufferedMessage } from './api';
 // Leads Upload API
 export {
   downloadLeadsTemplate,
@@ -46,6 +52,7 @@ export {
   useItem,
   useItems,
   useConversation,
+  useSaveChatMessages
 } from './hooks';
 // Leads Upload Hook
 export { useLeadsUpload } from './hooks/useLeadsUpload';
@@ -66,4 +73,4 @@ export type {
   MayaResponse,
   OnboardingContext,
   WorkflowNode,
-} from './types';
+} from './types';
