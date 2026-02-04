@@ -44,6 +44,7 @@ export interface ICPAnswerResponse {
   extractedData?: Record<string, any>;
   updatedCollectedAnswers?: Record<string, any>;
   error?: string;
+  conversationId?: string; // Added: Conversation ID when messages are saved on last step
 }
 /**
  * Maya AI Assistant Types (Legacy)
@@ -224,4 +225,4 @@ export interface LeadsFlowContext {
   platformActions: Record<string, string>;
   sequenceOrder: string[];
   delayBetween: number;
-}
+}

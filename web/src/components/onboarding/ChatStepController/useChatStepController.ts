@@ -31,7 +31,7 @@ import { handleOptionSelection } from './optionHandlers';
 // Module-level lock to prevent race conditions when startFlow is called multiple times quickly
 let isStartingFlow = false;
 export function useChatStepController(
-  onComplete: (answers: Record<string, any>) => void,
+  onComplete: (answers: Record<string, any>, conversationId?: string) => void,
   onUpdatePreview?: (stepIndex: number, answer: any) => void
 ) {
   const { addAIMessage, clearAIMessages, setIsProcessingAI, aiMessages, isICPFlowStarted, setIsICPFlowStarted } = useOnboardingStore();
@@ -308,14 +308,15 @@ export function useChatStepController(
       }
       // Handle completion
       if (result.completed || !result.nextQuestion || result.nextStepIndex === null) {
-        logger.debug('Flow completed - marking as complete');
+        logger.debug('Flow completed - marking as complete', { conversationId: result.conversationId });
         addAIMessage({
           role: 'ai',
           content: result.message || "Great! I've understood your requirements. Building your workflow now…",
           timestamp: new Date(),
         });
         setCurrentStepIndex(totalSteps);
-        onComplete(result.updatedCollectedAnswers || answers);
+        // Pass conversationId from the response (captured when messages were saved on last step)
+        onComplete(result.updatedCollectedAnswers || answers, result.conversationId);
         setIsLoading(false);
         setIsProcessingAI(false);
         return;

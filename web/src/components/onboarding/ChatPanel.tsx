@@ -18,7 +18,6 @@ import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import { useSaveChatMessages } from '@lad/sdk/features/ai-icp-assistant';
 type FlowState =
   | 'initial'
   | 'platform_selection'
@@ -38,7 +37,6 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   const router = useRouter();
   const [isLoadingCampaign, setIsLoadingCampaign] = useState(false);
   const campaignLoadedRef = useRef(false); // Track if campaign has been loaded
-  const { saveMessages } = useSaveChatMessages();
   const {
     selectedPath,
     aiMessages,
@@ -542,9 +540,9 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   };
   // Chat step controller for ICP onboarding
   const chatStepController = useChatStepController(
-    async (answers) => {
+    async (answers, conversationId) => {
       // On completion, create and start campaign automatically
-      logger.info('🎯 [ICP COMPLETION] ICP onboarding completed', { answers });
+      logger.info('🎯 [ICP COMPLETION] ICP onboarding completed', { answers, conversationId });
       logger.info('🎯 [ICP COMPLETION] inboundLeadData status:', { 
         exists: !!inboundLeadData,
         leadIds: inboundLeadData?.leadIds,
@@ -649,40 +647,19 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           campaignType: campaignData.config?.campaign_type
         });
         
-        // Save buffered chat messages before creating campaign
-        let conversationId: string | undefined;
-        try {
-          const bufferedMessagesKey = 'icp_buffered_messages_default_session';
-          const bufferedMessagesData = localStorage.getItem(bufferedMessagesKey);
-          
-          if (bufferedMessagesData) {
-            const bufferedMessages = JSON.parse(bufferedMessagesData);
-            logger.info('💬 [Campaign Creation] Saving buffered messages', { 
-              count: bufferedMessages.length 
-            });
-            
-            const saveResult = await saveMessages('default_session', bufferedMessages);
-            conversationId = saveResult.conversationId;
-            
-            logger.info('✅ [Campaign Creation] Chat messages saved', { 
-              conversationId,
-              savedCount: saveResult.savedCount 
-            });
-            
-            // Clear buffered messages after successful save
-            localStorage.removeItem(bufferedMessagesKey);
-          } else {
-            logger.info('ℹ️ [Campaign Creation] No buffered messages found in localStorage');
-          }
-        } catch (error) {
-          logger.error('❌ [Campaign Creation] Error saving chat messages', error);
-          // Continue with campaign creation even if message saving fails
-        }
-        
-        // Add conversation ID to campaign data if available
+        // Use conversationId passed from the ICP flow completion
+        // This conversationId was captured when messages were saved on the last ICP step
         if (conversationId) {
           campaignData.conversationId = conversationId;
+          logger.info('✅ [Campaign Creation] Using conversationId from ICP flow', { conversationId });
+        } else {
+          logger.warn('⚠️ [Campaign Creation] No conversationId available - messages may not be linked to campaign');
         }
+        
+        logger.debug('[Campaign Creation] Sending campaign creation request', { 
+          campaignData,
+          hasConversationId: !!conversationId
+        });
         const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
         if (createResponse.success) {
           const campaignId = createResponse.data.id || createResponse.data.data?.id;

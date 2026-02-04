@@ -138,8 +138,8 @@ export function hasBufferedMessages(sessionId: string): boolean {
   return getBufferedMessages(sessionId).length > 0;
 }
 
-async function saveBufferedMessagesToBackend(sessionId: string, messages: BufferedMessage[]): Promise<void> {
-  if (messages.length === 0) return;
+async function saveBufferedMessagesToBackend(sessionId: string, messages: BufferedMessage[]): Promise<{ conversationId: string } | null> {
+  if (messages.length === 0) return null;
   
   const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/ai-icp-assistant/messages/batch-save`;
@@ -164,7 +164,10 @@ async function saveBufferedMessagesToBackend(sessionId: string, messages: Buffer
       throw new Error(`Failed to save buffered messages: ${response.statusText}`);
     }
 
-    logger.debug('[ICP Buffer] Successfully saved all buffered messages to backend');
+    const result = await response.json();
+    logger.debug('[ICP Buffer] Successfully saved all buffered messages to backend', { conversationId: result.conversationId });
+    
+    return { conversationId: result.conversationId };
   } catch (error) {
     logger.error('[ICP Buffer] Failed to save buffered messages to backend', error);
     throw error;
@@ -334,7 +337,12 @@ export async function processICPAnswer(
     });
 
     try {
-      await saveBufferedMessagesToBackend(sessionId, bufferedMessages);
+      const saveResult = await saveBufferedMessagesToBackend(sessionId, bufferedMessages);
+      if (saveResult?.conversationId) {
+        // Add conversationId to the response so it's available to the caller
+        responseData.conversationId = saveResult.conversationId;
+        logger.debug('[ICP] Added conversationId to response', { conversationId: saveResult.conversationId });
+      }
       clearBufferedMessages(sessionId);
     } catch (error) {
       logger.error('[ICP] Failed to save buffered messages, keeping in localStorage', error);
