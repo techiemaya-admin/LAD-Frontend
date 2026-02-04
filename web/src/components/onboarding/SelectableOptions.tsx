@@ -395,7 +395,7 @@ export default function SelectableOptions({
                             <div className="w-1.5 h-1.5 rounded-full bg-white" />
                           }
                         </div>
-n                        <span className="text-xs font-medium">With message</span>
+                        <span className="text-xs font-medium">With message</span>
                       </button>
 
                       {/* Without message option (default) */}

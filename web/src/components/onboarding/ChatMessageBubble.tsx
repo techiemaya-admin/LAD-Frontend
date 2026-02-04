@@ -241,19 +241,19 @@ export default function ChatMessageBubble({
       )}>
         {/* Only show message bubble if there's content to display */}
         {shouldShowBubble && (
+        <div className={cn(
+          'rounded-2xl px-4 py-3 shadow-sm',
+          isAI
+            ? 'bg-white border border-gray-200'
+            : 'bg-blue-600 text-white'
+        )}>
           <div className={cn(
-            'rounded-2xl px-4 py-3 shadow-sm',
-            isAI
-              ? 'bg-white border border-gray-200'
-              : 'bg-blue-600 text-white'
+            'whitespace-pre-wrap leading-relaxed text-sm',
+            isAI ? 'text-gray-900' : 'text-white'
           )}>
-            <div className={cn(
-              'whitespace-pre-wrap leading-relaxed text-sm',
-              isAI ? 'text-gray-900' : 'text-white'
-            )}>
               {showOptions ? displayQuestionText : cleanContent(content)}
-            </div>
           </div>
+        </div>
         )}
         {/* Selectable Options - Render based on step type */}
         {showOptions && parsedOptions && (
