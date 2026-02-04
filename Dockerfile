@@ -58,11 +58,12 @@ COPY . .
 RUN test -f /app/web/next.config.mjs && echo "✅ next.config.mjs present" || (echo "❌ next.config.mjs missing" && exit 1)
 RUN test -f /app/web/tsconfig.json && echo "✅ tsconfig.json present" || (echo "❌ tsconfig.json missing" && exit 1)
 
-WORKDIR /app/web
-
-# Verify React Query package resolution
+# Verify React Query package resolution from root (monorepo location)
+WORKDIR /app
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
+
+WORKDIR /app/web
 
 # Build args - these MUST be provided via --build-arg in cloudbuild
 ARG VITE_BACKEND_URL
@@ -88,12 +89,11 @@ ENV NODE_ENV=production
 WORKDIR /app
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
 
-# Verify React Query package resolution
-WORKDIR /app/web
+# Verify React Query package resolution from root (monorepo location)
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
-WORKDIR /app/web
+# Build from root using turbo (builds SDK first, then web)
 RUN npm run build && \
   echo "✅ Build completed successfully" && \
   test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || echo "⚠️ server.js not found, checking .next structure" && ls -la /app/web/.next/standalone/ 2>/dev/null | head -20 || echo "⚠️ .next/standalone dir may not exist"
