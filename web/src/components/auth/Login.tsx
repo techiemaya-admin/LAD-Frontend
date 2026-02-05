@@ -20,20 +20,9 @@ const Login: React.FC = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const auth = useSelector((state: RootState) => state.auth);
   const { loading, error } = auth || { loading: false, error: null };
-
-  useEffect(() => {
-    // Load saved credentials
-    const savedEmail = localStorage.getItem('savedEmail');
-    const savedPassword = localStorage.getItem('savedPassword');
-    if (savedEmail && savedPassword) {
-      setFormData({ email: savedEmail, password: savedPassword });
-      setRememberMe(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (error) {
@@ -155,22 +144,6 @@ const Login: React.FC = () => {
                 🔐 {formErrors.password}
               </p>
             )}
-          </div>
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-            />
-            <label
-              htmlFor="rememberMe"
-              className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
-            >
-              Remember
-            </label>
           </div>
           {/* Login Button */}
           <Button

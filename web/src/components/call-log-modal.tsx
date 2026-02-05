@@ -735,13 +735,13 @@ export function CallLogModal({
     }
   };
 
-  // Get lead category from API response or categorize
+  // Get lead category from API response or show unknown
   const leadCategory = (() => {
     if (log?.lead_category) {
       const normalized = normalizeLeadCategory(log.lead_category);
       if (normalized) return normalized;
     }
-    return categorizeLead(log || {});
+    return "unknown";
   })();
   const tagConfig = getTagConfig(leadCategory);
 
@@ -760,7 +760,7 @@ export function CallLogModal({
             <PhoneCall className="h-6 w-6 text-orange-500" />
             <div className="flex flex-col space-y-1">
               <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
-              {leadCategory && (
+              {/* {leadCategory && (
                 <Badge className={cn(
                   "w-fit text-xs font-semibold",
                   tagConfig.bgColor,
@@ -768,7 +768,7 @@ export function CallLogModal({
                 )}>
                   {tagConfig.label}
                 </Badge>
-              )}
+              )} */}
             </div>
           </div>
           <div className="flex items-center space-x-2">

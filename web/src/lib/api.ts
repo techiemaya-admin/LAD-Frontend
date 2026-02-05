@@ -11,21 +11,33 @@ function authHeaders() {
 
   let token: string | null = null;
 
-  // First try to get token from safeStorage (now prioritizes cookies)
-  token = safeStorage.getItem('token');
-  logger.debug('[API] authHeaders: Token from safeStorage:', { 
-    hasToken: !!token, 
-    preview: token ? `${token.substring(0, 30)}...` : '(none)',
-    source: 'safeStorage (cookies first)'
-  });
+  // First try to get token from cookies (primary source)
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split("=");
+    const name = rawName?.trim();
+    const value = rawValueParts.join("=");
+    if (name === "token" && value) {
+      token = decodeURIComponent(value);
+      logger.debug('[API] authHeaders: Token from cookie:', { 
+        hasToken: true, 
+        preview: `${token.substring(0, 30)}...`,
+        source: 'cookie'
+      });
+      break;
+    }
+  }
 
-  // Also check what's directly in localStorage for debugging
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const lsToken = localStorage.getItem('token');
-    logger.debug('[API] authHeaders: Direct localStorage check:', { 
-      hasToken: !!lsToken,
-      matchesSafeStorage: lsToken === token 
-    });
+  // Fallback to localStorage/safeStorage
+  if (!token) {
+    token = safeStorage.getItem('token');
+    if (token) {
+      logger.debug('[API] authHeaders: Token from safeStorage:', { 
+        hasToken: true, 
+        preview: `${token.substring(0, 30)}...`,
+        source: 'safeStorage'
+      });
+    }
   }
 
   logger.debug('[API] authHeaders: Final token:', { 

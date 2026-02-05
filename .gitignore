@@ -61,5 +61,7 @@ next-env.d.ts
 *.swo
 *~
 
+package-lock.json
+
 # OS
 Thumbs.db

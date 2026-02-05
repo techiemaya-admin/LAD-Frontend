@@ -62,7 +62,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
         // Fetch available agents
         const availableAgentsRes = await apiGet<{ success: boolean; data?: any[]; agents?: any[] }>(
-          '/api/voice-agent/user/available-agents',
+          '/api/dashboard/user/available-agents',
           { signal: abortController.signal }
         );
         const availableAgents = availableAgentsRes.data || availableAgentsRes.agents || [];

@@ -38,6 +38,13 @@ interface CallLogResponse {
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
+  analysis?: {
+    raw_analysis?: {
+      lead_score_full?: {
+        lead_category?: string;
+      };
+    };
+  };
 }
 
 interface CallLogsResponse {
@@ -287,6 +294,11 @@ const resolveDateRange = () => {
           .filter(Boolean)
           .join(' ') || '';
 
+        // Extract lead_category from nested analysis path or top level
+        const leadCategory = r.lead_category || 
+                            r.analysis?.raw_analysis?.lead_score_full?.lead_category ||
+                            (r as any).analysis?.raw_analysis?.lead_score_full?.lead_category;
+
         return {
           id: String(r.call_log_id || r.id || ''),
           assistant: r.agent_name || '',
@@ -298,7 +310,7 @@ const resolveDateRange = () => {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
-          lead_category: r.lead_category,
+          lead_category: leadCategory,
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -468,13 +480,13 @@ const resolveDateRange = () => {
     }
   };
 
-  // ✅ Handle row click - prevent modal for active calls
+  // ✅ Handle row click - prevent modal for active calls and failed calls
   const handleRowClick = (id: string) => {
     const call = items.find(i => i.id === id);
     const status = call?.status.toLowerCase() || '';
     
-    // Don't open modal for calling, queue, or ongoing calls
-    if (['calling', 'queue', 'queued', 'ongoing', 'in_queue'].includes(status)) {
+    // Don't open modal for calling, queue, ongoing, or failed calls
+    if (['calling', 'queue', 'queued', 'ongoing', 'in_queue', 'failed'].includes(status)) {
       return;
     }
     
@@ -522,7 +534,7 @@ const resolveDateRange = () => {
 
   if (authed === null) {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 p-6">
+      <div className="max-w-full mx-auto space-y-8 px-6 py-6">
         {/* Header */}
         <CallLogsHeader
           search={search}
@@ -570,7 +582,7 @@ const resolveDateRange = () => {
   const hasFailedCalls = failedCallIds.length > 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 p-6">
+    <div className="max-w-full mx-auto space-y-8 px-6 py-6">
       {/* Header */}
       <CallLogsHeader
         search={search}
@@ -628,11 +640,11 @@ const resolveDateRange = () => {
 
 
       {/* Pagination */}
-      <Pagination
+      {/* <Pagination
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
-      />
+      /> */}
 
       {/* Modal */}
       <CallLogModal

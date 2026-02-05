@@ -101,7 +101,7 @@ export function CallLogsHeader({
           </div>
           {/* Type Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-muted-foreground" />
+            {/* <Filter className="w-5 h-5 text-muted-foreground" /> */}
             <select
               value={filterProvider}
               onChange={(e) => onFilterProviderChange(e.target.value)}
@@ -116,7 +116,7 @@ export function CallLogsHeader({
             </select>
           </div>
           {/* Items Per Page */}
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Show:</span>
             <select
               value={perPage}
@@ -129,7 +129,7 @@ export function CallLogsHeader({
               <option value={100}>100</option>
             </select>
             <span className="text-sm text-muted-foreground">per page</span>
-          </div>
+          </div> */}
         </div>
         {/* Row 2: Date Range and Call Type Filters */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
@@ -204,4 +204,4 @@ export function CallLogsHeader({
       </div>
     </div>
   );
-}
+}
