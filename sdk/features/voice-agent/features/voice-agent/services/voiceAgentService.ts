@@ -159,7 +159,7 @@ class VoiceAgentService {
         url: error?.config?.url,
         baseURL: error?.config?.baseURL,
         method: methodName
-      };
+      } as any;
       
       // Only add fullBackendResponse if it's serializable
       if (error?.response?.data) {

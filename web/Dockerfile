@@ -7,9 +7,9 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files for monorepo workspaces
-COPY package.json package-lock.json ./
-COPY web/package.json ./web/
-COPY sdk/package.json ./sdk/
+COPY package*.json ./
+COPY web/package*.json ./web/
+COPY sdk/package*.json ./sdk/
 
 # Install dependencies using npm workspaces (resolves SDK as workspace package)
 RUN npm ci --ignore-scripts

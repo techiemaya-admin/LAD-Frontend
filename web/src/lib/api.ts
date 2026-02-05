@@ -100,6 +100,22 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
   }
   return res.json();
 }
+
+export async function apiPatch<T>(path: string, body: any): Promise<T> {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  const res = await loadingFetch(`${API_BASE}${p}`, {
+    method: "PATCH",
+    credentials: 'include',
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    handleAuthError(res.status, p);
+    throw new Error(`PATCH ${path} ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, {

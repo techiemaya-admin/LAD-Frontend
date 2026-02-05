@@ -1,60 +1,40 @@
 /**
  * Campaigns Feature - useCampaignStats Hook
  * 
- * React hook for fetching campaign statistics.
+ * React hook for fetching campaign statistics using TanStack Query.
  * Framework-independent (no Next.js imports).
  */
-import { useState, useCallback, useEffect } from 'react';
-import { getCampaignStats } from '../api';
+import { useQuery } from '@tanstack/react-query';
+import { getCampaignStatsOptions } from '../api';
 import type { CampaignStats } from '../types';
+
 export interface UseCampaignStatsReturn {
-  stats: CampaignStats | null;
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  clearError: () => void;
+  data: CampaignStats | undefined;
+  stats: CampaignStats | undefined; // Alias for backward compatibility
+  isLoading: boolean;
+  loading: boolean; // Alias for backward compatibility
+  error: Error | null;
+  isError: boolean;
+  refetch: () => void;
+  isFetching: boolean;
+  isStale: boolean;
 }
+
+/**
+ * Hook to get campaign statistics with TanStack Query
+ */
 export function useCampaignStats(): UseCampaignStatsReturn {
-  const [stats, setStats] = useState<CampaignStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const fetchStats = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCampaignStats();
-      setStats(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load campaign stats';
-      setError(errorMessage);
-      console.error('[campaigns] Failed to load stats:', err);
-      // Set default stats on error
-      setStats({
-        total_campaigns: 0,
-        active_campaigns: 0,
-        total_leads: 0,
-        total_sent: 0,
-        total_delivered: 0,
-        total_connected: 0,
-        total_replied: 0,
-        avg_connection_rate: 0,
-        avg_reply_rate: 0,
-        instagram_connection_rate: 0,
-        whatsapp_connection_rate: 0,
-        voice_agent_connection_rate: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const query = useQuery(getCampaignStatsOptions());
+  
   return {
-    stats,
-    loading,
-    error,
-    refetch: fetchStats,
-    clearError: () => setError(null),
+    data: query.data,
+    stats: query.data, // Backward compatibility alias
+    isLoading: query.isLoading,
+    loading: query.isLoading, // Backward compatibility alias
+    error: query.error,
+    isError: query.isError,
+    refetch: query.refetch,
+    isFetching: query.isFetching,
+    isStale: query.isStale,
   };
-}
+}

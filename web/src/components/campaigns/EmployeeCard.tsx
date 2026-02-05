@@ -29,6 +29,7 @@ interface EmployeeCardProps {
     first_name?: string;
     last_name?: string;
     title?: string;
+    company?: string;
     email?: string;
     phone?: string;
     linkedin_url?: string;
@@ -103,7 +104,7 @@ export default function EmployeeCard({
           {/* Avatar - Top (for grid view) */}
           {employeeViewMode === 'grid' && (
             <div className="flex justify-center mb-4 w-full">
-              <Avatar className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md flex-shrink-0">
+              <Avatar className="w-[90px] h-[90px] border-4 shadow-md flex-shrink-0">
                 <AvatarImage src={employee.photo_url} alt={employeeName} />
                 <AvatarFallback className="bg-gray-200">
                   <User className="w-12 h-12 text-gray-500" />
@@ -135,16 +136,31 @@ export default function EmployeeCard({
             >
               {employeeName}
             </h3>
-            {employee.title && (
-              <Badge
-                variant="default"
+            {(employee.title || employee.company) && (
+              <div
                 className={`
-                  font-semibold text-xs h-[26px] max-w-fit px-3
-                  ${employeeViewMode === 'grid' ? 'self-center' : 'self-start'}
+                  text-sm text-gray-600 max-w-fit
+                  ${employeeViewMode === 'grid' ? 'text-center' : 'text-left'}
                 `}
               >
-                {employee.title}
-              </Badge>
+                {employee.title && employee.company && (
+                  <span>{employee.title} at {employee.company}</span>
+                )}
+                {employee.title && !employee.company && (
+                  <Badge
+                    variant="default"
+                    className={`
+                      font-semibold text-xs h-[26px] max-w-fit px-3
+                      ${employeeViewMode === 'grid' ? 'self-center' : 'self-start'}
+                    `}
+                  >
+                    {employee.title}
+                  </Badge>
+                )}
+                {!employee.title && employee.company && (
+                  <span>{employee.company}</span>
+                )}
+              </div>
             )}
           </div>
           {/* Contact info - Below name/title for grid */}

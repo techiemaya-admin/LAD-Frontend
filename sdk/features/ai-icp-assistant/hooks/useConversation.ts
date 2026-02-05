@@ -63,14 +63,13 @@ export function useConversation(
           setCurrentStepIndex(response.nextStepIndex);
         }
         if (response.nextQuestion) {
-          // Check for duplicate message IDs
-          if (response.nextQuestion.messageId) {
-            if (seenMessageIds.current.has(response.nextQuestion.messageId)) {
-              console.warn('[useConversation] Duplicate message detected, skipping');
-              return response;
-            }
-            seenMessageIds.current.add(response.nextQuestion.messageId);
+          // Check for duplicate questions based on id + intentKey combo
+          const questionKey = `${response.nextQuestion.id}_${response.nextQuestion.intentKey}`;
+          if (seenMessageIds.current.has(questionKey)) {
+            console.warn('[useConversation] Duplicate message detected, skipping');
+            return response;
           }
+          seenMessageIds.current.add(questionKey);
           setCurrentQuestion(response.nextQuestion);
           setCurrentIntentKey(response.nextQuestion.intentKey || '');
         } else {
@@ -127,4 +126,4 @@ export function useConversation(
     reset,
     setAnswer,
   };
-}
+}
