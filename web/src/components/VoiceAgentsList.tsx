@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Briefcase, Plus, ChevronRight } from "lucide-react";
 import { logger } from "@/lib/logger";
-import { apiGet } from "@/lib/api";
+import { voiceAgentService } from "@lad/frontend-features/voice-agent";
 
 interface Agent {
   id: string;
   name: string;
-  status: "active" | "draft" | "Active" | "Draft";
-  language: string;
+  status?: "active" | "draft" | "Active" | "Draft";
+  language?: string;
   [key: string]: any;
 }
 
@@ -23,11 +23,9 @@ export function VoiceAgentsList() {
     const fetchAgents = async () => {
       try {
         setLoading(true);
-        logger.debug("🔍 Fetching agents from /api/voice-agent/user/available-agents");
+        logger.debug("🔍 Fetching agents from SDK service");
 
-        const data = await apiGet<Agent[]>("/api/voice-agent/user/available-agents", {
-          signal: abortController.signal
-        });
+        const data = await voiceAgentService.getAvailableAgents();
 
         logger.debug("✅ Agents fetched successfully:", data);
         setAgents(Array.isArray(data) ? data : []);
@@ -51,7 +49,8 @@ export function VoiceAgentsList() {
     };
   }, []);
 
-  const normalizeStatus = (status: string) => {
+  const normalizeStatus = (status?: string) => {
+    if (!status) return "Draft";
     return status.toLowerCase() === "active" ? "Active" : "Draft";
   };
 
@@ -118,9 +117,11 @@ export function VoiceAgentsList() {
                     >
                       {normalizeStatus(agent.status)}
                     </span>
-                    <span className="text-xs text-gray-500 px-2 py-1">
-                      {agent.language}
-                    </span>
+                    {agent.language && (
+                      <span className="text-xs text-gray-500 px-2 py-1">
+                        {agent.language}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

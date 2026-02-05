@@ -5,9 +5,7 @@ import { Bot, Phone, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { apiGet } from '@/lib/api';
 import { cn } from '@/lib/utils';
-
 interface VoiceAgent {
   id: string;
   name: string;
@@ -18,6 +16,9 @@ interface VoiceAgent {
 
 interface VoiceAgentsWidgetProps {
   id: string;
+  availableAgents?: any[];
+  callLogs?: any[];
+  loading?: boolean;
 }
 
 const statusStyles = {
@@ -38,9 +39,13 @@ const determineStatus = (callsToday: number, successRate: number): 'active' | 'b
   return 'idle';
 };
 
-export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
+export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ 
+  id, 
+  availableAgents = [], 
+  callLogs = [], 
+  loading = false 
+}) => {
   const [agents, setAgents] = useState<VoiceAgent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 3;
@@ -54,32 +59,11 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
   );
 
   useEffect(() => {
-    const abortController = new AbortController();
+    if (loading || !availableAgents || availableAgents.length === 0) return;
 
-    const fetchAgentMetrics = async () => {
+    const computeAgentMetrics = () => {
       try {
-        setLoading(true);
-
-        // Fetch available agents
-        const availableAgentsRes = await apiGet<{ success: boolean; data?: any[]; agents?: any[] }>(
-          '/api/dashboard/user/available-agents',
-          { signal: abortController.signal }
-        );
-        const availableAgents = availableAgentsRes.data || availableAgentsRes.agents || [];
-
-        // Fetch call logs for metrics
-        const now = new Date();
-        const startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30); // Last 30 days
-
-        const startDateISO = startDate.toISOString();
-        const endDateISO = now.toISOString();
-        const qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
-
-        const callsRes = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
-          `/api/dashboard/calls${qs}`
-        );
-        const logs = Array.isArray(callsRes) ? callsRes : (callsRes.data || callsRes.logs || callsRes.calls || []);
+        const logs = callLogs || [];
 
         // Group call logs by agent
         const agentMetrics = new Map<string, {
@@ -142,25 +126,17 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
               successRate,
             };
           })
-          .sort((a, b) => b.callsToday - a.callsToday); // Sort by calls today descending
+          .sort((a, b) => b.callsToday - a.callsToday);
 
         setAgents(agentList.length > 0 ? agentList : []);
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('Error fetching agent metrics:', error);
-          setAgents([]);
-        }
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        console.error('Error computing agent metrics:', error);
+        setAgents([]);
       }
     };
 
-    fetchAgentMetrics();
-
-    return () => {
-      abortController.abort();
-    };
-  }, []);
+    computeAgentMetrics();
+  }, [availableAgents, callLogs, loading]);
 
   if (loading) {
     return (

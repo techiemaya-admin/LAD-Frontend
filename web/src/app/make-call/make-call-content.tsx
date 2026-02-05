@@ -12,7 +12,8 @@ import { UserStorage } from "@/utils/userStorage";
 import { 
   useUserAvailableNumbers, 
   useAvailableAgents, 
-  useResolvePhones 
+  useResolvePhones,
+  voiceAgentService
 } from "@lad/frontend-features/voice-agent";
 type NumberItem = {
   id: string;
@@ -245,10 +246,7 @@ export default function MakeCallContent() {
           return;
         }
         setLoading(true);
-        // Use SDK service directly for resolvePhones
-        const { voiceAgentService } = (
-          await import("@lad/frontend-features/voice-agent")
-        );
+        // Use SDK service for resolvePhones
         const json = await voiceAgentService.resolvePhones(idsPayload, qpType as 'company' | 'employee');
         const totalResolved = Array.isArray(json)
           ? json.length
@@ -538,17 +536,17 @@ export default function MakeCallContent() {
     [numbers, selectedNumberId]
   );
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-10">
         {/* Show skeleton loaders during initialization */}
         {isInitializing ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
             <CallConfigurationSkeleton />
             <CallOptionsSkeleton />
           </div>
         ) : (
           // Show actual content once data is loaded
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
             <CallConfiguration
               numbers={numbers}
               agents={agents}

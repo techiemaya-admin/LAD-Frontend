@@ -21,18 +21,27 @@ class ApiClient {
     // Use NEXT_PUBLIC_BACKEND_URL (preferred) or NEXT_PUBLIC_API_URL (legacy fallback)
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
     
+    console.log('[API Client] Environment variables:', {
+      NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+      backendUrl,
+      NODE_ENV: process.env.NODE_ENV,
+    });
+    
     if (!backendUrl && process.env.NODE_ENV === 'production') {
       throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
     }
     
-    // If backend URL is provided, append /api; otherwise use production backend as default
+    // If backend URL is provided, append /api; otherwise use Next.js API routes (relative path)
     if (backendUrl) {
       // Check if URL already contains /api suffix
       this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
     } else {
-      // Default to production backend instead of localhost
-      this.baseURL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
+      // In development without env vars, use relative path to Next.js API routes
+      this.baseURL = '';
     }
+    
+    console.log('[API Client] Initialized with baseURL:', this.baseURL);
   }
   private async request<T>(
     method: string,
@@ -40,7 +49,20 @@ class ApiClient {
     body?: any,
     options?: RequestOptions
   ): Promise<ApiResponse<T>> {
-    const url = new URL(path, this.baseURL);
+    // Handle relative vs absolute URLs
+    let url: URL;
+    try {
+      if (this.baseURL) {
+        url = new URL(path, this.baseURL);
+      } else {
+        // For relative paths (Next.js API routes), construct from window.location
+        url = new URL(path, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+      }
+    } catch (error) {
+      console.error('[API Client] Invalid URL construction:', { baseURL: this.baseURL, path, error });
+      throw new Error(`Invalid URL: ${path} with base ${this.baseURL}`);
+    }
+    
     // Add query parameters
     if (options?.params) {
       Object.entries(options.params).forEach(([key, value]) => {
@@ -69,21 +91,51 @@ class ApiClient {
     if (body) {
       config.body = JSON.stringify(body);
     }
+    
+    console.log('[API Client] Making request:', {
+      method,
+      url: url.toString(),
+      headers: { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined },
+      body: body ? JSON.stringify(body).substring(0, 100) : undefined,
+    });
     try {
       const response = await fetch(url.toString(), config);
+      
+      console.log('[API Client] Response received:', {
+        url: url.toString(),
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('[API Client] Request failed:', {
+          url: url.toString(),
+          status: response.status,
+          errorData,
+        });
         throw new Error(
           errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
         );
       }
       const data = await response.json();
+      
+      console.log('[API Client] Response data:', {
+        url: url.toString(),
+        dataKeys: Object.keys(data),
+      });
+      
       return {
         data,
         status: response.status,
         statusText: response.statusText,
       };
     } catch (error) {
+      console.error('[API Client] Request error:', {
+        url: url.toString(),
+        error,
+      });
       if (error instanceof Error) {
         throw error;
       }

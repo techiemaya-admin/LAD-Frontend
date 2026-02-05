@@ -1,8 +1,15 @@
 import React, { useMemo, useCallback } from "react";
-import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { logger } from "@/lib/logger";
 import { useRef, useEffect, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -57,6 +64,14 @@ interface CallLogsTableProps {
   onToggleBatch?: (batchId: string) => void;
   totalFilteredCount?: number;
   onSortChange?: (sortConfig: SortConfig | null) => void;
+  dateFilter?: string;
+  onDateFilterChange?: (value: string) => void;
+  fromDate?: string | null;
+  toDate?: string | null;
+  onFromDateChange?: (value: string) => void;
+  onToDateChange?: (value: string) => void;
+  callFilter?: string;
+  onCallFilterChange?: (value: string) => void;
 }
 
 const columnHelper = createColumnHelper<CallLog>();
@@ -73,6 +88,14 @@ export function CallLogsTable({
   onToggleBatch,
   totalFilteredCount = 0,
   onSortChange,
+  dateFilter = 'all',
+  onDateFilterChange,
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  callFilter = 'all',
+  onCallFilterChange,
 }: CallLogsTableProps) {
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -80,6 +103,8 @@ export function CallLogsTable({
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [downloadErrors, setDownloadErrors] = useState<Map<string, string>>(new Map());
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
@@ -246,6 +271,10 @@ export function CallLogsTable({
       id: 'status',
       header: 'Status',
       cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+      filterFn: (row, columnId, filterValue) => {
+        const status = row.getValue(columnId) as string;
+        return status.toLowerCase().includes(filterValue.toLowerCase());
+      },
     }),
     columnHelper.accessor('startedAt', {
       id: 'startedAt',
@@ -324,8 +353,19 @@ export function CallLogsTable({
       sorting,
       columnFilters,
       pagination,
-    },                                           
+      globalFilter,
+    },
+    onGlobalFilterChange: setGlobalFilter,
   });
+
+  // Apply status filter
+  React.useEffect(() => {
+    if (statusFilter === 'all') {
+      table.getColumn('status')?.setFilterValue(undefined);
+    } else {
+      table.getColumn('status')?.setFilterValue(statusFilter);
+    }
+  }, [statusFilter, table]);
                                                                                                                                                                                                                                                                                                                                                                                         
   // Render batch header row                                                                                                                                                                                                                                                                                      
   const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
@@ -412,6 +452,78 @@ export function CallLogsTable({
 
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Search Bar */}
+      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
+          <input
+            type="text"
+            placeholder="Search Call Logs..."
+            value={globalFilter ?? ''}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="ended">Ended</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="calling">Calling</SelectItem>
+              <SelectItem value="ongoing">Ongoing</SelectItem>
+              <SelectItem value="queue">Queue</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={onDateFilterChange}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Date Filter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={callFilter} onValueChange={onCallFilterChange}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Call Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Calls</SelectItem>
+              <SelectItem value="current">Current Batch</SelectItem>
+              <SelectItem value="batch">Batch View</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Custom Date Inputs (only show when custom is selected) */}
+        {dateFilter === 'custom' && (
+          <div className="flex gap-3 px-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">From:</label>
+              <input
+                type="date"
+                value={fromDate || ""}
+                onChange={(e) => onFromDateChange?.(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">To:</label>
+              <input
+                type="date"
+                value={toDate || ""}
+                onChange={(e) => onToDateChange?.(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        )}
+      </div>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -446,30 +558,49 @@ export function CallLogsTable({
         </TableHeader>
         <TableBody>
           {batchGroups ? (
-            <>
-              {/* Render batch groups */}
-              {Object.entries(batchGroups.groups).map(([batchId, calls]) => (
-                <React.Fragment key={`batch-group-${batchId}`}>
-                  {renderBatchHeader(batchId, calls)}
-                  {expandedBatches.has(batchId) &&
-                    calls.map((call) => renderCallRow(call, true))}
-                </React.Fragment>
-              ))}
+            (() => {
+              // Create timeline items combining batches and individual calls
+              const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
               
-              {/* Render non-batch calls */}
-              {batchGroups.noBatchCalls.length > 0 && (
-                <>
-                  {Object.keys(batchGroups.groups).length > 0 && (
-                    <TableRow className="bg-muted/30">
-                      <TableCell colSpan={columns.length} className="py-3 text-sm font-semibold text-muted-foreground">
-                        Individual Calls
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {batchGroups.noBatchCalls.map((call) => renderCallRow(call, false))}
-                </>
-              )}
-            </>
+              // Add batch groups with their earliest timestamp
+              Object.entries(batchGroups.groups).forEach(([batchId, calls]) => {
+                const earliestTimestamp = Math.min(
+                  ...calls.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                );
+                timelineItems.push({
+                  type: 'batch',
+                  data: { batchId, calls },
+                  timestamp: earliestTimestamp
+                });
+              });
+              
+              // Add individual calls
+              batchGroups.noBatchCalls.forEach(call => {
+                timelineItems.push({
+                  type: 'call',
+                  data: call,
+                  timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
+                });
+              });
+              
+              // Sort by timestamp (newest first)
+              timelineItems.sort((a, b) => b.timestamp - a.timestamp);
+              
+              return timelineItems.map((item, index) => {
+                if (item.type === 'batch') {
+                  const { batchId, calls } = item.data;
+                  return (
+                    <React.Fragment key={`batch-group-${batchId}`}>
+                      {renderBatchHeader(batchId, calls)}
+                      {expandedBatches.has(batchId) &&
+                        calls.map((call) => renderCallRow(call, true))}
+                    </React.Fragment>
+                  );
+                } else {
+                  return renderCallRow(item.data, false);
+                }
+              });
+            })()
           ) : table.getRowModel().rows.length === 0 ? (
             <TableRow>
   <TableCell
@@ -511,17 +642,20 @@ export function CallLogsTable({
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
       <span>Show</span>
-      <select
-        value={table.getState().pagination?.pageSize ?? 10}
-        onChange={(e) => table.setPageSize(Number(e.target.value))}
-        className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+      <Select 
+        value={String(table.getState().pagination?.pageSize ?? 10)} 
+        onValueChange={(value) => table.setPageSize(Number(value))}
       >
-        {[5, 10, 20, 50].map((size) => (
-          <option key={size} value={size}>
-            {size}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="w-[70px] h-8 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="5">5</SelectItem>
+          <SelectItem value="10">10</SelectItem>
+          <SelectItem value="20">20</SelectItem>
+          <SelectItem value="50">50</SelectItem>
+        </SelectContent>
+      </Select>
       <span>
         of {totalFilteredCount || table.getFilteredRowModel().rows.length} calls
       </span>
@@ -537,28 +671,28 @@ export function CallLogsTable({
         <button
           onClick={() => table.setPageIndex(0)}
           disabled={!table.getCanPreviousPage()}
-          className="h-8 w-8 border rounded disabled:opacity-50"
+          className="h-8 w-8 border rounded-lg disabled:opacity-50"
         >
           «
         </button>
         <button
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          className="h-8 w-8 border rounded disabled:opacity-50"
+          className="h-8 w-8 border rounded-lg disabled:opacity-50"
         >
           ‹
         </button>
         <button
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          className="h-8 w-8 border rounded disabled:opacity-50"
+          className="h-8 w-8 border rounded-lg disabled:opacity-50"
         >
           ›
         </button>
         <button
           onClick={() => table.setPageIndex(table.getPageCount() - 1)}
           disabled={!table.getCanNextPage()}
-          className="h-8 w-8 border rounded disabled:opacity-50"
+          className="h-8 w-8 border rounded-lg disabled:opacity-50"
         >
           »
         </button>

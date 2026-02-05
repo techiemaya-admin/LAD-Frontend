@@ -4,6 +4,7 @@ import { useAgentForm } from '@/hooks/useAgentForm';
 import { useToast } from '../../hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { safeStorage } from '@/utils/storage';
+import { voiceAgentService } from '@lad/frontend-features/voice-agent';
 import { AgentSelector } from './AgentSelector';
 import { AgentForm } from './AgentForm';
 import { FormSkeleton } from './FormSkeleton';
@@ -61,26 +62,9 @@ export function VoiceAgentSettings() {
         const authData = await authResponse.json();
         logger.debug('[VoiceAgentSettings] User authenticated', { user: authData.user?.email || authData.user?.name });
 
-        // Now fetch agents through proxy
-        logger.debug('[VoiceAgentSettings] Fetching agents from proxy');
-        const response = await fetch(`/api/voice-agent/available-agents`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-          },
-          credentials: "include", // Include httpOnly cookies
-        });
-
-        logger.debug('[VoiceAgentSettings] Agents response received', { status: response.status, statusText: response.statusText });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error('[VoiceAgentSettings] Agents fetch failed', { error: errorText, status: response.status });
-          throw new Error(`Failed to fetch agents: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        // Now fetch agents using SDK service
+        logger.debug('[VoiceAgentSettings] Fetching agents from SDK service');
+        const data: any = await voiceAgentService.getAvailableAgents();
         logger.debug('[VoiceAgentSettings] Agents fetched successfully', { count: Array.isArray(data) ? data.length : data.data?.length });
         
         // Map API response to Agent interface

@@ -12,9 +12,8 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
 import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
-import { useMakeCall } from '@lad/frontend-features/voice-agent';
+import { useMakeCall, voiceAgentService } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
-import { apiPost } from "@/lib/api";
 type BulkEntry = {
   to_number: string;
   lead_name?: string;
@@ -138,8 +137,8 @@ export function CallOptions(props: CallOptionsProps) {
           ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
         };
         logger.debug('Sending bulk payload', { entriesCount: payload.entries.length });
-        // Using backend voice-agent batch calls API (V2 endpoint)
-        const res = await apiPost("/api/voice-agent/batch/trigger-batch-call", payload);
+        // Using SDK service for batch calls
+        const res = await voiceAgentService.triggerBatchCall(payload);
         // Expect backend response like { success: true, result: { job_id: "batch-..." } }
         const anyRes: any = res;
         const jobId: string | undefined =
@@ -246,7 +245,7 @@ export function CallOptions(props: CallOptionsProps) {
             ...(dataType === 'employee' ? { company_sales_summary: activeText } : { sales_summary: activeText }),
             type: dataType,
           } as const;
-          await apiPost('/api/voice-agent/update-summary', payload as any);
+          await voiceAgentService.updateSummary(payload as any);
           logger.debug('Updated database summary', { identifier: identifier || normalizedPhone });
         } catch (apiError: any) {
           logger.error('Failed to update database', { error: apiError });
@@ -758,15 +757,7 @@ export function CallOptions(props: CallOptionsProps) {
                   if (!text) return;
                   try {
                     setIsRephrasing(true);
-                    const res = await fetch(
-                      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/gemini/generate-phrase`,
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ context: text }),
-                      }
-                    );
-                    const data = await res.json();
+                    const data = await voiceAgentService.generatePhrase(text);
                     if (data.success) {
                       const generated = data.generatedText as string;
                       setEditorValues((v) => (

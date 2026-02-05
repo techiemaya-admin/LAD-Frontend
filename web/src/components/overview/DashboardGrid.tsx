@@ -34,8 +34,8 @@ import { CalendarWidget } from './widgets/CalendarWidget';
 import { cn } from '@/lib/utils';
 
 // Utilities
-import { apiGet } from '@/lib/api';
 import { safeStorage } from '@/utils/storage';
+import { useCallLogs, useWallet, useAvailableAgents } from '@lad/frontend-features/overview';
 
 // Types
 type BackendCallLog = {
@@ -49,15 +49,6 @@ type BackendCallLog = {
   timeline?: Array<{ t: string; title: string; desc?: string }>;
   agentName?: string;
   leadName?: string;
-};
-
-type PhoneNumber = {
-  id: string;
-  e164: string;
-  label?: string;
-  provider?: string;
-  sid?: string;
-  account?: string;
 };
 
 type CallLog = {
@@ -80,7 +71,6 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   // Data states
-  const [calls, setCalls] = useState<BackendCallLog[]>([]);
   const [chartMode, setChartMode] = useState<'month' | 'year'>('month');
   const [countToday, setCountToday] = useState(0);
   const [countYesterday, setCountYesterday] = useState(0);
@@ -88,57 +78,30 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const [countLastMonth, setCountLastMonth] = useState(0);
   const [answerRate, setAnswerRate] = useState<number>(0);
   const [answerRateLastWeek, setAnswerRateLastWeek] = useState<number>(0);
-  const [creditsData, setCreditsData] = useState<{
-    balance: number;
-    totalMinutes: number;
-    remainingMinutes: number;
-    usageThisMonth: number;
-  } | null>(null);
-  const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
 
-  // Fetch credits data
-  const fetchCredits = useCallback(async () => {
-    try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
-      if (!token) return;
+  // Calculate date range based on chart mode
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    let start: Date;
 
-      const walletData = await apiGet<{
-        wallet?: {
-          currentBalance?: number;
-          availableBalance?: number;
-        };
-        credits?: number;
-        balance?: number;
-        monthly_usage?: number;
-      }>('/api/billing/wallet');
-
-      // Try new API response format first, fall back to legacy format
-      const balance = walletData?.wallet?.availableBalance || 
-                     walletData?.wallet?.currentBalance || 
-                     walletData?.credits || 
-                     walletData?.balance || 
-                     0;
-      
-      const usageThisMonth = walletData?.monthly_usage || 0;
-      const totalMinutes = balance * 3.7;
-      const remainingMinutes = totalMinutes * (1 - usageThisMonth / 100);
-
-      setCreditsData({
-        balance,
-        totalMinutes,
-        remainingMinutes,
-        usageThisMonth,
-      });
-    } catch (error) {
-      // Error already logged by apiGet - set default values
-      setCreditsData({
-        balance: 0,
-        totalMinutes: 0,
-        remainingMinutes: 0,
-        usageThisMonth: 0,
-      });
+    if (chartMode === 'month') {
+      start = new Date(now);
+      start.setDate(now.getDate() - (DAYS_RANGE - 1));
+    } else {
+      start = new Date(now);
+      start.setFullYear(now.getFullYear() - 1);
     }
-  }, []);
+
+    return {
+      startDate: start.toISOString(),
+      endDate: now.toISOString()
+    };
+  }, [chartMode]);
+
+  // Use SDK hooks
+  const { calls, loading: callsLoading } = useCallLogs({ startDate, endDate });
+  const { walletData: creditsData, loading: walletLoading } = useWallet();
+  const { agents: availableAgents, loading: agentsLoading } = useAvailableAgents();
 
   // Format call duration
   const formatDuration = (call: BackendCallLog) => {
@@ -177,121 +140,88 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     );
   };
 
-  // Fetch call logs
-  const fetchCallLogs = useCallback(async () => {
-    try {
-      const now = new Date();
-      let startDate: Date;
-
-      if (chartMode === 'month') {
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - (DAYS_RANGE - 1));
-      } else {
-        startDate = new Date(now);
-        startDate.setFullYear(now.getFullYear() - 1);
-      }
-
-      const startDateISO = startDate.toISOString();
-      const endDateISO = now.toISOString();
-      let qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
-
-      const res = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
-        `/api/dashboard/calls${qs}`
-      );
-
-      const rows: any[] = Array.isArray(res) ? res : (res.data || res.logs || res.calls || []);
-      const mapped: BackendCallLog[] = rows.map((r: any) => {
-        const leadFullName = [r.lead_first_name, r.lead_last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-
-        return {
-          id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? crypto.randomUUID()),
-          from: r.agent || r.initiated_by || r.from || r.from_number || r.fromnum || r.source || r.from_number_id || '-',
-          to: r.to || r.to_number || r.tonum || '-',
-          startedAt: r.startedAt || r.started_at || r.created_at || r.createdAt || r.start_time || r.timestamp || '',
-          endedAt: r.endedAt ?? r.ended_at ?? r.end_time ?? undefined,
-          status: r.status || r.call_status || r.result || 'unknown',
-          recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
-          timeline: r.timeline,
-          agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
-          leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
-        };
-      });
-
-      setCalls(mapped);
-
-      // Calculate metrics
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayCalls = mapped.filter((i) => new Date(i.startedAt) >= todayStart);
-      setCountToday(todayCalls.length);
-
-      const yesterdayStart = new Date(todayStart);
-      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-      const yesterdayCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= yesterdayStart && callDate < todayStart;
-      });
-      setCountYesterday(yesterdayCalls.length);
-
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const thisMonthCalls = mapped.filter((i) => new Date(i.startedAt) >= monthStart);
-      setCountThisMonth(thisMonthCalls.length);
-
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-      const lastMonthCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= lastMonthStart && callDate <= lastMonthEnd;
-      });
-      setCountLastMonth(lastMonthCalls.length);
-
-      // Answer rate calculations
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      const thisWeekCalls = mapped.filter((i) => new Date(i.startedAt) >= weekStart);
-      const answeredThisWeek = thisWeekCalls.filter(
-        (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
-      ).length;
-      const answerRateThisWeek = thisWeekCalls.length > 0 ? Math.round((answeredThisWeek / thisWeekCalls.length) * 100) : 0;
-      setAnswerRate(answerRateThisWeek);
-
-      const lastWeekStart = new Date(weekStart);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-      const lastWeekEnd = new Date(weekStart);
-      const lastWeekCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= lastWeekStart && callDate < lastWeekEnd;
-      });
-      const answeredLastWeek = lastWeekCalls.filter(
-        (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
-      ).length;
-      const answerRateLastWeekValue = lastWeekCalls.length > 0 ? Math.round((answeredLastWeek / lastWeekCalls.length) * 100) : 0;
-      setAnswerRateLastWeek(answerRateLastWeekValue);
-    } catch (error) {
-      console.error('[Dashboard] Error fetching call logs:', error);
-      setCalls([]);
-    }
-  }, [chartMode]);
-
-  // Fetch phone numbers
+  // Calculate metrics from call logs
   useEffect(() => {
-    const loadNumbers = async () => {
+    if (callsLoading || !calls) return;
+
+    const computeMetrics = () => {
       try {
-        const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/user/available-numbers');
-        setNumbers(data?.numbers || data?.items || []);
-      } catch {}
-    };
-    loadNumbers();
-  }, []);
+        // Map call logs to BackendCallLog format
+        const mapped: BackendCallLog[] = calls.map((r: any) => {
+          const leadFullName = [r.lead_first_name, r.lead_last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
 
-  // Fetch all data on mount and when chartMode changes
-  useEffect(() => {
-    fetchCallLogs();
-    fetchCredits();
-  }, [fetchCallLogs, fetchCredits]);
+          return {
+            id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? crypto.randomUUID()),
+            from: r.agent || r.initiated_by || r.from || r.from_number || r.fromnum || r.source || r.from_number_id || '-',
+            to: r.to || r.to_number || r.tonum || '-',
+            startedAt: r.startedAt || r.started_at || r.created_at || r.createdAt || r.start_time || r.timestamp || '',
+            endedAt: r.endedAt ?? r.ended_at ?? r.end_time ?? undefined,
+            status: r.status || r.call_status || r.result || 'unknown',
+            recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
+            timeline: r.timeline,
+            agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
+            leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
+          };
+        });
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayCalls = mapped.filter((i) => new Date(i.startedAt) >= todayStart);
+        setCountToday(todayCalls.length);
+
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+        const yesterdayCalls = mapped.filter((i) => {
+          const callDate = new Date(i.startedAt);
+          return callDate >= yesterdayStart && callDate < todayStart;
+        });
+        setCountYesterday(yesterdayCalls.length);
+
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const thisMonthCalls = mapped.filter((i) => new Date(i.startedAt) >= monthStart);
+        setCountThisMonth(thisMonthCalls.length);
+
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        const lastMonthCalls = mapped.filter((i) => {
+          const callDate = new Date(i.startedAt);
+          return callDate >= lastMonthStart && callDate <= lastMonthEnd;
+        });
+        setCountLastMonth(lastMonthCalls.length);
+
+        // Answer rate calculations
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const thisWeekCalls = mapped.filter((i) => new Date(i.startedAt) >= weekStart);
+        const answeredThisWeek = thisWeekCalls.filter(
+          (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+        ).length;
+        const answerRateThisWeek = thisWeekCalls.length > 0 ? Math.round((answeredThisWeek / thisWeekCalls.length) * 100) : 0;
+        setAnswerRate(answerRateThisWeek);
+
+        const lastWeekStart = new Date(weekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(weekStart);
+        const lastWeekCalls = mapped.filter((i) => {
+          const callDate = new Date(i.startedAt);
+          return callDate >= lastWeekStart && callDate < lastWeekEnd;
+        });
+        const answeredLastWeek = lastWeekCalls.filter(
+          (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+        ).length;
+        const answerRateLastWeekValue = lastWeekCalls.length > 0 ? Math.round((answeredLastWeek / lastWeekCalls.length) * 100) : 0;
+        setAnswerRateLastWeek(answerRateLastWeekValue);
+      } catch (error) {
+        console.error('[Dashboard] Error computing metrics:', error);
+      }
+    };
+
+    computeMetrics();
+  }, [calls, callsLoading]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -323,10 +253,13 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
   // Calculate chart data
   const chartData = useMemo(() => {
+    if (!calls || calls.length === 0) return [];
+
     if (chartMode === 'month') {
       const counts = new Map<string, number>();
       for (const c of calls) {
-        const d = new Date(c.startedAt);
+        const callStartedAt = c.startedAt || c.started_at || c.created_at || c.createdAt || c.start_time || c.timestamp;
+        const d = new Date(callStartedAt);
         if (isNaN(d.getTime())) continue;
         const key = d.toISOString().slice(0, 10);
         counts.set(key, (counts.get(key) || 0) + 1);
@@ -357,7 +290,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     // Year mode - group by month
     const monthly = new Map<string, number>();
     for (const c of calls) {
-      const d = new Date(c.startedAt);
+      const callStartedAt = c.startedAt || c.started_at || c.created_at || c.createdAt || c.start_time || c.timestamp;
+      const d = new Date(callStartedAt);
       if (isNaN(d.getTime())) continue;
       const key = d.toISOString().slice(0, 7);
       monthly.set(key, (monthly.get(key) || 0) + 1);
@@ -388,15 +322,29 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
   // Transform calls to widget format
   const latestCalls: CallLog[] = useMemo(
-    () =>
-      calls.slice(0, 10).map((call) => ({
-        id: call.id,
-        leadName: call.leadName || 'Unknown Lead',
-        agentName: call.agentName || 'AI Assistant',
-        status: call.status,
-        duration: formatDuration(call),
-        date: formatCallDate(call.startedAt),
-      })),
+    () => {
+      if (!calls || calls.length === 0) return [];
+
+      return calls.slice(0, 10).map((call: any) => {
+        const callStartedAt = call.startedAt || call.started_at || call.created_at || call.createdAt || call.start_time || call.timestamp;
+        const leadFullName = [call.lead_first_name, call.lead_last_name].filter(Boolean).join(' ').trim();
+        const leadName = call.leadName || call.lead_name || leadFullName || call.target || call.client_name || 'Unknown Lead';
+        const agentName = call.agentName || call.agent_name || call.agent || call.voice || 'AI Assistant';
+        
+        return {
+          id: String(call.id ?? call.call_id ?? call.call_log_id ?? call.uuid ?? crypto.randomUUID()),
+          leadName,
+          agentName,
+          status: call.status || call.call_status || call.result || 'unknown',
+          duration: formatDuration({
+            ...call,
+            startedAt: callStartedAt,
+            endedAt: call.endedAt ?? call.ended_at ?? call.end_time
+          } as BackendCallLog),
+          date: formatCallDate(callStartedAt),
+        };
+      });
+    },
     [calls]
   );
 
@@ -471,7 +419,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       case 'latest-calls':
         return <LatestCallsWidget id={widgetId} calls={latestCalls} />;
       case 'voice-agents':
-        return <VoiceAgentsWidget id={widgetId} />;
+        return (
+          <VoiceAgentsWidget 
+            id={widgetId} 
+            availableAgents={availableAgents}
+            callLogs={calls}
+            loading={agentsLoading || callsLoading}
+          />
+        );
       case 'ai-insights':
         return <AIInsightsWidget id={widgetId} />;
       case 'quick-actions':

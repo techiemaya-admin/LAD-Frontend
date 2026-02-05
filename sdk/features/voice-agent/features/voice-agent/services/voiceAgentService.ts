@@ -386,13 +386,80 @@ class VoiceAgentService {
   async resolvePhones(ids: string[], type: 'company' | 'employee' = 'company'): Promise<any[]> {
     return this.safeApiCall(
       async () => {
-        // V2 API doesn't have resolve-phones endpoint
-        // This feature may need to be implemented differently in V2
-        logger.warn('resolvePhones not available in V2 API', { ids, type });
-        return [];
+        const response = await api.post('/api/voice-agent/resolve-phones', {
+          ids,
+          type
+        });
+        return response.data?.data ?? response.data;
       },
       [], // fallback empty array
       'resolvePhones'
+    );
+  }
+
+  /**
+   * Trigger a batch call
+   * @param payload - Batch call payload with entries, agent_id, from_number, etc.
+   */
+  async triggerBatchCall(payload: {
+    voice_id: string;
+    agent_id: string;
+    from_number: string;
+    added_context?: string;
+    entries: Array<{
+      to_number: string;
+      lead_name?: string;
+      added_context?: string;
+      lead_id?: string;
+      knowledge_base_store_ids?: string[];
+    }>;
+    initiated_by?: string;
+  }): Promise<{ success: boolean; result: { job_id: string } }> {
+    return this.safeApiCall(
+      async () => {
+        const response = await api.post('/api/voice-agent/batch/trigger-batch-call', payload);
+        return response.data;
+      },
+      { success: false, result: { job_id: '' } }, // fallback
+      'triggerBatchCall'
+    );
+  }
+
+  /**
+   * Update summary for a company or employee
+   * @param payload - Update summary payload
+   */
+  async updateSummary(payload: {
+    company_data_id?: string;
+    employee_data_id?: string;
+    name?: string;
+    summary: string;
+    sales_summary?: string;
+    company_sales_summary?: string;
+    type: 'company' | 'employee';
+  }): Promise<{ success: boolean }> {
+    return this.safeApiCall(
+      async () => {
+        const response = await api.post('/api/voice-agent/update-summary', payload);
+        return response.data;
+      },
+      { success: false }, // fallback
+      'updateSummary'
+    );
+  }
+
+  /**
+   * Generate a phrase using Gemini AI
+   * @param context - The context to generate a phrase from
+   */
+  async generatePhrase(context: string): Promise<{ success: boolean; generatedText?: string; error?: string }> {
+    return this.safeApiCall(
+      async () => {
+        const response = await api.post('/api/gemini/generate-phrase', { context });
+        return response.data;
+      },
+      { success: false, error: 'Failed to generate phrase' }, // fallback
+      'generatePhrase'
     );
   }
 }

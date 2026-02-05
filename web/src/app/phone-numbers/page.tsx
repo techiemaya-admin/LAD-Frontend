@@ -127,7 +127,7 @@
 
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { apiGet } from "@/lib/api";
+import { voiceAgentService } from "@lad/frontend-features/voice-agent";
 import { CreateNumberClient } from "@/components/create-number-client";
 
 export type PhoneNumber = {
@@ -148,10 +148,9 @@ export default function PhoneNumbersPage() {
   const [filterProvider, setFilterProvider] = useState("All");
 
   const fetchData = useCallback(async () => {
-    const response = await apiGet<{ success: boolean; numbers: PhoneNumber[] }>("/api/voice-agent/numbers");
-    if (response.success) {
-      setItems(response.numbers);
-    }
+    const response: any = await voiceAgentService.getTenantPhoneNumbers();
+    const numbers = Array.isArray(response) ? response : (response?.numbers || response?.data || []);
+    setItems(numbers);
   }, []);
 
   useEffect(() => {

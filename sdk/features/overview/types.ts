@@ -98,3 +98,84 @@ export interface UpdateLeadBookingParams {
   execution_attempts?: number;
   last_execution_error?: string;
 }
+
+// Voice Agent Types
+export interface VoiceAgent {
+  id: string;
+  name: string;
+  agent_name?: string;
+  label?: string;
+}
+
+// Call Log Types
+export interface CallLog {
+  id: string;
+  from: string;
+  to: string;
+  startedAt: string;
+  endedAt?: string;
+  status: string;
+  recordingUrl?: string;
+  timeline?: Array<{ t: string; title: string; desc?: string }>;
+  agentName?: string;
+  agent_name?: string;
+  agent?: string;
+  leadName?: string;
+  lead_name?: string;
+  lead_first_name?: string;
+  lead_last_name?: string;
+  call_id?: string;
+  call_log_id?: string;
+  uuid?: string;
+  initiated_by?: string;
+  from_number?: string;
+  fromnum?: string;
+  source?: string;
+  from_number_id?: string;
+  to_number?: string;
+  tonum?: string;
+  started_at?: string;
+  created_at?: string;
+  createdAt?: string;
+  start_time?: string;
+  timestamp?: string;
+  ended_at?: string;
+  end_time?: string;
+  call_status?: string;
+  result?: string;
+  call_recording_url?: string;
+  recording_url?: string;
+  voice?: string;
+  target?: string;
+  client_name?: string;
+  customer_name?: string;
+}
+
+// Credits/Wallet Types
+export interface WalletData {
+  wallet?: {
+    currentBalance?: number;
+    availableBalance?: number;
+  };
+  credits?: number;
+  balance?: number;
+  monthly_usage?: number;
+}
+
+// API Response Types for new endpoints
+export interface AvailableAgentsResponse extends ApiResponse<VoiceAgent[]> {
+  agents?: VoiceAgent[];
+}
+
+export interface CallLogsResponse extends ApiResponse<CallLog[]> {
+  logs?: CallLog[];
+  calls?: CallLog[];
+}
+
+export interface WalletResponse extends ApiResponse<WalletData> {}
+
+// Query Parameters for Call Logs
+export interface GetCallLogsParams {
+  startDate?: string;
+  endDate?: string;
+}

@@ -123,7 +123,7 @@ class DashboardApiService {
     }
 
     const query = queryParams.toString();
-    const endpoint = `/bookings${query ? `?${query}` : ''}`;
+    const endpoint = `/api/dashboard/bookings${query ? `?${query}` : ''}`;
     
     return this.request<LeadBookingListResponse>(endpoint);
   }
@@ -151,7 +151,32 @@ class DashboardApiService {
 
   // Users APIs
   async getTenantUsers(): Promise<UsersListResponse> {
-    return this.request<UsersListResponse>('/users');
+    return this.request<UsersListResponse>('/api/dashboard/users');
+  }
+
+  // Voice Agents APIs
+  async getAvailableAgents(): Promise<any> {
+    return this.request<any>('/api/dashboard/user/available-agents');
+  }
+
+  // Call Logs APIs
+  async getCallLogs(params?: { startDate?: string; endDate?: string }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    
+    if (params) {
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+    }
+
+    const query = queryParams.toString();
+    const endpoint = `/api/dashboard/calls${query ? `?${query}` : ''}`;
+    
+    return this.request<any>(endpoint);
+  }
+
+  // Billing/Wallet APIs
+  async getWallet(): Promise<any> {
+    return this.request<any>('/api/billing/wallet');
   }
 }
 
