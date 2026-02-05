@@ -21,7 +21,7 @@ import { mockConversations } from '@/data/mockConversations';
  * @returns {UseConversationsReturn} Conversations state and handlers
  */
 export function useConversations(): UseConversationsReturn {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations as any);
   const [selectedId, setSelectedId] = useState<string | null>(mockConversations[0]?.id || null);
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');

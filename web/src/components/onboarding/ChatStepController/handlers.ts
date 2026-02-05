@@ -38,6 +38,7 @@ export async function processAnswer(
   options?: Array<{ text: string; value: string }>; // Clickable options from backend
   correctedAnswer?: string | null;
   totalSteps?: number;
+  conversationId?: string; // Added to capture conversationId from SDK
 }> {
   const { addAIMessage, setIsProcessingAI } = useOnboardingStore.getState();
   // Validate userInput is a string
@@ -147,6 +148,7 @@ export async function processAnswer(
       message: response.message,
       correctedAnswer: response.correctedAnswer || null,
       options: response.options, // Pass options from backend (for industry selection, etc.)
+      conversationId: response.conversationId, // Pass through conversationId from SDK
     };
   } catch (error: any) {
     logger.error('Error processing answer', error);

@@ -25,6 +25,7 @@ interface WorkflowPreviewPanelProps {
   campaignName?: string;
   campaignDays?: string;
   workingDays?: string;
+  campaignId?: string | null;
 }
 const platformIcons: Record<string, React.ReactNode> = {
   linkedin: <Linkedin className="w-4 h-4" />,
@@ -41,6 +42,7 @@ export default function WorkflowPreviewPanel({
   campaignName: propsCampaignName,
   campaignDays: propsCampaignDays,
   workingDays: propsWorkingDays,
+  campaignId,
 }: WorkflowPreviewPanelProps = {}) {
   // Read from store if no props provided
   const workflowPreview = useOnboardingStore((state) => state.workflowPreview);
@@ -179,8 +181,9 @@ export default function WorkflowPreviewPanel({
         <StepEditor
           step={editingStep}
           onClose={() => setEditingStep(null)}
+          campaignId={campaignId}
         />
       )}
     </div>
   );
-}
+}

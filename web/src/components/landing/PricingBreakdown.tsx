@@ -39,15 +39,15 @@ export default function PricingBreakdown() {
     {
       title: "Lead Enrichment",
       emoji: "🎯",
-      credits: "2-17",
+      credits: "1-10",
       unit: "credits per lead",
       examples: [
         { duration: "Email + LinkedIn URL", cost: "2 credits" },
-        { duration: "Phone Reveal", cost: "+10 credits" },
-        { duration: "Profile Summary", cost: "5 credits" },
-        { duration: "Complete Data", cost: "17 credits" }
+        { duration: "LinkedIn Connection", cost: "1 credit" },
+        { duration: "Each Template Message", cost: "5 credits" },
+        { duration: "Phone Reveal", cost: "10 credits" }
       ],
-      note: "100 leads with phones ≈ 1,700 credits",
+      note: "100 leads with phones ≈ 1,000 credits",
       gradient: "from-orange-50 to-orange-100",
       border: "border-orange-200",
       accent: "text-orange-600"

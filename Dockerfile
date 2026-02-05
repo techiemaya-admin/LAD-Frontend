@@ -21,9 +21,12 @@ COPY package*.json ./
 COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
+# Install root dependencies first (monorepo dependencies like @tanstack/react-query)
+RUN npm install --include=optional --foreground-scripts --no-audit --fund=false
+
 WORKDIR /app/web
 
-# Install dependencies (keep package-lock.json for reproducible builds)
+# Install web workspace dependencies
 RUN rm -rf node_modules \
   && npm install --include=optional --foreground-scripts --no-audit --fund=false
 
@@ -37,7 +40,10 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
       echo "⚠️ lightningcss binding missing; searching..."; \
       f="$(find node_modules -maxdepth 6 -name 'lightningcss.linux-x64-*.node' | head -n 1 || true)"; \
       echo "Found: $f"; \
-      if [ -n "$f" ]; then cp "$f" node_modules/lightningcss/lightningcss.linux-x64-gnu.node; fi; \
+      if [ -n "$f" ]; then \
+        mkdir -p node_modules/lightningcss && \
+        cp "$f" node_modules/lightningcss/lightningcss.linux-x64-gnu.node; \
+      fi; \
     fi
 
 # Fail fast checks
@@ -52,11 +58,12 @@ COPY . .
 RUN test -f /app/web/next.config.mjs && echo "✅ next.config.mjs present" || (echo "❌ next.config.mjs missing" && exit 1)
 RUN test -f /app/web/tsconfig.json && echo "✅ tsconfig.json present" || (echo "❌ tsconfig.json missing" && exit 1)
 
-WORKDIR /app/web
-
-# Verify React Query package resolution
+# Verify React Query package resolution from root (monorepo location)
+WORKDIR /app
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
+
+WORKDIR /app/web
 
 # Build args - these MUST be provided via --build-arg in cloudbuild
 ARG VITE_BACKEND_URL
@@ -82,12 +89,11 @@ ENV NODE_ENV=production
 WORKDIR /app
 RUN if [ -d "prisma" ]; then npx prisma generate; fi
 
-# Verify React Query package resolution
-WORKDIR /app/web
+# Verify React Query package resolution from root (monorepo location)
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
-WORKDIR /app/web
+# Build from root using turbo (builds SDK first, then web)
 RUN npm run build && \
   echo "✅ Build completed successfully" && \
   test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || echo "⚠️ server.js not found, checking .next structure" && ls -la /app/web/.next/standalone/ 2>/dev/null | head -20 || echo "⚠️ .next/standalone dir may not exist"
@@ -106,39 +112,29 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
   adduser --system --uid 1001 nextjs
 
-# Copy standalone server and dependencies (monorepo nested under web/)
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone/web ./
-# Copy static assets
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+# Copy the entire standalone output (includes monorepo structure)
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
+# Copy static assets to the correct location
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 # Copy public directory
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
-# Verify server.js exists before running
-RUN test -f server.js || (echo "ERROR: server.js not found!" && ls -la && exit 1)
+# Verify server.js exists at the correct path
+RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || (echo "❌ server.js not found!" && ls -la /app && ls -la /app/web 2>/dev/null && exit 1)
 
-# Cloud Run-friendly start script: always bind HOSTNAME and PORT
+# Cloud Run-friendly start script
 RUN printf '%s\n' \
   '#!/bin/sh' \
   'set -e' \
   'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
   'export PORT="${PORT:-8080}"' \
-  'if [ -f /app/server.js ]; then' \
-  '  echo "Starting /app/server.js on ${HOSTNAME}:${PORT}"' \
-  '  exec node /app/server.js' \
-  'elif [ -f /app/web/server.js ]; then' \
-  '  echo "Starting /app/web/server.js on ${HOSTNAME}:${PORT}"' \
-  '  exec node /app/web/server.js' \
-  'else' \
-  '  echo "ERROR: No server.js found in /app or /app/web"' \
-  '  ls -la /app || true' \
-  '  ls -la /app/web || true' \
-  '  exit 1' \
-  'fi' \
+  'echo "Starting Next.js server on ${HOSTNAME}:${PORT}"' \
+  'cd /app/web && exec node server.js' \
   > /app/start.sh \
   && chmod +x /app/start.sh \
   && chown nextjs:nodejs /app/start.sh
 
 USER nextjs
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["/app/start.sh"]

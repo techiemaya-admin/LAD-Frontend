@@ -12,13 +12,12 @@ import { useChatStepController } from '@/components/onboarding/ChatStepControlle
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
-import { saveInboundLeads, cancelLeadBookingsForReNurturing } from '@lad/frontend-features/campaigns';
+import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
 import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import { getCampaign } from '@lad/frontend-features/campaigns';
 type FlowState =
   | 'initial'
   | 'platform_selection'
@@ -541,9 +540,9 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   };
   // Chat step controller for ICP onboarding
   const chatStepController = useChatStepController(
-    async (answers) => {
+    async (answers, conversationId) => {
       // On completion, create and start campaign automatically
-      logger.info('🎯 [ICP COMPLETION] ICP onboarding completed', { answers });
+      logger.info('🎯 [ICP COMPLETION] ICP onboarding completed', { answers, conversationId });
       logger.info('🎯 [ICP COMPLETION] inboundLeadData status:', { 
         exists: !!inboundLeadData,
         leadIds: inboundLeadData?.leadIds,
@@ -586,6 +585,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             leads_per_day: mappedAnswers.leads_per_day || 10,
             lead_gen_offset: 0,
             last_lead_gen_date: null,
+            // Get connection message from any of these sources (linkedin_template is from ICP flow)
+            connectionMessage: mappedAnswers.linkedinConnectionMessage || 
+                              mappedAnswers.linkedin_connection_message || 
+                              mappedAnswers.linkedin_template || 
+                              null,
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
@@ -645,6 +649,20 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           hasInboundLeadIds: !!campaignData.inbound_lead_ids,
           inboundLeadIdsCount: campaignData.inbound_lead_ids?.length,
           campaignType: campaignData.config?.campaign_type
+        });
+        
+        // Use conversationId passed from the ICP flow completion
+        // This conversationId was captured when messages were saved on the last ICP step
+        if (conversationId) {
+          campaignData.conversationId = conversationId;
+          logger.info('✅ [Campaign Creation] Using conversationId from ICP flow', { conversationId });
+        } else {
+          logger.warn('⚠️ [Campaign Creation] No conversationId available - messages may not be linked to campaign');
+        }
+        
+        logger.debug('[Campaign Creation] Sending campaign creation request', { 
+          campaignData,
+          hasConversationId: !!conversationId
         });
         const createResponse = await apiPost<{ success: boolean; data: any }>('/api/campaigns', campaignData);
         if (createResponse.success) {
@@ -1092,10 +1110,10 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     // Convert utility answers to node settings
     const schedule = currentUtilityAnswers.schedule || 'immediate';
     const delayType = currentUtilityAnswers.delay || 'none';
-    const delay: { days?: number; hours?: number } | undefined = delayType === 'hours'
-      ? { hours: currentUtilityAnswers.delayHours || 0 }
+    const delay: { type: string; value?: number } | undefined = delayType === 'hours'
+      ? { type: 'hours', value: currentUtilityAnswers.delayHours || 0 }
       : delayType === 'days'
-        ? { days: currentUtilityAnswers.delayDays || 0 }
+        ? { type: 'days', value: currentUtilityAnswers.delayDays || 0 }
         : undefined;
     const condition = currentUtilityAnswers.condition === 'none' ? null : currentUtilityAnswers.condition;
     const variables = Array.isArray(currentUtilityAnswers.variables)

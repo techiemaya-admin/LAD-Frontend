@@ -5,7 +5,14 @@
  * All HTTP calls are handled through apiClient (no direct fetch/axios).
  */
 import { apiClient } from '../../shared/apiClient';
-import { logger } from '@/lib/logger';
+
+// Simple logger for SDK - avoids Next.js dependency
+const logger = {
+  debug: (...args: any[]) => console.debug('[Bookings-SDK]', ...args),
+  info: (...args: any[]) => console.info('[Bookings-SDK]', ...args),
+  warn: (...args: any[]) => console.warn('[Bookings-SDK]', ...args),
+  error: (message: string, context?: any, error?: any) => console.error('[Bookings-SDK]', message, context, error),
+};
 const BOOKINGS_PATH = '/api/deals-pipeline/bookings';
 const LEGACY_BOOKINGS_PATH = '/api/deals-pipeline/booking';
 // ============================================================================
@@ -251,4 +258,4 @@ export async function fetchCounsellors(): Promise<unknown[]> {
     logger.error('fetchCounsellors failed', error);
     throw error;
   }
-}
+}

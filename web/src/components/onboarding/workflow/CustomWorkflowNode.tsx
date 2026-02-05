@@ -161,4 +161,4 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
       )}
     </div>
   );
-}
+}

@@ -13,17 +13,17 @@ const nextConfig = {
 
   // ✅ Use webpack instead - it handles monorepo workspace packages correctly
   webpack: (config, { isServer }) => {
-    // Force all @tanstack/react-query imports to use web's node_modules
-    // This prevents duplicate React Query instances in the bundle (monorepo issue)
+    // Force all @tanstack/react-query imports to use root node_modules (monorepo setup)
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@tanstack/react-query': path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
-      '@tanstack/query-core': path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
+      '@tanstack/react-query': path.resolve(__dirname, '../node_modules/@tanstack/react-query'),
+      '@tanstack/query-core': path.resolve(__dirname, '../node_modules/@tanstack/query-core'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
       '@lad/frontend-features': path.resolve(__dirname, '../sdk'),
       '@lad/frontend-features/ai-icp-assistant': path.resolve(__dirname, '../sdk/features/ai-icp-assistant'),
       '@lad/frontend-features/billing': path.resolve(__dirname, '../sdk/features/billing'),
       '@lad/frontend-features/campaigns': path.resolve(__dirname, '../sdk/features/campaigns'),
+      '@lad/sdk/features/ai-icp-assistant': path.resolve(__dirname, '../sdk/features/ai-icp-assistant'),
       '@lad/frontend-features/conversations': path.resolve(__dirname, '../sdk/features/conversations'),
       '@lad/frontend-features/overview': path.resolve(__dirname, '../sdk/features/overview'),
       '@lad/frontend-features/voice-agent': path.resolve(__dirname, '../sdk/features/voice-agent'),
@@ -38,14 +38,15 @@ const nextConfig = {
   // Allow Turbopack build - use relative paths (Turbopack doesn't support absolute paths)
   turbopack: {
     resolveAlias: {
-      // Force all @tanstack/react-query imports to use web's node_modules
-      '@tanstack/react-query': './node_modules/@tanstack/react-query',
-      '@tanstack/query-core': './node_modules/@tanstack/query-core',
+      // Force all @tanstack/react-query imports to use root node_modules (monorepo setup)
+      '@tanstack/react-query': '../node_modules/@tanstack/react-query',
+      '@tanstack/query-core': '../node_modules/@tanstack/query-core',
       'chart.js': './node_modules/chart.js/dist/chart.js',
       '@lad/frontend-features': '../sdk',
       '@lad/frontend-features/ai-icp-assistant': '../sdk/features/ai-icp-assistant',
       '@lad/frontend-features/billing': '../sdk/features/billing',
       '@lad/frontend-features/campaigns': '../sdk/features/campaigns',
+      '@lad/sdk/features/ai-icp-assistant': '../sdk/features/ai-icp-assistant',
       '@lad/frontend-features/conversations': '../sdk/features/conversations',
       '@lad/frontend-features/overview': '../sdk/features/overview',
       '@lad/frontend-features/voice-agent': '../sdk/features/voice-agent',

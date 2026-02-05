@@ -53,7 +53,117 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
     if (step.type === 'delay') return 'bg-gray-500';
     return 'bg-blue-500';
   };
+
+  /**
+   * Update localStorage icp_buffered_messages_default_session with workflow step changes
+   * This syncs workflow edits back to the chat panel's data source
+   */
+  const updateBufferedMessages = (updatedData: Partial<typeof formData>) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const sessionId = 'default_session';
+      const key = `icp_buffered_messages_${sessionId}`;
+      const data = localStorage.getItem(key);
+      const messages: any[] = data ? JSON.parse(data) : [];
+      
+      if (messages.length === 0) return;
+      
+      // Update messages based on step type
+      if (step.type === 'lead_generation') {
+        // Parse description for targeting info
+        const description = updatedData.description || formData.description || '';
+        const parts = description.split('|').map((p: string) => p.trim());
+        
+        const updates: Record<string, string> = {};
+        for (const part of parts) {
+          if (part.toLowerCase().startsWith('roles:')) {
+            updates.icp_roles = part.replace(/^roles:\s*/i, '').trim();
+          } else if (part.toLowerCase().startsWith('industries:')) {
+            updates.icp_industries = part.replace(/^industries:\s*/i, '').trim();
+          } else if (part.toLowerCase().startsWith('location:')) {
+            updates.icp_location = part.replace(/^location:\s*/i, '').trim();
+          }
+        }
+        
+        // Update relevant messages in buffer
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            // Update messageData with new values
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, ...updates }
+            };
+          }
+          return msg;
+        });
+        
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+        console.log('[StepEditor] Updated buffered messages with lead generation changes', updates);
+      }
+      
+      // For message templates, update the corresponding message data
+      if (step.type === 'linkedin_connect' && updatedData.message) {
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, linkedin_connection_message: updatedData.message }
+            };
+          }
+          return msg;
+        });
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+      }
+      
+      if (step.type === 'linkedin_message' && updatedData.message) {
+        const updatedMessages = messages.map((msg: any) => {
+          if (msg.messageData) {
+            return {
+              ...msg,
+              messageData: { ...msg.messageData, linkedin_message_template: updatedData.message }
+            };
+          }
+          return msg;
+        });
+        localStorage.setItem(key, JSON.stringify(updatedMessages));
+      }
+      
+      // Also update window.__icpAnswers for immediate effect
+      if ((window as any).__icpAnswers) {
+        const currentAnswers = (window as any).__icpAnswers;
+        if (step.type === 'lead_generation') {
+          const description = updatedData.description || formData.description || '';
+          const parts = description.split('|').map((p: string) => p.trim());
+          for (const part of parts) {
+            if (part.toLowerCase().startsWith('roles:')) {
+              currentAnswers.icp_roles = part.replace(/^roles:\s*/i, '').trim();
+            } else if (part.toLowerCase().startsWith('industries:')) {
+              currentAnswers.icp_industries = part.replace(/^industries:\s*/i, '').trim();
+            } else if (part.toLowerCase().startsWith('location:')) {
+              currentAnswers.icp_location = part.replace(/^location:\s*/i, '').trim();
+            }
+          }
+        }
+        if (updatedData.leadLimit) {
+          currentAnswers.leads_per_day = updatedData.leadLimit;
+        }
+        (window as any).__icpAnswers = currentAnswers;
+      }
+      
+      // Dispatch event to notify chat panel of update
+      window.dispatchEvent(new CustomEvent('workflowStepUpdated', { 
+        detail: { stepId: step.id, stepType: step.type, updatedData } 
+      }));
+      
+    } catch (e) {
+      console.error('[StepEditor] Error updating buffered messages', e);
+    }
+  };
+
   const handleSave = () => {
+    let updatedData: Partial<typeof formData>;
+    
     // For delay steps, update title and description based on days/hours values
     if (step.type === 'delay') {
       const days = formData.delayDays || 0;
@@ -65,18 +175,23 @@ export default function StepEditor({ step, onClose }: StepEditorProps) {
       if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
       if (parts.length === 0) parts.push('0 hours');
       delayTitle += parts.join(' ');
-      updateWorkflowStep(step.id, {
+      
+      updatedData = {
         ...formData,
         title: delayTitle,
         description: formData.description || `Delay: ${parts.join(' ')}`,
         delayDays: days,
         delayHours: hours,
-      });
+      };
+      updateWorkflowStep(step.id, updatedData);
     } else {
-      updateWorkflowStep(step.id, {
-        ...formData,
-      });
+      updatedData = { ...formData };
+      updateWorkflowStep(step.id, updatedData);
     }
+    
+    // Sync changes to localStorage buffered messages
+    updateBufferedMessages(updatedData);
+    
     onClose();
   };
   const renderFields = () => {

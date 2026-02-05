@@ -200,8 +200,8 @@ export default function StepSettings({
               {requiredFields.includes('message') && !isFieldValid('message', data.message)
                 ? 'Message is required'
                 : resolvedStepType === 'linkedin_connect'
-                ? 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}} for personalization. Note: LinkedIn limits connection messages to 4-5 per month for normal accounts.'
-                : 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}} for personalization'
+                ? 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{industry}} for personalization. Note: LinkedIn limits connection messages to 4-5 per month for normal accounts.'
+                : 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{industry}} for personalization'
               }
             </p>
           </div>
@@ -210,7 +210,7 @@ export default function StepSettings({
               Available Variables:
             </span>
             <div className="flex flex-row gap-2 flex-wrap">
-              {['first_name', 'last_name', 'company_name', 'title', 'email'].map((varName) => (
+              {['first_name', 'last_name', 'company_name', 'title', 'industry', 'email'].map((varName) => (
                 <span
                   key={varName}
                   className="text-xs bg-slate-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-slate-200"

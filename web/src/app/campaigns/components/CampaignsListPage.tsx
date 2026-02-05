@@ -5,18 +5,15 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter } from 'next/navigation';
 import { deleteCampaign, pauseCampaign, stopCampaign, useCampaigns, useCampaignStats, type Campaign } from '@lad/frontend-features/campaigns';
-import CampaignStatsCards from './CampaignStatsCards';
-import CampaignFilters from './CampaignFilters';
-import CampaignsTable from './CampaignsTable';
-import CampaignActionsMenu from './CampaignActionsMenu';
-import CreateCampaignDialog from './CreateCampaignDialog';
+import CampaignStatsCards from '@/components/campaigns/CampaignStatsCards';
+import CampaignsTable from '@/components/campaigns/CampaignsTable';
+import CampaignActionsMenu from '@/components/campaigns/CampaignActionsMenu';
+import CreateCampaignDialog from '@/components/campaigns/CreateCampaignDialog';
 import { 
-  getCampaign, 
-  createCampaign, 
-  updateCampaign, 
   startCampaign
 } from '@lad/frontend-features/campaigns';
-export default function CampaignsList() {
+
+export default function CampaignsListPage() {
   const router = useRouter();
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +37,7 @@ export default function CampaignsList() {
       [searchQuery, statusFilter]
     )
   );
+  
   const { stats, error: statsError } = useCampaignStats();
   // Handle errors from SDK hooks
   useEffect(() => {

@@ -3,7 +3,9 @@
  * 
  * All HTTP API calls for the campaigns feature.
  * Uses the shared apiClient for consistent request handling.
+ * Enhanced with TanStack Query v5 support for better caching and data management.
  */
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../shared/apiClient';
 import type {
   Campaign,
@@ -14,6 +16,27 @@ import type {
   CampaignAnalytics,
   CampaignLead,
 } from './types';
+
+// Query keys for TanStack Query
+export const campaignKeys = {
+  all: ['campaigns'] as const,
+  lists: () => [...campaignKeys.all, 'list'] as const,
+  list: (filters?: CampaignFilters) => [...campaignKeys.lists(), filters] as const,
+  details: () => [...campaignKeys.all, 'detail'] as const,
+  detail: (id: string) => [...campaignKeys.details(), id] as const,
+  stats: () => [...campaignKeys.all, 'stats'] as const,
+  analytics: (id: string) => [...campaignKeys.all, 'analytics', id] as const,
+  leads: (id: string, filters?: { search?: string }) => [...campaignKeys.all, 'leads', id, filters] as const,
+  leadSummary: (campaignId: string, leadId: string) => [...campaignKeys.all, 'leadSummary', campaignId, leadId] as const,
+  activityFeed: (campaignId: string, filters?: { limit?: number; offset?: number; platform?: string; actionType?: string; status?: string }) => 
+    [...campaignKeys.all, 'activityFeed', campaignId, filters] as const,
+  inboundLeads: (filters?: { limit?: number; offset?: number; search?: string }) => 
+    [...campaignKeys.all, 'inbound', filters] as const,
+} as const;
+// ====================
+// Core API Functions
+// ====================
+
 /**
  * Get all campaigns with optional filters
  */
@@ -24,6 +47,18 @@ export async function getCampaigns(filters?: CampaignFilters): Promise<Campaign[
   const response = await apiClient.get<{ data: Campaign[] }>('/api/campaigns', { params });
   return response.data.data || [];
 }
+
+/**
+ * TanStack Query options for getting campaigns
+ */
+export const getCampaignsOptions = (filters?: CampaignFilters) =>
+  queryOptions({
+    queryKey: campaignKeys.list(filters),
+    queryFn: () => getCampaigns(filters),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+  });
+
 /**
  * Get a single campaign by ID
  */
@@ -31,6 +66,19 @@ export async function getCampaign(campaignId: string): Promise<Campaign> {
   const response = await apiClient.get<{ data: Campaign }>(`/api/campaigns/${campaignId}`);
   return response.data.data;
 }
+
+/**
+ * TanStack Query options for getting a single campaign
+ */
+export const getCampaignOptions = (campaignId: string) =>
+  queryOptions({
+    queryKey: campaignKeys.detail(campaignId),
+    queryFn: () => getCampaign(campaignId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled: !!campaignId,
+  });
+
 /**
  * Get campaign statistics
  */
@@ -38,6 +86,21 @@ export async function getCampaignStats(): Promise<CampaignStats> {
   const response = await apiClient.get<{ data: CampaignStats }>('/api/campaigns/stats');
   return response.data.data;
 }
+
+/**
+ * TanStack Query options for getting campaign statistics
+ */
+export const getCampaignStatsOptions = () =>
+  queryOptions({
+    queryKey: campaignKeys.stats(),
+    queryFn: getCampaignStats,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
+  });
+// ====================
+// Mutation Functions
+// ====================
+
 /**
  * Create a new campaign
  */
@@ -45,6 +108,7 @@ export async function createCampaign(data: CreateCampaignRequest): Promise<Campa
   const response = await apiClient.post<{ data: Campaign }>('/api/campaigns', data);
   return response.data.data;
 }
+
 /**
  * Update an existing campaign
  */
@@ -55,30 +119,38 @@ export async function updateCampaign(
   const response = await apiClient.put<{ data: Campaign }>(`/api/campaigns/${campaignId}`, data);
   return response.data.data;
 }
+
 /**
  * Delete a campaign
  */
 export async function deleteCampaign(campaignId: string): Promise<void> {
   await apiClient.delete(`/api/campaigns/${campaignId}`);
 }
+
 /**
  * Start a campaign
  */
 export async function startCampaign(campaignId: string): Promise<void> {
   await apiClient.post(`/api/campaigns/${campaignId}/start`, {});
 }
+
 /**
  * Pause a campaign
  */
 export async function pauseCampaign(campaignId: string): Promise<void> {
   await apiClient.post(`/api/campaigns/${campaignId}/pause`, {});
 }
+
 /**
  * Stop a campaign
  */
 export async function stopCampaign(campaignId: string): Promise<void> {
   await apiClient.post(`/api/campaigns/${campaignId}/stop`, {});
 }
+// ====================
+// Analytics & Leads Functions
+// ====================
+
 /**
  * Get campaign analytics
  */
@@ -88,6 +160,76 @@ export async function getCampaignAnalytics(campaignId: string): Promise<Campaign
   );
   return response.data.data;
 }
+
+/**
+ * TanStack Query options for getting campaign analytics
+ */
+export const getCampaignAnalyticsOptions = (campaignId: string) =>
+  queryOptions({
+    queryKey: campaignKeys.analytics(campaignId),
+    queryFn: () => getCampaignAnalytics(campaignId),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
+    enabled: !!campaignId,
+  });
+
+/**
+ * Get campaign activity feed
+ */
+export async function getCampaignActivityFeed(
+  campaignId: string,
+  filters?: {
+    limit?: number;
+    offset?: number;
+    platform?: string;
+    actionType?: string;
+    status?: string;
+  }
+): Promise<{ activities: any[]; total: number }> {
+  const params: Record<string, string> = {};
+  if (filters?.limit) params.limit = String(filters.limit);
+  if (filters?.offset) params.offset = String(filters.offset);
+  if (filters?.platform) params.platform = filters.platform;
+  if (filters?.actionType) params.actionType = filters.actionType;
+  if (filters?.status) params.status = filters.status;
+  
+  const response = await apiClient.get<{ 
+    success: boolean; 
+    data: { activities: any[]; total: number } 
+  }>(`/api/campaigns/${campaignId}/analytics`, { params });
+  
+  if (!response.data.success) {
+    throw new Error('Failed to fetch activity feed');
+  }
+  
+  return {
+    activities: response.data.data.activities || [],
+    total: response.data.data.total || 0
+  };
+}
+
+/**
+ * TanStack Query options for getting campaign activity feed
+ */
+export const getCampaignActivityFeedOptions = (
+  campaignId: string,
+  filters?: {
+    limit?: number;
+    offset?: number;
+    platform?: string;
+    actionType?: string;
+    status?: string;
+  }
+) =>
+  queryOptions({
+    queryKey: campaignKeys.activityFeed(campaignId, filters),
+    queryFn: () => getCampaignActivityFeed(campaignId, filters),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
+    enabled: !!campaignId,
+    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
+  });
+
 /**
  * Get campaign leads
  */
@@ -103,6 +245,25 @@ export async function getCampaignLeads(
   );
   return response.data.data || [];
 }
+
+/**
+ * TanStack Query options for getting campaign leads
+ */
+export const getCampaignLeadsOptions = (
+  campaignId: string,
+  filters?: { search?: string }
+) =>
+  queryOptions({
+    queryKey: campaignKeys.leads(campaignId, filters),
+    queryFn: () => getCampaignLeads(campaignId, filters),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    gcTime: 8 * 60 * 1000,
+    enabled: !!campaignId,
+  });
+// ====================
+// Lead Profile Functions
+// ====================
+
 /**
  * Get or generate lead profile summary
  */
@@ -118,6 +279,19 @@ export async function getLeadProfileSummary(
     exists: response.data.exists || false,
   };
 }
+
+/**
+ * TanStack Query options for getting lead profile summary
+ */
+export const getLeadProfileSummaryOptions = (campaignId: string, leadId: string) =>
+  queryOptions({
+    queryKey: campaignKeys.leadSummary(campaignId, leadId),
+    queryFn: () => getLeadProfileSummary(campaignId, leadId),
+    staleTime: 10 * 60 * 1000, // 10 minutes (summaries don't change often)
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled: !!(campaignId && leadId),
+  });
+
 /**
  * Generate lead profile summary
  */
@@ -131,6 +305,49 @@ export async function generateLeadProfileSummary(
   );
   return { summary: response.data.summary };
 }
+
+// ====================
+// Lead Reveal Functions
+// ====================
+
+
+/**
+ * Hook to reveal lead email
+ */
+export function useRevealLeadEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ campaignId, leadId, apolloPersonId }: {
+      campaignId: string;
+      leadId: string;
+      apolloPersonId: string;
+    }) => revealLeadEmail(campaignId, leadId, apolloPersonId),
+    onSuccess: (_, { campaignId }) => {
+      // Invalidate campaign leads to refresh with revealed email
+      queryClient.invalidateQueries({ queryKey: campaignKeys.leads(campaignId) });
+    },
+  });
+}
+
+/**
+ * Hook to reveal lead phone
+ */
+export function useRevealLeadPhone() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ campaignId, leadId, apolloPersonId }: {
+      campaignId: string;
+      leadId: string;
+      apolloPersonId: string;
+    }) => revealLeadPhone(campaignId, leadId, apolloPersonId),
+    onSuccess: (_, { campaignId }) => {
+      // Invalidate campaign leads to refresh with revealed phone
+      queryClient.invalidateQueries({ queryKey: campaignKeys.leads(campaignId) });
+    },
+  });
+}
 /**
  * Reveal email for a campaign lead
  * Calls campaigns API which proxies to Apollo Leads API
@@ -141,6 +358,7 @@ export async function revealLeadEmail(
   apolloPersonId: string
 ): Promise<{ email: string; from_cache: boolean; credits_used: number }> {
   const response = await apiClient.post<{
+    error: string;
     success: boolean;
     email: string;
     from_cache: boolean;
@@ -167,6 +385,7 @@ export async function revealLeadPhone(
   apolloPersonId: string
 ): Promise<{ phone: string; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
   const response = await apiClient.post<{
+    error: string;
     success: boolean;
     phone: string | null;
     from_cache: boolean;
@@ -187,6 +406,10 @@ export async function revealLeadPhone(
     message: response.data.message
   };
 }
+
+// ====================
+// Inbound Leads Functions
+// ====================
 
 /**
  * Save inbound leads
@@ -239,6 +462,21 @@ export async function getInboundLeads(filters?: {
   );
   return response.data.data || [];
 }
+
+/**
+ * TanStack Query options for getting inbound leads
+ */
+export const getInboundLeadsOptions = (filters?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}) =>
+  queryOptions({
+    queryKey: campaignKeys.inboundLeads(filters),
+    queryFn: () => getInboundLeads(filters),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
+  });
 
 /**
  * Cancel bookings for leads to re-nurture them

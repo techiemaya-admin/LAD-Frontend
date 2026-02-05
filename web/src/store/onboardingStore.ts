@@ -277,6 +277,7 @@ interface OnboardingState {
   setWorkflowState: (state: 'STATE_1' | 'STATE_2' | 'STATE_3' | 'STATE_4' | 'STATE_5') => void;
   setOnboardingMode: (mode: 'FORM' | 'CHAT') => void;
   addAIMessage: (message: AIMessage) => void;
+  clearAIMessages: () => void;  // Clear all AI messages for restoration from buffer
   setCurrentQuestionIndex: (index: number) => void;
   setIsProcessingAI: (processing: boolean) => void;
   setWorkflowPreview: (steps: WorkflowPreviewStep[]) => void;
@@ -316,7 +317,7 @@ interface OnboardingState {
   setInboundAnalysis: (analysis: InboundAnalysisResult | null) => void;
   setIsInboundFormVisible: (visible: boolean) => void;
 }
-const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setMobileView' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'setWorkflowState' | 'addAIMessage' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'removeWorkflowStep' | 'updateWorkflowStep' | 'moveWorkflowStep' | 'reorderPlatforms' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setPlatformsConfirmed' | 'setSelectedCategory' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setIsEditorPanelCollapsed' | 'setHasRequestedEditor' | 'pushToHistory' | 'undo' | 'redo' | 'canUndo' | 'canRedo' | 'setOnboardingMode' | 'completeOnboarding' | 'reset' | 'setIsICPFlowStarted' | 'setCampaignDataType' | 'setInboundLeadData' | 'setInboundAnalysis' | 'setIsInboundFormVisible'> = {
+const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setMobileView' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'setWorkflowState' | 'addAIMessage' | 'clearAIMessages' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'removeWorkflowStep' | 'updateWorkflowStep' | 'moveWorkflowStep' | 'reorderPlatforms' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setPlatformsConfirmed' | 'setSelectedCategory' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setIsEditorPanelCollapsed' | 'setHasRequestedEditor' | 'pushToHistory' | 'undo' | 'redo' | 'canUndo' | 'canRedo' | 'setOnboardingMode' | 'completeOnboarding' | 'reset' | 'setIsICPFlowStarted' | 'setCampaignDataType' | 'setInboundLeadData' | 'setInboundAnalysis' | 'setIsInboundFormVisible'> = {
   currentScreen: 0,
   hasSelectedOption: false,
   selectedPath: null,
@@ -382,6 +383,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         set((state) => ({
           aiMessages: [...state.aiMessages, message],
         })),
+      clearAIMessages: () => set({ aiMessages: [] }),
       setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
       setIsProcessingAI: (processing) => set({ isProcessingAI: processing }),
       setWorkflowPreview: (steps) => set({ workflowPreview: steps }),

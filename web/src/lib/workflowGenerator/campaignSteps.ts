@@ -85,26 +85,26 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       }
     }
     // Check for follow actions
-    const hasFollowAction = linkedinActions.some((action: string) => {
-      const actionStr = String(action).toLowerCase();
-      return actionStr.includes('follow') || actionStr === 'follow';
-    });
-    if (hasFollowAction) {
-      steps.push({
-        type: 'linkedin_follow',
-        order: order++,
-        title: 'Follow LinkedIn Profile',
-        description: 'Follow the profile',
-        config: {},
-      });
-      // Add delay after follow if configured
-      if (hasDelay) {
-        const delayStep = parseDelayConfig(delayConfig);
-        if (delayStep) {
-          steps.push({ ...delayStep, order: order++ });
-        }
-      }
-    }
+    // const hasFollowAction = linkedinActions.some((action: string) => {
+    //   const actionStr = String(action).toLowerCase();
+    //   return actionStr.includes('follow') || actionStr === 'follow';
+    // });
+    // if (hasFollowAction) {
+    //   steps.push({
+    //     type: 'linkedin_follow',
+    //     order: order++,
+    //     title: 'Follow LinkedIn Profile',
+    //     description: 'Follow the profile',
+    //     config: {},
+    //   });
+    //   // Add delay after follow if configured
+    //   if (hasDelay) {
+    //     const delayStep = parseDelayConfig(delayConfig);
+    //     if (delayStep) {
+    //       steps.push({ ...delayStep, order: order++ });
+    //     }
+    //   }
+    // }
     // Check for connection actions (handle various formats)
     const hasConnectionAction = linkedinActions.some((action: string) => {
       const actionStr = String(action).toLowerCase();
@@ -113,13 +113,18 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
              actionStr === 'send_connection';
     });
     if (hasConnectionAction) {
+      // Get connection message from any available source (linkedin_template is from ICP flow)
+      const connectionMessage = mappedAnswers.linkedinConnectionMessage || 
+                                mappedAnswers.linkedin_connection_message || 
+                                mappedAnswers.linkedin_template || 
+                                null;
       steps.push({
         type: 'linkedin_connect',
         order: order++,
         title: 'Send Connection Request',
-        description: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message || 'Connect with personalized message',
+        description: connectionMessage || 'Connect with personalized message',
         config: {
-          message: mappedAnswers.linkedinConnectionMessage || mappedAnswers.linkedin_connection_message,
+          message: connectionMessage,
         },
       });
       // Add delay after connection if configured
@@ -363,4 +368,4 @@ function parseDelayConfig(delayConfig: any): { type: string; order: number; titl
     };
   }
   return null;
-}
+}

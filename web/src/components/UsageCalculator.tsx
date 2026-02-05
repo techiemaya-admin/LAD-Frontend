@@ -104,8 +104,9 @@ export const UsageCalculator: React.FC = () => {
   const [callLength, setCallLength] = useState(5);
   const [premiumVoice, setPremiumVoice] = useState(false);
   const [leads, setLeads] = useState(50);
+  const [linkedinConnections, setLinkedinConnections] = useState(50);
+  const [templateMessages, setTemplateMessages] = useState(25);
   const [phoneReveals, setPhoneReveals] = useState(25);
-  const [profileSummaries, setProfileSummaries] = useState(25);
   const [linkedinConnection, setLinkedinConnection] = useState(true);
   const [googleConnection, setGoogleConnection] = useState(true);
   const [outlookConnection, setOutlookConnection] = useState(false);
@@ -119,11 +120,14 @@ export const UsageCalculator: React.FC = () => {
     // Lead enrichment (2 credits per lead with email + LinkedIn URL)
     const leadCredits = leads * 2;
 
+    // LinkedIn connections (1 credit per connection)
+    const linkedinConnectionCredits = linkedinConnections * 1;
+
+    // Template messages (5 credits each)
+    const templateCredits = templateMessages * 5;
+
     // Phone reveals (10 credits per reveal)
     const phoneCredits = phoneReveals * 10;
-
-    // Profile summaries (5 credits each)
-    const summaryCredits = profileSummaries * 5;
 
     // Platform connections (monthly)
     const connectionCredits = 
@@ -131,13 +135,14 @@ export const UsageCalculator: React.FC = () => {
       (googleConnection ? 20 : 0) + 
       (outlookConnection ? 20 : 0);
 
-    const totalCredits = voiceCredits + leadCredits + phoneCredits + summaryCredits + connectionCredits;
+    const totalCredits = voiceCredits + leadCredits + linkedinConnectionCredits + templateCredits + phoneCredits + connectionCredits;
 
     return {
       voiceCredits,
       leadCredits,
+      linkedinConnectionCredits,
+      templateCredits,
       phoneCredits,
-      summaryCredits,
       connectionCredits,
       totalCredits,
       totalMinutes
@@ -236,13 +241,31 @@ export const UsageCalculator: React.FC = () => {
             <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Enrichment</h3>
               <SliderRow
-                label="Leads with email + LinkedIn"
+                label="Leads with email + LinkedIn URL"
                 value={leads}
                 min={0}
                 max={500}
                 step={10}
                 onChange={setLeads}
                 helperText="2 credits per lead"
+              />
+              <SliderRow
+                label="LinkedIn connections"
+                value={linkedinConnections}
+                min={0}
+                max={500}
+                step={10}
+                onChange={setLinkedinConnections}
+                helperText="1 credit per connection"
+              />
+              <SliderRow
+                label="Template messages"
+                value={templateMessages}
+                min={0}
+                max={500}
+                step={10}
+                onChange={setTemplateMessages}
+                helperText="5 credits per message"
               />
               <SliderRow
                 label="Phone number reveals"
@@ -252,15 +275,6 @@ export const UsageCalculator: React.FC = () => {
                 step={10}
                 onChange={setPhoneReveals}
                 helperText="10 credits per phone reveal"
-              />
-              <SliderRow
-                label="AI Profile summaries"
-                value={profileSummaries}
-                min={0}
-                max={500}
-                step={10}
-                onChange={setProfileSummaries}
-                helperText="5 credits per summary"
               />
             </div>
 
@@ -330,6 +344,34 @@ export const UsageCalculator: React.FC = () => {
                 </div>
               )}
 
+              {credits.linkedinConnectionCredits > 0 && (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">LinkedIn Connections</p>
+                    <p className="text-xs text-gray-500">
+                      {linkedinConnections} connections × 1 cr
+                    </p>
+                  </div>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {credits.linkedinConnectionCredits.toLocaleString()} cr
+                  </span>
+                </div>
+              )}
+
+              {credits.templateCredits > 0 && (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Template Messages</p>
+                    <p className="text-xs text-gray-500">
+                      {templateMessages} messages × 5 cr
+                    </p>
+                  </div>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {credits.templateCredits.toLocaleString()} cr
+                  </span>
+                </div>
+              )}
+
               {credits.phoneCredits > 0 && (
                 <div className="flex justify-between items-center">
                   <div>
@@ -340,20 +382,6 @@ export const UsageCalculator: React.FC = () => {
                   </div>
                   <span className="text-lg font-semibold text-gray-900">
                     {credits.phoneCredits.toLocaleString()} cr
-                  </span>
-                </div>
-              )}
-
-              {credits.summaryCredits > 0 && (
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Profile Summaries</p>
-                    <p className="text-xs text-gray-500">
-                      {profileSummaries} summaries × 5 cr
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-gray-900">
-                    {credits.summaryCredits.toLocaleString()} cr
                   </span>
                 </div>
               )}
