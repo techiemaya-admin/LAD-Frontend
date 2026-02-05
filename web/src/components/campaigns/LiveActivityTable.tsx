@@ -64,6 +64,23 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ') || '';
   };
+  const getProviderName = (activity: any) => {
+    const provider =
+      activity?.response_data?.provider ||
+      activity?.response_data?.source ||
+      activity?.response_data?.integration ||
+      activity?.response_data?.service ||
+      activity?.response_data?.vendor;
+    if (provider) {
+      return String(provider)
+        .trim()
+        .replace(/^\w/, (char) => char.toUpperCase());
+    }
+    if (typeof activity?.error_message === 'string' && /unipile/i.test(activity.error_message)) {
+      return 'Unipile';
+    }
+    return null;
+  };
   if (error) {
     return (
       <div className="p-6 text-center">
@@ -218,13 +235,25 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <p 
-                            className="text-sm text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
-                          >
-                            {activity.message_content || activity.error_message || '-'}
-                          </p>
+                          <div className="max-w-[220px]">
+                            {getProviderName(activity) && (
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Provider: {getProviderName(activity)}
+                              </p>
+                            )}
+                            <p
+                              className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap"
+                            >
+                              {activity.message_content || activity.error_message || '-'}
+                            </p>
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent>
+                          {getProviderName(activity) && (
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Provider: {getProviderName(activity)}
+                            </p>
+                          )}
                           {activity.message_content || activity.error_message || ''}
                         </TooltipContent>
                       </Tooltip>

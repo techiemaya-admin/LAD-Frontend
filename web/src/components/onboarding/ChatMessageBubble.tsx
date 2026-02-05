@@ -79,8 +79,12 @@ export default function ChatMessageBubble({
     >
       {isAI && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-sm">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-white border border-slate-200 overflow-hidden flex items-center justify-center shadow-sm">
+            <img
+              src="/ai-chat-avatar.png"
+              alt="AI"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       )}
