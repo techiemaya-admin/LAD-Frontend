@@ -11,6 +11,7 @@ import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
 import { useChatStepController } from '@/components/onboarding/ChatStepController';
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
+import { clearBufferedMessages, clearAllBufferedMessages } from '@lad/frontend-features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
 import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
@@ -2109,25 +2110,13 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             <button
               onClick={() => {
                 if (window.confirm('Are you sure you want to start over? This will remove all messages and workflow.')) {
-                  // Clear chat messages and workflow state, AND reset to initial screen
-                  useOnboardingStore.setState({
-                    aiMessages: [],
-                    workflowPreview: [],
-                    isICPFlowStarted: false, // Reset the flow started flag
-                    workflowNodes: [],
-                    workflowEdges: [],
-                    icpAnswers: null,
-                    icpOnboardingComplete: false,
-                    hasSelectedOption: false, // Reset option selection
-                    selectedPath: null, // Clear selected path
-                    isAIChatActive: false, // Deactivate chat
-                    selectedPlatforms: [], // Clear platforms
-                    platformFeatures: {}, // Clear features
-                    campaignDataType: null, // Reset campaign data type
-                    inboundLeadData: null, // Clear inbound data
-                    inboundAnalysis: null, // Clear analysis
-                    isInboundFormVisible: false, // Hide form
-                  });
+                  useOnboardingStore.persist.clearStorage();
+                  clearBufferedMessages('default_session');
+                  clearAllBufferedMessages();
+                  (window as any).__icpAnswers = undefined;
+                  (window as any).__currentStepIndex = undefined;
+                  chatStepController.reset();
+                  useOnboardingStore.getState().reset();
                   setFlowState('initial');
                   setUserAnswers({});
                   setCurrentUtilityAnswers({});
@@ -2225,7 +2214,8 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 // Only render custom options if NOT using ICP flow's built-in option handling
                 !(isICPOnboardingActive && !chatStepController.isComplete && !message.isInboundPlatformSelection)
               ) && (
-                <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-2">\n                  {/* Inbound Platform Selection - Toggle style */}
+                <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-2">
+                  {/* Inbound Platform Selection - Toggle style */}
                   {message.isInboundPlatformSelection ? (
                     <>
                       <div className="grid grid-cols-2 gap-3">

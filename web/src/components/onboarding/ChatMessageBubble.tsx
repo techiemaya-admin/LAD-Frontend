@@ -37,6 +37,12 @@ export default function ChatMessageBubble({
   options: propsOptions,
 }: ChatMessageBubbleProps) {
   const isAI = role === 'ai';
+  const cleanContent = (text: string) =>
+    text
+      .replace(/\\n/g, '\n')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .trim();
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
@@ -93,7 +99,9 @@ export default function ChatMessageBubble({
             'whitespace-pre-wrap leading-relaxed text-sm',
             isAI ? 'text-gray-900' : 'text-white'
           )}>
-            {showOptions && parsedOptions ? parsedOptions.questionText : content}
+            {showOptions && parsedOptions
+              ? cleanContent(parsedOptions.questionText)
+              : cleanContent(content)}
           </div>
         </div>
         {/* Selectable Options - Render based on step type */}
@@ -128,6 +136,7 @@ export default function ChatMessageBubble({
                 totalPlatforms={parsedOptions.totalPlatforms}
                 preSelectedOptions={parsedOptions.preSelectedOptions}
                 platformName={parsedOptions.platformName} // Pass platform name for dependency checking
+                leadsPerDayOptions={parsedOptions.leadsPerDayOptions}
               />
             )}
           </div>
