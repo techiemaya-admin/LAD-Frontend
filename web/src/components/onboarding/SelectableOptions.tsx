@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDependentActionsToRemove, getRequiredActionsFromOptions } from '@/lib/actionDependencies';
@@ -12,6 +12,7 @@ interface SelectableOptionsProps {
   totalPlatforms?: number; // For platform actions progress display
   preSelectedOptions?: string[]; // Pre-selected options (for platform actions)
   platformName?: string; // Platform name for dependency checking (e.g., 'linkedin', 'whatsapp')
+  leadsPerDayOptions?: boolean; // Show warning + force single select for lead volume
 }
 export default function SelectableOptions({
   options,
@@ -22,11 +23,13 @@ export default function SelectableOptions({
   totalPlatforms,
   preSelectedOptions = [],
   platformName,
+  leadsPerDayOptions = false,
 }: SelectableOptionsProps) {
   // Pre-select all options if preSelectedOptions is provided, otherwise start empty
   const [selected, setSelected] = useState<Set<string>>(
     new Set(preSelectedOptions.length > 0 ? preSelectedOptions : [])
   );
+  const [showLeadsWarning, setShowLeadsWarning] = useState(false);
   // Update workflow in real-time when selections change (for platform actions)
   useEffect(() => {
     const platform = detectPlatform();
@@ -88,7 +91,7 @@ export default function SelectableOptions({
         }
       } else {
         // Checking an option
-        if (multiSelect) {
+        if (multiSelect && !leadsPerDayOptions) {
           next.add(option);
           // AUTO-CHECK REQUIRED ACTIONS: If this action requires other actions, auto-check them
           const platform = detectPlatform();
@@ -109,13 +112,42 @@ export default function SelectableOptions({
       return next;
     });
   };
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (selected.size > 0) {
       onSubmit(Array.from(selected));
     }
-  };
+  }, [selected, onSubmit]);
+
+  // Handle Enter key to submit
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && selected.size > 0) {
+        event.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selected, handleSubmit]);
   // Platform progress indicator
   const showProgress = platformIndex !== undefined && totalPlatforms !== undefined;
+
+  // Show a warning for high daily lead volume selections
+  useEffect(() => {
+    if (!leadsPerDayOptions) {
+      setShowLeadsWarning(false);
+      return;
+    }
+    const selectedValues = Array.from(selected);
+    const showWarning = selectedValues.some((value) => {
+      const normalized = value.toLowerCase();
+      if (normalized === 'max') return true;
+      const numericMatch = normalized.match(/(\d+)/);
+      return numericMatch ? Number(numericMatch[1]) >= 50 : false;
+    });
+    setShowLeadsWarning(showWarning);
+  }, [selected, leadsPerDayOptions]);
   // Render based on variant
   const renderOptions = () => {
     if (variant === 'cards') {
@@ -179,7 +211,9 @@ export default function SelectableOptions({
                 )}>
                   {isSelected && <Check className="w-3 h-3 text-white" />}
                 </div>
-                <span className="font-medium text-sm flex-1">{option}</span>
+                <span className="font-medium text-sm flex-1">
+                  {option.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim()}
+                </span>
               </button>
             );
           })}
@@ -205,7 +239,9 @@ export default function SelectableOptions({
                 )}
                 aria-pressed={isSelected}
               >
-                <span className="font-medium text-sm">{option}</span>
+                <span className="font-medium text-sm">
+                  {option.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim()}
+                </span>
                 {isSelected && (
                   <div className="flex-shrink-0 ml-2">
                     <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
@@ -246,6 +282,11 @@ export default function SelectableOptions({
           Continue
         </button>
       </div>
+      {showLeadsWarning && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          If your LinkedIn account is a free account, it’s better to continue with 25 leads per day.
+        </div>
+      )}
     </div>
   );
-}
+}

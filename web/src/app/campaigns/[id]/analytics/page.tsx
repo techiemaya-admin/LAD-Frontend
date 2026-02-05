@@ -21,8 +21,8 @@ const platformConfig = {
   linkedin: {
     name: 'LinkedIn',
     icon: Linkedin,
-    color: '#0A66C2',
-    gradient: 'linear-gradient(135deg, #0A66C2 0%, #004182 100%)',
+    color: '#0b1957',
+    gradient: 'linear-gradient(135deg, #0b1957 0%, #0a1540 100%)',
   },
   email: {
     name: 'Email',
@@ -56,7 +56,7 @@ export default function CampaignAnalyticsPage() {
 
   useEffect(() => {
     if (error) {
-      push({ variant: 'error', title: 'Error', description: error || 'Failed to load analytics' });
+      push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
       router.push('/campaigns');
     }
   }, [error, push, router]);
@@ -194,7 +194,7 @@ export default function CampaignAnalyticsPage() {
   };
 
   return (
-    <div className="p-6 h-full overflow-auto transition-all duration-300" style={{ background: isDarkMode ? '#0F172A' : '#F8F9FE' }}>
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Hero Header */}
       <div className="bg-white rounded-2xl p-8 mb-8 relative overflow-hidden shadow-sm border border-slate-200">
         <div className="absolute top-[-50px] right-[-50px] w-[200px] h-[200px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)' }} />
@@ -227,11 +227,18 @@ export default function CampaignAnalyticsPage() {
               {isConnected ? <Wifi className="w-3 h-3 mr-1" /> : <WifiOff className="w-3 h-3 mr-1" />}
               {isConnected ? 'Live' : 'Offline'}
             </Badge>
-            <Button onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} className="bg-indigo-500 text-white font-semibold px-6 hover:bg-indigo-600" style={{ boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)' }}>
+            <Button
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)}
+              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:bg-[#0a1540]"
+            >
               <Users className="w-4 h-4 mr-2" />
               View Leads
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} className="border-indigo-500 text-indigo-500 font-semibold border-2 hover:bg-indigo-50">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
+              className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl"
+            >
               Edit Campaign
             </Button>
           </div>
@@ -381,8 +388,8 @@ export default function CampaignAnalyticsPage() {
       {/* Analytics Charts Section */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
-          <Avatar className="w-11 h-11" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
-            <AvatarFallback><BarChart className="w-5 h-5 text-white" /></AvatarFallback>
+          <Avatar className="w-11 h-11 bg-white border border-slate-200 shadow-sm">
+            <AvatarFallback><BarChart className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
           </Avatar>
           <div>
             <h5 className="text-xl font-bold" style={{ color: theme.textPrimary }}>Visual Analytics</h5>
@@ -408,8 +415,8 @@ export default function CampaignAnalyticsPage() {
       {platformAnalytics.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-11 h-11" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }}>
-              <AvatarFallback><Lightbulb className="w-5 h-5 text-white" /></AvatarFallback>
+            <Avatar className="w-11 h-11 bg-white border border-slate-200 shadow-sm">
+              <AvatarFallback><Lightbulb className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
             </Avatar>
             <div>
               <h5 className="text-xl font-bold" style={{ color: theme.textPrimary }}>Channel Performance</h5>
@@ -424,12 +431,20 @@ export default function CampaignAnalyticsPage() {
             {platformAnalytics.map((item: any) => {
               const config = platformConfig[item.platform as keyof typeof platformConfig];
               const PlatformIcon = config.icon;
+              const computedRate = item.sent
+                ? ((item.connected + item.replied) / item.sent) * 100
+                : item.actions
+                ? ((item.connected + item.replied) / item.actions) * 100
+                : 0;
+              const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
               return (
                 <Card key={item.platform} style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl overflow-hidden transition-all duration-300 hover:transform hover:-translate-y-2">
                   <div className="p-5 flex items-center justify-between" style={{ background: config.gradient }}>
                     <div className="flex items-center gap-4">
-                      <Avatar className="w-12 h-12" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                        <AvatarFallback><PlatformIcon className="w-6 h-6 text-white" /></AvatarFallback>
+                      <Avatar className="w-12 h-12 bg-white border border-white/70 shadow-sm">
+                        <AvatarFallback>
+                          <PlatformIcon className="w-7 h-7" style={{ color: config.color }} />
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <h6 className="text-lg font-bold text-white">{config.name}</h6>
@@ -462,10 +477,10 @@ export default function CampaignAnalyticsPage() {
                     <div className="mt-6">
                       <div className="flex justify-between mb-2">
                         <p className="text-sm" style={{ color: theme.textSecondary }}>Success Rate</p>
-                        <p className="font-bold" style={{ color: config.color }}>{item.rate.toFixed(1)}%</p>
+                        <p className="font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                       </div>
                       <div className="relative h-2 rounded-full" style={{ backgroundColor: theme.progressBg }}>
-                        <div className="absolute h-2 rounded-full" style={{ width: `${Math.min(item.rate, 100)}%`, background: config.gradient }}></div>
+                        <div className="absolute h-2 rounded-full" style={{ width: `${Math.min(safeRate, 100)}%`, background: config.gradient }}></div>
                       </div>
                     </div>
                   </div>
@@ -478,11 +493,11 @@ export default function CampaignAnalyticsPage() {
 
       {/* Performance Metrics Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
+        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-4 mb-6">
-              <Avatar style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }}>
-                <AvatarFallback><BarChart className="w-5 h-5" style={{ color: '#3B82F6' }} /></AvatarFallback>
+              <Avatar className="bg-white border border-slate-200 shadow-sm">
+                <AvatarFallback><BarChart className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <h6 className="text-lg font-bold" style={{ color: theme.textPrimary }}>Outreach Metrics</h6>
             </div>
@@ -495,7 +510,7 @@ export default function CampaignAnalyticsPage() {
                 { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
                 { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
               ].map((metric) => (
-                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
+                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border bg-white" style={{ borderColor: theme.statBorder }}>
                   <div className="flex items-center gap-4">
                     <Avatar className="w-9 h-9" style={{ backgroundColor: `${metric.color}20` }}>
                       <AvatarFallback><metric.icon className="w-4 h-4" style={{ color: metric.color }} /></AvatarFallback>
@@ -508,11 +523,11 @@ export default function CampaignAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
+        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-4 mb-6">
-              <Avatar style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)' }}>
-                <AvatarFallback><Gauge className="w-5 h-5" style={{ color: '#8B5CF6' }} /></AvatarFallback>
+              <Avatar className="bg-white border border-slate-200 shadow-sm">
+                <AvatarFallback><Gauge className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <h6 className="text-lg font-bold" style={{ color: theme.textPrimary }}>Performance Rates</h6>
             </div>
@@ -529,7 +544,7 @@ export default function CampaignAnalyticsPage() {
                     <p style={{ color: theme.textSecondary }}>{rate.label}</p>
                     <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
-                  <div className="relative h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: theme.progressBg }}>
+                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80">
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
                   </div>
                 </div>
