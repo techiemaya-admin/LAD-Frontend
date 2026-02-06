@@ -20,6 +20,8 @@ export interface Campaign {
   created_at: string;
   updated_at: string;
   created_by: string;
+  total_credits_deducted?: number;
+  last_credit_update?: string | null;
   steps?: Array<{ type: string; [key: string]: any }>;
 }
 export interface CampaignStats {

@@ -10,13 +10,19 @@ import {
   useCampaignLeads,
   type CampaignLead,
   useCampaign,
+  useLeadsSummaries,
+  useRevealLeadEmail,
+  useRevealLeadLinkedIn,
+  useLeadProfileSummary,
+  useGenerateLeadProfileSummary,
 } from "@lad/frontend-features/campaigns";
-import { apiGet, apiPost } from "@/lib/api";
+import { useApolloLeads } from "@lad/frontend-features/apollo-leads";
 import { EmployeeCard, ProfileSummaryDialog } from "@/components/campaigns";
 import { safeStorage } from "@/utils/storage";
 import { motion } from "framer-motion";
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
+  apollo_person_id: string;
   lead_data?: any;
   custom_fields?: any;
   profile_summary?: string;
@@ -30,7 +36,9 @@ interface ExtendedCampaignLead extends CampaignLead {
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
-  const campaignId = params.id as string;
+    //   const campaignId = params.id as string;
+    // TODO: Once leads api done will update this code
+  const campaignId = "85134050-5fca-40d9-8c99-46bedd55b814";
   const { push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
@@ -52,6 +60,18 @@ export default function CampaignLeadsPage() {
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;
+
+  // Fetch summaries for all leads using SDK hook
+  const leadIds = leads.map(lead => lead.id);
+  const { summaries } = useLeadsSummaries(campaignId, leadIds);
+
+  // Use Apollo Leads SDK for reveal operations
+  const apolloLeads = useApolloLeads();
+
+  // Use campaigns SDK for reveal email and LinkedIn
+  const revealEmailMutation = useRevealLeadEmail();
+  const revealLinkedInMutation = useRevealLeadLinkedIn();
+  const generateSummaryMutation = useGenerateLeadProfileSummary();
 
   // Debug: Log first lead to check photo_url
   useEffect(() => {
@@ -112,7 +132,7 @@ export default function CampaignLeadsPage() {
       push({
         variant: "error",
         title: "Error",
-        description: leadsError || "Failed to load leads",
+        description: typeof leadsError === "string" ? leadsError : (leadsError instanceof Error ? leadsError.message : "Failed to load leads"),
       });
     }
   }, [leadsError, push]);
@@ -123,38 +143,7 @@ export default function CampaignLeadsPage() {
       setTotalPages(Math.ceil(leads.length / 50));
     }
   }, [leads]);
-  // Load summaries for leads (this is UI-specific logic, not SDK)
-  useEffect(() => {
-    if (leads && leads.length > 0) {
-      // Fetch summaries for all leads in parallel
-      const summaryPromises = leads.map(async (lead) => {
-        try {
-          // Use apiGet to ensure correct backend URL
-          const data = await apiGet<{
-            success: boolean;
-            summary: string | null;
-            exists: boolean;
-          }>(`/api/campaigns/${campaignId}/leads/${lead.id}/summary`);
-          if (data.success && data.summary) {
-            return { leadId: lead.id, summary: data.summary };
-          }
-        } catch (err) {
-          // Silently fail - summary might not exist yet
-        }
-        return null;
-      });
-      Promise.all(summaryPromises).then((summaryResults) => {
-        const summaryMap = new Map<string, string>();
-        summaryResults.forEach((result) => {
-          if (result) {
-            summaryMap.set(result.leadId, result.summary);
-          }
-        });
-        // Update leads with summaries (this would need state management)
-        // For now, this is handled by the component's local state
-      });
-    }
-  }, [leads, campaignId]);
+
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || "";
     setRevealingContactsSafe((prev) => ({
@@ -162,14 +151,12 @@ export default function CampaignLeadsPage() {
       [idKey]: { ...prev[idKey], phone: true },
     }));
     try {
-      const response = await apiPost<any>("/api/apollo-leads/reveal-phone", {
-        person_id: employee.id,
-      });
-      if (response.success && response.phone) {
+      const phone = await apolloLeads.revealPhone(employee.id);
+      if (phone) {
         // Store the revealed phone value
         setRevealedValues((prev) => ({
           ...prev,
-          [idKey]: { ...prev[idKey], phone: response.phone },
+          [idKey]: { ...prev[idKey], phone },
         }));
         setRevealedContactsSafe((prev) => ({
           ...prev,
@@ -199,42 +186,35 @@ export default function CampaignLeadsPage() {
       [idKey]: { ...prev[idKey], email: true },
     }));
     try {
-      const response = await apiPost<any>(
-        `/api/campaigns/${campaignId}/leads/${employee.id}/reveal-email`,
-        {
-          apollo_person_id: employee.apollo_person_id || employee.id,
-        },
-      );
-      if (response.success && response.email) {
-        // Store the revealed email value
-        setRevealedValues((prev) => ({
-          ...prev,
-          [idKey]: { ...prev[idKey], email: response.email },
-        }));
-        setRevealedContactsSafe((prev) => ({
-          ...prev,
-          [idKey]: { ...prev[idKey], email: true },
-        }));
+      const result = await revealEmailMutation.mutateAsync({
+        campaignId,
+        leadId: employee.id,
+        apolloPersonId: employee.apollo_person_id || employee.id,
+      });
+      
+      // Store the revealed email value
+      setRevealedValues((prev) => ({
+        ...prev,
+        [idKey]: { ...prev[idKey], email: result.email },
+      }));
+      setRevealedContactsSafe((prev) => ({
+        ...prev,
+        [idKey]: { ...prev[idKey], email: true },
+      }));
 
-        // Update the employee object with enriched email
-        employee.enriched_email = response.email;
-        employee.email = response.email;
+      // Update the employee object with enriched email
+      employee.enriched_email = result.email;
+      employee.email = result.email;
 
-        push({
-          title: "Success",
-          description: response.from_database
-            ? "Email retrieved (no credits used)"
-            : `Email revealed (${response.credits_used} credit${response.credits_used !== 1 ? "s" : ""} used)`,
-        });
+      push({
+        title: "Success",
+        description: result.from_cache
+          ? "Email retrieved (no credits used)"
+          : `Email revealed (${result.credits_used} credit${result.credits_used !== 1 ? "s" : ""} used)`,
+      });
 
-        // Trigger re-render
-        refetch();
-      } else {
-        push({
-          title: "Error",
-          description: response.error || "Failed to reveal email",
-        });
-      }
+      // Trigger re-render
+      refetch();
     } catch (error) {
       push({
         title: "Error",
@@ -256,46 +236,36 @@ export default function CampaignLeadsPage() {
       [idKey]: { ...prev[idKey], linkedin: true },
     }));
     try {
-      const response = await apiPost<any>(
-        `/api/campaigns/${campaignId}/leads/${employee.id}/reveal-linkedin`,
-        {},
-      );
-      if (response.success && response.linkedin_url) {
-        // Store the revealed LinkedIn URL value
-        setRevealedValues((prev) => ({
-          ...prev,
-          [idKey]: { ...prev[idKey], linkedin_url: response.linkedin_url },
-        }));
-        setRevealedContactsSafe((prev) => ({
-          ...prev,
-          [idKey]: { ...prev[idKey], linkedin: true },
-        }));
+      const result = await revealLinkedInMutation.mutateAsync({
+        campaignId,
+        leadId: employee.id,
+      });
+      
+      // Store the revealed LinkedIn URL value
+      setRevealedValues((prev) => ({
+        ...prev,
+        [idKey]: { ...prev[idKey], linkedin_url: result.linkedin_url },
+      }));
+      setRevealedContactsSafe((prev) => ({
+        ...prev,
+        [idKey]: { ...prev[idKey], linkedin: true },
+      }));
 
-        // Update the employee object with the revealed LinkedIn URL
-        const updatedEmployee = {
-          ...employee,
-          linkedin_url: response.linkedin_url,
-          enriched_linkedin_url: response.linkedin_url,
-        };
+      // Update the employee object with the revealed LinkedIn URL
+      employee.linkedin_url = result.linkedin_url;
+      employee.enriched_linkedin_url = result.linkedin_url;
 
-        push({
-          title: "Success",
-          description: response.from_database
-            ? "LinkedIn profile retrieved (no credits used)"
-            : "LinkedIn profile revealed",
-        });
-      } else {
-        push({
-          title: "Info",
-          description:
-            response.error || "LinkedIn URL not available for this lead",
-        });
-      }
+      push({
+        title: "Success",
+        description: result.from_database
+          ? "LinkedIn profile retrieved (no credits used)"
+          : "LinkedIn profile revealed",
+      });
     } catch (error) {
       push({
-        title: "Error",
+        title: "Info",
         description:
-          error instanceof Error ? error.message : "Failed to reveal LinkedIn",
+          error instanceof Error ? error.message : "LinkedIn URL not available for this lead",
       });
     } finally {
       setRevealingContactsSafe((prev) => ({
@@ -311,30 +281,12 @@ export default function CampaignLeadsPage() {
     setProfileSummary(null);
     setSummaryError(null);
     setSummaryLoading(true);
+
     try {
-      // First, try to get existing summary
-      try {
-        const existingSummary = await apiGet<{
-          success: boolean;
-          summary: string | null;
-          exists: boolean;
-        }>(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`);
-        if (existingSummary.success && existingSummary.summary) {
-          setProfileSummary(existingSummary.summary);
-          setSummaryLoading(false);
-          return;
-        }
-      } catch (getError) {
-        // If getting existing summary fails, proceed to generate new one
-      }
-      // Generate new summary using apiPost
-      const response = await apiPost<{
-        success: boolean;
-        summary: string;
-        generated_at?: string;
-      }>(`/api/campaigns/${campaignId}/leads/${employee.id}/summary`, {
+      // Try to generate/get summary using SDK
+      const result = await generateSummaryMutation.mutateAsync({
+        campaignId,
         leadId: employee.id,
-        campaignId: campaignId,
         profileData: {
           ...employee,
           name:
@@ -347,11 +299,8 @@ export default function CampaignLeadsPage() {
           linkedin_url: employee.linkedin_url,
         },
       });
-      if (response.success && response.summary) {
-        setProfileSummary(response.summary);
-      } else {
-        throw new Error("Failed to generate summary");
-      }
+      
+      setProfileSummary(result.summary);
     } catch (error: any) {
       console.error("[Profile Summary] Error:", error);
       setSummaryError(error.message || "Failed to load profile summary");
@@ -505,7 +454,7 @@ export default function CampaignLeadsPage() {
                       handleRevealEmail={handleRevealEmail}
                       handleRevealLinkedIn={handleRevealLinkedIn}
                       onViewSummary={handleViewSummary}
-                      profileSummary={lead.profile_summary || null}
+                      profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
                       hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
                     />
                   </motion.div>

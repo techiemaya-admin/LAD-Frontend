@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   revealLeadEmail,
   revealLeadPhone,
+  revealLeadLinkedIn,
   campaignKeys 
 } from '../api';
 
@@ -44,6 +45,24 @@ export function useRevealLeadPhone() {
     }) => revealLeadPhone(campaignId, leadId, apolloPersonId),
     onSuccess: (_, { campaignId }) => {
       // Invalidate campaign leads to refresh with revealed phone
+      queryClient.invalidateQueries({ queryKey: campaignKeys.leads(campaignId) });
+    },
+  });
+}
+
+/**
+ * Hook to reveal lead LinkedIn URL
+ */
+export function useRevealLeadLinkedIn() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ campaignId, leadId }: {
+      campaignId: string;
+      leadId: string;
+    }) => revealLeadLinkedIn(campaignId, leadId),
+    onSuccess: (_, { campaignId }) => {
+      // Invalidate campaign leads to refresh with revealed LinkedIn URL
       queryClient.invalidateQueries({ queryKey: campaignKeys.leads(campaignId) });
     },
   });

@@ -297,14 +297,59 @@ export const getLeadProfileSummaryOptions = (campaignId: string, leadId: string)
  */
 export async function generateLeadProfileSummary(
   campaignId: string,
-  leadId: string
+  leadId: string,
+  profileData?: any
 ): Promise<{ summary: string }> {
   const response = await apiClient.post<{ success: boolean; summary: string }>(
     `/api/campaigns/${campaignId}/leads/${leadId}/summary`,
-    {}
+    profileData ? { leadId, campaignId, profileData } : {}
   );
   return { summary: response.data.summary };
 }
+
+/**
+ * Fetch summaries for multiple leads in batch
+ */
+export async function getLeadsSummaries(
+  campaignId: string,
+  leadIds: string[]
+): Promise<Map<string, string>> {
+  const summaryMap = new Map<string, string>();
+  
+  // Fetch summaries in parallel
+  const summaryPromises = leadIds.map(async (leadId) => {
+    try {
+      const data = await getLeadProfileSummary(campaignId, leadId);
+      if (data.summary) {
+        return { leadId, summary: data.summary };
+      }
+    } catch (err) {
+      // Silently fail - summary might not exist yet
+    }
+    return null;
+  });
+  
+  const results = await Promise.all(summaryPromises);
+  results.forEach((result) => {
+    if (result) {
+      summaryMap.set(result.leadId, result.summary);
+    }
+  });
+  
+  return summaryMap;
+}
+
+/**
+ * TanStack Query options for getting multiple lead summaries
+ */
+export const getLeadsSummariesOptions = (campaignId: string, leadIds: string[]) =>
+  queryOptions({
+    queryKey: [...campaignKeys.all, 'leadsSummaries', campaignId, leadIds.sort()],
+    queryFn: () => getLeadsSummaries(campaignId, leadIds),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled: !!(campaignId && leadIds.length > 0),
+  });
 
 // ====================
 // Lead Reveal Functions
@@ -404,6 +449,28 @@ export async function revealLeadPhone(
     credits_used: response.data.credits_used,
     processing: response.data.processing,
     message: response.data.message
+  };
+}
+
+/**
+ * Reveal LinkedIn URL for a campaign lead
+ */
+export async function revealLeadLinkedIn(
+  campaignId: string,
+  leadId: string
+): Promise<{ linkedin_url: string; from_database: boolean }> {
+  const response = await apiClient.post<{
+    error: string;
+    success: boolean;
+    linkedin_url: string;
+    from_database: boolean;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-linkedin`, {});
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal LinkedIn');
+  }
+  return {
+    linkedin_url: response.data.linkedin_url,
+    from_database: response.data.from_database
   };
 }
 
