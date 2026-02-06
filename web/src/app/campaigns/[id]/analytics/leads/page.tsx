@@ -85,7 +85,7 @@ export default function CampaignLeadsPage() {
       push({
         variant: 'error',
         title: 'Error',
-        description: leadsError || 'Failed to load leads',
+        description: typeof leadsError === 'string' ? leadsError : leadsError?.message || 'Failed to load leads',
       });
     }
   }, [leadsError, push]);
