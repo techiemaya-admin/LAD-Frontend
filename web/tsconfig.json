@@ -37,7 +37,8 @@
       "@lad/frontend-features/apollo-leads": ["../sdk/features/apollo-leads"],
       "@lad/frontend-features/dashboard": ["../sdk/features/dashboard"],
       "@lad/frontend-features/bookings": ["../sdk/features/bookings"],
-      "@lad/frontend-features/social-integration": ["../sdk/features/social-integration"]
+      "@lad/frontend-features/social-integration": ["../sdk/features/social-integration"],
+      "@lad/frontend-features/call-logs": ["../sdk/features/call-logs"]
     }
   },
   "include": [
