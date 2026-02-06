@@ -8,6 +8,7 @@ import type {
   RetryCallsParams,
   RecordingSignedUrlParams,
   RecordingSignedUrlResponse,
+  CallLogsStats,
 } from "./types";
 
 /**
@@ -90,4 +91,65 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
   
   // Extract data property from API client response
   return response.data;
+}
+
+/**
+ * Get call logs statistics
+ * Fetches call logs and calculates stats by counting based on status and lead_category
+ */
+export async function getCallLogsStats(params?: GetCallLogsParams): Promise<CallLogsStats> {
+  console.log('[Call Logs API] Fetching call logs stats with params:', params);
+  
+  // Fetch the call logs data
+  const callLogsData = await getCallLogs(params);
+  const logs = callLogsData.logs || [];
+  
+  console.log('[Call Logs API] Processing stats from logs:', logs.length);
+  
+  // Initialize counters
+  const stats: CallLogsStats = {
+    total_calls: 0,
+    completed_calls: 0,
+    failed_calls: 0,
+    ongoing: 0,
+    queue: 0,
+    hot_leads: 0,
+    warm_leads: 0,
+    cold_leads: 0,
+  };
+  
+  // Count each log by status and lead category
+  logs.forEach((log) => {
+    stats.total_calls++;
+    
+    const status = (log.status || '').toLowerCase();
+    
+    // Count by status
+    if (status === 'ended' || status === 'completed') {
+      stats.completed_calls++;
+    } else if (status === 'failed') {
+      stats.failed_calls++;
+    } else if (status === 'ongoing' || status === 'in_progress' || status === 'calling') {
+      stats.ongoing++;
+    } else if (status === 'queue' || status === 'queued' || status === 'pending') {
+      stats.queue++;
+    }
+    
+    // Count by lead category from analysis
+    const leadCategory = log.analysis?.raw_analysis?.lead_score_full?.lead_category;
+    if (leadCategory) {
+      const category = leadCategory.toLowerCase();
+      if (category.includes('hot')) {
+        stats.hot_leads++;
+      } else if (category.includes('warm')) {
+        stats.warm_leads++;
+      } else if (category.includes('cold')) {
+        stats.cold_leads++;
+      }
+    }
+  });
+  
+  console.log('[Call Logs API] Calculated stats:', stats);
+  
+  return stats;
 }

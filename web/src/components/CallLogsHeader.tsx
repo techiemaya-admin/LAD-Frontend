@@ -45,21 +45,19 @@ export function CallLogsHeader({
   onPerPageChange,
 }: CallLogsHeaderProps) {
   return (
-    <div className="rounded-2xl p-6 animate-fade-in-up">
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Title Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex items-center">
-          <div className="bg-[#172560] gradient-primary p-3 rounded-xl shadow-lg">
-            <Phone className="w-6 h-6 text-primary-foreground" />
-          </div>
+      <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
+        
+          
           <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
               Call Logs
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#64748B] ml-2">
               View and manage your call history
             </p>
-          </div>
+          
         </div>
         {selectedCount > 0 && (
           <div className="flex gap-2">

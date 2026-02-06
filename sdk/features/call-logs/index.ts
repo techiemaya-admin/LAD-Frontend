@@ -30,6 +30,7 @@ export { useCallLogs } from "./hooks/useCallLogs";
 export { useBatchStatus } from "./hooks/useBatchStatus";
 export { useEndCall, useRetryFailedCalls } from "./hooks/useCallLogMutations";
 export { useRecordingSignedUrl } from "./hooks/useRecordingSignedUrl";
+export { useCallLogsStats } from "./hooks/useCallLogsStats";
 
 // ============================================================================
 // TYPES

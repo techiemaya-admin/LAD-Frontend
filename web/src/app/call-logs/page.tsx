@@ -15,15 +15,16 @@ import {
   useBatchStatus, 
   useEndCall, 
   useRetryFailedCalls,
+  useCallLogsStats,
   type CallLog,
   type BatchPayload,
 } from "@lad/frontend-features/call-logs";
 
-import { CallLogsHeader } from "@/components/CallLogsHeader";
 import { CallLogsTable } from "@/components/CallLogsTable";
 import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
+import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
 
@@ -103,6 +104,14 @@ export default function CallLogsPage() {
 
   // SDK Hooks
   const callLogsQuery = useCallLogs(
+    {
+      from_date: dateRange.from,
+      to_date: dateRange.to,
+    },
+    authed === true // Only fetch when authenticated
+  );
+  
+  const callLogsStatsQuery = useCallLogsStats(
     {
       from_date: dateRange.from,
       to_date: dateRange.to,
@@ -490,47 +499,57 @@ export default function CallLogsPage() {
   });
   const hasFailedCalls = failedCallIds.length > 0;
 
-  // Check if filters are in default state (no skeleton needed for initial load)
-  const isDefaultFilters = dateFilter === 'all' && timeFilter === 'all';
-  const shouldShowSkeleton = (callLogsQuery.isLoading || batchStatusQuery.isLoading) && !isDefaultFilters;
+  // Show loading state in table body during fetch
+  const isTableLoading = callLogsQuery.isLoading || callLogsQuery.isFetching || batchStatusQuery.isLoading || batchStatusQuery.isFetching || initialLoading;
 
   return (
-    <div className="max-w-full mx-auto space-y-2 px-6 py-6">
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
-      <CallLogsHeader
-        filterProvider={providerFilter}
-        onFilterProviderChange={setProviderFilter}
-        callFilter={timeFilter}
-        onCallFilterChange={(f) => {
-          setTimeFilter(f);
-          setPage(1);
+      <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
+        <div>
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
+            Call Logs
+          </h1>
+          <p className="text-sm text-[#64748B] ml-2">
+            View and manage your call history
+          </p>
+        </div>
+        {selected.size > 0 && (
+          <div className="flex gap-2">
+            {hasFailedCalls && (
+              <button
+                onClick={retrySelectedCalls}
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                Retry Failed ({failedCallIds.length})
+              </button>
+            )}
+            <button
+              onClick={endSelectedCalls}
+              className="px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              End Selected ({selected.size})
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Stats Cards */}
+      <CallLogsStatsCards
+        stats={callLogsStatsQuery.data || {
+          total_calls: 0,
+          completed_calls: 0,
+          failed_calls: 0,
+          ongoing: 0,
+          queue: 0,
+          hot_leads: 0,
+          warm_leads: 0,
+          cold_leads: 0
         }}
-        uniqueProviders={uniqueProviders}
-        selectedCount={selected.size}
-        onEndSelected={endSelectedCalls}
-        onRetrySelected={retrySelectedCalls}
-        hasFailedCalls={hasFailedCalls}
-        failedCount={failedCallIds.length}
-        dateFilter={dateFilter}
-        onDateFilterChange={(f) => {
-          setDateFilter(f);
-          setPage(1);
-        }}
-        fromDate={fromDate}
-        toDate={toDate}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
-        perPage={perPage}
-        onPerPageChange={(value) => {
-          setPerPage(value);
-          setPage(1);
-        }}
+        loading={callLogsStatsQuery.isLoading}
       />
 
-     {/* Table */}
-{shouldShowSkeleton ? (
-  <CallLogsTableSkeleton />
-) : (
+      {/* Table */}
       <CallLogsTable
         items={paginated}
         selectedCalls={selected}
@@ -560,8 +579,8 @@ export default function CallLogsPage() {
           setTimeFilter(f as TimeFilter);
           setPage(1);
         }}
+        isLoading={isTableLoading}
       />
-)}
 
 
       {/* Pagination */}

@@ -100,3 +100,14 @@ export interface RecordingSignedUrlResponse {
     signed_url?: string;
   };
 }
+
+export interface CallLogsStats {
+  total_calls: number | string;
+  completed_calls: number | string;
+  failed_calls: number | string;
+  ongoing: number | string;
+  queue: number | string;
+  hot_leads: number | string;
+  warm_leads: number | string;
+  cold_leads: number | string;
+}

@@ -1,15 +1,11 @@
 import React, { useMemo, useCallback } from "react";
-import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, Search, Phone, ChevronsLeft, ChevronLeft, ChevronsRight, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { logger } from "@/lib/logger";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRef, useEffect, useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -72,6 +68,7 @@ interface CallLogsTableProps {
   onToDateChange?: (value: string) => void;
   callFilter?: string;
   onCallFilterChange?: (value: string) => void;
+  isLoading?: boolean;
 }
 
 const columnHelper = createColumnHelper<CallLog>();
@@ -96,7 +93,9 @@ export function CallLogsTable({
   onToDateChange,
   callFilter = 'all',
   onCallFilterChange,
+  isLoading = false,
 }: CallLogsTableProps) {
+  const router = useRouter();
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -471,7 +470,7 @@ export function CallLogsTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="ended">Ended</SelectItem>
+              <SelectItem value="ended">Completed</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
               <SelectItem value="calling">Calling</SelectItem>
               <SelectItem value="ongoing">Ongoing</SelectItem>
@@ -557,7 +556,18 @@ export function CallLogsTable({
           ))}
         </TableHeader>
         <TableBody>
-          {batchGroups ? (
+          {isLoading ? (
+            // Skeleton rows
+            Array.from({ length: 8 }).map((_, i) => (
+              <TableRow key={`skeleton-${i}`} className="animate-pulse">
+                {columns.map((col, j) => (
+                  <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
+                    <div className="h-4 bg-gray-200 rounded w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : batchGroups ? (
             (() => {
               // Create timeline items combining batches and individual calls
               const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
@@ -583,6 +593,62 @@ export function CallLogsTable({
                 });
               });
               
+              // Check if there's any data
+              if (timelineItems.length === 0) {
+                return (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="text-center py-16"
+                    >
+                      {callFilter === 'current' ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Phone className="w-8 h-8 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                              No calls in current batch
+                            </h3>
+                            <p className="text-sm text-[#64748B] mb-4">
+                              Start making calls to see them appear here
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => router.push('/make-call')}
+                            className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Go to Make Call
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Phone className="w-8 h-8 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                              Trigger a call
+                            </h3>
+                            <p className="text-sm text-[#64748B] mb-4">
+                              Start making calls to see them appear here
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => router.push('/make-call')}
+                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                          >
+                            <Phone className="w-4 h-4" />
+                            Make Call
+                          </button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+              
               // Sort by timestamp (newest first)
               timelineItems.sort((a, b) => b.timestamp - a.timestamp);
               
@@ -603,13 +669,55 @@ export function CallLogsTable({
             })()
           ) : table.getRowModel().rows.length === 0 ? (
             <TableRow>
-  <TableCell
-    colSpan={columns.length}
-    className="text-center py-8 text-[#64748B]"
-  >
-    No call logs found
-  </TableCell>
-</TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="text-center py-16"
+              >
+                {callFilter === 'current' ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Phone className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                        No calls in current batch
+                      </h3>
+                      <p className="text-sm text-[#64748B] mb-4">
+                        Start making calls to see them appear here
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/make-call')}
+                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Go to Make Call
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Phone className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                        Trigger a call
+                      </h3>
+                      <p className="text-sm text-[#64748B] mb-4">
+                        Start making calls to see them appear here
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/make-call')}
+                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Make Call
+                    </button>
+                  </div>
+                )}
+              </TableCell>
+            </TableRow>
           ) : (
             table.getRowModel().rows.map((row) => (
               <TableRow
@@ -642,20 +750,17 @@ export function CallLogsTable({
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
       <span>Show</span>
-      <Select 
-        value={String(table.getState().pagination?.pageSize ?? 10)} 
-        onValueChange={(value) => table.setPageSize(Number(value))}
+      <select
+        value={table.getState().pagination?.pageSize ?? 10}
+        onChange={(e) => table.setPageSize(Number(e.target.value))}
+        className="w-[70px] h-8 border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-white cursor-pointer"
       >
-        <SelectTrigger className="w-[70px] h-8 text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="5">5</SelectItem>
-          <SelectItem value="10">10</SelectItem>
-          <SelectItem value="20">20</SelectItem>
-          <SelectItem value="50">50</SelectItem>
-        </SelectContent>
-      </Select>
+        {[5, 10, 20, 50].map((pageSize) => (
+          <option key={pageSize} value={pageSize}>
+            {pageSize}
+          </option>
+        ))}
+      </select>
       <span>
         of {totalFilteredCount || table.getFilteredRowModel().rows.length} calls
       </span>
@@ -668,34 +773,42 @@ export function CallLogsTable({
       </div>
 
       <div className="flex items-center gap-1">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => table.setPageIndex(0)}
           disabled={!table.getCanPreviousPage()}
-          className="h-8 w-8 border rounded-lg disabled:opacity-50"
+          className="h-8 w-8 p-0"
         >
-          «
-        </button>
-        <button
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          className="h-8 w-8 border rounded-lg disabled:opacity-50"
+          className="h-8 w-8 p-0"
         >
-          ‹
-        </button>
-        <button
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          className="h-8 w-8 border rounded-lg disabled:opacity-50"
+          className="h-8 w-8 p-0"
         >
-          ›
-        </button>
-        <button
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => table.setPageIndex(table.getPageCount() - 1)}
           disabled={!table.getCanNextPage()}
-          className="h-8 w-8 border rounded-lg disabled:opacity-50"
+          className="h-8 w-8 p-0"
         >
-          »
-        </button>
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   </div>
