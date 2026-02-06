@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react';
+import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,7 +27,6 @@ import {
   getPaginationRowModel,
   flexRender,
   createColumnHelper,
-  type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
   type PaginationState,
@@ -84,7 +83,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     }
   };
 
-  const columns = React.useMemo<ColumnDef<Campaign>[]>(() => [
+  const columns = React.useMemo(() => [
     columnHelper.accessor('name', {
       id: 'name',
       header: 'Campaign Name',
@@ -145,11 +144,27 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       header: 'Replied',
       cell: ({ row }) => renderPlatformMetrics(row.original, 'replied'),
     }),
-    columnHelper.accessor('created_at', {
-      id: 'created_at',
-      header: 'Created',
-      cell: ({ getValue }) => new Date(getValue()).toLocaleDateString(),
+    columnHelper.display({
+      id: 'credit',
+      header: 'Credits Used',
+      cell: ({ row }) => {
+        const credits = row.original.total_credits_deducted || 0;
+        return (
+          <span className="text-sm text-gray-600 flex items-center gap-1">
+            <Coins className="h-4 w-4 text-amber-600" />
+            {credits}
+          </span>
+        );
+      },
     }),
+    columnHelper.accessor(
+      (row) => row.created_at as string,
+      {
+        id: 'created_at',
+        header: 'Created',
+        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
+      }
+    ),
     columnHelper.display({
       id: 'actions_menu',
       header: '',
@@ -188,7 +203,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       {/* Filters Section */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative min-w-[250px]">
+          <div className="relative min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
             <Input
               placeholder="Search campaigns..."

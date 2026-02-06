@@ -42,7 +42,7 @@ export default function CampaignsListPage() {
   // Handle errors from SDK hooks
   useEffect(() => {
     if (campaignsError) {
-      push({ variant: 'error', title: 'Error', description: campaignsError });
+      push({ variant: 'error', title: 'Error', description: campaignsError?.toString() });
     }
   }, [campaignsError, push]);
 
