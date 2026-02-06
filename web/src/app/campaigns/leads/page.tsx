@@ -17,6 +17,7 @@ import { safeStorage } from "@/utils/storage";
 import { motion } from "framer-motion";
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
+  apollo_person_id: string;
   lead_data?: any;
   custom_fields?: any;
   profile_summary?: string;
@@ -112,7 +113,7 @@ export default function CampaignLeadsPage() {
       push({
         variant: "error",
         title: "Error",
-        description: leadsError || "Failed to load leads",
+        description: typeof leadsError === "string" ? leadsError : (leadsError instanceof Error ? leadsError.message : "Failed to load leads"),
       });
     }
   }, [leadsError, push]);

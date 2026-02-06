@@ -306,6 +306,50 @@ export async function generateLeadProfileSummary(
   return { summary: response.data.summary };
 }
 
+/**
+ * Fetch summaries for multiple leads in batch
+ */
+export async function getLeadsSummaries(
+  campaignId: string,
+  leadIds: string[]
+): Promise<Map<string, string>> {
+  const summaryMap = new Map<string, string>();
+  
+  // Fetch summaries in parallel
+  const summaryPromises = leadIds.map(async (leadId) => {
+    try {
+      const data = await getLeadProfileSummary(campaignId, leadId);
+      if (data.summary) {
+        return { leadId, summary: data.summary };
+      }
+    } catch (err) {
+      // Silently fail - summary might not exist yet
+    }
+    return null;
+  });
+  
+  const results = await Promise.all(summaryPromises);
+  results.forEach((result) => {
+    if (result) {
+      summaryMap.set(result.leadId, result.summary);
+    }
+  });
+  
+  return summaryMap;
+}
+
+/**
+ * TanStack Query options for getting multiple lead summaries
+ */
+export const getLeadsSummariesOptions = (campaignId: string, leadIds: string[]) =>
+  queryOptions({
+    queryKey: [...campaignKeys.all, 'leadsSummaries', campaignId, leadIds.sort()],
+    queryFn: () => getLeadsSummaries(campaignId, leadIds),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled: !!(campaignId && leadIds.length > 0),
+  });
+
 // ====================
 // Lead Reveal Functions
 // ====================

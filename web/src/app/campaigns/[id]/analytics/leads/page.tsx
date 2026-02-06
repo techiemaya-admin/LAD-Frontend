@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Users, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
-import { useCampaignLeads, type CampaignLead, useCampaign } from '@lad/frontend-features/campaigns';
+import { useCampaignLeads, useLeadsSummaries, type CampaignLead, useCampaign } from '@lad/frontend-features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
 import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
 import { safeStorage } from '@/utils/storage';
@@ -46,6 +46,12 @@ export default function CampaignLeadsPage() {
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;
+  
+  // Get all lead IDs for batch summary fetching
+  const leadIds = useMemo(() => leads.map(lead => lead.id), [leads]);
+  
+  // Fetch summaries for all leads using the SDK hook
+  const { summaries, loading: summariesLoading } = useLeadsSummaries(campaignId, leadIds);
   
   // Debug: Log first lead to check photo_url
   useEffect(() => {
@@ -90,36 +96,7 @@ export default function CampaignLeadsPage() {
       setTotalPages(Math.ceil(leads.length / 50));
     }
   }, [leads]);
-  // Load summaries for leads (this is UI-specific logic, not SDK)
-  useEffect(() => {
-    if (leads && leads.length > 0) {
-      // Fetch summaries for all leads in parallel
-      const summaryPromises = leads.map(async (lead) => {
-        try {
-          // Use apiGet to ensure correct backend URL
-          const data = await apiGet<{ success: boolean; summary: string | null; exists: boolean }>(
-            `/api/campaigns/${campaignId}/leads/${lead.id}/summary`
-          );
-          if (data.success && data.summary) {
-            return { leadId: lead.id, summary: data.summary };
-          }
-        } catch (err) {
-          // Silently fail - summary might not exist yet
-          }
-        return null;
-      });
-      Promise.all(summaryPromises).then((summaryResults) => {
-        const summaryMap = new Map<string, string>();
-        summaryResults.forEach((result) => {
-          if (result) {
-            summaryMap.set(result.leadId, result.summary);
-          }
-        });
-        // Update leads with summaries (this would need state management)
-        // For now, this is handled by the component's local state
-      });
-    }
-  }, [leads, campaignId]);
+  
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
@@ -361,7 +338,7 @@ export default function CampaignLeadsPage() {
                   handleRevealEmail={handleRevealEmail}
                   handleRevealLinkedIn={handleRevealLinkedIn}
                   onViewSummary={handleViewSummary}
-                  profileSummary={lead.profile_summary || null}
+                  profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
                   hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
                 />
               );

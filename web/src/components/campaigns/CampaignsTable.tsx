@@ -84,7 +84,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     }
   };
 
-  const columns = React.useMemo<ColumnDef<Campaign>[]>(() => [
+  const columns = React.useMemo(() => [
     columnHelper.accessor('name', {
       id: 'name',
       header: 'Campaign Name',
@@ -145,11 +145,23 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       header: 'Replied',
       cell: ({ row }) => renderPlatformMetrics(row.original, 'replied'),
     }),
-    columnHelper.accessor('created_at', {
-      id: 'created_at',
-      header: 'Created',
-      cell: ({ getValue }) => new Date(getValue()).toLocaleDateString(),
+    columnHelper.display({
+      id: 'credit',
+      header: 'Credit',
+      cell: () => (
+        <span className="text-sm text-gray-600">
+          0 (0 AED) 
+        </span>
+      ),
     }),
+    columnHelper.accessor(
+      (row) => row.created_at as string,
+      {
+        id: 'created_at',
+        header: 'Created',
+        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
+      }
+    ),
     columnHelper.display({
       id: 'actions_menu',
       header: '',
