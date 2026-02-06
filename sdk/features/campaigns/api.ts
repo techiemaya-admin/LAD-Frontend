@@ -297,11 +297,12 @@ export const getLeadProfileSummaryOptions = (campaignId: string, leadId: string)
  */
 export async function generateLeadProfileSummary(
   campaignId: string,
-  leadId: string
+  leadId: string,
+  profileData?: any
 ): Promise<{ summary: string }> {
   const response = await apiClient.post<{ success: boolean; summary: string }>(
     `/api/campaigns/${campaignId}/leads/${leadId}/summary`,
-    {}
+    profileData ? { leadId, campaignId, profileData } : {}
   );
   return { summary: response.data.summary };
 }
@@ -448,6 +449,28 @@ export async function revealLeadPhone(
     credits_used: response.data.credits_used,
     processing: response.data.processing,
     message: response.data.message
+  };
+}
+
+/**
+ * Reveal LinkedIn URL for a campaign lead
+ */
+export async function revealLeadLinkedIn(
+  campaignId: string,
+  leadId: string
+): Promise<{ linkedin_url: string; from_database: boolean }> {
+  const response = await apiClient.post<{
+    error: string;
+    success: boolean;
+    linkedin_url: string;
+    from_database: boolean;
+  }>(`/api/campaigns/${campaignId}/leads/${leadId}/reveal-linkedin`, {});
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to reveal LinkedIn');
+  }
+  return {
+    linkedin_url: response.data.linkedin_url,
+    from_database: response.data.from_database
   };
 }
 

@@ -35,6 +35,9 @@ export {
   getLeadProfileSummary,
   generateLeadProfileSummary,
   getLeadsSummaries,
+  revealLeadEmail,
+  revealLeadPhone,
+  revealLeadLinkedIn,
   saveInboundLeads,
   getInboundLeads,
   cancelLeadBookingsForReNurturing,
@@ -49,6 +52,8 @@ export { useCampaignStats } from './hooks/useCampaignStats';
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 export { useCampaignLeads } from './hooks/useCampaignLeads';
 export { useLeadsSummaries } from './hooks/useLeadsSummaries';
+export { useLeadProfileSummary, useGenerateLeadProfileSummary } from './hooks/useLeadProfileSummary';
+export { useRevealLeadEmail, useRevealLeadPhone, useRevealLeadLinkedIn } from './hooks/useLeadReveal';
 export { useSaveInboundLeads, useInboundLeads } from './hooks/useInboundLeads';
 export { useCampaignActivityFeed } from './hooks/useCampaignActivityFeed';
 // ============================================================================
