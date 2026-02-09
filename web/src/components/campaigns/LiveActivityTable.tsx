@@ -218,11 +218,13 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <p 
-                            className="text-sm text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
-                          >
-                            {activity.message_content || activity.error_message || '-'}
-                          </p>
+                          <div className="max-w-[220px]">
+                            <p
+                              className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap"
+                            >
+                              {activity.message_content || activity.error_message || '-'}
+                            </p>
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent>
                           {activity.message_content || activity.error_message || ''}

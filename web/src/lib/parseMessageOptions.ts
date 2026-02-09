@@ -16,14 +16,16 @@ export interface ParsedOptions {
   totalPlatforms?: number; // For platform_actions
   subStepType?: 'campaign_days' | 'working_days'; // For campaign_settings
   preSelectedOptions?: string[]; // Pre-selected options (for platform actions)
+  leadsPerDayOptions?: boolean; // For lead volume selection warning/single select
 }
 export function parseMessageOptions(message: string): ParsedOptions | null {
   if (!message || typeof message !== 'string') {
     return null;
   }
-  const messageLower = message.toLowerCase();
+  const normalizedMessage = message.replace(/\\n/g, '\n');
+  const messageLower = normalizedMessage.toLowerCase();
   // Check if message contains "Options:" keyword
-  const optionsMatch = message.match(/Options?:/i);
+  const optionsMatch = normalizedMessage.match(/Options?:/i);
   // If no "Options:" keyword, check if it's a platform actions question that might have options in examples
   if (!optionsMatch) {
     // Check if it's a platform actions question with examples
@@ -107,9 +109,12 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     return null;
   }
   // Split message into question and options sections
-  const optionsIndex = message.indexOf(optionsMatch[0]);
-  const questionText = message.substring(0, optionsIndex).trim();
-  const optionsSection = message.substring(optionsIndex + optionsMatch[0].length).trim();
+  const optionsIndex = normalizedMessage.indexOf(optionsMatch[0]);
+  const questionText = normalizedMessage
+    .substring(0, optionsIndex)
+    .replace(/\\n/g, '')
+    .trim();
+  const optionsSection = normalizedMessage.substring(optionsIndex + optionsMatch[0].length).trim();
   // Extract options (support bullet points: •, *, -, or numbered)
   const optionLines = optionsSection
     .split('\n')
@@ -120,7 +125,11 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     })
     .map(line => {
       // Remove bullet point markers
-      return line.replace(/^[•\*\-]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+      return line
+        .replace(/^[•\*\-]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .replace(/\\n/g, '')
+        .trim();
     })
     .filter(line => line.length > 0 && !line.toLowerCase().includes('modify your selection')); // Filter out helper text
   // Check for multi-select hint
@@ -128,6 +137,7 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
   const multiSelect = multiSelectKeywords.some(keyword => 
     message.toLowerCase().includes(keyword)
   );
+  const isLeadsPerDay = /leads per day|leads do you want per day|connect with daily/i.test(messageLower);
   // Skip is no longer allowed - all questions are required
   const allowSkip = false;
   if (optionLines.length === 0) {
@@ -199,7 +209,7 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
   }
   return {
     options: optionLines,
-    multiSelect,
+    multiSelect: isLeadsPerDay ? false : multiSelect,
     allowSkip,
     questionText,
     stepType,
@@ -208,5 +218,6 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     totalPlatforms,
     subStepType,
     preSelectedOptions,
+    leadsPerDayOptions: isLeadsPerDay,
   };
-}
+}
