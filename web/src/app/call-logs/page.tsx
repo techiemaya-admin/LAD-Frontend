@@ -1,6 +1,6 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
@@ -10,10 +10,10 @@ import { logger } from "@/lib/logger";
 import type { SortConfig } from "@/utils/sortingUtils";
 
 // SDK Imports
-import { 
-  useCallLogs, 
-  useBatchStatus, 
-  useEndCall, 
+import {
+  useCallLogs,
+  useBatchStatus,
+  useEndCall,
   useRetryFailedCalls,
   useCallLogsStats,
   type CallLog,
@@ -33,12 +33,15 @@ export default function CallLogsPage() {
   const searchParams = useSearchParams();
 
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [tenantId, setTenantId] = useState<string>("");
 
   const [items, setItems] = useState<CallLog[]>([]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | undefined>();
-  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(
+    new Set(),
+  );
   const [initialLoading, setInitialLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -47,18 +50,22 @@ export default function CallLogsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
 
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
-  const socket = useRef(io(socketUrl, { 
-    transports: ["websocket"],
-    reconnection: false,
-    forceNew: true,
-    autoConnect: true,
-    timeout: 20000,
-    secure: true,
-    rejectUnauthorized: false,
-    upgrade: false,
-    rememberUpgrade: false
-  })).current;
+  const socketUrl =
+    process.env.NEXT_PUBLIC_SOCKET_URL ||
+    "https://lad-backend-develop-741719885039.us-central1.run.app";
+  const socket = useRef(
+    io(socketUrl, {
+      transports: ["websocket"],
+      reconnection: false,
+      forceNew: true,
+      autoConnect: true,
+      timeout: 20000,
+      secure: true,
+      rejectUnauthorized: false,
+      upgrade: false,
+      rememberUpgrade: false,
+    }),
+  ).current;
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -92,10 +99,10 @@ export default function CallLogsPage() {
     if (dateFilter === "custom" && fromDate && toDate) {
       const from = new Date(fromDate);
       from.setHours(0, 0, 0, 0);
-      
+
       const to = new Date(toDate);
       to.setHours(23, 59, 59, 999);
-      
+
       return { from: from.toISOString(), to: to.toISOString() };
     }
 
@@ -107,77 +114,69 @@ export default function CallLogsPage() {
     {
       from_date: dateRange.from,
       to_date: dateRange.to,
+      page: page,
+      limit: perPage,
     },
-    authed === true // Only fetch when authenticated
   );
-  
-  const callLogsStatsQuery = useCallLogsStats(
-    {
-      from_date: dateRange.from,
-      to_date: dateRange.to,
-    },
-    authed === true // Only fetch when authenticated
-  );
-  
+
+  const callLogsStatsQuery = useCallLogsStats(tenantId, !!tenantId);
+console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.data);
   const batchStatusQuery = useBatchStatus(batchJobId);
   const endCallMutation = useEndCall();
   const retryCallsMutation = useRetryFailedCalls();
 
-  // Debug logging for query states
+  // Get tenant_id from current user
   useEffect(() => {
-    logger.debug('[Call Logs Query State]', {
-      isLoading: callLogsQuery.isLoading,
-      isFetching: callLogsQuery.isFetching,
-      isError: callLogsQuery.isError,
-      isSuccess: callLogsQuery.isSuccess,
-      error: callLogsQuery.error,
-      dataExists: !!callLogsQuery.data,
-      authed,
-      dateRange,
-    });
-  }, [callLogsQuery.isLoading, callLogsQuery.isFetching, callLogsQuery.isError, callLogsQuery.isSuccess, callLogsQuery.data, authed, dateRange]);
-
-
-  // ----------------------
-  // AUTH
-  // ----------------------
-  useEffect(() => {
-    (async () => {
+    const fetchUser = async () => {
       try {
-        await getCurrentUser();
-        setAuthed(true);
-      } catch {
-        setAuthed(false);
-        router.replace("/login?redirect_url=/call-logs");
+        const user: any = await getCurrentUser();
+        const userTenantId = user?.user?.tenantId
+        if (userTenantId) {
+          setTenantId(userTenantId);
+        }
+      } catch (error) {
+        logger.error("[Call Logs] Failed to get user tenant_id", error);
       }
-    })();
-  }, [router]);
+    };
+    fetchUser();
+  }, []);
+
+  // Debug logging for query states
+  // useEffect(() => {
+
+  // }, [callLogsQuery.isLoading, callLogsQuery.isFetching, callLogsQuery.isError, callLogsQuery.isSuccess, callLogsQuery.data, authed, dateRange]);
 
   // Initialize batchJobId + mode from query params
   useEffect(() => {
     if (!searchParams) return;
-    
+
     const jobId = searchParams.get("jobId");
     const mode = searchParams.get("mode");
 
-    logger.debug('[Call Logs] Query params detected', { jobId, mode });
+    logger.debug("[Call Logs] Query params detected", { jobId, mode });
 
     if (jobId) {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId);
+      const isUUID =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          jobId,
+        );
       const isBatchFormat = /^batch-[0-9a-f]{32}$/i.test(jobId);
-      
-      logger.debug('[Call Logs] Batch ID validation', { isUUID, isBatchFormat });
-      
+
+      logger.debug("[Call Logs] Batch ID validation", {
+        isUUID,
+        isBatchFormat,
+      });
+
       if (isUUID || isBatchFormat) {
-        logger.debug('[Call Logs] Setting batchJobId', { jobId });
+        logger.debug("[Call Logs] Setting batchJobId", { jobId });
         setBatchJobId(jobId);
         if (mode === "current-batch") {
-          logger.debug('[Call Logs] Setting timeFilter to batch');
+          logger.debug("[Call Logs] Setting timeFilter to batch");
           setTimeFilter("batch");
         }
       } else {
-        logger.warn('[Call Logs] Invalid batch ID format', { jobId });
-        router.replace('/call-logs');
+        logger.warn("[Call Logs] Invalid batch ID format", { jobId });
+        router.replace("/call-logs");
       }
     }
   }, [searchParams, router]);
@@ -186,24 +185,12 @@ export default function CallLogsPage() {
   // PROCESS SDK DATA
   // ----------------------
   useEffect(() => {
-    logger.debug('[Call Logs] Processing data effect triggered', {
-      timeFilter,
-      batchJobId,
-      hasBatchData: !!batchStatusQuery.data,
-      hasCallLogsData: !!callLogsQuery.data,
-      callLogsQueryState: {
-        isLoading: callLogsQuery.isLoading,
-        isSuccess: callLogsQuery.isSuccess,
-        isError: callLogsQuery.isError,
-      }
-    });
-
     // Handle batch view
     if (timeFilter === "batch" && batchJobId && batchStatusQuery.data) {
-      logger.debug('[Call Logs] Processing batch data', { batchJobId });
-      
+      logger.debug("[Call Logs] Processing batch data", { batchJobId });
+
       const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result;
-      
+
       if (!batch) {
         setItems([]);
         setInitialLoading(false);
@@ -226,7 +213,7 @@ export default function CallLogsPage() {
         batch_id: batchJobId,
       }));
 
-      logger.debug('[Call Logs] Setting batch items', { count: logs.length });
+      logger.debug("[Call Logs] Setting batch items", { count: logs.length });
       setItems(logs);
       setInitialLoading(false);
       return;
@@ -234,25 +221,25 @@ export default function CallLogsPage() {
 
     // Handle normal call logs
     if (callLogsQuery.isSuccess && callLogsQuery.data) {
-      logger.debug('[Call Logs] Processing normal call logs', { 
+      logger.debug("[Call Logs] Processing normal call logs", {
         rawData: callLogsQuery.data,
-        logsCount: callLogsQuery.data.logs?.length 
+        logsCount: callLogsQuery.data.logs?.length,
       });
 
       const logs: CallLog[] = (callLogsQuery.data.logs || []).map((r) => {
-        const leadName = [r.lead_first_name, r.lead_last_name]
-          .filter(Boolean)
-          .join(' ') || '';
+        const leadName =
+          [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
-        const leadCategory = r.lead_category || 
-                            r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+        const leadCategory =
+          r.lead_category ||
+          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
 
         return {
-          id: String(r.call_log_id || r.id || ''),
-          assistant: r.agent_name || '',
+          id: String(r.call_log_id || r.id || ""),
+          assistant: r.agent_name || "",
           lead_name: leadName,
           type: r.direction === "inbound" ? "Inbound" : "Outbound",
-          status: r.status || '',
+          status: r.status || "",
           startedAt: r.started_at,
           duration: r.duration_seconds || r.call_duration || 0,
           cost: r.cost ?? r.call_cost ?? 0,
@@ -265,9 +252,9 @@ export default function CallLogsPage() {
         };
       });
 
-      logger.debug('[Call Logs] Loaded call logs with count:', {
+      logger.debug("[Call Logs] Loaded call logs with count:", {
         total: logs.length,
-        withBatchId: logs.filter(l => l.batch_id).length,
+        withBatchId: logs.filter((l) => l.batch_id).length,
         sample: logs.slice(0, 3),
       });
 
@@ -277,19 +264,22 @@ export default function CallLogsPage() {
 
     // Handle errors
     if (batchStatusQuery.isError && timeFilter === "batch" && batchJobId) {
-      logger.error('[Call Logs] Failed to load batch status', batchStatusQuery.error);
+      logger.error(
+        "[Call Logs] Failed to load batch status",
+        batchStatusQuery.error,
+      );
       setBatchJobId(null);
       setTimeFilter("all");
-      router.replace('/call-logs');
+      router.replace("/call-logs");
     }
   }, [
-    callLogsQuery.data, 
-    batchStatusQuery.data, 
-    batchStatusQuery.isError, 
+    callLogsQuery.data,
+    batchStatusQuery.data,
+    batchStatusQuery.isError,
     batchStatusQuery.error,
-    timeFilter, 
-    batchJobId, 
-    router
+    timeFilter,
+    batchJobId,
+    router,
   ]);
 
   // ----------------------
@@ -301,7 +291,7 @@ export default function CallLogsPage() {
     });
 
     socket.on("calllogs:update", () => {
-      callLogsQuery.refetch();
+      // callLogsQuery.refetch();
       if (batchJobId) {
         batchStatusQuery.refetch();
       }
@@ -328,8 +318,15 @@ export default function CallLogsPage() {
       if (timeFilter === "current") {
         // Current Batch: only show batch calls with running/pending/queued status
         if (i.batch_id) {
-          const status = i.status?.toLowerCase() || '';
-          matchTime = ['running', 'pending', 'queued', 'ongoing', 'calling', 'in_progress'].includes(status);
+          const status = i.status?.toLowerCase() || "";
+          matchTime = [
+            "running",
+            "pending",
+            "queued",
+            "ongoing",
+            "calling",
+            "in_progress",
+          ].includes(status);
         } else {
           matchTime = false; // Hide individual calls in Current Batch view
         }
@@ -358,7 +355,7 @@ export default function CallLogsPage() {
 
   const uniqueProviders = useMemo(
     () => [...new Set(items.map((i) => i.type))],
-    [items]
+    [items],
   );
 
   // Apply sorting to filtered results for consistent ordering across pages
@@ -368,15 +365,28 @@ export default function CallLogsPage() {
     return sortCallLogs(filtered, sortConfig);
   }, [filtered, sortConfig]);
 
-  const totalPages = Math.ceil(sortedFiltered.length / perPage) || 1;
-  const paginated = sortedFiltered.slice((page - 1) * perPage, page * perPage);
+  // Server-side pagination - use backend data directly
+  const paginated = sortedFiltered;
+  
+  // Use backend pagination metadata
+  const paginationMeta = callLogsQuery.data?.pagination || {
+    page: 1,
+    limit: perPage,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
+  
+  const totalPages = paginationMeta.totalPages || 1;
+  const totalRecords = paginationMeta.total || 0;
 
   // Group calls by batch (from paginated items)
   const batchGroups = useMemo(() => {
     const groups: Record<string, typeof paginated> = {};
     const noBatchCalls: typeof paginated = [];
 
-    paginated.forEach((call: typeof paginated[0]) => {
+    paginated.forEach((call: (typeof paginated)[0]) => {
       if (call.batch_id) {
         if (!groups[call.batch_id]) {
           groups[call.batch_id] = [];
@@ -387,7 +397,7 @@ export default function CallLogsPage() {
       }
     });
 
-    logger.debug('[Call Logs] Batch grouping prepared', {
+    logger.debug("[Call Logs] Batch grouping prepared", {
       totalCalls: paginated.length,
       batchGroups: Object.keys(groups).length,
       noBatchCalls: noBatchCalls.length,
@@ -433,14 +443,18 @@ export default function CallLogsPage() {
 
   // ✅ Handle row click - prevent modal for active calls and failed calls
   const handleRowClick = (id: string) => {
-    const call = items.find(i => i.id === id);
-    const status = call?.status.toLowerCase() || '';
-    
+    const call = items.find((i) => i.id === id);
+    const status = call?.status.toLowerCase() || "";
+
     // Don't open modal for calling, queue, ongoing, or failed calls
-    if (['calling', 'queue', 'queued', 'ongoing', 'in_queue', 'failed'].includes(status)) {
+    if (
+      ["calling", "queue", "queued", "ongoing", "in_queue", "failed"].includes(
+        status,
+      )
+    ) {
       return;
     }
-    
+
     setOpenId(id);
   };
 
@@ -448,7 +462,7 @@ export default function CallLogsPage() {
   async function endSelectedCalls() {
     alert("Ending " + selected.size + " calls");
     // TODO: Implement bulk end API
-    await callLogsQuery.refetch();
+    // await callLogsQuery.refetch();
     setSelected(new Set());
   }
 
@@ -457,7 +471,7 @@ export default function CallLogsPage() {
     try {
       await endCallMutation.mutateAsync({ callId });
     } catch (error) {
-      logger.error('Error ending call', error);
+      logger.error("Error ending call", error);
       alert("Failed to end call. Please try again.");
     }
   }
@@ -470,38 +484,27 @@ export default function CallLogsPage() {
       alert(`Retrying ${failedCallIds.length} failed calls`);
       setSelected(new Set());
     } catch (error) {
-      logger.error('Error retrying calls', error);
+      logger.error("Error retrying calls", error);
       alert("Failed to retry calls. Please try again.");
     }
   }
 
-  // ----------------------
-  // BULK BATCH START HANDLER
-  // ----------------------
-  async function onBulkStart(data: any) {
-    const jobId = data.result.job_id;
-    setBatchJobId(jobId);
-    setTimeFilter("batch");
-    router.push(`/call-logs?jobId=${jobId}&mode=current-batch`);
-    await callLogsQuery.refetch();
-  }
-
-  if (authed === null) {
-    return null;
-  }
-
-  if (!authed) return <></>;
 
   // Check if any selected calls have "failed" status and count them
-  const failedCallIds = Array.from(selected).filter(id => {
-    const call = items.find(i => i.id === id);
+  const failedCallIds = Array.from(selected).filter((id) => {
+    const call = items.find((i) => i.id === id);
     return call && call.status.toLowerCase() === "failed";
   });
   const hasFailedCalls = failedCallIds.length > 0;
 
   // Show loading state in table body during fetch
-  const isTableLoading = callLogsQuery.isLoading || callLogsQuery.isFetching || batchStatusQuery.isLoading || batchStatusQuery.isFetching || initialLoading;
-
+  const isTableLoading =
+    callLogsQuery.isLoading ||
+    callLogsQuery.isFetching ||
+    batchStatusQuery.isLoading ||
+    batchStatusQuery.isFetching ||
+    initialLoading;
+  const { stats } = callLogsStatsQuery?.data || {};
   return (
     <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
@@ -536,16 +539,18 @@ export default function CallLogsPage() {
 
       {/* Stats Cards */}
       <CallLogsStatsCards
-        stats={callLogsStatsQuery.data || {
-          total_calls: 0,
-          completed_calls: 0,
-          failed_calls: 0,
-          ongoing: 0,
-          queue: 0,
-          hot_leads: 0,
-          warm_leads: 0,
-          cold_leads: 0
-        }}
+        stats={
+          stats || {
+            total_calls: 0,
+            completed_calls: 0,
+            failed_calls: 0,
+            ongoing: 0,
+            queue: 0,
+            hot_leads: 0,
+            warm_leads: 0,
+            cold_leads: 0,
+          }
+        }
         loading={callLogsStatsQuery.isLoading}
       />
 
@@ -580,15 +585,17 @@ export default function CallLogsPage() {
           setPage(1);
         }}
         isLoading={isTableLoading}
-      />
-
-
-      {/* Pagination */}
-      {/* <Pagination
-        currentPage={page}
+        // Backend pagination props
+        currentPage={paginationMeta.page}
         totalPages={totalPages}
-        onPageChange={setPage}
-      /> */}
+        totalRecords={totalRecords}
+        onPageChange={(newPage) => {
+          logger.debug('[Pagination] Page change requested', { from: page, to: newPage });
+          setPage(newPage);
+        }}
+        hasNextPage={paginationMeta.hasNextPage}
+        hasPreviousPage={paginationMeta.hasPreviousPage}
+      />
 
       {/* Modal */}
       <CallLogModal
