@@ -11,10 +11,10 @@ import * as api from "../api";
 /**
  * Hook to fetch call logs statistics
  */
-export function useCallLogsStats(params?: GetCallLogsParams, enabled: boolean = true) {
+export function useCallLogsStats(tenant_id: string, enabled: boolean = true) {
   return useQuery<CallLogsStats>({
-    queryKey: ["call-logs-stats", params],
-    queryFn: () => api.getCallLogsStats(params),
+    queryKey: ["call-logs-stats", tenant_id],
+    queryFn: () => api.getCallLogsStats(tenant_id),
     staleTime: 30000, // 30 seconds
     enabled: enabled,
   });

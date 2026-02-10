@@ -77,8 +77,12 @@ export interface CallLog {
 }
 
 export interface GetCallLogsParams {
+  status?: string;
+  agent_id?: string;
   from_date?: string;
   to_date?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface EndCallParams {
@@ -102,12 +106,12 @@ export interface RecordingSignedUrlResponse {
 }
 
 export interface CallLogsStats {
-  total_calls: number | string;
-  completed_calls: number | string;
-  failed_calls: number | string;
-  ongoing: number | string;
-  queue: number | string;
-  hot_leads: number | string;
-  warm_leads: number | string;
-  cold_leads: number | string;
+  total_calls: number;
+  completed_calls: number;
+  failed_calls: number;
+  ongoing: number;
+  queue: number;
+  hot_leads: number;
+  warm_leads: number;
+  cold_leads: number;
 }

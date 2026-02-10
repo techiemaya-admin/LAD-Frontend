@@ -1,11 +1,26 @@
 import React, { useMemo, useCallback } from "react";
-import { PhoneIncoming, PhoneOutgoing, StopCircle, ChevronDown, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, Search, Phone, ChevronsLeft, ChevronLeft, ChevronsRight, Plus } from "lucide-react";
+import { 
+  PhoneIncoming, 
+  PhoneOutgoing, 
+  StopCircle, 
+  ChevronDown, 
+  ChevronRight, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Search, 
+  Phone, 
+  ChevronsLeft, 
+  ChevronLeft, 
+  ChevronsRight, 
+  Plus,
+  ChevronRight as ChevronRightIcon
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
-import { logger } from "@/lib/logger";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRef, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -14,20 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { categorizeLead, getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
-import { sortCallLogs, toggleSortDirection, type SortConfig } from "@/utils/sortingUtils";
-import { generateRecordingFilename, downloadRecording } from "@/utils/recordingDownload";
+import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
 import {
   useReactTable,
   getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   flexRender,
-  createColumnHelper,
   type ColumnDef,
-  type SortingState,
-  type ColumnFiltersState,
 } from '@tanstack/react-table';
 
 interface CallLog {
@@ -58,8 +65,6 @@ interface CallLogsTableProps {
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
-  totalFilteredCount?: number;
-  onSortChange?: (sortConfig: SortConfig | null) => void;
   dateFilter?: string;
   onDateFilterChange?: (value: string) => void;
   fromDate?: string | null;
@@ -69,9 +74,14 @@ interface CallLogsTableProps {
   callFilter?: string;
   onCallFilterChange?: (value: string) => void;
   isLoading?: boolean;
+  // Backend pagination props
+  currentPage?: number;
+  totalPages?: number;
+  totalRecords?: number;
+  onPageChange?: (page: number) => void;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
 }
-
-const columnHelper = createColumnHelper<CallLog>();
 
 export function CallLogsTable({
   items,
@@ -83,8 +93,6 @@ export function CallLogsTable({
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
-  totalFilteredCount = 0,
-  onSortChange,
   dateFilter = 'all',
   onDateFilterChange,
   fromDate,
@@ -94,66 +102,26 @@ export function CallLogsTable({
   callFilter = 'all',
   onCallFilterChange,
   isLoading = false,
+  // Backend pagination props
+  currentPage = 1,
+  totalPages = 1,
+  totalRecords = 0,
+  onPageChange,
+  hasNextPage = false,
+  hasPreviousPage = false,
 }: CallLogsTableProps) {
   const router = useRouter();
-  const headerCheckboxRef = useRef<HTMLInputElement>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
-  const [downloadErrors, setDownloadErrors] = useState<Map<string, string>>(new Map());
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    // Prioritize API-provided lead_category and normalize it
     if (item.lead_category) {
       const normalized = normalizeLeadCategory(item.lead_category);
-      if (normalized) {
-        return normalized;
-      }
+      if (normalized) return normalized;
     }
-    // Return unknown if no lead_category found in API
     return "unknown";
   }, []);
-  // Handle recording download with error handling
-  const handleDownloadRecording = useCallback(
-    async (callId: string, leadName?: string, startedAt?: string) => {
-      const item = items.find(i => i.id === callId);
-      if (!item) return;
-
-      const recordingUrl = item.signed_recording_url || item.recording_url || item.call_recording_url;
-      if (!recordingUrl) {
-        setDownloadErrors(prev => new Map(prev).set(callId, "No recording available"));
-        return;
-      }
-
-      setDownloadingIds(prev => new Set(prev).add(callId));
-      setDownloadErrors(prev => {
-        const next = new Map(prev);
-        next.delete(callId);
-        return next;
-      });
-
-      try {
-        const filename = generateRecordingFilename(leadName, startedAt);
-        await downloadRecording(recordingUrl, filename, (error) => {
-          setDownloadErrors(prev => new Map(prev).set(callId, error.message));
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Download failed";
-        setDownloadErrors(prev => new Map(prev).set(callId, message));
-      } finally {
-        setDownloadingIds(prev => {
-          const next = new Set(prev);
-          next.delete(callId);
-          return next;
-        });
-      }
-    },
-    [items]
-  );
 
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
@@ -198,11 +166,10 @@ export function CallLogsTable({
 
   // Define table columns
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
-    columnHelper.display({
+    {
       id: 'select',
       header: ({ table }) => (
         <input
-          ref={headerCheckboxRef}
           type="checkbox"
           checked={table.getIsAllRowsSelected()}
           onChange={(e) => {
@@ -223,31 +190,35 @@ export function CallLogsTable({
           className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
         />
       ),
-    }),
-    columnHelper.accessor('id', {
+    },
+    {
       id: 'id',
+      accessorKey: 'id',
       header: 'Call ID',
       cell: ({ getValue }) => (
         <span className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
-          {getValue().slice(0, 8)}...
+          {(getValue() as string).slice(0, 8)}...
         </span>
       ),
-    }),
-    columnHelper.accessor('assistant', {
+    },
+    {
       id: 'assistant',
+      accessorKey: 'assistant',
       header: 'Agent',
-      cell: ({ getValue }) => <span className="font-medium">{getValue() || "—"}</span>,
-    }),
-    columnHelper.accessor('lead_name', {
+      cell: ({ getValue }) => <span className="font-medium">{(getValue() as string) || "—"}</span>,
+    },
+    {
       id: 'lead_name',
+      accessorKey: 'lead_name',
       header: 'Lead',
-      cell: ({ getValue }) => <span className="text-muted-foreground">{cleanLeadName(getValue())}</span>,
-    }),
-    columnHelper.accessor('type', {
+      cell: ({ getValue }) => <span className="text-muted-foreground">{cleanLeadName(getValue() as string)}</span>,
+    },
+    {
       id: 'type',
+      accessorKey: 'type',
       header: 'Type',
       cell: ({ getValue }) => {
-        const type = getValue();
+        const type = getValue() as string;
         return (
           <span
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
@@ -265,30 +236,34 @@ export function CallLogsTable({
           </span>
         );
       },
-    }),
-    columnHelper.accessor('status', {
+    },
+    {
       id: 'status',
+      accessorKey: 'status',
       header: 'Status',
-      cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+      cell: ({ getValue }) => <StatusBadge status={getValue() as string} />,
       filterFn: (row, columnId, filterValue) => {
         const status = row.getValue(columnId) as string;
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
-    }),
-    columnHelper.accessor('startedAt', {
+    },
+    {
       id: 'startedAt',
+      accessorKey: 'startedAt',
       header: 'Started',
       cell: ({ getValue }) => (
-        <span className="text-sm text-muted-foreground">{formatDateTime(getValue())}</span>
+        <span className="text-sm text-muted-foreground">{formatDateTime(getValue() as string)}</span>
       ),
-    }),
-    columnHelper.accessor('duration', {
+    },
+    {
       id: 'duration',
+      accessorKey: 'duration',
       header: 'Duration',
-      cell: ({ getValue }) => <span className="font-mono text-sm">{formatDuration(getValue())}</span>,
-    }),
-    columnHelper.accessor('tag', {
+      cell: ({ getValue }) => <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>,
+    },
+    {
       id: 'tag',
+      accessorKey: 'tag',
       header: 'Tags',
       cell: ({ row }) => {
         const tag = getLeadTag(row.original);
@@ -302,8 +277,8 @@ export function CallLogsTable({
           </span>
         );
       },
-    }),
-    columnHelper.display({
+    },
+    {
       id: 'cost',
       header: 'Cost',
       cell: ({ row }) => {
@@ -314,8 +289,8 @@ export function CallLogsTable({
           </span>
         );
       },
-    }),
-    columnHelper.display({
+    },
+    {
       id: 'actions',
       header: '',
       cell: ({ row }) => {
@@ -334,7 +309,7 @@ export function CallLogsTable({
           </div>
         );
       },
-    }),
+    },
   ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag]);
 
   // Setup table instance
@@ -342,29 +317,31 @@ export function CallLogsTable({
     data: itemsWithTags,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onPaginationChange: setPagination,
     state: {
-      sorting,
-      columnFilters,
-      pagination,
       globalFilter,
     },
     onGlobalFilterChange: setGlobalFilter,
   });
 
-  // Apply status filter
-  React.useEffect(() => {
-    if (statusFilter === 'all') {
-      table.getColumn('status')?.setFilterValue(undefined);
-    } else {
-      table.getColumn('status')?.setFilterValue(statusFilter);
-    }
-  }, [statusFilter, table]);
+  // Apply status filter manually to items
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'all') return itemsWithTags;
+    return itemsWithTags.filter(item => 
+      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
+    );
+  }, [itemsWithTags, statusFilter]);
+
+  // Apply global search filter
+  const searchFilteredItems = useMemo(() => {
+    if (!globalFilter) return filteredItems;
+    const lowerSearch = globalFilter.toLowerCase();
+    return filteredItems.filter(item => 
+      item.lead_name?.toLowerCase().includes(lowerSearch) ||
+      item.assistant?.toLowerCase().includes(lowerSearch) ||
+      item.id?.toLowerCase().includes(lowerSearch) ||
+      item.status?.toLowerCase().includes(lowerSearch)
+    );
+  }, [filteredItems, globalFilter]);
                                                                                                                                                                                                                                                                                                                                                                                         
   // Render batch header row                                                                                                                                                                                                                                                                                      
   const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
@@ -659,7 +636,7 @@ export function CallLogsTable({
                     <React.Fragment key={`batch-group-${batchId}`}>
                       {renderBatchHeader(batchId, calls)}
                       {expandedBatches.has(batchId) &&
-                        calls.map((call) => renderCallRow(call, true))}
+                        calls.map((call: CallLog) => renderCallRow(call, true))}
                     </React.Fragment>
                   );
                 } else {
@@ -745,39 +722,26 @@ export function CallLogsTable({
           )}
         </TableBody>
       </Table>
-      {/* Pagination Controls – same as CampaignsTable */}
-{table.getRowModel().rows.length > 0 && (
+      {/* Pagination Controls – Server-Side Pagination */}
+{table.getRowModel().rows.length > 0 && onPageChange && (
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
-      <span>Show</span>
-      <select
-        value={table.getState().pagination?.pageSize ?? 10}
-        onChange={(e) => table.setPageSize(Number(e.target.value))}
-        className="w-[70px] h-8 border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-white cursor-pointer"
-      >
-        {[5, 10, 20, 50].map((pageSize) => (
-          <option key={pageSize} value={pageSize}>
-            {pageSize}
-          </option>
-        ))}
-      </select>
       <span>
-        of {totalFilteredCount || table.getFilteredRowModel().rows.length} calls
+        Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalRecords)} of {totalRecords} calls
       </span>
     </div>
 
     <div className="flex items-center gap-2">
       <div className="text-sm text-[#64748B]">
-        Page {table.getState().pagination?.pageIndex + 1 || 1} of{" "}
-        {table.getPageCount()}
+        Page {currentPage} of {totalPages}
       </div>
 
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => onPageChange(1)}
+          disabled={!hasPreviousPage}
           className="h-8 w-8 p-0"
         >
           <ChevronsLeft className="h-4 w-4" />
@@ -785,8 +749,8 @@ export function CallLogsTable({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={!hasPreviousPage}
           className="h-8 w-8 p-0"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -794,8 +758,8 @@ export function CallLogsTable({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={!hasNextPage}
           className="h-8 w-8 p-0"
         >
           <ChevronRight className="h-4 w-4" />
@@ -803,8 +767,8 @@ export function CallLogsTable({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          disabled={!table.getCanNextPage()}
+          onClick={() => onPageChange(totalPages)}
+          disabled={!hasNextPage}
           className="h-8 w-8 p-0"
         >
           <ChevronsRight className="h-4 w-4" />
