@@ -96,6 +96,19 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
 
 
 /**
+ * Retry failed calls
+ */
+export async function retryFailedCalls(params: RetryCallsParams): Promise<void> {
+  //console.log('[Call Logs API] Retrying failed calls:', params);
+  
+  const response = await apiPost(`/api/voice-agent/calls/retry`, params);
+  //console.log('[Call Logs API] Retry response:', response);
+  
+  // No data to return for void response
+  return;
+}
+
+/**
  * Get call logs statistics
  * Fetches call logs statistics for a specific tenant
  */
