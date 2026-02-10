@@ -3,6 +3,17 @@
 import * as React from "react";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
+
+// SDK Imports
+import { 
+  useCallLogs, 
+  useBatchStatus, 
+  useEndCall, 
+  useRetryFailedCalls,
+  useRecordingSignedUrl,
+  type CallLog,
+  type BatchPayload,
+} from "@lad/frontend-features/call-logs";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +39,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/app-toaster";
-import { apiGet } from "@/lib/api";
+import { voiceAgentService } from "@lad/frontend-features/voice-agent";
 import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
@@ -546,10 +557,41 @@ export function CallLogModal({
     []
   );
   const [analysis, setAnalysis] = useState<any | null>(null);
-  const [signedRecordingUrl, setSignedRecordingUrl] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<any | null>(null);
   const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
   const { push } = useToast();
+  
+  // Get callId for recording URL query
+  const callId = log?.call_id ?? log?.callId ?? log?.voice_call_id ?? log?.id;
+  
+  // Use SDK hook to fetch signed recording URL
+  const recordingUrlQuery = useRecordingSignedUrl(callId);
+  
+  // Determine the final recording URL (SDK signed URL > fallback URLs from log)
+  const signedRecordingUrl = useMemo(() => {
+    if (recordingUrlQuery.data?.signed_url) {
+      logger.debug('Using signed URL from SDK hook');
+      return recordingUrlQuery.data.signed_url;
+    }
+    if (recordingUrlQuery.data?.data?.signed_url) {
+      logger.debug('Using nested signed URL from SDK hook');
+      return recordingUrlQuery.data.data.signed_url;
+    }
+    // Fallback to log data
+    if (log?.signed_recording_url) {
+      logger.debug('Using signed_recording_url from log data');
+      return log.signed_recording_url;
+    }
+    if (log?.recording_url) {
+      logger.debug('Using recording_url from log data');
+      return log.recording_url;
+    }
+    if (log?.call_recording_url) {
+      logger.debug('Using call_recording_url from log data');
+      return log.call_recording_url;
+    }
+    return undefined;
+  }, [recordingUrlQuery.data, log]);
 
   useEffect(() => {
     async function load() {
@@ -558,14 +600,13 @@ export function CallLogModal({
         setSegments([]);
         setAnalysis(null);
         setMessages(null);
-        setSignedRecordingUrl(undefined);
         return;
       }
 
       try {
-        // Call log - Using voice-agent API (get by call_log_id)
-        const res = await apiGet<{ success: boolean; log?: any; data?: any }>(`/api/voice-agent/calllogs/${id}`);
-        const l = res.data || res.log;
+        // Call log - Using voice-agent SDK service
+        const res: any = await voiceAgentService.getCallLog(id);
+        const l = res.data || res.log || res;
         setLog(l);
 
         // 2) Transcripts: accept string OR object, and several common keys
@@ -610,64 +651,7 @@ export function CallLogModal({
           setSegments([]);
         }
 
-        // 3) Audio: always try signed URL using a real call id, then fallback
-        try {
-          const callId = l?.call_id ?? l?.callId ?? l?.voice_call_id ?? l?.id;
-          let audioUrl: string | undefined;
-
-          if (callId) {
-            try {
-              // Using voice-agent API for recording URL (VAPI integration disabled in backend)
-              logger.debug(`Fetching signed recording URL for callId: ${callId}`);
-              const signedRes = await apiGet<{ success: boolean; signed_url?: string; data?: { signed_url?: string } }>(
-                `/api/voice-agent/calls/${callId}/recording-signed-url`
-              );
-              
-              // Log the full response for debugging - check both response structures (cloud vs localhost)
-              logger.debug(`API response check: success=${signedRes?.success}, direct_url=${!!signedRes?.signed_url}, data_url=${!!signedRes?.data?.signed_url}`);
-              
-              // Handle both response structures: direct signed_url OR nested in data
-              const signedUrl = signedRes?.signed_url || signedRes?.data?.signed_url;
-              
-              if (signedRes?.success && signedUrl) {
-                logger.debug(`Successfully retrieved signed URL. First 100 chars: ${signedUrl.substring(0, 100)}...`);
-                audioUrl = signedUrl;
-              } else {
-                logger.warn(`Signed URL not found. Response structure: ${JSON.stringify({ success: signedRes?.success, hasDirect: !!signedRes?.signed_url, hasData: !!signedRes?.data, dataKeys: Object.keys(signedRes?.data || {}) })}`);
-              }
-            } catch (apiError) {
-              logger.warn(`Failed to fetch signed recording URL from API (${apiError}), trying fallbacks`);
-            }
-          }
-          
-          // Try fallback URLs in order
-          if (!audioUrl && l?.signed_recording_url) {
-            logger.debug("Using signed_recording_url from log data");
-            audioUrl = l.signed_recording_url;
-          }
-          if (!audioUrl && l?.recording_url) {
-            logger.debug("Using recording_url from log data");
-            audioUrl = l.recording_url;
-          }
-          if (!audioUrl && l?.call_recording_url) {
-            logger.debug("Using call_recording_url from log data");
-            audioUrl = l.call_recording_url;
-          }
-          
-          if (audioUrl) {
-            logger.debug(`Recording URL set. Type: ${audioUrl.includes('signed') ? 'signed' : 'direct'}. First 100 chars: ${audioUrl.substring(0, 100)}...`);
-          } else {
-            logger.warn("No recording URL found in response or fallbacks");
-          }
-          
-          setSignedRecordingUrl(audioUrl);
-        } catch (signErr) {
-          // Fallback to direct URLs if signed URL fetch fails
-          logger.error(`Unexpected error while fetching recording URL: ${signErr}`);
-          setSignedRecordingUrl(l?.signed_recording_url || l?.recording_url || l?.call_recording_url);
-        }
-
-        // 4) Analysis - included in the main call log response
+        // 3) Analysis - included in the main call log response
         try {
           const a = l?.analysis ?? null;
           setAnalysis(a);
@@ -685,7 +669,6 @@ export function CallLogModal({
         setSegments([]);
         setAnalysis(null);
         setMessages(null);
-        setSignedRecordingUrl(undefined);
       }
     }
 
@@ -735,13 +718,13 @@ export function CallLogModal({
     }
   };
 
-  // Get lead category from API response or categorize
+  // Get lead category from API response or show unknown
   const leadCategory = (() => {
     if (log?.lead_category) {
       const normalized = normalizeLeadCategory(log.lead_category);
       if (normalized) return normalized;
     }
-    return categorizeLead(log || {});
+    return "unknown";
   })();
   const tagConfig = getTagConfig(leadCategory);
 
@@ -760,7 +743,7 @@ export function CallLogModal({
             <PhoneCall className="h-6 w-6 text-orange-500" />
             <div className="flex flex-col space-y-1">
               <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
-              {leadCategory && (
+              {/* {leadCategory && (
                 <Badge className={cn(
                   "w-fit text-xs font-semibold",
                   tagConfig.bgColor,
@@ -768,7 +751,7 @@ export function CallLogModal({
                 )}>
                   {tagConfig.label}
                 </Badge>
-              )}
+              )} */}
             </div>
           </div>
           <div className="flex items-center space-x-2">
