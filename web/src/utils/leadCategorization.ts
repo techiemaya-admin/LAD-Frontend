@@ -3,7 +3,7 @@
  * Determines lead temperature (Hot/Warm/Cold) based on call characteristics
  */
 
-export type LeadTag = "hot" | "warm" | "cold";
+export type LeadTag = "hot" | "warm" | "cold" | "unknown";
 
 export interface LeadTagConfig {
   tag: LeadTag;
@@ -34,6 +34,13 @@ const TAG_CONFIGS: Record<LeadTag, LeadTagConfig> = {
     bgColor: "bg-blue-100",
     textColor: "text-blue-700",
     borderColor: "border-blue-300",
+  },
+  unknown: {
+    tag: "unknown",
+    label: "Unknown",
+    bgColor: "bg-gray-100",
+    textColor: "text-gray-700",
+    borderColor: "border-gray-300",
   },
 };
 
@@ -100,13 +107,31 @@ export function getAllTagConfigs(): Record<LeadTag, LeadTagConfig> {
  * Handles values like "Hot Lead", "hot", "HOT" and converts to "hot"
  */
 export function normalizeLeadCategory(apiValue?: string): LeadTag | null {
-  if (!apiValue) return null;
-  
-  const normalized = apiValue.toLowerCase().replace(/\s+lead\s*/i, '').trim();
-  
-  if (normalized === 'hot') return 'hot';
-  if (normalized === 'warm') return 'warm';
-  if (normalized === 'cold') return 'cold';
-  
+  if (!apiValue) {
+    return null;
+  }
+
+  const lowered = apiValue.toLowerCase();
+
+  // Replace common separators with spaces and strip trailing "lead" tokens so
+  // that variations like "Cold Lead", "cold_lead", or "Cold-Lead (AI)" all normalize correctly.
+  const sanitized = lowered
+    .replace(/[_-]/g, " ")
+    .replace(/\blead\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const tokens = sanitized.split(" ").filter(Boolean);
+  for (const tag of ["hot", "warm", "cold"] as const) {
+    if (tokens.includes(tag)) {
+      return tag;
+    }
+  }
+
+  // Final fallback in case the tag appears without surrounding whitespace.
+  if (sanitized.includes("hot")) return "hot";
+  if (sanitized.includes("warm")) return "warm";
+  if (sanitized.includes("cold")) return "cold";
+
   return null;
 }
