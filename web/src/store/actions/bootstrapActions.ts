@@ -8,8 +8,8 @@ import { setStatuses, setSources, setPriorities } from '../slices/masterDataSlic
 import { logger } from '@/lib/logger';
 import { AppDispatch, RootState } from '../store';
 import { safeStorage } from '../../utils/storage';
-import * as chatService from '../../services/chatService';
-import * as pipelineService from '../../services/pipelineService';
+import chatService from '../../services/chatService';
+import * as pipelineService from '@lad/frontend-features/deals-pipeline';
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
 export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
@@ -29,19 +29,8 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
       dispatch(setConversations(conversationsData));
       dispatch(setConversationLoading(false));
     }
-    // 2. Load notifications (if API exists) - only if backend has notifications
-    try {
-      const backendNotifications = await chatService.getConversationNotifications('');
-      if (backendNotifications && Array.isArray(backendNotifications) && backendNotifications.length > 0) {
-        logger.debug('[Bootstrap] Loaded notifications from backend', { count: backendNotifications.length });
-        dispatch(setNotifications(backendNotifications));
-      } else {
-        logger.debug('[Bootstrap] No notifications from backend, keeping localStorage notifications');
-      }
-    } catch (error) {
-      const err = error as Error;
-      logger.debug('[Bootstrap] Error fetching notifications from backend, keeping localStorage notifications', { error: err.message });
-    }
+    // 2. Load notifications
+    // Notifications are handled via socket events in chatService; no backend fetch here.
     // 3. Load pipeline data into Redux state
     try {
       logger.debug('[Bootstrap] Loading pipeline data...');
@@ -117,4 +106,4 @@ export const bootstrapApp = (): AppThunk => async (dispatch, getState) => {
     dispatch(setBootstrapError(error.message || 'Failed to bootstrap app'));
     dispatch(setBootstrapLoading(false));
   }
-};
+};

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Chip } from '@/components/ui/chip';
+import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { Stage } from '../store/slices/pipelineSlice';
 interface StageColor {
@@ -82,7 +83,7 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
     <Dialog open={open}>
       <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
         <DialogTitle className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-[#3A3A4F]">
+          <span className="text-lg font-semibold text-primary">
             {stage ? 'Edit Stage' : 'Add New Stage'}
           </span>
           <button
@@ -167,4 +168,4 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
       </Dialog>
   );
 };
-export default AddStageDialog;
+export default AddStageDialog;

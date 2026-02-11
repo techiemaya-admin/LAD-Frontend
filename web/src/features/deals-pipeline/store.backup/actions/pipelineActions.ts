@@ -19,7 +19,7 @@ import {
   bulkUpdateLeads,
   selectLeadsCacheValid
 } from '../slices/leadsSlice';
-import * as pipelineService from '@/services/pipelineService';
+import * as pipelineService from '@lad/frontend-features/deals-pipeline';
 import { AppDispatch, RootState } from '@/store/store';
 import { Stage } from '../slices/pipelineSlice';
 import { Lead } from '../../types';
@@ -61,7 +61,6 @@ export const createStageAction = (stageData: { name?: string; label?: string; po
     const allStages = await pipelineService.fetchStages();
     dispatch(setStages(allStages));
     dispatch(setStagesLoading(false));
-    .key || (newStage as { id?: string }).id);
   } catch (error) {
     const err = error as Error;
     console.error('[Redux] Failed to create stage:', error);
@@ -246,4 +245,4 @@ export const refreshPipelineDataAction = (): AppThunk => async (dispatch) => {
     dispatch(setStagesLoading(false));
     dispatch(setLeadsLoading(false));
   }
-};
+};

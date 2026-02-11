@@ -54,7 +54,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 shadow-lg rounded-3xl px-8 py-6 border border-gray-200 dark:border-gray-700">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight"> Deals Pipeline</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1"> Deals Pipeline</h1>
           <p className="text-gray-500 dark:text-gray-400 text-lg">Customize your pipeline ✨</p>
         </div>
     <div className="p-4 flex justify-between items-center border-b border-gray-200">
@@ -157,4 +157,4 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
     </div>
   );
 };
-export default PipelineBoardToolbar;
+export default PipelineBoardToolbar;

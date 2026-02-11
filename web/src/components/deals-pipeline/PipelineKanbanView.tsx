@@ -80,7 +80,7 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
   return (
     <>
       <div
-        className="flex gap-2 min-h-[calc(100vh-200px)] pb-4 px-2 pr-2"
+        className="flex gap-2 min-h-[calc(100vh-200px)] pb-4 px-2 pr-2 bg-[#f8f9fe]"
       >
         <SortableContext items={sortableStageIds} strategy={horizontalListSortingStrategy}>
           {stages.map((stage, index) => {
@@ -150,4 +150,4 @@ export default React.memo(PipelineKanbanView, (prevProps, nextProps) => {
       prevProps.leadsByStage[key]?.leads?.length === nextProps.leadsByStage[key]?.leads?.length
     )
   );
-});
+});
