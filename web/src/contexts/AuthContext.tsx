@@ -32,8 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load token and user from localStorage on mount
   useEffect(() => {
     logger.debug('[AuthContext] Loading auth data from localStorage...');
-    const storedToken = safeStorage.getItem('auth_token');
-    const storedUser = safeStorage.getItem('user');
+    const storedToken = safeStorage.getItem('token');
+    const storedUser = safeStorage.getItem('auth');
     
     if (storedToken) {
       logger.debug('[AuthContext] Stored token found');
@@ -85,15 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Token is invalid, clear it
         safeStorage.removeItem('token');
-        safeStorage.removeItem('user');
+        safeStorage.removeItem('auth');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
       safeStorage.removeItem('token');
-      safeStorage.removeItem('auth_token');
-      safeStorage.removeItem('user');
+      safeStorage.removeItem('auth');
       setToken(null);
       setUser(null);
     } finally {
@@ -133,8 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const logout = () => {
     safeStorage.removeItem('token');
-    safeStorage.removeItem('auth_token');
-    safeStorage.removeItem('user');
+    safeStorage.removeItem('auth');
     setToken(null);
     setUser(null);
     router.push('/login');
