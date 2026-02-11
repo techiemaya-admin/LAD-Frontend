@@ -18,7 +18,7 @@ import {
   User as UserIcon, Mail, Phone, Clock, Paperclip, MessageSquare, FileText, GripVertical,
   Trash2, MoreVertical, Building2, DollarSign, Calendar, Flag, CheckCircle2,
   AlertCircle, TrendingUp, TrendingDown, X, Edit, Save, XCircle, Plus,
-  UserCircle, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag
+  UserCircle, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag, Linkedin
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -50,6 +50,7 @@ import {
 } from '@/store/slices/usersSlice';
 import { fetchUsersAction } from '@/store/actions/usersActions';
 import BookingSlot from './BookingSlot';
+import PipelineBadge from './PipelineBadge';
 import * as bookingService from '@/services/bookingService';
 import { selectUser as selectAuthUser } from '@/store/slices/authSlice';
 interface TabPanelProps {
@@ -1836,10 +1837,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               <p className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 min-w-0">
                 {getLeadDisplayName(lead)}
               </p>
-              <div className="flex items-center gap-1 text-xs text-gray-500" title={`Success Probability: ${probability}%`}>
+              {/* <div className="flex items-center gap-1 text-xs text-gray-500" title={`Success Probability: ${probability}%`}>
                 <Progress value={probability} className="h-2 w-16" />
                 <span>{probability}%</span>
-              </div>
+              </div> */}
             </div>
             {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
               <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -1856,6 +1857,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               {trendValue > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             </span>
           )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" data-ignore-card-click className="focus:outline-none">
@@ -1920,11 +1922,28 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         )}
         {showDetails && (
           <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+            <div className="flex flex-wrap justify-between gap-3 text-sm text-gray-700">
               <span className="flex items-center gap-1 font-semibold text-green-600">
                 <DollarSign className="h-4 w-4" />
                 {formatCurrency((lead.amount as number) || 0)}
               </span>
+              {normalizeDisplayValue(
+                getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source,
+                ''
+              ) && (
+                <PipelineBadge
+                  source={normalizeDisplayValue(
+                    getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source
+                  )}
+                  showLabel={false}
+                />
+              )}
+              {normalizeDisplayValue((lead as any)?.phone || lead.phone, '') && (
+                <span className="text-xs text-gray-500 flex items-center gap-1 justify-end" title="Phone">
+                  <Phone className="h-3.5 w-3.5" />
+                  {normalizeDisplayValue((lead as any)?.phone || lead.phone)}
+                </span>
+              )}
               {(lead.closeDate as string | undefined) && (
                 <span
                   className={`flex items-center gap-1 text-xs ${
@@ -1937,6 +1956,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 </span>
               )}
             </div>
+
             {(lead.description as string | undefined) && (
               <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
             )}
@@ -1950,7 +1970,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </div>
             )}
           </div>
+          
         )}
+    
         <div className="mt-4 border-t border-gray-100 pt-2 text-xs text-gray-500 flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
@@ -2053,6 +2075,7 @@ export default React.memo(PipelineLeadCard, (prevProps, nextProps) => {
     prevProps.lead.name === nextProps.lead.name &&
     prevProps.lead.amount === nextProps.lead.amount &&
     prevProps.lead.company === nextProps.lead.company &&
+    (prevProps.lead as any).source === (nextProps.lead as any).source &&
     prevProps.hideCard === nextProps.hideCard &&
     prevProps.isPreview === nextProps.isPreview &&
     prevProps.externalDetailsOpen === nextProps.externalDetailsOpen
