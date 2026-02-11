@@ -184,10 +184,13 @@ export const selectPipelineBoardData = createSelector(
         }
       };
     });
-    
+
+    const leadsInKnownStages = stageData.flatMap(stage => stage.leads || []);
+
     return {
       stages: stageData,
-      totalLeads: allLeads.length,
+      // Count leads actually mapped into known stages (matches what board renders)
+      totalLeads: new Set(leadsInKnownStages.map(l => String((l as any).id))).size,
       totalValue: allLeads.reduce((sum, lead) => {
         const value = (lead as any).value || (lead as any).amount || 0;
         return sum + (typeof value === 'number' ? value : parseFloat(String(value)) || 0);
@@ -432,10 +435,13 @@ export const selectPipelineBoardDataWithFilters = createSelector(
         }
       };
     });
-    
+
+    const leadsInKnownStages = stageData.flatMap(stage => stage.leads || []);
+
     return {
       stages: stageData,
-      totalLeads: allFilteredLeads.length,
+      // Count leads actually mapped into known stages (matches what board renders)
+      totalLeads: new Set(leadsInKnownStages.map(l => String((l as any).id))).size,
       totalValue: allFilteredLeads.reduce((sum, lead) => {
         const amount = (lead as any).amount || (lead as any).value;
         return sum + (parseFloat(String(amount)) || 0);

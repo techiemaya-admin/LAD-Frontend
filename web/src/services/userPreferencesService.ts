@@ -157,7 +157,7 @@ class UserPreferencesService {
   // Get default preferences structure
   getDefaultPreferences(): PipelinePreferences {
     return {
-      viewMode: 'kanban', // 'kanban' | 'list'
+      viewMode: 'list', // 'kanban' | 'list'
       visibleColumns: {
         name: true,
         stage: true,
@@ -242,4 +242,4 @@ class UserPreferencesService {
     }, delay);
   }
 }
-export default new UserPreferencesService();
+export default new UserPreferencesService();

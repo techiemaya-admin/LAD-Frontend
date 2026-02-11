@@ -11,9 +11,9 @@ import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
 import PipelineLeadCard from './PipelineLeadCard';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { updateStage, deleteStage } from '@/services/pipelineService';
+import { updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
 import { useDispatch } from 'react-redux';
-import { Stage } from '../store/slices/pipelineSlice';
+import { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
 interface PipelineStageColumnProps {
@@ -176,14 +176,18 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <div className="flex justify-between items-center mb-2 min-h-[32px]">
+        <div
+          className={`sticky top-0 z-10 flex justify-between items-center mb-2 min-h-[32px] rounded-[5px] px-2 py-1 -mx-2 ${
+            isOver ? 'bg-blue-100' : 'bg-gray-50'
+          }`}
+        >
           <div className="flex flex-col gap-1 flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis">
+              <h3 className="text-lg font-semibold text-[#172560] whitespace-nowrap overflow-hidden text-ellipsis">
                 {stage.name || stage.label}
               </h3>
               {showCardCount && (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                <Badge variant="secondary" className="bg-[#e8ebf7] text-[#172560] text-xs">
                   {leads.length}
                 </Badge>
               )}
@@ -356,4 +360,4 @@ export default React.memo(PipelineStageColumn, (prevProps, nextProps) => {
     // Deep compare lead IDs to detect if leads array actually changed
     JSON.stringify(prevProps.leads.map(l => l.id)) === JSON.stringify(nextProps.leads.map(l => l.id))
   );
-});
+});

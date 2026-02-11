@@ -59,7 +59,7 @@ export async function updateUserSettings(settings: Record<string, unknown>): Pro
 }
 // Pipeline Preferences Helper Functions
 interface PipelinePreferences {
-  viewMode: 'kanban' | 'list';
+  viewMode:  'list' | 'kanban' ;
   visibleColumns: Record<string, boolean>;
   filters: {
     statuses: string[];

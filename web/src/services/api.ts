@@ -27,6 +27,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
+    // Log detailed error information
+    const errorInfo = {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: error.code,
+      responseData: error.response?.data
+    };
+    
+    logger.error('API Error:', errorInfo);
+    
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         safeStorage.removeItem('token');

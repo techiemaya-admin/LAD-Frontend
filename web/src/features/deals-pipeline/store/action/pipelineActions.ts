@@ -19,11 +19,13 @@ import {
   bulkUpdateLeads,
   selectLeadsCacheValid
 } from '../slices/leadsSlice';
-import * as pipelineService from '../../../../services/pipelineService';
+import * as pipelineService from '@lad/frontend-features/deals-pipeline';
 import { AppDispatch, RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
 import { Lead } from '../../types';
 import { logger } from '@/lib/logger';
+
+const PIPELINE_LOAD_TIMEOUT_MS: number = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 120000;
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
 // ============ STAGES ACTIONS ============
@@ -260,7 +262,10 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
     dispatch(clearLeadsError());
     // Add timeout to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout - please check your connection')), 15000)
+      setTimeout(
+        () => reject(new Error('Request timeout - please check your connection')),
+        PIPELINE_LOAD_TIMEOUT_MS
+      )
     );
     const data = await Promise.race([
       pipelineService.fetchPipelineData(),
@@ -276,17 +281,30 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
     });
   } catch (error) {
     const err = error as any;
-    logger.error('[Redux] Failed to load pipeline data:', {
-      errorType: typeof err,
-      errorConstructor: err?.constructor?.name,
-      errorMessage: err?.message || err?.toString() || 'Unknown error',
-      errorStack: err?.stack,
-      errorResponse: err?.response?.data,
-      errorStatus: err?.response?.status,
-      errorKeys: err ? Object.keys(err) : [],
-      rawError: JSON.stringify(err, Object.getOwnPropertyNames(err))
-    });
-    const errorMessage = err?.message || 'Failed to load pipeline data';
+    
+    // Extract detailed error information
+    const errorDetails = {
+      type: typeof err,
+      constructor: err?.constructor?.name,
+      message: err?.message || err?.toString() || 'Unknown error',
+      statusCode: err?.response?.status,
+      statusText: err?.response?.statusText,
+      responseData: err?.response?.data,
+      code: err?.code,
+      isAxiosError: err?.isAxiosError,
+      url: err?.config?.url,
+      method: err?.config?.method,
+      fullError: err instanceof Error ? {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      } : null
+    };
+    
+    // Log with full details using logger only
+    logger.error('[Redux] Failed to load pipeline data:', errorDetails);
+    
+    const errorMessage = err?.message || err?.response?.data?.message || 'Failed to load pipeline data';
     dispatch(setStagesError(errorMessage));
     dispatch(setLeadsError(errorMessage));
   } finally {
