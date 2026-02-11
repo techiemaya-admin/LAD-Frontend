@@ -29,13 +29,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  // Load token from localStorage on mount
+  // Load token and user from localStorage on mount
   useEffect(() => {
-    logger.debug('[AuthContext] Loading token from localStorage...');
+    logger.debug('[AuthContext] Loading auth data from localStorage...');
     const storedToken = safeStorage.getItem('auth_token');
+    const storedUser = safeStorage.getItem('user');
+    
     if (storedToken) {
       logger.debug('[AuthContext] Stored token found');
       setToken(storedToken);
+    }
+    
+    if (storedUser) {
+      try {
+        logger.debug('[AuthContext] Stored user found');
+        const user = JSON.parse(storedUser);
+        setUser(user);
+      } catch (e) {
+        logger.error('[AuthContext] Failed to parse stored user', { error: e });
+      }
+    }
+    
+    if (storedToken) {
       fetchCurrentUser(storedToken);
     } else {
       logger.debug('[AuthContext] No stored token found');
@@ -65,15 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.debug('[AuthContext] User data received');
         const user = userData.user || userData;
         setUser(user);
+        // Store user data in localStorage for persistence
+        safeStorage.setItem('user', JSON.stringify(user));
       } else {
         // Token is invalid, clear it
         safeStorage.removeItem('token');
+        safeStorage.removeItem('user');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
       safeStorage.removeItem('token');
+      safeStorage.removeItem('auth_token');
+      safeStorage.removeItem('user');
       setToken(null);
       setUser(null);
     } finally {
@@ -113,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const logout = () => {
     safeStorage.removeItem('token');
+    safeStorage.removeItem('auth_token');
+    safeStorage.removeItem('user');
     setToken(null);
     setUser(null);
     router.push('/login');
