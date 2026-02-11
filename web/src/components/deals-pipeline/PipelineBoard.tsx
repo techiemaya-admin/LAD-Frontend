@@ -6,6 +6,8 @@ import type { AppDispatch } from '@/store/store';
 import { store } from '@/store/store';
 import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { logger } from '@/lib/logger';
@@ -209,9 +211,30 @@ const PipelineBoard: React.FC = () => {
   const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
   // Add preferences loading state (still local as it's component-specific)
   const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
+  // Custom export date range dialog state
+  const [customExportDialogOpen, setCustomExportDialogOpen] = useState<boolean>(false);
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   // Computed loading state combining all loading states
   const isLoading = reduxStagesLoading || reduxLeadsLoading || masterDataLoading || usersLoading || !preferencesLoaded;
   const currentError = reduxStagesError || reduxLeadsError || usersError || masterDataErrors?.[0] || null;
+
+  const pipelinePriorityCounts = useMemo(() => {
+    return pipelineBoardData.stages.reduce(
+      (acc: { high: number; medium: number; low: number }, stage: any) => {
+        acc.high += stage?.priority?.high || 0;
+        acc.medium += stage?.priority?.medium || 0;
+        acc.low += stage?.priority?.low || 0;
+        return acc;
+      },
+      { high: 0, medium: 0, low: 0 }
+    );
+  }, [pipelineBoardData.stages]);
+
+  const wonClosedCount = useMemo(() => {
+    const allLeads = pipelineBoardData.stages.flatMap((s: any) => s?.leads || []);
+    return allLeads.filter((lead: any) => lead?.status === 'won' || lead?.stage === 'won').length;
+  }, [pipelineBoardData.stages]);
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
     if (!isLoading) return;
@@ -304,7 +327,7 @@ const PipelineBoard: React.FC = () => {
         const preferences = await getPipelinePreferences();
         // Merge uiSettings with viewMode and visibleColumns
         const newSettings = { 
-          viewMode: preferences.viewMode || 'kanban',
+          viewMode: preferences.viewMode || 'list',
           visibleColumns: preferences.visibleColumns as any || {},
           ...preferences.uiSettings 
         };
@@ -334,6 +357,243 @@ const PipelineBoard: React.FC = () => {
   const sortedAndFilteredLeads = useMemo(() => {
     return Object.values(currentLeadsByStage).flatMap(stageData => stageData.leads);
   }, [currentLeadsByStage]);
+
+  const handleExportLeads = useCallback(async (): Promise<void> => {
+    const leads = sortedAndFilteredLeads || [];
+    const filename = `pipeline_leads_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const { Workbook } = await import('exceljs');
+
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('Leads');
+
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 18 },
+      { header: 'Name', key: 'name', width: 24 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Phone', key: 'phone', width: 18 },
+      { header: 'Company', key: 'company', width: 24 },
+      { header: 'Stage', key: 'stage', width: 18 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Priority', key: 'priority', width: 12 },
+      { header: 'Source', key: 'source', width: 16 },
+      { header: 'Value', key: 'value', width: 14 },
+      { header: 'Assignee', key: 'assignee', width: 18 },
+      { header: 'Created At', key: 'created_at', width: 20 },
+      { header: 'Updated At', key: 'updated_at', width: 20 }
+    ];
+
+    leads.forEach((lead: any) => {
+      worksheet.addRow({
+        id: lead?.id ?? '',
+        name: lead?.name ?? lead?.contact_name ?? '',
+        email: lead?.email ?? '',
+        phone: lead?.phone ?? '',
+        company: lead?.company_name ?? lead?.company ?? '',
+        stage: lead?.stage ?? '',
+        status: lead?.status ?? '',
+        priority: lead?.priority ?? '',
+        source: lead?.source ?? '',
+        value: lead?.amount ?? lead?.value ?? '',
+        assignee: lead?.assigneeName ?? lead?.assignee ?? lead?.assigned_to_id ?? lead?.assigned_to ?? '',
+        created_at: lead?.created_at ?? lead?.createdAt ?? '',
+        updated_at: lead?.updated_at ?? lead?.updatedAt ?? ''
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [sortedAndFilteredLeads]);
+
+  const handleExportLeadsWithDateRange = useCallback(async (
+    range: 'today' | 'thisMonth' | 'thisYear' | 'custom',
+    startDate?: string,
+    endDate?: string
+  ): Promise<void> => {
+    const allLeads = sortedAndFilteredLeads || [];
+    let start: Date;
+    let end: Date;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // start of today
+
+    switch (range) {
+      case 'today':
+        start = new Date(now);
+        end = new Date(now);
+        end.setDate(end.getDate() + 1);
+        end.setMilliseconds(end.getMilliseconds() - 1);
+        break;
+      case 'thisMonth':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'thisYear':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'custom':
+        setCustomExportDialogOpen(true);
+        return; // wait for user to pick dates in dialog
+      default:
+        return;
+    }
+
+    const filtered = allLeads.filter((lead: any) => {
+      const createdAt = lead?.created_at || lead?.createdAt;
+      if (!createdAt) return false;
+      const created = new Date(createdAt);
+      return created >= start && created <= end;
+    });
+
+    const filename = `pipeline_leads_${range}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const { Workbook } = await import('exceljs');
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('Leads');
+
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 18 },
+      { header: 'Name', key: 'name', width: 24 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Phone', key: 'phone', width: 18 },
+      { header: 'Company', key: 'company', width: 24 },
+      { header: 'Stage', key: 'stage', width: 18 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Priority', key: 'priority', width: 12 },
+      { header: 'Source', key: 'source', width: 16 },
+      { header: 'Value', key: 'value', width: 14 },
+      { header: 'Assignee', key: 'assignee', width: 18 },
+      { header: 'Created At', key: 'created_at', width: 20 },
+      { header: 'Updated At', key: 'updated_at', width: 20 }
+    ];
+
+    filtered.forEach((lead: any) => {
+      worksheet.addRow({
+        id: lead?.id ?? '',
+        name: lead?.name ?? lead?.contact_name ?? '',
+        email: lead?.email ?? '',
+        phone: lead?.phone ?? '',
+        company: lead?.company_name ?? lead?.company ?? '',
+        stage: lead?.stage ?? '',
+        status: lead?.status ?? '',
+        priority: lead?.priority ?? '',
+        source: lead?.source ?? '',
+        value: lead?.amount ?? lead?.value ?? '',
+        assignee: lead?.assigneeName ?? lead?.assignee ?? lead?.assigned_to_id ?? lead?.assigned_to ?? '',
+        created_at: lead?.created_at ?? lead?.createdAt ?? '',
+        updated_at: lead?.updated_at ?? lead?.updatedAt ?? ''
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [sortedAndFilteredLeads]);
+
+  const handleCustomExport = useCallback(() => {
+    if (!customStartDate || !customEndDate) return;
+    const start = new Date(customStartDate);
+    const end = new Date(customEndDate);
+    end.setHours(23, 59, 59, 999);
+    const allLeads = sortedAndFilteredLeads || [];
+    const filtered = allLeads.filter((lead: any) => {
+      const createdAt = lead?.created_at || lead?.createdAt;
+      if (!createdAt) return false;
+      const created = new Date(createdAt);
+      return created >= start && created <= end;
+    });
+
+    (async () => {
+      const filename = `pipeline_leads_custom_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const { Workbook } = await import('exceljs');
+      const workbook = new Workbook();
+      const worksheet = workbook.addWorksheet('Leads');
+
+      worksheet.columns = [
+        { header: 'ID', key: 'id', width: 18 },
+        { header: 'Name', key: 'name', width: 24 },
+        { header: 'Email', key: 'email', width: 28 },
+        { header: 'Phone', key: 'phone', width: 18 },
+        { header: 'Company', key: 'company', width: 24 },
+        { header: 'Stage', key: 'stage', width: 18 },
+        { header: 'Status', key: 'status', width: 14 },
+        { header: 'Priority', key: 'priority', width: 12 },
+        { header: 'Source', key: 'source', width: 16 },
+        { header: 'Value', key: 'value', width: 14 },
+        { header: 'Assignee', key: 'assignee', width: 18 },
+        { header: 'Created At', key: 'created_at', width: 20 },
+        { header: 'Updated At', key: 'updated_at', width: 20 }
+      ];
+
+      filtered.forEach((lead: any) => {
+        worksheet.addRow({
+          id: lead?.id ?? '',
+          name: lead?.name ?? lead?.contact_name ?? '',
+          email: lead?.email ?? '',
+          phone: lead?.phone ?? '',
+          company: lead?.company_name ?? lead?.company ?? '',
+          stage: lead?.stage ?? '',
+          status: lead?.status ?? '',
+          priority: lead?.priority ?? '',
+          source: lead?.source ?? '',
+          value: lead?.amount ?? lead?.value ?? '',
+          assignee: lead?.assigneeName ?? lead?.assignee ?? lead?.assigned_to_id ?? lead?.assigned_to ?? '',
+          created_at: lead?.created_at ?? lead?.createdAt ?? '',
+          updated_at: lead?.updated_at ?? lead?.updatedAt ?? ''
+        });
+      });
+
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setCustomExportDialogOpen(false);
+      setCustomStartDate('');
+      setCustomEndDate('');
+    })();
+  }, [customStartDate, customEndDate, sortedAndFilteredLeads]);
+
   // Memoized stage column component to prevent unnecessary re-renders
   const StageColumnMemo = useMemo(() => {
     return React.memo(({ stageKey, stage, leads, activeCard, handlers, allStages }: {
@@ -678,7 +938,7 @@ const PipelineBoard: React.FC = () => {
             </div>
           ))}
           {/* New stage at the end */}
-          <div className="flex items-center py-2 px-4 mb-2 rounded bg-blue-100 text-blue-900 border-2 border-blue-500">
+          <div className="flex items-center py-2 px-4 mb-2 rounded bg-[#e8ebf7] text-primary border-2 border-primary/80">
             <span className="text-sm font-semibold">
               {newStageName || 'New Stage'} (will be added here)
             </span>
@@ -720,7 +980,7 @@ const PipelineBoard: React.FC = () => {
             key={index}
             className={`flex items-center py-2 px-4 mb-2 rounded ${
               (stage as Stage & { isPreview?: boolean }).isPreview 
-                ? 'bg-blue-100 text-blue-900 border-2 border-blue-500' 
+                ? 'bg-[#e8ebf7] text-[#3B82F6] border-2 border-[#EBF4FF]' 
                 : 'bg-gray-50 text-gray-900'
             }`}
           >
@@ -1089,22 +1349,26 @@ const PipelineBoard: React.FC = () => {
       className="w-full flex flex-col"
       style={{ height: `calc(93vh - ${HEADER_HEIGHT}px)` }}
     >
-      <PipelineBoardToolbar
-        totalLeads={totalLeads}
-        filteredLeadsCount={filteredLeadsCount}
-        stagesCount={currentStages.length}
-        labels={labels}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        zoom={zoom}
-        onZoomChange={handleZoomChange}
-        viewMode={pipelineSettings.viewMode}
-        onAddStage={() => dispatch(setAddStageDialogOpen(true))}
-        onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
-        onOpenFilter={handleOpenFilter}
-        onOpenSort={handleOpenSort}
-        onOpenSettings={handleOpenSettings}
-      />
+      {pipelineSettings.viewMode !== 'list' && (
+        <PipelineBoardToolbar
+          totalLeads={totalLeads}
+          filteredLeadsCount={filteredLeadsCount}
+          stagesCount={currentStages.length}
+          labels={labels}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          zoom={zoom}
+          onZoomChange={handleZoomChange}
+          viewMode={pipelineSettings.viewMode}
+          onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+          onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+          onOpenFilter={handleOpenFilter}
+          onOpenSort={handleOpenSort}
+          onOpenSettings={handleOpenSettings}
+          onExport={handleExportLeads}
+          onExportWithDateRange={handleExportLeadsWithDateRange}
+        />
+      )}
       <EnhancedAddStageDialog
         open={addDialogOpen}
         onClose={() => {
@@ -1146,7 +1410,7 @@ const PipelineBoard: React.FC = () => {
         />
       )}
       <div 
-        className="pipeline-board-scrollable flex-1 overflow-x-scroll overflow-y-auto relative bg-gray-100"
+        className="pipeline-board-scrollable flex-1 overflow-x-scroll overflow-y-auto relative bg-[#f8f9fe]"
         style={{ height: 0 }} // Force flex item to respect container height
       >
         {(() => {
@@ -1170,8 +1434,9 @@ const PipelineBoard: React.FC = () => {
                 stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                 teamMembers={[]}
                 visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
-                showCardCount={pipelineSettings.showCardCount}
-                showTotalValue={pipelineSettings.showStageValue}
+                onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+                onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+                onExport={handleExportLeads}
                 onStatusChange={memoizedHandlers.onStatusChange as ((leadId: string | number, status: string) => Promise<void>) | undefined}
                 onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
                 onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
@@ -1241,6 +1506,40 @@ const PipelineBoard: React.FC = () => {
         onClose={() => dispatch(setSettingsDialogOpen(false))}
         onSettingsChange={handleSettingsChange}
       />
+      {/* Custom Export Date Range Dialog */}
+      <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
+        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setCustomExportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCustomExport} disabled={!customStartDate || !customEndDate}>
+              Export
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

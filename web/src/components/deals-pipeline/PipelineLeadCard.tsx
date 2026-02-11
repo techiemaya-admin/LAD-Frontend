@@ -18,7 +18,7 @@ import {
   User as UserIcon, Mail, Phone, Clock, Paperclip, MessageSquare, FileText, GripVertical,
   Trash2, MoreVertical, Building2, DollarSign, Calendar, Flag, CheckCircle2,
   AlertCircle, TrendingUp, TrendingDown, X, Edit, Save, XCircle, Plus,
-  UserCircle, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive
+  UserCircle, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -1287,7 +1287,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             {/* Schedule Appointment Section */}
             <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 rounded-lg">
               <h3 className="text-base font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-500" />
+                <Calendar className="h-5 w-5 text-primary" />
                 Schedule Appointment
               </h3>
               <div className="flex flex-col gap-4">
@@ -1316,7 +1316,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </div>
             {/* Tags Section */}
             <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base font-semibold mb-4 text-gray-900">
+              <h3 className="text-base font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                <Tag className="h-5 w-5 text-primary" />
                 Tags
               </h3>
               {globalEditingOverview ? (
@@ -1715,11 +1716,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         <DialogTitle className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-10 w-10 ">
                 {lead.avatar ? (
                   <img src={lead.avatar} alt={getLeadDisplayName(lead) || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
                 ) : (
-                  <span className="text-base font-semibold text-white bg-blue-500 h-full w-full rounded-full flex items-center justify-center">
+                  <span className="text-base font-semibold text-white bg-primary h-full w-full rounded-full flex items-center justify-center">
                     {getLeadDisplayName(lead).charAt(0) || 'L'}
                   </span>
                 )}
@@ -1799,7 +1800,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             ) : (
               <Button
                 onClick={handleStartEdit}
-                className="ml-auto bg-blue-500 hover:bg-blue-600 text-white"
+                className="ml-auto bg-primary hover:bg-primary/80 text-white"
               >
                 Edit Lead
               </Button>
@@ -1837,12 +1838,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         role="button"
         tabIndex={0}
       >
-        <div className="absolute top-0 left-0 h-1 w-full rounded-t-2xl bg-gray-100 overflow-hidden">
+        {/* <div className="absolute top-0 left-0 h-1 w-full rounded-t-2xl bg-gray-100 overflow-hidden">
           <div
-            className="h-full bg-blue-500 transition-all duration-300"
+            className="h-full transition-all duration-300"
             style={{ width: `${getProgressValue()}%` }}
           />
-        </div>
+        </div> */}
         <div className="flex items-start gap-3">
           {/* CRITICAL: Apply drag listeners ONLY to drag handle */}
           <button

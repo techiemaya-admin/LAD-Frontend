@@ -41,9 +41,15 @@ export const fetchPipelineData = async (): Promise<PipelineData> => {
         const firstName = rawLead.first_name || rawLead.firstName || '';
         const lastName = rawLead.last_name || rawLead.lastName || '';
         const fullName = `${firstName} ${lastName}`.trim();
+        // Normalize stage to lowercase if present
+        let stage = rawLead.stage;
+        if (typeof stage === 'string') {
+          stage = stage.toLowerCase();
+        }
         return {
           ...rawLead,
           name: rawLead.name || fullName || undefined,
+          stage,
         } as Lead;
       });
     }
@@ -53,10 +59,20 @@ export const fetchPipelineData = async (): Promise<PipelineData> => {
     }
     return data;
   } catch (error) {
-    logger.error('Error fetching pipeline data', error);
+    const err = error as any;
+    const errorInfo = {
+      endpoint: API_ENDPOINTS.pipeline,
+      status: err?.response?.status,
+      statusText: err?.response?.statusText,
+      message: err?.message,
+      responseData: err?.response?.data,
+      code: err?.code
+    };
+    logger.error('Error fetching pipeline data from ' + API_ENDPOINTS.pipeline, errorInfo);
     throw error;
   }
 };
+// Get pipeline overview/statistics
 // Get pipeline overview/statistics
 export const fetchPipelineOverview = async (): Promise<unknown> => {
   const response = await api.get('/api/deals-pipeline/leads/stats');
@@ -369,4 +385,4 @@ export const uploadAttachment = async (leadId: string | number, file: File): Pro
     logger.error('Failed to upload attachment', error);
     throw error;
   }
-};
+};
