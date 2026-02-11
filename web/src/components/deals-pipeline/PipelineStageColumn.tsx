@@ -11,9 +11,9 @@ import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
 import PipelineLeadCard from './PipelineLeadCard';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { updateStage, deleteStage } from '@/services/pipelineService';
+import { updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
 import { useDispatch } from 'react-redux';
-import { Stage } from '../store/slices/pipelineSlice';
+import { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
 interface PipelineStageColumnProps {

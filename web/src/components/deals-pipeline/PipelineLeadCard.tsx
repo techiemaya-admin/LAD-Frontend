@@ -23,14 +23,14 @@ import {
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import api from '@/services/api';
-import leadsService from '@/services/leadsService';
+import * as leadsService from '@lad/frontend-features/deals-pipeline';
 import { FileDown } from 'lucide-react';
 import { getStatusLabel } from '@/utils/statusMappings';
 import { getFieldValue } from '@/utils/fieldMappings';
 import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
 import { selectStages } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import { updateLeadAction, deleteLeadAction } from '@/features/deals-pipeline/store/action/pipelineActions';
-import type { Lead as PipelineLead } from '../types';
+import type { Lead } from '@/features/deals-pipeline/types';
 import { 
   selectLeadCardActiveTab,
   selectLeadCardExpanded,
@@ -52,31 +52,6 @@ import { fetchUsersAction } from '@/store/actions/usersActions';
 import BookingSlot from './BookingSlot';
 import * as bookingService from '@/services/bookingService';
 import { selectUser as selectAuthUser } from '@/store/slices/authSlice';
-interface Lead {
-  id: string | number;
-  name?: string;
-  email?: string;
-  company?: string;
-  phone?: string;
-  status?: string;
-  priority?: string;
-  stage?: string;
-  amount?: number | string;
-  assignee?: string;
-  assigned_to_id?: string | number;
-  source?: string;
-  closeDate?: string;
-  close_date?: string;
-  expectedCloseDate?: string;
-  expected_close_date?: string;
-  description?: string;
-  tags?: string[];
-  goals?: string | string[];
-  avatar?: string;
-  lastActivity?: string;
-  createdAt?: string;
-  [key: string]: unknown;
-}
 interface TabPanelProps {
   children: React.ReactNode;
   value: number;
@@ -755,7 +730,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         }
       });
       // Use Redux action instead of direct API call
-      await dispatch(updateLeadAction(lead.id, updateData as Partial<PipelineLead>) as any);
+      await dispatch(updateLeadAction(lead.id, updateData as Partial<Lead>) as any);
       dispatch(setLeadCardEditingOverview(false));
       setNewTagInput(''); // Reset tag input on successful save
       showSnackbar('Lead updated successfully', 'success');

@@ -164,6 +164,48 @@ export function CallLogsTable({
     tag: getLeadTag(item),
   })), [items, getLeadTag]);
 
+  // Apply status filter manually to items
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'all') return itemsWithTags;
+    return itemsWithTags.filter(item => 
+      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
+    );
+  }, [itemsWithTags, statusFilter]);
+
+  // Apply global search filter
+  const searchFilteredItems = useMemo(() => {
+    if (!globalFilter) return filteredItems;
+    const lowerSearch = globalFilter.toLowerCase();
+    return filteredItems.filter(item => 
+      item.lead_name?.toLowerCase().includes(lowerSearch) ||
+      item.assistant?.toLowerCase().includes(lowerSearch) ||
+      item.id?.toLowerCase().includes(lowerSearch) ||
+      item.status?.toLowerCase().includes(lowerSearch)
+    );
+  }, [filteredItems, globalFilter]);
+
+  // Filter batch groups by status filter
+  const filteredBatchGroups = useMemo(() => {
+    if (!batchGroups) return null;
+    if (statusFilter === 'all') return batchGroups;
+    
+    const filteredGroups: Record<string, CallLog[]> = {};
+    Object.entries(batchGroups.groups).forEach(([batchId, calls]) => {
+      const filteredCalls = calls.filter(call => 
+        call.status?.toLowerCase().includes(statusFilter.toLowerCase())
+      );
+      if (filteredCalls.length > 0) {
+        filteredGroups[batchId] = filteredCalls;
+      }
+    });
+    
+    const filteredNoBatchCalls = batchGroups.noBatchCalls.filter(call =>
+      call.status?.toLowerCase().includes(statusFilter.toLowerCase())
+    );
+    
+    return { groups: filteredGroups, noBatchCalls: filteredNoBatchCalls };
+  }, [batchGroups, statusFilter]);
+
   // Define table columns
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
@@ -312,9 +354,9 @@ export function CallLogsTable({
     },
   ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag]);
 
-  // Setup table instance
+  // Setup table instance with filtered data
   const table = useReactTable({
-    data: itemsWithTags,
+    data: searchFilteredItems,
     columns,
     getCoreRowModel: getCoreRowModel(),
     state: {
@@ -323,27 +365,7 @@ export function CallLogsTable({
     onGlobalFilterChange: setGlobalFilter,
   });
 
-  // Apply status filter manually to items
-  const filteredItems = useMemo(() => {
-    if (statusFilter === 'all') return itemsWithTags;
-    return itemsWithTags.filter(item => 
-      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
-    );
-  }, [itemsWithTags, statusFilter]);
-
-  // Apply global search filter
-  const searchFilteredItems = useMemo(() => {
-    if (!globalFilter) return filteredItems;
-    const lowerSearch = globalFilter.toLowerCase();
-    return filteredItems.filter(item => 
-      item.lead_name?.toLowerCase().includes(lowerSearch) ||
-      item.assistant?.toLowerCase().includes(lowerSearch) ||
-      item.id?.toLowerCase().includes(lowerSearch) ||
-      item.status?.toLowerCase().includes(lowerSearch)
-    );
-  }, [filteredItems, globalFilter]);
-                                                                                                                                                                                                                                                                                                                                                                                        
-  // Render batch header row                                                                                                                                                                                                                                                                                      
+  // Render batch header row                                                                                                                     
   const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
     const isExpanded = expandedBatches.has(batchId);                                                                          
     const totalCalls = calls.length;
@@ -393,8 +415,8 @@ export function CallLogsTable({
 
   // Render individual call row with optional indent for batch calls
   const renderCallRow = (callLog: CallLog, indent = false) => {
-    // Find the row in the table data
-    const rowIndex = itemsWithTags.findIndex(item => item.id === callLog.id);
+    // Find the row in the table data (searchFilteredItems)
+    const rowIndex = searchFilteredItems.findIndex(item => item.id === callLog.id);
     if (rowIndex === -1) return null;
 
     const tableRow = table.getRowModel().rows[rowIndex];
@@ -549,8 +571,11 @@ export function CallLogsTable({
               // Create timeline items combining batches and individual calls
               const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
               
+              // Use filteredBatchGroups instead of batchGroups
+              const groupsToRender = filteredBatchGroups || batchGroups;
+              
               // Add batch groups with their earliest timestamp
-              Object.entries(batchGroups.groups).forEach(([batchId, calls]) => {
+              Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
                 const earliestTimestamp = Math.min(
                   ...calls.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
                 );
@@ -562,7 +587,7 @@ export function CallLogsTable({
               });
               
               // Add individual calls
-              batchGroups.noBatchCalls.forEach(call => {
+              groupsToRender.noBatchCalls.forEach(call => {
                 timelineItems.push({
                   type: 'call',
                   data: call,

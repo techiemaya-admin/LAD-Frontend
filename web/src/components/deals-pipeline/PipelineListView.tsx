@@ -17,9 +17,25 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Edit, Trash2, User, Search, Filter, ArrowUpDown, Columns, Download, Settings, Plus
+  Edit,
+  Trash2,
+  User,
+  Search,
+  Filter,
+  ArrowUpDown,
+  Columns,
+  Download,
+  Settings,
+  Plus,
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Linkedin,
+  Phone
 } from 'lucide-react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
@@ -216,9 +232,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Load master data if not loaded (bootstrap fallback)
   useEffect(() => {
     const loadMasterData = async () => {
-      if (statusOptions.length === 0) {
+      if (statusOptions.length === 0 && !masterDataRequestedRef.current) {
         try {
-          const { fetchStatuses, fetchPriorities, fetchSources } = await import('@/services/pipelineService');
+          masterDataRequestedRef.current = true;
+          const { fetchStatuses, fetchPriorities, fetchSources } = await import('@lad/frontend-features/deals-pipeline');
           const [statuses, priorities, sources] = await Promise.all([
             fetchStatuses().catch(err => { 
               console.warn('Failed to load statuses:', err); 
@@ -258,6 +275,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           dispatch(setSources(sources));
           } catch (err) {
           console.error('[PipelineListView] Failed to load master data:', err);
+        } finally {
+          masterDataRequestedRef.current = false;
         }
       }
     };
@@ -339,7 +358,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       'priority',
       'amount',
       'source',
-      'assignee',
       'createdAt',
       'updatedAt',
       'lastActivity'
@@ -347,9 +365,11 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     []
   );
   const visibleColumnKeys = useMemo(() => {
-    const ordered = DEFAULT_COLUMN_ORDER.filter((key) => visibleColumns[key] !== false);
+    const ordered = DEFAULT_COLUMN_ORDER.filter(
+      (key) => key !== 'assignee' && visibleColumns[key] !== false
+    );
     const extras = Object.keys(visibleColumns).filter(
-      (key) => visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
+      (key) => key !== 'assignee' && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
     );
     return [...ordered, ...extras];
   }, [DEFAULT_COLUMN_ORDER, visibleColumns]);
@@ -373,6 +393,22 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     };
   };
   const columnWidths = getColumnWidths();
+  // Pagination state (client-side, similar to CallLogsTable)
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const totalRecords = filteredAndSortedLeads.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  const hasPreviousPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
+  const handlePageChange = (page: number) => {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(nextPage);
+  };
+  const paginatedLeads = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return filteredAndSortedLeads.slice(startIndex, endIndex);
+  }, [filteredAndSortedLeads, currentPage]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
@@ -585,6 +621,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               return 'bg-green-100 text-green-600 border border-green-300';
             case 'website':
               return 'bg-purple-100 text-purple-600 border border-purple-300';
+            case 'linkedin':
+              return 'bg-blue-100 text-blue-600 border border-blue-300';
             default:
               return 'bg-gray-100 text-gray-600 border border-gray-300';
           }
@@ -595,13 +633,25 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               return 'Apollo.io';
             case 'voice_agent':
               return 'Voice-Agent';
+            case 'linkedin':
+              return 'LinkedIn';
             default:
               return source || 'Unknown';
           }
         };
+        const getSourceIcon = (source: string) => {
+          switch (source.toLowerCase()) {
+            case 'linkedin':
+              return <Linkedin className="w-4 h-4" />;
+            case 'voice_agent':
+              return <Phone className="w-4 h-4" />;
+            default:
+              return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
+          }
+        };
         return (
           <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
-            <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />
+            {getSourceIcon(sourceValue)}
             {formatSourceName(lead.source || '')}
           </span>
         );
@@ -762,7 +812,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredAndSortedLeads.map((lead) => (
+          {paginatedLeads.map((lead) => (
             <TableRow
               key={lead.id}
               onClick={(e) => {
@@ -808,6 +858,61 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           )}
         </TableBody>
       </Table>
+      {/* Pagination Controls – Client-Side Pagination, matching CallLogsTable */}
+      {filteredAndSortedLeads.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+            <span>
+              {`Showing ${((currentPage - 1) * PAGE_SIZE) + 1} to ${Math.min(currentPage * PAGE_SIZE, totalRecords)} of ${totalRecords} leads`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-[#64748B]">
+              {`Page ${currentPage} of ${totalPages}`}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(1)}
+                disabled={!hasPreviousPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={!hasPreviousPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasNextPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={!hasNextPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {globalSelectedLead && (
         <PipelineLeadCard
           lead={globalSelectedLead as any}

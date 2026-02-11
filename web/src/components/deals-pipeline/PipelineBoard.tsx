@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, TouchSensor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSelector, useDispatch } from 'react-redux';
@@ -121,7 +121,7 @@ import {
   setSources, 
   setPriorities
 } from '@/store/slices/masterDataSlice';
-import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@/services/pipelineService';
+import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
 const HEADER_HEIGHT = 64; 
 // Feature flags for gradual migration
 const USE_REDUX_PIPELINE = true; // Enable Redux data fetching
@@ -145,6 +145,9 @@ interface StageUpdateData {
   [key: string]: unknown;
 }
 const PipelineBoard: React.FC = () => {
+  const initialPipelineLoadRequestedRef = useRef(false);
+  const initialMasterDataLoadRequestedRef = useRef(false);
+
   // Education vertical context
   const { hasFeature } = useAuth();
   const isEducation = hasFeature('education_vertical');
@@ -655,18 +658,22 @@ const PipelineBoard: React.FC = () => {
   };
   // Load master data if not available
   const loadMasterData = useCallback(async (): Promise<void> => {
+    if (masterDataLoading) return;
+    if (initialMasterDataLoadRequestedRef.current) return;
+
     if (!statusOptions.length || !priorityOptions.length || !sourceOptions.length) {
       try {
+        initialMasterDataLoadRequestedRef.current = true;
         const [statuses, sources, priorities] = await Promise.all([
-          fetchStatuses().catch(err => { 
+          fetchStatuses().catch((err: unknown) => { 
             console.warn('Failed to load statuses:', err); 
             return []; 
           }),
-          fetchSources().catch(err => { 
+          fetchSources().catch((err: unknown) => { 
             console.warn('Failed to load sources:', err); 
             return []; 
           }),
-          fetchPriorities().catch(err => { 
+          fetchPriorities().catch((err: unknown) => { 
             console.warn('Failed to load priorities:', err); 
             return []; 
           })
@@ -677,12 +684,17 @@ const PipelineBoard: React.FC = () => {
         dispatch(setPriorities(priorities));
         } catch (error) {
         console.warn('[PipelineBoard] Failed to load master data:', error);
+      } finally {
+        initialMasterDataLoadRequestedRef.current = false;
       }
     }
-  }, [dispatch, statusOptions.length, priorityOptions.length, sourceOptions.length]);
+  }, [dispatch, statusOptions.length, priorityOptions.length, sourceOptions.length, masterDataLoading]);
   useEffect(() => {
-    dispatch(loadPipelineDataAction());
-    dispatch(fetchUsersAction());
+    if (!initialPipelineLoadRequestedRef.current) {
+      initialPipelineLoadRequestedRef.current = true;
+      dispatch(loadPipelineDataAction());
+      dispatch(fetchUsersAction());
+    }
     loadMasterData();
   }, [dispatch, loadMasterData]);
   // Memoize drag handlers to prevent child re-renders
@@ -1410,7 +1422,11 @@ const PipelineBoard: React.FC = () => {
         />
       )}
       <div 
-        className="pipeline-board-scrollable flex-1 overflow-x-scroll overflow-y-auto relative bg-[#f8f9fe]"
+        className={`pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] ${
+          pipelineSettings.viewMode === 'kanban' 
+            ? 'overflow-x-scroll overflow-y-auto' 
+            : 'overflow-visible'
+        }`}
         style={{ height: 0 }} // Force flex item to respect container height
       >
         {(() => {
@@ -1510,7 +1526,7 @@ const PipelineBoard: React.FC = () => {
       <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
         <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
-          <div className="flex gap-4 mb-4">
+          <div className="flex gap-4 mb-2">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
               <Input
@@ -1530,11 +1546,29 @@ const PipelineBoard: React.FC = () => {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-3">
+          {(() => {
+            const isValid = !customStartDate || !customEndDate || new Date(customEndDate) >= new Date(customStartDate);
+            if (!isValid) {
+              return (
+                <div className="text-sm text-red-600 mb-4">
+                  End date must be on or after start date
+                </div>
+              );
+            }
+            return null;
+          })()}
+          <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setCustomExportDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCustomExport} disabled={!customStartDate || !customEndDate}>
+            <Button
+              onClick={handleCustomExport}
+              disabled={
+                !customStartDate ||
+                !customEndDate ||
+                new Date(customEndDate) < new Date(customStartDate)
+              }
+            >
               Export
             </Button>
           </div>

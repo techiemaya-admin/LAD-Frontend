@@ -81,24 +81,12 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   const handleZoomOut = (): void => onZoomChange(zoom - 0.2);
   const handleZoomReset = (): void => onZoomChange(1);
   return (
-    <div className="bg-[#f8fafc] dark:bg-gray-900 shadow-lg rounded-3xl px-4 sm:px-8 py-4 sm:py-6 border border-gray-200 dark:border-gray-700 mb-4">
+    <div className="rounded-3xl px-4 sm:px-8 py-4 sm:py-6">
       <div className="flex flex-col gap-4">
         {/* Top row: All controls */}
     <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
           {/* Left side - Stats, Action buttons, and Zoom */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Stats */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                {filteredLeadsCount !== totalLeads ? `${filteredLeadsCount} of ` : ''}{totalLeads} {labels.entityPlural.toLowerCase()}
-              </span>
-              <Badge 
-                variant="secondary"
-                className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 h-5 text-xs"
-              >
-                {stagesCount} stages
-              </Badge>
-            </div>
             {/* Action buttons (hidden in list view) */}
             {viewMode !== 'list' && (
               <>

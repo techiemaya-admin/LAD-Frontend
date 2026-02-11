@@ -70,10 +70,10 @@ export default function PipelinePage(): JSX.Element {
   }, 0);
 
   return (
-    <div className="p-4">
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="mb-6 mt-10">
+        <div className="flex items-center gap-3 mb-5">
           {/* <IconComponent className="h-8 w-8 text-blue-600" /> */}
           <div>
             <h1 className="text-3xl font-bold text-[#1e293b]">{labels.title}</h1>
