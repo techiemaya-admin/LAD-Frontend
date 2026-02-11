@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set('token', token, {
       httpOnly: true,
       secure: isProduction, // Only require HTTPS in production
-      sameSite: 'lax',
+      sameSite: isProduction ? 'none' : 'lax', // Use 'none' in production to allow cross-site redirects
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });

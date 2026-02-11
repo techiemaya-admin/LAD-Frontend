@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   // Feature checking based on user capabilities and tenant features
   const hasFeature = (featureKey: string): boolean => {
-    if (!user || !token) {
+    if (!user) {
       return false;
     }
     // Check both capabilities and tenant features
@@ -165,8 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const value = {
     user,
-    token,
-    isAuthenticated: !!user && !!token,
+    token, // Token might be null if using cookie-only auth (OAuth)
+    isAuthenticated: !!user, // Consider authenticated if user data is present, even without client-side token
     isLoading,
     login,
     logout,
