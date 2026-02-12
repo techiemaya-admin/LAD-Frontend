@@ -18,7 +18,6 @@ export default function PipelinePage(): JSX.Element {
   // Fetch real-time statistics using the SDK hook
   // passing current filters ensures stats stay in sync with board filtering
   const { data: stats, isLoading } = usePipelineStats(activeFilters as any);
-  debugger
   // Determine if this is education vertical (only after user is loaded)
   const isEducation = isAuthenticated && user ? hasFeature('education_vertical') : false;
 
