@@ -336,7 +336,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   }, []);
   // Critical: Don't disable sortable - use handle strategy instead to prevent re-initialization issues
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: lead.id,
+    id: String(lead.id),
     data: { type: 'lead', lead },
     disabled: isPreview // Only disable for preview, NOT for dialog state
   });

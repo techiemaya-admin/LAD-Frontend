@@ -197,7 +197,7 @@ const PipelineBoard: React.FC = () => {
   const settingsDialogOpen = useSelector(selectSettingsDialogOpen);
   // Selected items from global Redux state
   const selectedLead = useSelector(selectSelectedLead);
-  const activeCard = useSelector((state: { ui: { activeCard: Lead | null } }) => state.ui.activeCard);
+  const activeCardId = useSelector(selectActiveCard);
   // Form states from global Redux state
   const newStageName = useSelector(selectNewStageName);
   const positionStageId = useSelector(selectPositionStageId);
@@ -278,6 +278,13 @@ const PipelineBoard: React.FC = () => {
       return acc;
     }, {});
   }, [pipelineBoardData]);
+
+  const activeCard = useMemo((): Lead | null => {
+    if (activeCardId === null || activeCardId === undefined) return null;
+    const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads || []);
+    return allLeads.find((l) => String(l.id) === String(activeCardId)) || null;
+  }, [activeCardId, currentLeadsByStage]);
+
   // Use filtered data directly (no manual filtering needed)
   const filteredAndSortedLeadsByStage = currentLeadsByStage;
   // Search and filter state handlers (now dispatch to Redux)
@@ -310,15 +317,15 @@ const PipelineBoard: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Movement threshold before drag starts
-        delay: isTouchDevice() ? 200 : 0, // Delay for touch to prevent accidental drags during scroll
-        tolerance: isTouchDevice() ? 5 : 0 // Tolerance for touch movement
+        distance: 2, // Lower threshold for a more responsive drag start
+        delay: isTouchDevice() ? 80 : 0, // Short delay on touch to reduce accidental drags without feeling stuck
+        tolerance: isTouchDevice() ? 3 : 0 // Slight tolerance for touch movement
       }
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200, // Delay to distinguish touch drag from scroll
-        tolerance: 5 // Tolerance for touch movement
+        delay: 120, // Shorter delay to make drag feel more immediate
+        tolerance: 3 // Slightly lower tolerance for quicker activation
       }
     }),
     useSensor(KeyboardSensor)
