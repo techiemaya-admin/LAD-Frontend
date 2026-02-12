@@ -29,13 +29,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  // Load token from localStorage on mount
+  // Load token and user from localStorage on mount
   useEffect(() => {
-    logger.debug('[AuthContext] Loading token from localStorage...');
-    const storedToken = safeStorage.getItem('auth_token');
+    logger.debug('[AuthContext] Loading auth data from localStorage...');
+    const storedToken = safeStorage.getItem('token');
+    const storedAuth = safeStorage.getItem('auth');
+    
     if (storedToken) {
       logger.debug('[AuthContext] Stored token found');
       setToken(storedToken);
+    }
+    
+    if (storedAuth) {
+      try {
+        logger.debug('[AuthContext] Stored auth data found');
+        const parsedAuth = JSON.parse(storedAuth);
+        // Handle Redux format { user: ..., isAuthenticated: true } or direct user object
+        const user = parsedAuth.user || parsedAuth;
+        setUser(user);
+      } catch (e) {
+        logger.error('[AuthContext] Failed to parse stored auth', { error: e });
+      }
+    }
+    
+    if (storedToken) {
       fetchCurrentUser(storedToken);
     } else {
       logger.debug('[AuthContext] No stored token found');
@@ -65,15 +82,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.debug('[AuthContext] User data received');
         const user = userData.user || userData;
         setUser(user);
+        // Store user data in localStorage for persistence (keep Redux in sync)
+        safeStorage.setItem('auth', JSON.stringify({ 
+          user, 
+          isAuthenticated: true,
+          theme: 'light' // Default or preserve if read
+        }));
+        // Also store as 'user' for direct access if needed
+        safeStorage.setItem('user', JSON.stringify(user));
       } else {
         // Token is invalid, clear it
         safeStorage.removeItem('token');
+        safeStorage.removeItem('auth');
+        safeStorage.removeItem('user');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
+      // Only clear if strictly necessary or certain errors?
+      // For now, keep behavior but be safer
       safeStorage.removeItem('token');
+      safeStorage.removeItem('auth');
+      safeStorage.removeItem('user');
       setToken(null);
       setUser(null);
     } finally {
@@ -113,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const logout = () => {
     safeStorage.removeItem('token');
+    safeStorage.removeItem('user');
     setToken(null);
     setUser(null);
     router.push('/login');
@@ -122,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   // Feature checking based on user capabilities and tenant features
   const hasFeature = (featureKey: string): boolean => {
-    if (!user || !token) {
+    if (!user) {
       return false;
     }
     // Check both capabilities and tenant features
@@ -133,8 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const value = {
     user,
-    token,
-    isAuthenticated: !!user && !!token,
+    token, // Token might be null if using cookie-only auth (OAuth)
+    isAuthenticated: !!user, // Consider authenticated if user data is present, even without client-side token
     isLoading,
     login,
     logout,

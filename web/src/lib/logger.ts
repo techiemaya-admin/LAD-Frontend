@@ -62,27 +62,28 @@ class Logger {
    * IMPORTANT: Never log sensitive data like tokens, passwords, card numbers
    */
   error(message: string, error?: Error | any): void {
-    if (!error) {
-      console.error(this.formatMessage('error', message));
-      return;
-    }
-    
-    // If it's already a structured object (not an Error instance), log it as-is
-    if (error && typeof error === 'object' && !(error instanceof Error)) {
-      console.error(this.formatMessage('error', message), error);
-      return;
-    }
-    
-    // For Error instances, extract useful properties
-    const errorData = error instanceof Error 
-      ? { 
-          message: error.message, 
+    // Always use structured logging, never call console.error directly
+    let errorData: any = undefined;
+    if (error) {
+      if (error instanceof Error) {
+        errorData = {
+          message: error.message,
           stack: this.isDevelopment ? error.stack : undefined,
           name: error.name
-        }
-      : error;
-    
-    console.error(this.formatMessage('error', message), errorData);
+        };
+      } else if (typeof error === 'object') {
+        errorData = error;
+      } else {
+        errorData = { value: error };
+      }
+    }
+    // Output error using console.log to avoid triggering global error handlers
+    if (errorData !== undefined) {
+      // You can replace this with a custom transport if needed
+      console.log(this.formatMessage('error', message), errorData);
+    } else {
+      console.log(this.formatMessage('error', message));
+    }
   }
   /**
    * Create a child logger with a different prefix

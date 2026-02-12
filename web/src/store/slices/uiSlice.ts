@@ -176,7 +176,7 @@ interface UIState {
 const initialState: UIState = {
   // Pipeline view preferences
   pipeline: {
-    viewMode: 'kanban', // 'kanban' | 'list'
+    viewMode: 'list', // 'kanban' | 'list'
     zoom: 1,
     searchQuery: '',
     activeFilters: {
@@ -318,7 +318,7 @@ const initialState: UIState = {
   },
   // Pipeline board settings (shared across components)
   pipelineSettings: {
-    viewMode: 'kanban', // 'kanban' or 'list'
+    viewMode: 'list', // 'kanban' or 'list'
     visibleColumns: {
       name: true,
       stage: true,
@@ -763,7 +763,7 @@ interface RootState {
   ui: UIState;
 }
 export const selectPipelineUI = (state: RootState): PipelineState => state.ui?.pipeline || initialState.pipeline;
-export const selectPipelineViewMode = (state: RootState): 'kanban' | 'list' => state.ui?.pipeline?.viewMode || 'kanban';
+export const selectPipelineViewMode = (state: RootState): 'kanban' | 'list' => state.ui?.pipeline?.viewMode || 'list';
 export const selectPipelineZoom = (state: RootState): number => state.ui?.pipeline?.zoom || 1;
 export const selectPipelineSearchQuery = (state: RootState): string => state.ui?.pipeline?.searchQuery || '';
 export const selectPipelineActiveFilters = (state: RootState): PipelineActiveFilters => state.ui?.pipeline?.activeFilters || initialState.pipeline.activeFilters;
@@ -807,13 +807,9 @@ export const selectEditLeadErrors = (state: RootState): Record<string, string> =
 export const selectCreateLeadLoading = (state: RootState): boolean => state.ui?.pipeline?.formLoading?.createLead || false;
 export const selectEditLeadLoading = (state: RootState): boolean => state.ui?.pipeline?.formLoading?.editLead || false;
 export const selectDeleteLeadLoading = (state: RootState): boolean => state.ui?.pipeline?.formLoading?.deleteLead || false;
-// AI insights selectors
-export const selectAiInsights = (state: RootState): AIInsights => state.ui?.pipeline?.aiInsights || initialState.pipeline.aiInsights;
-export const selectAiInsightsLoading = (state: RootState): boolean => state.ui?.pipeline?.aiInsights?.loading || false;
 // Pipeline settings selectors
 export const selectPipelineSettings = (state: RootState): PipelineSettings => state.ui?.pipelineSettings || initialState.pipelineSettings;
 export const selectVisibleColumns = (state: RootState): VisibleColumns => state.ui?.pipelineSettings?.visibleColumns || initialState.pipelineSettings.visibleColumns;
-export const selectPipelineViewModeFromSettings = (state: RootState): 'kanban' | 'list' => state.ui?.pipelineSettings?.viewMode || 'kanban';
-// General UI selectors
-export const selectSidebarOpen = (state: RootState): boolean => state.ui?.sidebarOpen ?? true;
-export const selectUILoading = (state: RootState): UILoading => state.ui?.loading || initialState.loading;
+export const selectPipelineViewModeFromSettings = (state: RootState): 'kanban' | 'list' => state.ui?.pipelineSettings?.viewMode || 'list';
+// AI insights selectors
+export const selectAiInsights = (state: RootState): AIInsights => state.ui?.pipeline?.aiInsights || initialState.pipeline.aiInsights;

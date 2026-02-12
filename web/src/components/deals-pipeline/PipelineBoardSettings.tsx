@@ -38,7 +38,7 @@ const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(
     <label
       htmlFor={optionId}
       className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-colors ${
-        isActive ? 'bg-blue-50 border-2 border-blue-200' : 'hover:bg-gray-100 border-2 border-transparent'
+        isActive ? 'bg-[#e8ebf7] border-2 border-[#d1d9f0]' : 'hover:bg-gray-100 border-2 border-transparent'
       }`}
     >
       <RadioGroupItem
@@ -51,7 +51,7 @@ const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(
       <span
         className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
           isActive
-            ? 'border-blue-500 bg-blue-500'
+            ? 'border-primary bg-primary'
             : 'border-slate-300 bg-white'
         }`}
       >
@@ -61,9 +61,9 @@ const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(
           }`}
         />
       </span>
-      <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
+      <Icon className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-gray-500'}`} />
       <div>
-        <div className={`text-sm font-medium ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>
+        <div className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-gray-900'}`}>
           {title}
         </div>
         <div className="text-xs text-gray-500">
@@ -90,7 +90,7 @@ interface VisibleColumns {
   lastActivity: boolean;
 }
 interface PipelineSettings {
-  viewMode: 'kanban' | 'list';
+  viewMode: 'list' | 'kanban';
   visibleColumns: VisibleColumns;
   autoRefresh: boolean;
   refreshInterval: number;
@@ -195,7 +195,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   };
   const handleReset = (): void => {
     const defaultSettings: PipelineSettings = {
-      viewMode: 'kanban',
+      viewMode: 'list',
       visibleColumns: DEFAULT_VISIBLE_COLUMNS,
       autoRefresh: true,
       refreshInterval: 30,
@@ -235,7 +235,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                 </div>
               </Label>
               <RadioGroup
-                value={localSettings.viewMode || 'kanban'}
+                value={localSettings.viewMode || 'list'}
                 onValueChange={handleViewModeChange}
                 className="flex flex-col gap-4"
               >
@@ -429,7 +429,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
             </Button>
             <Button 
               onClick={handleSave} 
-              className="rounded-lg shadow-md font-semibold bg-blue-500 hover:bg-blue-600 text-white"
+              className="rounded-lg shadow-md font-semibold bg-primary text-white"
               style={{
                 boxShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
               }}
@@ -442,4 +442,4 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       </Dialog>
     );
 };
-export default PipelineBoardSettings;
+export default PipelineBoardSettings;
