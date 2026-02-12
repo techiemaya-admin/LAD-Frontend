@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar
 } from 'recharts';
 
-const COLORS = ['#6366F1', '#06b6d4', '#10b981', '#f59e42', '#0077b5', '#f43f5e'];
+const COLORS = ['#0b1957', '#06b6d4', '#6366F1', '#f59e42', '#F59E0B', '#EC4899'];
 
 export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
   <div className="flex flex-wrap gap-8">
@@ -20,7 +20,7 @@ export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
           <XAxis dataKey="date" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="leads" stroke="#6366F1" strokeWidth={3} dot={{ r: 4 }} />
+          <Line type="monotone" dataKey="leads" stroke="#0b1957" strokeWidth={3} dot={{ r: 4 }} />
         </LineChart>
       </ResponsiveContainer>
       </CardContent>
@@ -56,7 +56,7 @@ export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
             <XAxis dataKey="stage" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="count" fill="#10b981" radius={[8,8,0,0]} />
+            <Bar dataKey="count" fill="#0b1957" radius={[8,8,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

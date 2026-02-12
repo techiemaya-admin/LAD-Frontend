@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -51,23 +51,103 @@ export default function CampaignAnalyticsPage() {
   const { push } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { analytics, loading, error } = useCampaignAnalytics(campaignId);
-  // Use analytics data directly, no real-time stats hook available
+  // SSE connection for real-time updates is handled in useCampaignAnalytics hook
   const isConnected = analytics?.campaign?.status === 'running';
 
   useEffect(() => {
     if (error) {
-      push({ variant: 'error', title: 'Error', description: error || 'Failed to load analytics' });
+      push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
       router.push('/campaigns');
     }
   }, [error, push, router]);
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <Card className="p-8 rounded-2xl text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mx-auto" />
-          <p className="mt-4 font-semibold">Loading Advanced Analytics...</p>
-        </Card>
+      <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+        {/* Skeleton Header */}
+        <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 w-64 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex items-center gap-3 ml-11 flex-wrap">
+              <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="h-10 w-28 bg-gray-200 rounded-xl animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-200 rounded-xl animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Skeleton Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex justify-between items-start mb-4">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+              <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Activity Table */}
+        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm mb-8">
+          <div className="p-4 border-b border-[#E2E8F0]">
+            <div className="flex justify-between items-center">
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+              <div className="flex gap-2">
+                <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex gap-4 py-3 border-b border-gray-100">
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton Charts */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-8">
+          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Skeleton 3-Column Metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-9 w-9 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="flex-1">
+                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-1"></div>
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -194,200 +274,167 @@ export default function CampaignAnalyticsPage() {
   };
 
   return (
-    <div className="p-6 h-full overflow-auto transition-all duration-300" style={{ background: isDarkMode ? '#0F172A' : '#F8F9FE' }}>
-      {/* Hero Header */}
-      <div className="bg-white rounded-2xl p-8 mb-8 relative overflow-hidden shadow-sm border border-slate-200">
-        <div className="absolute top-[-50px] right-[-50px] w-[200px] h-[200px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-[-30px] left-[30%] w-[150px] h-[150px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%)' }} />
-        <div className="flex justify-between items-start relative z-10 flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="bg-slate-100 text-slate-800 hover:bg-slate-200">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <Badge className="bg-slate-100 text-slate-800 font-semibold">
-                <Rocket className="w-3 h-3 mr-1" style={{ color: '#6366F1' }} />
-                Advanced Analytics
-              </Badge>
-            </div>
-            <h3 className="text-3xl font-extrabold text-slate-800 mb-2">{analytics.campaign.name}</h3>
-            <div className="flex items-center gap-4 flex-wrap">
-              <Badge className="bg-slate-100 text-slate-800 capitalize font-semibold">
-                <div className="w-2 h-2 rounded-full ml-1 mr-2" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
-                {analytics.campaign.status}
-              </Badge>
-              <p className="text-slate-500">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
-            </div>
+    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+      {/* Header */}
+      <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-3">
+            <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+              {analytics.campaign.name}
+            </h1>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex items-center gap-3 ml-11 flex-wrap">
+            <Badge className="capitalize">
+              <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
+              {analytics.campaign.status}
+            </Badge>
             <Badge 
-              className={`font-semibold ${isConnected ? 'bg-green-100 text-green-600 border-green-300' : 'bg-red-100 text-red-600 border-red-300'}`}
-              style={{ border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}
+              className={`font-semibold ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
             >
               {isConnected ? <Wifi className="w-3 h-3 mr-1" /> : <WifiOff className="w-3 h-3 mr-1" />}
               {isConnected ? 'Live' : 'Offline'}
             </Badge>
-            <Button onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)} className="bg-indigo-500 text-white font-semibold px-6 hover:bg-indigo-600" style={{ boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)' }}>
-              <Users className="w-4 h-4 mr-2" />
-              View Leads
-            </Button>
-            <Button variant="outline" onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} className="border-indigo-500 text-indigo-500 font-semibold border-2 hover:bg-indigo-50">
-              Edit Campaign
-            </Button>
+            <p className="text-sm text-[#64748B]">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
           </div>
+        </div>
+        <div className="flex gap-3 items-start">
+          <Button
+            onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)}
+            className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:bg-[#0a1540]"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            View Leads
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
+            className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl"
+          >
+            Edit Campaign
+          </Button>
         </div>
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl p-6 relative overflow-hidden transition-all duration-300">
-          <div className="absolute top-2.5 right-2.5">
-            <Avatar className="w-10 h-10" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
-              <AvatarFallback><Users className="w-5 h-5" style={{ color: '#6366F1' }} /></AvatarFallback>
-            </Avatar>
-          </div>
-          <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Total Leads</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.total_leads}</h3>
-          <div className="flex items-center gap-1 mt-2">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <p className="text-xs font-semibold text-green-500">Active Campaign</p>
-          </div>
-        </Card>
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl p-6 relative overflow-hidden transition-all duration-300">
-          <div className="absolute top-2.5 right-2.5">
-            <Avatar className="w-10 h-10" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-              <AvatarFallback><Send className="w-5 h-5" style={{ color: '#10B981' }} /></AvatarFallback>
-            </Avatar>
-          </div>
-          <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>{sentLabel}</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{primarySentCount}</h3>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {hasLinkedIn && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
-                <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {analyticsAny?.platform_metrics?.linkedin?.sent ?? 0}
-              </Badge>
-            )}
-            {hasEmail && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
-                <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {analyticsAny?.platform_metrics?.email?.sent ?? 0}
-              </Badge>
-            )}
-            {hasWhatsApp && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
-                <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0}
-              </Badge>
-            )}
-            {hasVoice && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
-                <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {analyticsAny?.platform_metrics?.voice?.sent ?? 0}
-              </Badge>
-            )}
-            {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
-              <div className="flex items-center gap-1">
-                <Zap className="w-4 h-4 text-amber-500" />
-                <p className="text-xs font-semibold text-amber-500">Outreach</p>
+      <div className="flex gap-4 mb-6 flex-wrap items-stretch">
+        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+            <div className="flex-1 flex flex-col p-4">
+              <div className="flex flex-col h-full">
+                <div className="flex justify-end mb-2">
+                  <Avatar className="bg-indigo-500 w-8 h-8">
+                    <AvatarFallback className="bg-indigo-500">
+                      <Users className="w-6 h-6 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    Total Leads
+                  </p>
+                  <h5 className="text-2xl font-bold text-slate-800">
+                    {analytics.overview.total_leads}
+                  </h5>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </Card>
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl p-6 relative overflow-hidden transition-all duration-300">
-          <div className="absolute top-2.5 right-2.5">
-            <Avatar className="w-10 h-10" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-              <AvatarFallback><Linkedin className="w-5 h-5" style={{ color: '#3B82F6' }} /></AvatarFallback>
-            </Avatar>
-          </div>
-          <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Connected</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.connected}</h3>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {hasLinkedIn && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
-                <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {analyticsAny?.platform_metrics?.linkedin?.connected ?? 0}
-              </Badge>
-            )}
-            {hasEmail && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
-                <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {analyticsAny?.platform_metrics?.email?.connected ?? 0}
-              </Badge>
-            )}
-            {hasWhatsApp && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
-                <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0}
-              </Badge>
-            )}
-            {hasVoice && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
-                <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {analyticsAny?.platform_metrics?.voice?.connected ?? 0}
-              </Badge>
-            )}
-            {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-4 h-4 text-blue-500" />
-                <p className="text-xs font-semibold text-blue-500">{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</p>
+        </div>
+
+        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+            <div className="flex-1 flex flex-col p-4">
+              <div className="flex flex-col h-full">
+                <div className="flex justify-end mb-2">
+                  <Avatar className="bg-green-500 w-8 h-8">
+                    <AvatarFallback className="bg-green-500">
+                      <Send className="w-6 h-6 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {sentLabel}
+                  </p>
+                  <h5 className="text-2xl font-bold text-slate-800">
+                    {primarySentCount}
+                  </h5>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </Card>
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl p-6 relative overflow-hidden transition-all duration-300">
-          <div className="absolute top-2.5 right-2.5">
-            <Avatar className="w-10 h-10" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
-              <AvatarFallback><Reply className="w-5 h-5" style={{ color: '#F59E0B' }} /></AvatarFallback>
-            </Avatar>
-          </div>
-          <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>Replied</p>
-          <h3 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>{analytics.overview.replied}</h3>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {hasLinkedIn && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(10, 102, 194, 0.1)', color: '#0A66C2' }}>
-                <Linkedin className="w-3 h-3 mr-1" style={{ color: '#0A66C2' }} />
-                {analyticsAny?.platform_metrics?.linkedin?.replied ?? 0}
-              </Badge>
-            )}
-            {hasEmail && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
-                <Mail className="w-3 h-3 mr-1" style={{ color: '#F59E0B' }} />
-                {analyticsAny?.platform_metrics?.email?.replied ?? 0}
-              </Badge>
-            )}
-            {hasWhatsApp && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
-                <MessageCircle className="w-3 h-3 mr-1" style={{ color: '#25D366' }} />
-                {analyticsAny?.platform_metrics?.whatsapp?.replied ?? 0}
-              </Badge>
-            )}
-            {hasVoice && (
-              <Badge className="h-5 text-xs font-semibold" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
-                <Phone className="w-3 h-3 mr-1" style={{ color: '#8B5CF6' }} />
-                {analyticsAny?.platform_metrics?.voice?.replied ?? 0}
-              </Badge>
-            )}
-            {!hasLinkedIn && !hasEmail && !hasWhatsApp && !hasVoice && (
-              <div className="flex items-center gap-1">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <p className="text-xs font-semibold text-amber-500">{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</p>
+        </div>
+
+        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+            <div className="flex-1 flex flex-col p-4">
+              <div className="flex flex-col h-full">
+                <div className="flex justify-end mb-2">
+                  <Avatar className="bg-[#0077B5] w-8 h-8">
+                    <AvatarFallback className="bg-[#0077B5]">
+                      <Linkedin className="w-6 h-6 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    Connected
+                  </p>
+                  <h5 className="text-2xl font-bold text-slate-800">
+                    {analytics.overview.connected}
+                  </h5>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </Card>
+        </div>
+
+        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+            <div className="flex-1 flex flex-col p-4">
+              <div className="flex flex-col h-full">
+                <div className="flex justify-end mb-2">
+                  <Avatar className="bg-amber-500 w-8 h-8">
+                    <AvatarFallback className="bg-amber-500">
+                      <Reply className="w-6 h-6 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    Replied
+                  </p>
+                  <h5 className="text-2xl font-bold text-slate-800">
+                    {analytics.overview.replied}
+                  </h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Activity Feed */}
+      <div className="mb-8">
+        <LiveActivityTable campaignId={campaignId} maxHeight={500} pageSize={50} />
       </div>
 
       {/* Analytics Charts Section */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
-          <Avatar className="w-11 h-11" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
-            <AvatarFallback><BarChart className="w-5 h-5 text-white" /></AvatarFallback>
+          <Avatar className="w-11 h-11 bg-white border border-slate-200 shadow-sm">
+            <AvatarFallback><BarChart className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
           </Avatar>
-          <div>
-            <h5 className="text-xl font-bold" style={{ color: theme.textPrimary }}>Visual Analytics</h5>
-            <p className="text-sm" style={{ color: theme.textSecondary }}>Charts and graphs for deeper insights</p>
+          <div className="flex-1">
+            <h5 className="text-xl font-bold text-[#1E293B]">Visual Analytics</h5>
+            <p className="text-sm text-[#64748B]">Charts and graphs for deeper insights</p>
           </div>
+          <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
+            Live
+          </Badge>
         </div>
         <div style={{
           '--card-bg': isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
@@ -399,94 +446,100 @@ export default function CampaignAnalyticsPage() {
         </div>
       </div>
 
-      {/* Live Activity Feed */}
-      <div className="mb-8">
-        <LiveActivityTable campaignId={campaignId} maxHeight={500} pageSize={50} />
-      </div>
-
-      {/* Channel Performance Cards */}
-      {platformAnalytics.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-11 h-11" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }}>
-              <AvatarFallback><Lightbulb className="w-5 h-5 text-white" /></AvatarFallback>
-            </Avatar>
-            <div>
-              <h5 className="text-xl font-bold" style={{ color: theme.textPrimary }}>Channel Performance</h5>
-              <p className="text-sm" style={{ color: theme.textSecondary }}>Real-time analytics for your active channels</p>
-            </div>
-            <Badge className="ml-auto font-semibold animate-pulse" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
-              <Activity className="w-4 h-4 mr-1" style={{ color: '#10B981' }} />
-              Live
-            </Badge>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {platformAnalytics.map((item: any) => {
-              const config = platformConfig[item.platform as keyof typeof platformConfig];
-              const PlatformIcon = config.icon;
-              return (
-                <Card key={item.platform} style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl overflow-hidden transition-all duration-300 hover:transform hover:-translate-y-2">
-                  <div className="p-5 flex items-center justify-between" style={{ background: config.gradient }}>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-12 h-12" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                        <AvatarFallback><PlatformIcon className="w-6 h-6 text-white" /></AvatarFallback>
-                      </Avatar>
+      {/* Performance Metrics - 3 Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Channel Performance */}
+        {platformAnalytics.length > 0 && (
+          <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+                  <AvatarFallback><Lightbulb className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h6 className="text-lg font-bold text-[#1E293B]">Channel Performance</h6>
+                  <p className="text-xs text-[#64748B]">Active channels</p>
+                </div>
+                <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
+                  Live
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-4">
+                {platformAnalytics.map((item: any) => {
+                  const config = platformConfig[item.platform as keyof typeof platformConfig];
+                  const PlatformIcon = config.icon;
+                  const computedRate = item.sent
+                    ? ((item.connected + item.replied) / item.sent) * 100
+                    : item.actions
+                    ? ((item.connected + item.replied) / item.actions) * 100
+                    : 0;
+                  const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
+                  return (
+                    <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] bg-white">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8" style={{ backgroundColor: `${config.color}20` }}>
+                            <AvatarFallback>
+                              <PlatformIcon className="w-4 h-4" style={{ color: config.color }} />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold text-[#1E293B]">{config.name}</p>
+                            <p className="text-xs text-[#64748B]">{item.actions > 0 ? 'Active' : 'Ready'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        <div className="text-center">
+                          <p className="text-lg font-bold" style={{ color: config.color }}>{item.actions}</p>
+                          <p className="text-xs text-[#64748B]">Actions</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-green-600">{item.sent}</p>
+                          <p className="text-xs text-[#64748B]">Sent</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-blue-600">{item.connected}</p>
+                          <p className="text-xs text-[#64748B]">Connected</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-amber-600">{item.replied}</p>
+                          <p className="text-xs text-[#64748B]">Replied</p>
+                        </div>
+                      </div>
                       <div>
-                        <h6 className="text-lg font-bold text-white">{config.name}</h6>
-                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>Channel Analytics</p>
+                        <div className="flex justify-between mb-1">
+                          <p className="text-xs text-[#64748B]">Success Rate</p>
+                          <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
+                        </div>
+                        <div className="relative h-1.5 rounded-full bg-slate-200">
+                          <div className="absolute h-1.5 rounded-full" style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}></div>
+                        </div>
                       </div>
                     </div>
-                    <Badge className="text-xs font-semibold" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-                      {item.actions > 0 ? 'Active' : 'Ready'}
-                    </Badge>
-                  </div>
-                  <div className="p-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
-                        <h4 className="text-2xl font-extrabold" style={{ color: config.color }}>{item.actions}</h4>
-                        <p className="text-xs" style={{ color: theme.textSecondary }}>Actions</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
-                        <h4 className="text-2xl font-extrabold text-green-500">{item.sent}</h4>
-                        <p className="text-xs" style={{ color: theme.textSecondary }}>Sent</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
-                        <h4 className="text-2xl font-extrabold text-blue-500">{item.connected}</h4>
-                        <p className="text-xs" style={{ color: theme.textSecondary }}>Connected</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
-                        <h4 className="text-2xl font-extrabold text-amber-500">{item.replied}</h4>
-                        <p className="text-xs" style={{ color: theme.textSecondary }}>Replied</p>
-                      </div>
-                    </div>
-                    <div className="mt-6">
-                      <div className="flex justify-between mb-2">
-                        <p className="text-sm" style={{ color: theme.textSecondary }}>Success Rate</p>
-                        <p className="font-bold" style={{ color: config.color }}>{item.rate.toFixed(1)}%</p>
-                      </div>
-                      <div className="relative h-2 rounded-full" style={{ backgroundColor: theme.progressBg }}>
-                        <div className="absolute h-2 rounded-full" style={{ width: `${Math.min(item.rate, 100)}%`, background: config.gradient }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
 
-      {/* Performance Metrics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <Avatar style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }}>
-                <AvatarFallback><BarChart className="w-5 h-5" style={{ color: '#3B82F6' }} /></AvatarFallback>
+            <div className="flex items-center gap-3 mb-6">
+              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+                <AvatarFallback><BarChart className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
-              <h6 className="text-lg font-bold" style={{ color: theme.textPrimary }}>Outreach Metrics</h6>
+              <div className="flex-1">
+                <h6 className="text-lg font-bold text-[#1E293B]">Outreach Metrics</h6>
+                <p className="text-xs text-[#64748B]">Message tracking</p>
+              </div>
+              <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
+                Live
+              </Badge>
             </div>
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4">
               {[
                 { label: 'Sent', value: analytics.overview.sent, icon: Send, color: '#6366F1' },
                 { label: 'Delivered', value: analytics.overview.delivered, icon: CheckCircle, color: '#10B981' },
@@ -495,28 +548,35 @@ export default function CampaignAnalyticsPage() {
                 { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
                 { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
               ].map((metric) => (
-                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border" style={{ backgroundColor: theme.statBg, borderColor: theme.statBorder }}>
+                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border border-[#E2E8F0] bg-white">
                   <div className="flex items-center gap-4">
                     <Avatar className="w-9 h-9" style={{ backgroundColor: `${metric.color}20` }}>
                       <AvatarFallback><metric.icon className="w-4 h-4" style={{ color: metric.color }} /></AvatarFallback>
                     </Avatar>
-                    <p style={{ color: theme.textSecondary }}>{metric.label}</p>
+                    <p className="text-[#64748B]">{metric.label}</p>
                   </div>
-                  <h6 className="text-lg font-bold" style={{ color: theme.textPrimary }}>{metric.value}</h6>
+                  <h6 className="text-lg font-bold text-[#1E293B]">{metric.value}</h6>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-        <Card style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }} className="rounded-xl h-full transition-all duration-300">
+        
+        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <Avatar style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)' }}>
-                <AvatarFallback><Gauge className="w-5 h-5" style={{ color: '#8B5CF6' }} /></AvatarFallback>
+            <div className="flex items-center gap-3 mb-6">
+              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+                <AvatarFallback><Gauge className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
-              <h6 className="text-lg font-bold" style={{ color: theme.textPrimary }}>Performance Rates</h6>
+              <div className="flex-1">
+                <h6 className="text-lg font-bold text-[#1E293B]">Performance Rates</h6>
+                <p className="text-xs text-[#64748B]">Success percentages</p>
+              </div>
+              <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
+                Live
+              </Badge>
             </div>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               {[
                 { label: 'Delivery Rate', value: analytics.overview.sent ? ((analytics.overview.delivered / analytics.overview.sent) * 100) : (analytics.metrics.delivery_rate ?? 0), color: '#10B981' },
                 { label: 'Open Rate', value: analytics.overview.delivered ? ((analytics.overview.opened / analytics.overview.delivered) * 100) : (analytics.metrics.open_rate ?? 0), color: '#8B5CF6' },
@@ -526,10 +586,10 @@ export default function CampaignAnalyticsPage() {
               ].map((rate) => (
                 <div key={rate.label}>
                   <div className="flex justify-between mb-2">
-                    <p style={{ color: theme.textSecondary }}>{rate.label}</p>
+                    <p className="text-[#64748B]">{rate.label}</p>
                     <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
-                  <div className="relative h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: theme.progressBg }}>
+                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80">
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
                   </div>
                 </div>
