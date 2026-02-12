@@ -19,14 +19,8 @@ import type {
   ApolloPerson
 } from './types';
 import * as apolloApi from './api';
-// Try to import feature flags helper (when integrated into LAD)
-let isFeatureEnabled: (feature: string) => boolean;
-try {
-  isFeatureEnabled = require('../../featureFlags').isFeatureEnabled;
-} catch {
-  // Fallback for standalone feature repo
-  isFeatureEnabled = () => true;
-}
+// Feature flag check - can be integrated with LAD feature flags system
+const isFeatureEnabled = (feature: string) => true;
 export const useApolloLeads = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,4 +135,4 @@ export const useApolloLeads = () => {
     // Utilities
     clearError: () => setError(null)
   };
-};
+};
