@@ -1,9 +1,9 @@
 "use client";
-import Login from '../../components/auth/Login';
+import ForgotPassword from '../../components/auth/ForgotPassword';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0b1957] flex flex-col">
       <main className="flex-1 flex items-center justify-center">
@@ -18,23 +18,16 @@ export default function LoginPage() {
             <div className="relative w-full h-[720px]">
               <Image src="/LAD-Image.svg" alt="LAD hero" fill style={{ objectFit: 'cover' }} priority={false} />
             </div>
-
-            {/* <h2 className="text-4xl font-bold text-[#0b1957] dark:text-white">LAD — Let Agent Deal</h2> */}
-            {/* <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md">
-              AI agents that autonomously handle sales — qualify leads, negotiate and close
-              deals across voice, chat, email and social channels.
-            </p> */}
-
           </motion.div>
 
-          {/* Right: Login form */}
+          {/* Right: ForgotPassword form */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="p-8 md:p-12 flex flex-col justify-center items-center"
           >
-            <Login />
+            <ForgotPassword />
           </motion.div>
         </div>
       </main>

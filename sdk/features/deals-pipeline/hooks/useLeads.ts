@@ -5,7 +5,7 @@
  * Framework-independent (no Next.js imports).
  */
 import { useQuery } from "@tanstack/react-query";
-import type { Lead, LeadFilters } from "../types";
+import type { Lead, LeadFilters, PaginatedLeads } from "../types";
 import * as api from "../api";
 
 /**
@@ -16,6 +16,18 @@ export function useLeads(filters?: LeadFilters, enabled: boolean = true) {
     queryKey: ["deals-pipeline", "leads", filters],
     queryFn: () => api.getLeads(filters),
     staleTime: 30000, // 30 seconds
+    enabled: enabled,
+  });
+}
+
+/**
+ * Hook to fetch leads with pagination and filters
+ */
+export function usePaginatedLeads(filters?: LeadFilters, enabled: boolean = true) {
+  return useQuery<PaginatedLeads>({
+    queryKey: ["deals-pipeline", "leads", "paginated", filters],
+    queryFn: () => api.getPaginatedLeads(filters),
+    staleTime: 30000,
     enabled: enabled,
   });
 }

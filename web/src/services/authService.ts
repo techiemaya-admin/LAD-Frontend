@@ -77,5 +77,33 @@ const authService = {
     // Backend returns { success: true, user: {...} }, extract the user
     return (data.user || data) as AuthUser;
   },
+
+  forgotPassword: async (email: string): Promise<any> => {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error || 'Failed to send reset email');
+    }
+    return await response.json();
+  },
+
+  resetPassword: async (password: string, token: string): Promise<any> => {
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, token }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error || 'Failed to reset password');
+    }
+    return await response.json();
+  },
 };
 export default authService;

@@ -156,21 +156,29 @@ const Login: React.FC = () => {
               </p>
             )}
           </div>
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-            />
-            <label
-              htmlFor="rememberMe"
-              className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
+          {/* Remember Me Checkbox & Forgot Password */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              />
+              <label
+                htmlFor="rememberMe"
+                className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
+              >
+                Remember
+              </label>
+            </div>
+            <a
+              href="/forgot-password"
+              className="text-sm font-semibold text-gray-800 hover:text-gray-600 transition"
             >
-              Remember
-            </label>
+              Forgot Password?
+            </a>
           </div>
           {/* Login Button */}
           <Button

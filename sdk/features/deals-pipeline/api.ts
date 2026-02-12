@@ -20,6 +20,7 @@ import type {
   UpdateStageParams,
   ReorderStagesParams,
   PipelineData,
+  PaginatedLeads,
   PipelineStats,
   Note,
   CreateNoteParams,
@@ -62,6 +63,28 @@ export async function getLeads(filters?: LeadFilters): Promise<Lead[]> {
     ? `/api/deals-pipeline/leads?${queryString}`
     : "/api/deals-pipeline/leads";
   const response = await apiGet<Lead[]>(url);
+  return response.data;
+}
+
+/**
+ * Get leads with pagination
+ */
+export async function getPaginatedLeads(
+  filters?: LeadFilters
+): Promise<PaginatedLeads> {
+  const query = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.append(key, String(value));
+      }
+    });
+  }
+  const queryString = query.toString();
+  const url = queryString
+    ? `/api/deals-pipeline/leads?${queryString}`
+    : "/api/deals-pipeline/leads";
+  const response = await apiGet<PaginatedLeads>(url);
   return response.data;
 }
 
@@ -239,8 +262,8 @@ export async function reorderStages(
 /**
  * Get complete pipeline board data (stages + leads)
  */
-export async function getPipelineData(): Promise<PipelineData> {
-  const response = await apiGet<PipelineData>("/api/deals-pipeline/pipeline/board");
+export async function getPipelineData(page: number = 1, limit: number = 50): Promise<PipelineData> {
+  const response = await apiGet<PipelineData>(`/api/deals-pipeline/pipeline/board?page=${page}&limit=${limit}`);
   const data = response.data;
 
   // Normalize leads

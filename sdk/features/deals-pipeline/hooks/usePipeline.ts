@@ -11,10 +11,10 @@ import * as api from "../api";
 /**
  * Hook to fetch complete pipeline board data (stages + leads)
  */
-export function usePipelineData(enabled: boolean = true) {
+export function usePipelineData(page: number = 1, limit: number = 50, enabled: boolean = true) {
   return useQuery<PipelineData>({
-    queryKey: ["deals-pipeline", "pipeline"],
-    queryFn: () => api.getPipelineData(),
+    queryKey: ["deals-pipeline", "pipeline", { page, limit }],
+    queryFn: () => api.getPipelineData(page, limit),
     staleTime: 30000, // 30 seconds
     enabled: enabled,
   });
