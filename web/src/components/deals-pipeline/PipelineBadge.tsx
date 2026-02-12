@@ -20,7 +20,10 @@ import {
   Megaphone,
   Target,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Flame,
+  Snowflake,
+  Sun
 } from 'lucide-react';
 
 interface PipelineBadgeProps {
@@ -110,8 +113,11 @@ const getSourceIcon = (source: string) => {
     case 'prospect':
       return Target;
     case 'hot':
+      return Flame;
     case 'warm':
-      return TrendingUp;
+      return Sun;
+    case 'cold':
+      return Snowflake;
     case 'qualified':
     case 'qualified lead':
       return CheckCircle;
@@ -194,8 +200,11 @@ const getSourceColor = (source: string) => {
     case 'prospect':
       return '#f97316';
     case 'hot':
+      return '#ef4444';
     case 'warm':
-      return '#f59e0b';
+      return '#facc15';
+    case 'cold':
+      return '#3b82f6';
     case 'qualified':
     case 'qualified lead':
       return '#10b981';

@@ -1252,6 +1252,25 @@ const PipelineBoard: React.FC = () => {
       }
     });
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
+
+  const handleViewModeChange = useCallback((mode: 'kanban' | 'list'): void => {
+    dispatch(setPipelineSettings({ viewMode: mode }));
+    autoSavePipelinePreferences({
+      viewMode: mode,
+      visibleColumns: pipelineSettings.visibleColumns as unknown as Record<string, boolean>,
+      filters: activeFilters as any,
+      sortConfig: sortConfig,
+      uiSettings: {
+        zoom: zoom,
+        autoRefresh: pipelineSettings.autoRefresh,
+        refreshInterval: pipelineSettings.refreshInterval,
+        compactView: pipelineSettings.compactView,
+        showCardCount: pipelineSettings.showCardCount,
+        showStageValue: pipelineSettings.showStageValue,
+        enableDragAndDrop: pipelineSettings.enableDragAndDrop
+      }
+    });
+  }, [pipelineSettings, activeFilters, sortConfig, dispatch, zoom]);
   // Toolbar dialog handlers
   const handleOpenFilter = useCallback((): void => {
     dispatch(setFilterDialogOpen(true));
@@ -1358,29 +1377,28 @@ const PipelineBoard: React.FC = () => {
   }
   return (
     <div 
-      className="w-full flex flex-col"
+      className="w-full flex flex-col bg-[#f8f9fe] p-1 border border-gray-200 rounded-lg"
       style={{ height: `calc(93vh - ${HEADER_HEIGHT}px)` }}
     >
-      {pipelineSettings.viewMode !== 'list' && (
-        <PipelineBoardToolbar
-          totalLeads={totalLeads}
-          filteredLeadsCount={filteredLeadsCount}
-          stagesCount={currentStages.length}
-          labels={labels}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          zoom={zoom}
-          onZoomChange={handleZoomChange}
-          viewMode={pipelineSettings.viewMode}
-          onAddStage={() => dispatch(setAddStageDialogOpen(true))}
-          onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
-          onOpenFilter={handleOpenFilter}
-          onOpenSort={handleOpenSort}
-          onOpenSettings={handleOpenSettings}
-          onExport={handleExportLeads}
-          onExportWithDateRange={handleExportLeadsWithDateRange}
-        />
-      )}
+      <PipelineBoardToolbar
+        totalLeads={totalLeads}
+        filteredLeadsCount={filteredLeadsCount}
+        stagesCount={currentStages.length}
+        labels={labels}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        zoom={zoom}
+        onZoomChange={handleZoomChange}
+        viewMode={pipelineSettings.viewMode}
+        onViewModeChange={handleViewModeChange}
+        onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+        onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+        onOpenFilter={handleOpenFilter}
+        onOpenSort={handleOpenSort}
+        onOpenSettings={handleOpenSettings}
+        onExport={handleExportLeads}
+        onExportWithDateRange={handleExportLeadsWithDateRange}
+      />
       <EnhancedAddStageDialog
         open={addDialogOpen}
         onClose={() => {
