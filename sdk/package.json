@@ -23,8 +23,8 @@
       "default": "./features/apollo-leads/index.ts"
     },
     "./voice-agent": {
-      "types": "./features/voice-agent/features/voice-agent/index.ts",
-      "default": "./features/voice-agent/features/voice-agent/index.ts"
+      "types": "./features/voice-agent/index.ts",
+      "default": "./features/voice-agent/index.ts"
     },
     "./social-integration": {
       "types": "./features/social-integration/features/social-integration/index.ts",
