@@ -36,7 +36,8 @@ import {
 import { 
   selectLeadsLoading, 
   selectLeadsError,
-  selectLeads
+  selectLeads,
+  selectLeadsPagination
 } from '@/features/deals-pipeline/store/slices/leadsSlice';
 import { 
   selectUsers,
@@ -99,6 +100,7 @@ import {
 import { 
   loadPipelineDataAction, 
   refreshPipelineDataAction,
+  fetchLeadsAction,
   moveLeadAction,
   createLeadAction,
   updateLeadAction,
@@ -147,6 +149,8 @@ interface StageUpdateData {
 const PipelineBoard: React.FC = () => {
   const initialPipelineLoadRequestedRef = useRef(false);
   const initialMasterDataLoadRequestedRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isFetchingMoreRef = useRef(false);
 
   // Education vertical context
   const { hasFeature } = useAuth();
@@ -170,6 +174,7 @@ const PipelineBoard: React.FC = () => {
   const reduxLeadsLoading = useSelector(selectLeadsLoading);
   const reduxStagesError = useSelector(selectStagesError);
   const reduxLeadsError = useSelector(selectLeadsError);
+  const pagination = useSelector(selectLeadsPagination);
   // Master data selectors
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
@@ -221,49 +226,6 @@ const PipelineBoard: React.FC = () => {
   // Computed loading state combining all loading states
   const isLoading = reduxStagesLoading || reduxLeadsLoading || masterDataLoading || usersLoading || !preferencesLoaded;
   const currentError = reduxStagesError || reduxLeadsError || usersError || masterDataErrors?.[0] || null;
-
-  const pipelinePriorityCounts = useMemo(() => {
-    return pipelineBoardData.stages.reduce(
-      (acc: { high: number; medium: number; low: number }, stage: any) => {
-        acc.high += stage?.priority?.high || 0;
-        acc.medium += stage?.priority?.medium || 0;
-        acc.low += stage?.priority?.low || 0;
-        return acc;
-      },
-      { high: 0, medium: 0, low: 0 }
-    );
-  }, [pipelineBoardData.stages]);
-
-  const wonClosedCount = useMemo(() => {
-    const allLeads = pipelineBoardData.stages.flatMap((s: any) => s?.leads || []);
-    return allLeads.filter((lead: any) => lead?.status === 'won' || lead?.stage === 'won').length;
-  }, [pipelineBoardData.stages]);
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
-    if (!isLoading) return;
-    console.debug('[PipelineBoard] Loading state:', {
-      reduxStagesLoading,
-      reduxLeadsLoading,
-      masterDataLoading,
-      usersLoading,
-      preferencesLoaded,
-      reduxStagesError,
-      reduxLeadsError,
-      usersError,
-      masterDataErrors
-    });
-  }, [
-    isLoading,
-    reduxStagesLoading,
-    reduxLeadsLoading,
-    masterDataLoading,
-    usersLoading,
-    preferencesLoaded,
-    reduxStagesError,
-    reduxLeadsError,
-    usersError,
-    masterDataErrors
-  ]);
   // Use the filtered data directly from selector instead of manual filtering
   const currentStages = pipelineBoardData.stages;
   // Memoize normalized stages to prevent creating new objects on every render
@@ -356,6 +318,37 @@ const PipelineBoard: React.FC = () => {
       dispatch(fetchUsersAction());
     }
   }, [isAuthenticated, dispatch]);
+
+  // Infinite scroll handler for Kanban board
+  useEffect(() => {
+    const handleScroll = async () => {
+      if (!scrollContainerRef.current || !pagination.hasMore || reduxLeadsLoading || isFetchingMoreRef.current) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      
+      // If we're within 100px of the bottom, load more
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        try {
+          isFetchingMoreRef.current = true;
+          logger.debug('[PipelineBoard] Reached bottom, loading next page:', pagination.page + 1);
+          await dispatch(fetchLeadsAction(pagination.page + 1, pagination.limit));
+        } finally {
+          isFetchingMoreRef.current = false;
+        }
+      }
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer && pipelineSettings.viewMode === 'kanban') {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [pagination.hasMore, pagination.page, pagination.limit, reduxLeadsLoading, pipelineSettings.viewMode, dispatch]);
   // Calculate totals for toolbar
   const totalLeads = useMemo(() => {
     return Object.values(currentLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
@@ -1447,6 +1440,7 @@ const PipelineBoard: React.FC = () => {
         />
       )}
       <div 
+        ref={scrollContainerRef}
         className={`pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] ${
           pipelineSettings.viewMode === 'kanban' 
             ? 'overflow-x-scroll overflow-y-auto' 
@@ -1505,6 +1499,11 @@ const PipelineBoard: React.FC = () => {
                 showCardCount={pipelineSettings.showCardCount}
                 showTotalValue={pipelineSettings.showStageValue}
               />
+              {reduxLeadsLoading && pagination.page > 1 && (
+                <div className="flex justify-center p-4 w-full sticky bottom-0 bg-white/10 backdrop-blur-sm">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
             </DndContext>
           );
         })()}
