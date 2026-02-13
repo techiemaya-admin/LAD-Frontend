@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDependentActionsToRemove, getRequiredActionsFromOptions } from '@/lib/actionDependencies';
@@ -12,6 +12,7 @@ interface SelectableOptionsProps {
   totalPlatforms?: number; // For platform actions progress display
   preSelectedOptions?: string[]; // Pre-selected options (for platform actions)
   platformName?: string; // Platform name for dependency checking (e.g., 'linkedin', 'whatsapp')
+  leadsPerDayOptions?: boolean; // Show warning and force single-select for lead volume
 }
 export default function SelectableOptions({
   options,
@@ -22,11 +23,13 @@ export default function SelectableOptions({
   totalPlatforms,
   preSelectedOptions = [],
   platformName,
+  leadsPerDayOptions = false,
 }: SelectableOptionsProps) {
   // Pre-select all options if preSelectedOptions is provided, otherwise start empty
   const [selected, setSelected] = useState<Set<string>>(
     new Set(preSelectedOptions.length > 0 ? preSelectedOptions : [])
   );
+  const [showLeadsWarning, setShowLeadsWarning] = useState(false);
   // Update workflow in real-time when selections change (for platform actions)
   useEffect(() => {
     const platform = detectPlatform();
@@ -50,6 +53,39 @@ export default function SelectableOptions({
       window.dispatchEvent(updateEvent);
     }
   }, [selected, variant]);
+  // Detect if high lead volume is selected (50+ or "max")
+  useEffect(() => {
+    if (!leadsPerDayOptions) {
+      setShowLeadsWarning(false);
+      return;
+    }
+    const selectedValues = Array.from(selected);
+    const showWarning = selectedValues.some((value) => {
+      const normalized = value.toLowerCase();
+      if (normalized === 'max') return true;
+      const numericMatch = normalized.match(/(\d+)/);
+      return numericMatch ? Number(numericMatch[1]) >= 50 : false;
+    });
+    setShowLeadsWarning(showWarning);
+  }, [selected, leadsPerDayOptions]);
+  const handleSubmit = useCallback(() => {
+    if (selected.size > 0) {
+      onSubmit(Array.from(selected));
+    }
+  }, [selected, onSubmit]);
+
+  // Handle Enter key to submit
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && selected.size > 0) {
+        event.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selected, handleSubmit]);
   // Detect platform from props or options (for platform actions)
   const detectPlatform = (): string | null => {
     // Use platformName prop if provided
@@ -108,11 +144,6 @@ export default function SelectableOptions({
       }
       return next;
     });
-  };
-  const handleSubmit = () => {
-    if (selected.size > 0) {
-      onSubmit(Array.from(selected));
-    }
   };
   // Platform progress indicator
   const showProgress = platformIndex !== undefined && totalPlatforms !== undefined;
@@ -246,6 +277,12 @@ export default function SelectableOptions({
           Continue
         </button>
       </div>
+      {/* Leads Per Day Warning */}
+      {showLeadsWarning && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          If your LinkedIn account is a free account, it's better to continue with 25 leads per day.
+        </div>
+      )}
     </div>
   );
-}
+}
