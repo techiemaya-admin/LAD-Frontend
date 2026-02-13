@@ -108,8 +108,9 @@ export const LinkedInIntegration: React.FC = () => {
         const user = JSON.parse(userStr);
         const tenantId = user.tenantId || user.organizationId;
         if (tenantId) {
-          socket.emit('join', tenantId);
-          console.log('[Socket.IO] Joined tenant room:', tenantId);
+          const tenantRoom = `tenant:${tenantId}`;
+          socket.emit('join', tenantRoom);
+          console.log('[Socket.IO] Joined tenant room:', tenantRoom);
         }
       } catch (e) {
         console.error('[Socket.IO] Failed to parse user data:', e);
@@ -119,34 +120,80 @@ export const LinkedInIntegration: React.FC = () => {
     // Listen for LinkedIn account status updates
     socket.on('linkedin:account:status', (data: {
       accountId: string;
-      accountName: string;
+      accountName?: string;
+      profileName?: string;
       status: string;
-      dbStatus: string;
-      needsReconnect: boolean;
+      dbStatus?: string;
+      needsReconnect?: boolean;
       timestamp: string;
     }) => {
       console.log('[Socket.IO] Account status update received:', data);
 
+      const newStatus = data.status || data.dbStatus;
+      const isActive = newStatus === 'active' || newStatus === 'connected';
+      const isCheckpoint = newStatus === 'checkpoint';
+
       // Update account status in state
       setLinkedInConnections(prev => prev.map(account => {
-        if (account.id === data.accountId || account.accountName === data.accountName) {
+        if (account.id === data.accountId || 
+            account.unipileAccount?.id === data.accountId ||
+            account.accountName === data.accountName ||
+            account.profileName === data.profileName) {
           return {
             ...account,
-            status: data.dbStatus === 'active' ? 'connected' : 
-                   data.dbStatus === 'credentials_expired' ? 'error' :
-                   data.dbStatus === 'error' ? 'error' :
-                   data.dbStatus === 'stopped' ? 'stopped' : 'unknown' as any,
-            connected: data.dbStatus === 'active',
+            status: newStatus === 'active' ? 'connected' : 
+                   newStatus === 'credentials_expired' ? 'error' :
+                   newStatus === 'error' ? 'error' :
+                   newStatus === 'stopped' ? 'stopped' : 
+                   newStatus === 'checkpoint' ? 'checkpoint' : 'unknown' as any,
+            connected: isActive,
           };
         }
         return account;
       }));
 
+      // If checkpoint is resolved (user clicked Yes/No on mobile device)
+      if (isActive && showOtpModal && currentCheckpointAccount) {
+        const isCurrentAccount = currentCheckpointAccount.id === data.accountId || 
+                                currentCheckpointAccount.unipileAccount?.id === data.accountId;
+        
+        if (isCurrentAccount) {
+          console.log('[Socket.IO] Checkpoint resolved! Auto-closing modal');
+          
+          // Stop polling if active
+          if (yesNoPolling) {
+            clearInterval(yesNoPolling);
+            setYesNoPolling(null);
+          }
+          
+          // Auto-close modal and show success
+          setAutoResolving(true);
+          setShowOtpModal(false);
+          setConnectionSuccess(true);
+          
+          // Refresh account status
+          const accountEmail = currentCheckpointAccount?.email || email;
+          checkLinkedInConnection(accountEmail);
+          
+          // Close connection modal after a short delay
+          setTimeout(() => {
+            setShowConnectionModal(false);
+            setEmail('');
+            setPassword('');
+            setLiAtCookie('');
+            setLiACookie('');
+            setAutoResolving(false);
+          }, 2000);
+        }
+      }
+
       // Show notification if account needs reconnection
       if (data.needsReconnect) {
-        alert(`⚠️ LinkedIn Account Update: ${data.accountName} needs reconnection. Please reconnect to continue using this account.`);
-      } else if (data.dbStatus === 'active') {
-        console.log(`✅ ${data.accountName} is now active`);
+        const accountName = data.accountName || data.profileName || 'LinkedIn Account';
+        alert(`⚠️ LinkedIn Account Update: ${accountName} needs reconnection. Please reconnect to continue using this account.`);
+      } else if (isActive) {
+        const accountName = data.accountName || data.profileName || 'Account';
+        console.log(`✅ ${accountName} is now active`);
       }
     });
 
@@ -168,10 +215,13 @@ export const LinkedInIntegration: React.FC = () => {
     };
   }, []); // Run once on mount
 
-  // Auto-polling for Yes/No checkpoint - monitors LinkedIn and auto-logins when user clicks Yes on mobile
+  // Auto-polling for Yes/No checkpoint - FALLBACK only (primary is webhook + Socket.IO)
+  // Keeps polling as backup in case webhook fails
   useEffect(() => {
-    // If we have a Yes/No checkpoint, start polling to detect when user clicks Yes on mobile
+    // If we have a Yes/No checkpoint, start polling as fallback (webhook should handle this)
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
+      console.log('[LinkedIn] Starting fallback polling for Yes/No checkpoint (webhook is primary)');
+      
       const pollInterval = setInterval(async () => {
         try {
           const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
@@ -183,6 +233,8 @@ export const LinkedInIntegration: React.FC = () => {
           const data = await response.json();
           // If checkpoint is resolved (user clicked Yes on mobile), auto-login
           if (data.connected || data.status === 'connected' || (data.checkpoint && !data.checkpoint.required)) {
+            console.log('[LinkedIn] Fallback polling detected checkpoint resolution');
+            
             // Stop polling
             if (yesNoPolling) {
               clearInterval(yesNoPolling);
@@ -208,7 +260,7 @@ export const LinkedInIntegration: React.FC = () => {
         } catch (error) {
           console.error('[LinkedIn Integration] Error polling checkpoint status:', error);
         }
-      }, 3000); // Poll every 3 seconds
+      }, 5000); // Poll every 5 seconds (less frequent since webhook is primary)
       setYesNoPolling(pollInterval);
       // Cleanup after 5 minutes (stop polling if user hasn't clicked Yes)
       setTimeout(() => {
