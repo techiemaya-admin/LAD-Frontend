@@ -25,6 +25,7 @@ import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
+import { ScrollText } from "lucide-react";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
 
@@ -510,9 +511,12 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
-            Call Logs
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <ScrollText className="w-6 h-6 text-[#1E293B]" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+              Call Logs
+            </h1>
+          </div>
           <p className="text-sm text-[#64748B] ml-2">
             View and manage your call history
           </p>

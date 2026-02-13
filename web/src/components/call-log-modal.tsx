@@ -11,6 +11,7 @@ import {
   useEndCall, 
   useRetryFailedCalls,
   useRecordingSignedUrl,
+  getCallLog,
   type CallLog,
   type BatchPayload,
 } from "@lad/frontend-features/call-logs";
@@ -39,7 +40,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/app-toaster";
-import { voiceAgentService } from "@lad/frontend-features/voice-agent";
 import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
@@ -128,11 +128,11 @@ const TranscriptsTab = ({
             className={cn(
               "p-3 rounded-2xl max-w-xs shadow-md",
               (msg.speaker || "").toLowerCase() === "user"
-                ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-900"
-                : "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900"
+                ? "bg-linear-to-r from-orange-100 to-orange-200 text-orange-900"
+                : "bg-linear-to-r from-blue-100 to-blue-200 text-blue-900"
             )}
           >
-            <p className="text-sm font-medium break-words">{msg.text}</p>
+            <p className="text-sm font-medium wrap-break-word">{msg.text}</p>
             <span className="text-[10px] text-muted-foreground block mt-1">
               {formatTimestamp(msg.time)}
             </span>
@@ -227,7 +227,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
               <Zap className="h-5 w-5 text-[#0b1957]" />
               <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
             </div>
-            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-200 break-words whitespace-pre-wrap">
+            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-200 wrap-break-word whitespace-pre-wrap">
               {summaryText || "No summary available."}
             </p>
           </div>
@@ -239,12 +239,12 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
             </div>
             <Badge
               className={cn(
-                "px-4 py-2 text-sm font-semibold shadow-md break-words whitespace-pre-wrap",
+                "px-4 py-2 text-sm font-semibold shadow-md wrap-break-word whitespace-pre-wrap",
                 dispositionInfo.color
               )}
             >
               <DispoIcon className="h-4 w-4 mr-1 shrink-0" />
-              <span className="break-words whitespace-pre-wrap">
+              <span className="wrap-break-word whitespace-pre-wrap">
                 {sentimentText || "Neutral"}
               </span>
             </Badge>
@@ -293,7 +293,7 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
   return (
     <ScrollArea className="h-full p-4">
       <Card className="border-orange-200 shadow-lg overflow-hidden">
-        <CardContent className="p-6 space-y-6 bg-gradient-to-br from-white to-orange-50">
+        <CardContent className="p-6 space-y-6 bg-linear-to-br from-white to-orange-50">
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <MessageSquare className="h-5 w-5 text-orange-500" />
@@ -418,7 +418,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
   return (
     <Card className="border-orange-200 shadow-lg">
       <ChartStyle id={pieId} config={chartConfig} />
-      <div className="flex flex-col md:flex-row gap-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50">
+      <div className="flex flex-col md:flex-row gap-6 p-6 bg-linear-to-r from-orange-50 to-amber-50">
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-lg font-semibold text-gray-800">Total Cost</span>
@@ -462,7 +462,7 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
         </div>
 
         <div className="flex-1 flex justify-center items-center">
-          <ChartContainer id={pieId} config={chartConfig} className="mx-auto aspect-square w-full max-w-[240px]">
+          <ChartContainer id={pieId} config={chartConfig} className="mx-auto aspect-square w-full max-w-60">
             <PieChart>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
               <Pie
@@ -604,8 +604,8 @@ export function CallLogModal({
       }
 
       try {
-        // Call log - Using voice-agent SDK service
-        const res: any = await voiceAgentService.getCallLog(id);
+        // Call log - Using call-logs SDK API
+        const res: any = await getCallLog(id);
         const l = res.data || res.log || res;
         setLog(l);
 

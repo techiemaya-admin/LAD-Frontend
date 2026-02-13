@@ -277,4 +277,4 @@ export const refreshPipelineDataAction = (): AppThunk => async (dispatch) => {
     dispatch(setStagesLoading(false));
     dispatch(setLeadsLoading(false));
   }
-};
+};

@@ -1,5 +1,5 @@
 "use client";
-import { Phone, Filter, Calendar } from "lucide-react";
+import { Phone, Filter, Calendar, ScrollText } from "lucide-react";
 type DateFilter = "today" | "month" | "custom" | "all";
 interface CallLogsHeaderProps {
   filterProvider: string;
@@ -51,6 +51,7 @@ export function CallLogsHeader({
         
           
           <div>
+            <ScrollText className="w-6 h-6 text-[#1E293B] mb-1" />
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
               Call Logs
             </h1>

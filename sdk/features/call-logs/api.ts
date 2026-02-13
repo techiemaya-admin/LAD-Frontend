@@ -56,6 +56,19 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
 }
 
 /**
+ * Get a single call log by ID
+ */
+export async function getCallLog(callId: string): Promise<any> {
+  //console.log('[Call Logs API] Fetching call log for ID:', callId);
+  
+  const response = await apiGet<any>(`/api/voice-agent/calls/${callId}`);
+  //console.log('[Call Logs API] Call log response:', response);
+  
+  // Extract data property from API client response
+  return response.data;
+}
+
+/**
  * Get batch status by job ID
  */
 export async function getBatchStatus(batchJobId: string): Promise<BatchApiResponse> {

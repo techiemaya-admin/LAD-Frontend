@@ -1,20 +1,245 @@
 
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen } from "lucide-react";
+import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/app-toaster";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
 import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
-import { useMakeCall } from '@lad/frontend-features/voice-agent';
+import { useMakeCall, useTriggerBatchCall, useUpdateSummary } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
-import { apiPost } from "@/lib/api";
+
+// Country codes data with flag emojis and dial codes
+const COUNTRIES = [
+  { code: "IN", name: "India", dialCode: "+91", flag: "🇮🇳" },
+  { code: "US", name: "United States", dialCode: "+1", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", dialCode: "+44", flag: "🇬🇧" },
+  { code: "CA", name: "Canada", dialCode: "+1", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", dialCode: "+61", flag: "🇦🇺" },
+  { code: "DE", name: "Germany", dialCode: "+49", flag: "🇩🇪" },
+  { code: "FR", name: "France", dialCode: "+33", flag: "🇫🇷" },
+  { code: "IT", name: "Italy", dialCode: "+39", flag: "🇮🇹" },
+  { code: "ES", name: "Spain", dialCode: "+34", flag: "🇪🇸" },
+  { code: "BR", name: "Brazil", dialCode: "+55", flag: "🇧🇷" },
+  { code: "MX", name: "Mexico", dialCode: "+52", flag: "🇲🇽" },
+  { code: "AR", name: "Argentina", dialCode: "+54", flag: "🇦🇷" },
+  { code: "ZA", name: "South Africa", dialCode: "+27", flag: "🇿🇦" },
+  { code: "EG", name: "Egypt", dialCode: "+20", flag: "🇪🇬" },
+  { code: "NG", name: "Nigeria", dialCode: "+234", flag: "🇳🇬" },
+  { code: "KE", name: "Kenya", dialCode: "+254", flag: "🇰🇪" },
+  { code: "SG", name: "Singapore", dialCode: "+65", flag: "🇸🇬" },
+  { code: "JP", name: "Japan", dialCode: "+81", flag: "🇯🇵" },
+  { code: "KR", name: "South Korea", dialCode: "+82", flag: "🇰🇷" },
+  { code: "CN", name: "China", dialCode: "+86", flag: "🇨🇳" },
+  { code: "HK", name: "Hong Kong", dialCode: "+852", flag: "🇭🇰" },
+  { code: "AE", name: "UAE", dialCode: "+971", flag: "🇦🇪" },
+  { code: "SA", name: "Saudi Arabia", dialCode: "+966", flag: "🇸🇦" },
+  { code: "PK", name: "Pakistan", dialCode: "+92", flag: "🇵🇰" },
+  { code: "BD", name: "Bangladesh", dialCode: "+880", flag: "🇧🇩" },
+  { code: "LK", name: "Sri Lanka", dialCode: "+94", flag: "🇱🇰" },
+  { code: "MY", name: "Malaysia", dialCode: "+60", flag: "🇲🇾" },
+  { code: "ID", name: "Indonesia", dialCode: "+62", flag: "🇮🇩" },
+  { code: "PH", name: "Philippines", dialCode: "+63", flag: "🇵🇭" },
+  { code: "TH", name: "Thailand", dialCode: "+66", flag: "🇹🇭" },
+  { code: "VN", name: "Vietnam", dialCode: "+84", flag: "🇻🇳" },
+  { code: "NZ", name: "New Zealand", dialCode: "+64", flag: "🇳🇿" },
+  { code: "RU", name: "Russia", dialCode: "+7", flag: "🇷🇺" },
+  { code: "TR", name: "Turkey", dialCode: "+90", flag: "🇹🇷" },
+  { code: "NL", name: "Netherlands", dialCode: "+31", flag: "🇳🇱" },
+  { code: "BE", name: "Belgium", dialCode: "+32", flag: "🇧🇪" },
+  { code: "CH", name: "Switzerland", dialCode: "+41", flag: "🇨🇭" },
+  { code: "AT", name: "Austria", dialCode: "+43", flag: "🇦🇹" },
+  { code: "SE", name: "Sweden", dialCode: "+46", flag: "🇸🇪" },
+  { code: "NO", name: "Norway", dialCode: "+47", flag: "🇳🇴" },
+  { code: "DK", name: "Denmark", dialCode: "+45", flag: "🇩🇰" },
+  { code: "FI", name: "Finland", dialCode: "+358", flag: "🇫🇮" },
+  { code: "PL", name: "Poland", dialCode: "+48", flag: "🇵🇱" },
+  { code: "UA", name: "Ukraine", dialCode: "+380", flag: "🇺🇦" },
+  { code: "IL", name: "Israel", dialCode: "+972", flag: "🇮🇱" },
+  { code: "QA", name: "Qatar", dialCode: "+974", flag: "🇶🇦" },
+  { code: "KW", name: "Kuwait", dialCode: "+965", flag: "🇰🇼" },
+  { code: "BH", name: "Bahrain", dialCode: "+973", flag: "🇧🇭" },
+  { code: "OM", name: "Oman", dialCode: "+968", flag: "🇴🇲" },
+  { code: "JO", name: "Jordan", dialCode: "+962", flag: "🇯🇴" },
+  { code: "LB", name: "Lebanon", dialCode: "+961", flag: "🇱🇧" },
+  { code: "IQ", name: "Iraq", dialCode: "+964", flag: "🇮🇶" },
+  { code: "IR", name: "Iran", dialCode: "+98", flag: "🇮🇷" },
+  { code: "AF", name: "Afghanistan", dialCode: "+93", flag: "🇦🇫" },
+  { code: "NP", name: "Nepal", dialCode: "+977", flag: "🇳🇵" },
+  { code: "MM", name: "Myanmar", dialCode: "+95", flag: "🇲🇲" },
+  { code: "KH", name: "Cambodia", dialCode: "+855", flag: "🇰🇭" },
+  { code: "LA", name: "Laos", dialCode: "+856", flag: "🇱🇦" },
+  { code: "BN", name: "Brunei", dialCode: "+673", flag: "🇧🇳" },
+  { code: "MO", name: "Macau", dialCode: "+853", flag: "🇲🇴" },
+  { code: "TW", name: "Taiwan", dialCode: "+886", flag: "🇹🇼" },
+  { code: "MN", name: "Mongolia", dialCode: "+976", flag: "🇲🇳" },
+  { code: "KP", name: "North Korea", dialCode: "+850", flag: "🇰🇵" },
+  { code: "KZ", name: "Kazakhstan", dialCode: "+7", flag: "🇰🇿" },
+  { code: "UZ", name: "Uzbekistan", dialCode: "+998", flag: "🇺🇿" },
+  { code: "TM", name: "Turkmenistan", dialCode: "+993", flag: "🇹🇲" },
+  { code: "KG", name: "Kyrgyzstan", dialCode: "+996", flag: "🇰🇬" },
+  { code: "TJ", name: "Tajikistan", dialCode: "+992", flag: "🇹🇯" },
+  { code: "GE", name: "Georgia", dialCode: "+995", flag: "🇬🇪" },
+  { code: "AZ", name: "Azerbaijan", dialCode: "+994", flag: "🇦🇿" },
+  { code: "AM", name: "Armenia", dialCode: "+374", flag: "🇦🇲" },
+  { code: "MD", name: "Moldova", dialCode: "+373", flag: "🇲🇩" },
+  { code: "BY", name: "Belarus", dialCode: "+375", flag: "🇧🇾" },
+  { code: "EE", name: "Estonia", dialCode: "+372", flag: "🇪🇪" },
+  { code: "LV", name: "Latvia", dialCode: "+371", flag: "🇱🇻" },
+  { code: "LT", name: "Lithuania", dialCode: "+370", flag: "🇱🇹" },
+  { code: "IE", name: "Ireland", dialCode: "+353", flag: "🇮🇪" },
+  { code: "IS", name: "Iceland", dialCode: "+354", flag: "🇮🇸" },
+  { code: "AL", name: "Albania", dialCode: "+355", flag: "🇦🇱" },
+  { code: "BA", name: "Bosnia & Herzegovina", dialCode: "+387", flag: "🇧🇦" },
+  { code: "ME", name: "Montenegro", dialCode: "+382", flag: "🇲🇪" },
+  { code: "MK", name: "North Macedonia", dialCode: "+389", flag: "🇲🇰" },
+  { code: "RS", name: "Serbia", dialCode: "+381", flag: "🇷🇸" },
+  { code: "SI", name: "Slovenia", dialCode: "+386", flag: "🇸🇮" },
+  { code: "HR", name: "Croatia", dialCode: "+385", flag: "🇭🇷" },
+  { code: "BG", name: "Bulgaria", dialCode: "+359", flag: "🇧🇬" },
+  { code: "RO", name: "Romania", dialCode: "+40", flag: "🇷🇴" },
+  { code: "HU", name: "Hungary", dialCode: "+36", flag: "🇭🇺" },
+  { code: "CZ", name: "Czech Republic", dialCode: "+420", flag: "🇨🇿" },
+  { code: "SK", name: "Slovakia", dialCode: "+421", flag: "🇸🇰" },
+  { code: "PT", name: "Portugal", dialCode: "+351", flag: "🇵🇹" },
+  { code: "GR", name: "Greece", dialCode: "+30", flag: "🇬🇷" },
+  { code: "MT", name: "Malta", dialCode: "+356", flag: "🇲🇹" },
+  { code: "CY", name: "Cyprus", dialCode: "+357", flag: "🇨🇾" },
+  { code: "LU", name: "Luxembourg", dialCode: "+352", flag: "🇱🇺" },
+  { code: "MC", name: "Monaco", dialCode: "+377", flag: "🇲🇨" },
+  { code: "LI", name: "Liechtenstein", dialCode: "+423", flag: "🇱🇮" },
+  { code: "AD", name: "Andorra", dialCode: "+376", flag: "🇦🇩" },
+  { code: "SM", name: "San Marino", dialCode: "+378", flag: "🇸🇲" },
+  { code: "VA", name: "Vatican City", dialCode: "+379", flag: "🇻🇦" },
+  { code: "GI", name: "Gibraltar", dialCode: "+350", flag: "🇬🇮" },
+  { code: "FO", name: "Faroe Islands", dialCode: "+298", flag: "🇫🇴" },
+  { code: "GL", name: "Greenland", dialCode: "+299", flag: "🇬🇱" },
+  { code: "PM", name: "St. Pierre & Miquelon", dialCode: "+508", flag: "🇵🇲" },
+  { code: "AW", name: "Aruba", dialCode: "+297", flag: "🇦🇼" },
+  { code: "CW", name: "Curaçao", dialCode: "+599", flag: "🇨🇼" },
+  { code: "SX", name: "Sint Maarten", dialCode: "+1-721", flag: "🇸🇽" },
+  { code: "BQ", name: "Caribbean Netherlands", dialCode: "+599", flag: "🇧🇶" },
+  { code: "GP", name: "Guadeloupe", dialCode: "+590", flag: "🇬🇵" },
+  { code: "MQ", name: "Martinique", dialCode: "+596", flag: "🇲🇶" },
+  { code: "GF", name: "French Guiana", dialCode: "+594", flag: "🇬🇫" },
+  { code: "RE", name: "Réunion", dialCode: "+262", flag: "🇷🇪" },
+  { code: "YT", name: "Mayotte", dialCode: "+269", flag: "🇾🇹" },
+  { code: "SC", name: "Seychelles", dialCode: "+248", flag: "🇸🇨" },
+  { code: "MU", name: "Mauritius", dialCode: "+230", flag: "🇲🇺" },
+  { code: "MG", name: "Madagascar", dialCode: "+261", flag: "🇲🇬" },
+  { code: "KM", name: "Comoros", dialCode: "+269", flag: "🇰🇲" },
+  { code: "MZ", name: "Mozambique", dialCode: "+258", flag: "🇲🇿" },
+  { code: "MW", name: "Malawi", dialCode: "+265", flag: "🇲🇼" },
+  { code: "ZM", name: "Zambia", dialCode: "+260", flag: "🇿🇲" },
+  { code: "ZW", name: "Zimbabwe", dialCode: "+263", flag: "🇿🇼" },
+  { code: "BW", name: "Botswana", dialCode: "+267", flag: "🇧🇼" },
+  { code: "NA", name: "Namibia", dialCode: "+264", flag: "🇳🇦" },
+  { code: "AO", name: "Angola", dialCode: "+244", flag: "🇦🇴" },
+  { code: "CD", name: "DR Congo", dialCode: "+243", flag: "🇨🇩" },
+  { code: "CG", name: "Congo", dialCode: "+242", flag: "🇨🇬" },
+  { code: "GA", name: "Gabon", dialCode: "+241", flag: "🇬🇦" },
+  { code: "GQ", name: "Equatorial Guinea", dialCode: "+240", flag: "🇬🇶" },
+  { code: "ST", name: "São Tomé & Príncipe", dialCode: "+239", flag: "🇸🇹" },
+  { code: "CV", name: "Cape Verde", dialCode: "+238", flag: "🇨🇻" },
+  { code: "GN", name: "Guinea", dialCode: "+224", flag: "🇬🇳" },
+  { code: "GW", name: "Guinea-Bissau", dialCode: "+245", flag: "🇬🇼" },
+  { code: "GM", name: "Gambia", dialCode: "+220", flag: "🇬🇲" },
+  { code: "SN", name: "Senegal", dialCode: "+221", flag: "🇸🇳" },
+  { code: "MR", name: "Mauritania", dialCode: "+222", flag: "🇲🇷" },
+  { code: "ML", name: "Mali", dialCode: "+223", flag: "🇲🇱" },
+  { code: "SL", name: "Sierra Leone", dialCode: "+232", flag: "🇸🇱" },
+  { code: "LR", name: "Liberia", dialCode: "+231", flag: "🇱🇷" },
+  { code: "CI", name: "Côte d'Ivoire", dialCode: "+225", flag: "🇨🇮" },
+  { code: "GH", name: "Ghana", dialCode: "+233", flag: "🇬🇭" },
+  { code: "TG", name: "Togo", dialCode: "+228", flag: "🇹🇬" },
+  { code: "BJ", name: "Benin", dialCode: "+229", flag: "🇧🇯" },
+  { code: "CO", name: "Colombia", dialCode: "+57", flag: "🇨🇴" },
+  { code: "VE", name: "Venezuela", dialCode: "+58", flag: "🇻🇪" },
+  { code: "GY", name: "Guyana", dialCode: "+592", flag: "🇬🇾" },
+  { code: "SR", name: "Suriname", dialCode: "+597", flag: "🇸🇷" },
+  { code: "EC", name: "Ecuador", dialCode: "+593", flag: "🇪🇨" },
+  { code: "PE", name: "Peru", dialCode: "+51", flag: "🇵🇪" },
+  { code: "BO", name: "Bolivia", dialCode: "+591", flag: "🇧🇴" },
+  { code: "CL", name: "Chile", dialCode: "+56", flag: "🇨🇱" },
+  { code: "PY", name: "Paraguay", dialCode: "+595", flag: "🇵🇾" },
+  { code: "UY", name: "Uruguay", dialCode: "+598", flag: "🇺🇾" },
+  { code: "FK", name: "Falkland Islands", dialCode: "+500", flag: "🇫🇰" },
+  { code: "GS", name: "South Georgia", dialCode: "+500", flag: "🇬🇸" },
+  { code: "JM", name: "Jamaica", dialCode: "+1-876", flag: "🇯🇲" },
+  { code: "TT", name: "Trinidad & Tobago", dialCode: "+1-868", flag: "🇹🇹" },
+  { code: "BB", name: "Barbados", dialCode: "+1-246", flag: "🇧🇧" },
+  { code: "GD", name: "Grenada", dialCode: "+1-473", flag: "🇬🇩" },
+  { code: "VC", name: "St. Vincent", dialCode: "+1-784", flag: "🇻🇨" },
+  { code: "LC", name: "St. Lucia", dialCode: "+1-758", flag: "🇱🇨" },
+  { code: "DM", name: "Dominica", dialCode: "+1-767", flag: "🇩🇲" },
+  { code: "AG", name: "Antigua & Barbuda", dialCode: "+1-268", flag: "🇦🇬" },
+  { code: "KN", name: "St. Kitts & Nevis", dialCode: "+1-869", flag: "🇰🇳" },
+  { code: "BS", name: "Bahamas", dialCode: "+1-242", flag: "🇧🇸" },
+  { code: "BZ", name: "Belize", dialCode: "+501", flag: "🇧🇿" },
+  { code: "CR", name: "Costa Rica", dialCode: "+506", flag: "🇨🇷" },
+  { code: "SV", name: "El Salvador", dialCode: "+503", flag: "🇸🇻" },
+  { code: "GT", name: "Guatemala", dialCode: "+502", flag: "🇬🇹" },
+  { code: "HN", name: "Honduras", dialCode: "+504", flag: "🇭🇳" },
+  { code: "NI", name: "Nicaragua", dialCode: "+505", flag: "🇳🇮" },
+  { code: "PA", name: "Panama", dialCode: "+507", flag: "🇵🇦" },
+  { code: "CU", name: "Cuba", dialCode: "+53", flag: "🇨🇺" },
+  { code: "HT", name: "Haiti", dialCode: "+509", flag: "🇭🇹" },
+  { code: "DO", name: "Dominican Republic", dialCode: "+1-809", flag: "🇩🇴" },
+  { code: "PR", name: "Puerto Rico", dialCode: "+1-787", flag: "🇵🇷" },
+  { code: "VI", name: "U.S. Virgin Islands", dialCode: "+1-340", flag: "🇻🇮" },
+  { code: "VG", name: "British Virgin Islands", dialCode: "+1-284", flag: "🇻🇬" },
+  { code: "AI", name: "Anguilla", dialCode: "+1-264", flag: "🇦🇮" },
+  { code: "MS", name: "Montserrat", dialCode: "+1-664", flag: "🇲🇸" },
+  { code: "KY", name: "Cayman Islands", dialCode: "+1-345", flag: "🇰🇾" },
+  { code: "TC", name: "Turks & Caicos", dialCode: "+1-649", flag: "🇹🇨" },
+  { code: "BM", name: "Bermuda", dialCode: "+1-441", flag: "🇧🇲" },
+  { code: "AX", name: "Åland Islands", dialCode: "+358", flag: "🇦🇽" },
+  { code: "SJ", name: "Svalbard & Jan Mayen", dialCode: "+47", flag: "🇸🇯" },
+  { code: "BL", name: "St. Barthélemy", dialCode: "+590", flag: "🇧🇱" },
+  { code: "MF", name: "St. Martin", dialCode: "+590", flag: "🇲🇫" },
+  { code: "WF", name: "Wallis & Futuna", dialCode: "+681", flag: "🇼🇫" },
+  { code: "NC", name: "New Caledonia", dialCode: "+687", flag: "🇳🇨" },
+  { code: "PF", name: "French Polynesia", dialCode: "+689", flag: "🇵🇫" },
+  { code: "CK", name: "Cook Islands", dialCode: "+682", flag: "🇨🇰" },
+  { code: "NU", name: "Niue", dialCode: "+683", flag: "🇳🇺" },
+  { code: "TK", name: "Tokelau", dialCode: "+690", flag: "🇹🇰" },
+  { code: "AS", name: "American Samoa", dialCode: "+1-684", flag: "🇦🇸" },
+  { code: "WS", name: "Samoa", dialCode: "+685", flag: "🇼🇸" },
+  { code: "KI", name: "Kiribati", dialCode: "+686", flag: "🇰🇮" },
+  { code: "NR", name: "Nauru", dialCode: "+674", flag: "🇳🇷" },
+  { code: "PW", name: "Palau", dialCode: "+680", flag: "🇵🇼" },
+  { code: "FM", name: "Micronesia", dialCode: "+691", flag: "🇫🇲" },
+  { code: "MH", name: "Marshall Islands", dialCode: "+692", flag: "🇲🇭" },
+  { code: "TV", name: "Tuvalu", dialCode: "+688", flag: "🇹🇻" },
+  { code: "TO", name: "Tonga", dialCode: "+676", flag: "🇹🇴" },
+  { code: "FJ", name: "Fiji", dialCode: "+679", flag: "🇫🇯" },
+  { code: "VU", name: "Vanuatu", dialCode: "+678", flag: "🇻🇺" },
+  { code: "SB", name: "Solomon Islands", dialCode: "+677", flag: "🇸🇧" },
+  { code: "PG", name: "Papua New Guinea", dialCode: "+675", flag: "🇵🇬" },
+  { code: "MP", name: "Northern Mariana Islands", dialCode: "+1-670", flag: "🇲🇵" },
+  { code: "GU", name: "Guam", dialCode: "+1-671", flag: "🇬🇺" },
+];
+
+// Helper function to get full phone number with country code
+function getFullPhoneNumber(phoneNumber: string, countryDialCode: string): string {
+  const cleanPhone = phoneNumber.replace(/\s+/g, "").trim();
+  // If phone already starts with +, assume it has country code
+  if (cleanPhone.startsWith("+")) {
+    return cleanPhone;
+  }
+  // If phone starts with the dial code digits (without +), don't add it again
+  if (cleanPhone.startsWith(countryDialCode.replace("+", ""))) {
+    return `+${cleanPhone}`;
+  }
+  return `${countryDialCode}${cleanPhone}`;
+}
 type BulkEntry = {
   to_number: string;
   lead_name?: string;
@@ -70,7 +295,11 @@ export function CallOptions(props: CallOptionsProps) {
   const router = useRouter();
   // LAD Architecture Compliance: Use SDK hook instead of direct API calls
   const makeCallMutation = useMakeCall();
+  const triggerBatchCallMutation = useTriggerBatchCall();
+  const updateSummaryMutation = useUpdateSummary();
   const [expanded, setExpanded] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // Default to India (+91)
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const hasBulk = (bulkEntries?.length || 0) > 0;
   const visibleCount = expanded ? bulkEntries.length : Math.min(5, bulkEntries.length);
   // --- new state for radio selection and modal ---
@@ -138,9 +367,7 @@ export function CallOptions(props: CallOptionsProps) {
           ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
         };
         logger.debug('Sending bulk payload', { entriesCount: payload.entries.length });
-        // Using backend voice-agent batch calls API (V2 endpoint)
-        const res = await apiPost("/api/voice-agent/batch/trigger-batch-call", payload);
-        // Expect backend response like { success: true, result: { job_id: "batch-..." } }
+        const res = await triggerBatchCallMutation.mutateAsync(payload);
         const anyRes: any = res;
         const jobId: string | undefined =
           anyRes?.result?.job_id ||
@@ -161,18 +388,18 @@ export function CallOptions(props: CallOptionsProps) {
         return;
       }
       if (!dial) throw new Error("Please enter a phone number to call");
-      const normalizedPhone = dial.replace(/\s+/g, ""); // Remove all spaces from phone number
+      const fullPhoneNumber = getFullPhoneNumber(dial, selectedCountry.dialCode);
       // LAD Architecture Compliance: Use SDK hook instead of direct API call
       if (!agentId) throw new Error("Please select a voice agent");
       logger.debug("Initiating single call via SDK", { 
         hasAgent: !!agentId, 
-        hasPhone: !!normalizedPhone,
+        hasPhone: !!fullPhoneNumber,
         hasContext: !!additionalInstructions 
       });
       // Use SDK hook which handles VAPI disable logic and error handling
       await makeCallMutation.mutateAsync({
         voiceAgentId: agentId,
-        phoneNumber: normalizedPhone,
+        phoneNumber: fullPhoneNumber,
         context: additionalInstructions || "Call initiated from dashboard",
         fromNumber: fromNumber // Pass from number from call configuration
       });
@@ -246,7 +473,7 @@ export function CallOptions(props: CallOptionsProps) {
             ...(dataType === 'employee' ? { company_sales_summary: activeText } : { sales_summary: activeText }),
             type: dataType,
           } as const;
-          await apiPost('/api/voice-agent/update-summary', payload as any);
+          await updateSummaryMutation.mutateAsync(payload as any);
           logger.debug('Updated database summary', { identifier: identifier || normalizedPhone });
         } catch (apiError: any) {
           logger.error('Failed to update database', { error: apiError });
@@ -691,10 +918,107 @@ export function CallOptions(props: CallOptionsProps) {
           </Button>
         </div>
         {!useCsv ? (
-          // — Single Call UI (omitted for brevity) —
+          // — Single Call UI with Country Selector —
           <div className="space-y-3">
-            <Input value={dial} onChange={(e) => onDialChange(e.target.value)} placeholder="Enter phone number" />
-            <Input value={clientName} onChange={(e) => onClientNameChange(e.target.value)} placeholder="Lead name (optional)" />
+            {/* Phone Number with Country Dropdown */}
+            <div className="relative">
+              <div className="flex rounded-[10px] border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 focus-within:border-gray-200 h-12">
+                {/* Country Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-r border-gray-200 hover:bg-gray-100 transition-colors min-w-[80px]"
+                >
+                  <Image
+                    src={`https://flagcdn.com/w40/${selectedCountry.code.toLowerCase()}.png`}
+                    alt={selectedCountry.name}
+                    width={24}
+                    height={16}
+                    // className="rounded-sm"
+                    unoptimized
+                  />
+                  <span className="text-sm font-medium text-gray-700">{selectedCountry.dialCode}</span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
+                {/* Phone Input */}
+                <input
+                  type="tel"
+                  value={dial}
+                  onChange={(e) => onDialChange(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="flex-1 px-3 py-2 text-sm outline-none"
+                />
+              </div>
+              
+              {/* Country Dropdown Menu */}
+              {showCountryDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-[280px] max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-[10px] shadow-lg z-50">
+                  <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-200"
+                      onChange={(e) => {
+                        const searchTerm = e.target.value.toLowerCase();
+                        const filtered = COUNTRIES.filter(
+                          (c) =>
+                            c.name.toLowerCase().includes(searchTerm) ||
+                            c.dialCode.includes(searchTerm) ||
+                            c.code.toLowerCase().includes(searchTerm)
+                        );
+                        // Update the dropdown list dynamically
+                        const dropdownList = document.getElementById('country-dropdown-list');
+                        if (dropdownList) {
+                          dropdownList.innerHTML = '';
+                          filtered.forEach((country) => {
+                            const item = document.createElement('button');
+                            item.className = 'w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors text-left';
+                            item.innerHTML = `<img src="https://flagcdn.com/w40/${country.code.toLowerCase()}.png" alt="${country.name}" width="24" height="16"  /><span class="flex-1 text-sm text-gray-700">${country.name}</span><span class="text-sm font-medium text-gray-500">${country.dialCode}</span>`;
+                            item.onclick = () => {
+                              setSelectedCountry(country);
+                              setShowCountryDropdown(false);
+                            };
+                            dropdownList.appendChild(item);
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div id="country-dropdown-list" className="py-1">
+                    {COUNTRIES.map((country) => (
+                      <button
+                        key={country.code}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCountry(country);
+                          setShowCountryDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors text-left ${
+                          selectedCountry.code === country.code ? 'bg-gray-50' : ''
+                        }`}
+                      >
+                        <Image
+                          src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
+                          alt={country.name}
+                          width={20}
+                          height={20}
+                          className=""
+                          unoptimized
+                        />
+                        <span className="flex-1 text-sm text-gray-700">{country.name}</span>
+                        <span className="text-sm font-medium text-gray-500">{country.dialCode}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <Input 
+              value={clientName} 
+              onChange={(e) => onClientNameChange(e.target.value)} 
+              placeholder="Lead name (optional)" 
+              className="h-12 rounded-[10px]"
+            />
           </div>
         ) : (
           <BulkTable />

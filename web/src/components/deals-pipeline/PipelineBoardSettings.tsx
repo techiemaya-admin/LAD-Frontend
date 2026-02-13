@@ -4,76 +4,16 @@ import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, LayoutGrid, List, RotateCcw, Save } from 'lucide-react';
+import { Settings, RotateCcw, Save } from 'lucide-react';
 import {
   selectPipelineSettings,
   setPipelineSettings
 } from '@/store/slices/uiSlice';
-type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-interface ViewModeOptionProps extends Omit<React.ComponentProps<typeof RadioGroupItem>, 'checked'> {
-  title: string;
-  description: string;
-  icon: IconComponent;
-  checked?: boolean; // Optional: can be passed from parent to indicate active state
-}
-const ViewModeOption = React.forwardRef<HTMLButtonElement, ViewModeOptionProps>(({
-  title,
-  description,
-  icon: Icon,
-  id,
-  className,
-  value,
-  checked,
-  ...radioProps
-}, ref) => {
-  const optionId = id || `view-mode-${value}`;
-  // RadioGroupItem is controlled by RadioGroup's value, but we use checked prop for visual state
-  const isActive = Boolean(checked);
-  return (
-    <label
-      htmlFor={optionId}
-      className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#e8ebf7] border-2 border-[#d1d9f0]' : 'hover:bg-gray-100 border-2 border-transparent'
-      }`}
-    >
-      <RadioGroupItem
-        {...radioProps}
-        id={optionId}
-        ref={ref}
-        value={value}
-        className={`sr-only ${className ?? ''}`}
-      />
-      <span
-        className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
-          isActive
-            ? 'border-primary bg-primary'
-            : 'border-slate-300 bg-white'
-        }`}
-      >
-        <span
-          className={`h-2.5 w-2.5 rounded-sm transition-opacity ${
-            isActive ? 'bg-white opacity-100' : 'bg-transparent opacity-0'
-          }`}
-        />
-      </span>
-      <Icon className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-gray-500'}`} />
-      <div>
-        <div className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-gray-900'}`}>
-          {title}
-        </div>
-        <div className="text-xs text-gray-500">
-          {description}
-        </div>
-      </div>
-    </label>
-  );
-});
-ViewModeOption.displayName = 'ViewModeOption';
+
 interface VisibleColumns {
   name: boolean;
   stage: boolean;
@@ -162,9 +102,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       });
     }
   }, [open, settings]);
-  const handleViewModeChange = (value: string): void => {
-    setLocalSettings({ ...localSettings, viewMode: value as 'kanban' | 'list' });
-  };
   const handleColumnVisibilityChange = (columnKey: keyof VisibleColumns): void => {
     setLocalSettings({
       ...localSettings,
@@ -226,38 +163,6 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
             </button>
           </div>
         </DialogTitle>
-          {/* View Mode Section */}
-          <div className="p-6 mb-6 bg-gray-50 rounded-lg">
-            <fieldset>
-              <Label className="mb-4 font-semibold text-gray-900 block">
-                <div className="flex items-center gap-2">
-                  View Mode
-                </div>
-              </Label>
-              <RadioGroup
-                value={localSettings.viewMode || 'list'}
-                onValueChange={handleViewModeChange}
-                className="flex flex-col gap-4"
-              >
-                <ViewModeOption
-                  value="kanban"
-                  id="view-kanban"
-                  title="Kanban View"
-                  description="Cards organized in columns by stage"
-                  icon={LayoutGrid}
-                  checked={localSettings.viewMode === 'kanban'}
-                />
-                <ViewModeOption
-                  value="list"
-                  id="view-list"
-                  title="List View"
-                  description="Tabular view with customizable columns"
-                  icon={List}
-                  checked={localSettings.viewMode === 'list'}
-                />
-              </RadioGroup>
-            </fieldset>
-          </div>
           {/* Column Visibility Section - Only show for List View */}
           {localSettings.viewMode === 'list' && (
             <div className="p-6 mb-6 bg-gray-50 rounded-lg">

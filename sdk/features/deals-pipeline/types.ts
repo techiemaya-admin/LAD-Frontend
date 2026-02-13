@@ -56,6 +56,8 @@ export interface Lead {
 }
 
 export interface LeadFilters {
+  page?: number;
+  limit?: number;
   [key: string]: string | number | null | undefined;
 }
 
@@ -163,7 +165,23 @@ export interface StagePositionParams {
 export interface PipelineData {
   leads: Lead[];
   stages: Stage[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   [key: string]: unknown;
+}
+
+export interface PaginatedLeads {
+  leads: Lead[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface PipelineStats {
