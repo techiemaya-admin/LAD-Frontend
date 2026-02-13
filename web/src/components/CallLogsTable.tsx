@@ -33,8 +33,10 @@ import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadC
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
   type ColumnDef,
+  type SortingState,
 } from '@tanstack/react-table';
 
 interface CallLog {
@@ -81,6 +83,9 @@ interface CallLogsTableProps {
   onPageChange?: (page: number) => void;
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
+  pageSize?: number;
+  onPageSizeChange?: (size: number) => void;
+  onSortChange?: (sorting: any) => void;
 }
 
 export function CallLogsTable({
@@ -109,10 +114,13 @@ export function CallLogsTable({
   onPageChange,
   hasNextPage = false,
   hasPreviousPage = false,
+  pageSize = 20,
+  onPageSizeChange,
 }: CallLogsTableProps) {
   const router = useRouter();
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
@@ -234,16 +242,6 @@ export function CallLogsTable({
       ),
     },
     {
-      id: 'id',
-      accessorKey: 'id',
-      header: 'Call ID',
-      cell: ({ getValue }) => (
-        <span className="font-mono text-sm text-muted-foreground truncate max-w-[120px]">
-          {(getValue() as string).slice(0, 8)}...
-        </span>
-      ),
-    },
-    {
       id: 'assistant',
       accessorKey: 'assistant',
       header: 'Agent',
@@ -321,18 +319,6 @@ export function CallLogsTable({
       },
     },
     {
-      id: 'cost',
-      header: 'Cost',
-      cell: ({ row }) => {
-        const cost = row.original.cost || row.original.call_cost;
-        return (
-          <span className="font-mono text-sm">
-            {cost ? `$${Number(cost).toFixed(2)}` : "—"}
-          </span>
-        );
-      },
-    },
-    {
       id: 'actions',
       header: '',
       cell: ({ row }) => {
@@ -359,10 +345,16 @@ export function CallLogsTable({
     data: searchFilteredItems,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     state: {
       globalFilter,
+      sorting,
     },
     onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: (newSorting) => {
+      const sortingState = typeof newSorting === 'function' ? newSorting(sorting) : newSorting;
+      setSorting(sortingState);
+    },
   });
 
   // Render batch header row                                                                                                                     
@@ -752,11 +744,30 @@ export function CallLogsTable({
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
       <span>
-        Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalRecords)} of {totalRecords} calls
+        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} calls
       </span>
     </div>
 
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-[#64748B]">Page size:</span>
+        <Select value={pageSize.toString()} onValueChange={(value) => {
+          const newSize = parseInt(value, 10);
+          onPageSizeChange?.(newSize);
+          // Reset to page 1 when page size changes
+          onPageChange?.(1);
+        }}>
+          <SelectTrigger className="w-[80px] h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="20">20</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="text-sm text-[#64748B]">
         Page {currentPage} of {totalPages}
       </div>

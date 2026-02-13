@@ -505,7 +505,7 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
     batchStatusQuery.isLoading ||
     batchStatusQuery.isFetching ||
     initialLoading;
-  const { stats } = callLogsStatsQuery?.data || {};
+  const { stats }: any = callLogsStatsQuery?.data || { stats: undefined };
   return (
     <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
@@ -569,7 +569,6 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         batchGroups={batchGroups}
         expandedBatches={expandedBatches}
         onToggleBatch={toggleBatch}
-        totalFilteredCount={sortedFiltered.length}
         onSortChange={(newSort) => {
           setSortConfig(newSort);
           setPage(1); // Reset to first page when sorting changes
@@ -599,6 +598,11 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         }}
         hasNextPage={paginationMeta.hasNextPage}
         hasPreviousPage={paginationMeta.hasPreviousPage}
+        pageSize={perPage}
+        onPageSizeChange={(newSize) => {
+          logger.debug('[Pagination] Page size change requested', { from: perPage, to: newSize });
+          setPerPage(newSize);
+        }}
       />
 
       {/* Modal */}
