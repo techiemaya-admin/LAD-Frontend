@@ -57,15 +57,15 @@ export function useCampaignAnalytics(campaignId: string): UseCampaignAnalyticsRe
               // Map SSE stats to analytics format
               return {
                 ...oldData,
-                summary: {
-                  ...oldData.summary,
-                  total_leads: data.stats?.leads_count ?? oldData.summary?.total_leads ?? 0,
-                  connections_sent: data.stats?.sent_count ?? oldData.summary?.connections_sent ?? 0,
-                  connections_accepted: data.stats?.connected_count ?? oldData.summary?.connections_accepted ?? 0,
-                  messages_replied: data.stats?.replied_count ?? oldData.summary?.messages_replied ?? 0,
-                  messages_delivered: data.stats?.delivered_count ?? oldData.summary?.messages_delivered ?? 0,
-                  messages_opened: data.stats?.opened_count ?? oldData.summary?.messages_opened ?? 0,
-                  messages_clicked: data.stats?.clicked_count ?? oldData.summary?.messages_clicked ?? 0,
+                overview: {
+                  ...oldData.overview,
+                  total_leads: data.stats?.leads_count ?? oldData.overview.total_leads ?? 0,
+                  sent: data.stats?.sent_count ?? oldData.overview.sent ?? 0,
+                  connected: data.stats?.connected_count ?? oldData.overview.connected ?? 0,
+                  replied: data.stats?.replied_count ?? oldData.overview.replied ?? 0,
+                  delivered: data.stats?.delivered_count ?? oldData.overview.delivered ?? 0,
+                  opened: data.stats?.opened_count ?? oldData.overview.opened ?? 0,
+                  clicked: data.stats?.clicked_count ?? oldData.overview.clicked ?? 0,
                 },
               };
             }
