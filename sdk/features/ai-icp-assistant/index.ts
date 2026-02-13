@@ -10,6 +10,8 @@ export {
   getBufferedConversation,
   getCurrentStepFromBuffer,
   hasBufferedMessages,
+  clearBufferedMessages,
+  clearAllBufferedMessages,
 } from './api';
 
 // Export BufferedMessage type

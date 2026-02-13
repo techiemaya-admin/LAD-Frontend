@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Bot, User } from 'lucide-react';
 import RequirementsCollection from './RequirementsCollection';
@@ -37,6 +37,51 @@ export default function ChatMessageBubble({
   options: propsOptions,
 }: ChatMessageBubbleProps) {
   const isAI = role === 'ai';
+  const cleanContent = (text: string) =>
+    text
+      .replace(/\\n/g, '\n')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .trim();
+  const fullText = useMemo(() => cleanContent(content), [content]);
+  const shouldAnimate = isAI && isLastMessage;
+  const [typedText, setTypedText] = useState(() =>
+    shouldAnimate ? '' : fullText
+  );
+  const [isTyping, setIsTyping] = useState(() =>
+    shouldAnimate && fullText.length > 0
+  );
+  useEffect(() => {
+    if (!shouldAnimate) {
+      setTypedText(fullText);
+      setIsTyping(false);
+      return;
+    }
+    if (!fullText) {
+      setTypedText('');
+      setIsTyping(false);
+      return;
+    }
+    setIsTyping(true);
+    setTypedText('');
+    let index = 0;
+    const interval = setInterval(() => {
+      index += 2;
+      const nextText = fullText.slice(0, index);
+      setTypedText(nextText);
+      if (index >= fullText.length) {
+        clearInterval(interval);
+        setIsTyping(false);
+      }
+    }, 12);
+    return () => clearInterval(interval);
+  }, [fullText, shouldAnimate]);
+  useEffect(() => {
+    if (!isAI || !isLastMessage) return;
+    window.dispatchEvent(
+      new CustomEvent('aiTyping', { detail: { isTyping } })
+    );
+  }, [isAI, isLastMessage, isTyping]);
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
@@ -63,7 +108,7 @@ export default function ChatMessageBubble({
   // Parse options from message content (only for last AI message and NOT a template request)
   // If it's a template request, don't parse options even if they exist in the message
   const parsedOptions = isAI && isLastMessage && !isTemplateRequest ? parseMessageOptions(content) : null;
-  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined;
+  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping;
   return (
     <div
       className={cn(
@@ -93,7 +138,7 @@ export default function ChatMessageBubble({
             'whitespace-pre-wrap leading-relaxed text-sm',
             isAI ? 'text-gray-900' : 'text-white'
           )}>
-            {showOptions && parsedOptions ? parsedOptions.questionText : content}
+            {showOptions && parsedOptions ? parsedOptions.questionText : typedText}
           </div>
         </div>
         {/* Selectable Options - Render based on step type */}
@@ -127,7 +172,8 @@ export default function ChatMessageBubble({
                 platformIndex={parsedOptions.platformIndex}
                 totalPlatforms={parsedOptions.totalPlatforms}
                 preSelectedOptions={parsedOptions.preSelectedOptions}
-                platformName={parsedOptions.platformName} // Pass platform name for dependency checking
+                platformName={parsedOptions.platformName}
+                leadsPerDayOptions={parsedOptions.leadsPerDayOptions}
               />
             )}
           </div>
