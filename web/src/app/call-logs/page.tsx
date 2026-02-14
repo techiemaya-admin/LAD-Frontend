@@ -637,6 +637,11 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         }}
         hasNextPage={paginationMeta.hasNextPage}
         hasPreviousPage={paginationMeta.hasPreviousPage}
+        pageSize={perPage}
+        onPageSizeChange={(newSize) => {
+          logger.debug('[Pagination] Page size change requested', { from: perPage, to: newSize });
+          setPerPage(newSize);
+        }}
       />
 
       {/* Modal */}

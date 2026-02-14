@@ -43,8 +43,10 @@ import { Stage } from "@/features/deals-pipeline/store/slices/pipelineSlice";
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
   type ColumnDef,
+  type SortingState,
 } from '@tanstack/react-table';
 
 interface CallLog {
@@ -545,10 +547,16 @@ export function CallLogsTable({
     data: leadTagFilteredItems,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     state: {
       globalFilter,
+      sorting,
     },
     onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: (newSorting) => {
+      const sortingState = typeof newSorting === 'function' ? newSorting(sorting) : newSorting;
+      setSorting(sortingState);
+    },
   });
 
   // Render batch header row                                                                                                                     
@@ -938,11 +946,30 @@ export function CallLogsTable({
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
       <span>
-        Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalRecords)} of {totalRecords} calls
+        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} calls
       </span>
     </div>
 
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-[#64748B]">Page size:</span>
+        <Select value={pageSize.toString()} onValueChange={(value) => {
+          const newSize = parseInt(value, 10);
+          onPageSizeChange?.(newSize);
+          // Reset to page 1 when page size changes
+          onPageChange?.(1);
+        }}>
+          <SelectTrigger className="w-[80px] h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="20">20</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="text-sm text-[#64748B]">
         Page {currentPage} of {totalPages}
       </div>
