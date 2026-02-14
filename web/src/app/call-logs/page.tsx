@@ -78,6 +78,10 @@ export default function CallLogsPage() {
   const [fromDate, setFromDate] = useState<string | null>(null);
   const [toDate, setToDate] = useState<string | null>(null);
 
+  const [leadTagFilter, setLeadTagFilter] = useState<
+    "hot" | "warm" | "cold" | null
+  >(null);
+
   // Memoize date range to prevent unnecessary re-renders and API calls
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -117,6 +121,7 @@ export default function CallLogsPage() {
       to_date: dateRange.to,
       page: page,
       limit: perPage,
+      lead_category: leadTagFilter || undefined,
     },
   );
 
@@ -238,6 +243,7 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         return {
           id: String(r.call_log_id || r.id || ""),
           assistant: r.agent_name || "",
+          lead_id: r.lead_id,
           lead_name: leadName,
           type: r.direction === "inbound" ? "Inbound" : "Outbound",
           status: r.status || "",
@@ -370,7 +376,7 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
   const paginated = sortedFiltered;
   
   // Use backend pagination metadata
-  const paginationMeta = callLogsQuery.data?.pagination || {
+  const paginationMeta = (callLogsQuery.data as any)?.pagination || {
     page: 1,
     limit: perPage,
     total: 0,
@@ -424,26 +430,45 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
   // ----------------------
   // SELECTION
   // ----------------------
+  const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none');
+
   const handleSelectCall = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+      // If selecting individual items, we're no longer in "select all" mode
+      setSelectAllMode('none');
       return next;
     });
   };
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = (checked: boolean, visibleIds?: string[]) => {
     if (checked) {
-      // ✅ NEW: Collect ALL call IDs from FILTERED results (all pages, not just current page)
-      const allCallIds = filtered.map((i) => i.id);
-      setSelected(new Set(allCallIds));
+      if (selectAllMode === 'page') {
+        // Switch to selecting ALL calls across all pages
+        const allIds = items.map((i: CallLog) => i.id);
+        setSelected(new Set(allIds));
+        setSelectAllMode('all');
+      } else {
+        // First click - select current page only
+        const idsToSelect = visibleIds || paginated.map((i: CallLog) => i.id);
+        setSelected(new Set(idsToSelect));
+        setSelectAllMode('page');
+      }
     } else {
       setSelected(new Set());
+      setSelectAllMode('none');
     }
   };
 
   // ✅ Handle row click - prevent modal for active calls and failed calls
   const handleRowClick = (id: string) => {
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      );
+    if (!isUUID) return;
+
     const call = items.find((i) => i.id === id);
     const status = call?.status.toLowerCase() || "";
 
@@ -505,7 +530,7 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
     batchStatusQuery.isLoading ||
     batchStatusQuery.isFetching ||
     initialLoading;
-  const { stats } = callLogsStatsQuery?.data || {};
+  const { stats } = (callLogsStatsQuery?.data as any) || {};
   return (
     <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
@@ -522,7 +547,12 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
           </p>
         </div>
         {selected.size > 0 && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {selectAllMode === 'all' && (
+              <span className="text-sm text-primary font-medium mr-2">
+                All {totalRecords} calls selected
+              </span>
+            )}
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
@@ -556,6 +586,11 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
           }
         }
         loading={callLogsStatsQuery.isLoading}
+        selectedLeadTag={leadTagFilter}
+        onLeadTagChange={(tag) => {
+          setLeadTagFilter(tag);
+          setPage(1);
+        }}
       />
 
       {/* Table */}
@@ -564,13 +599,15 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         selectedCalls={selected}
         onSelectCall={handleSelectCall}
         onSelectAll={handleSelectAll}
+        selectAllMode={selectAllMode}
         onRowClick={handleRowClick}
         onEndCall={endSingleCall}
+        leadTagFilter={leadTagFilter}
         batchGroups={batchGroups}
         expandedBatches={expandedBatches}
         onToggleBatch={toggleBatch}
         totalFilteredCount={sortedFiltered.length}
-        onSortChange={(newSort) => {
+        onSortChange={(newSort: SortConfig | null) => {
           setSortConfig(newSort);
           setPage(1); // Reset to first page when sorting changes
         }}
@@ -590,7 +627,8 @@ console.log('[Call Logs Page] Tenant ID for stats query:',callLogsStatsQuery.dat
         }}
         isLoading={isTableLoading}
         // Backend pagination props
-        currentPage={paginationMeta.page}
+        currentPage={page}
+        perPage={perPage}
         totalPages={totalPages}
         totalRecords={totalRecords}
         onPageChange={(newPage) => {

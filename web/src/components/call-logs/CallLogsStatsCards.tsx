@@ -58,12 +58,19 @@ interface StatCardProps {
   icon: React.ReactNode;
   bgColor: string;
   onClick?: () => void;
+  isLeadTag?: boolean;
+  isSelected?: boolean;
 }
 
-const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
+const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div 
-      className={`bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+      className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
+        ${onClick ? 'cursor-pointer' : ''}
+        ${isLeadTag 
+          ? `hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98] ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200'}`
+          : `${onClick ? 'hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''} border-slate-200`
+        }`}
       onClick={onClick}
     >
       <div className="flex-1 flex flex-col p-4">
@@ -92,9 +99,16 @@ const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
 interface CallLogsStatsCardsProps {
   stats: CallLogsStats;
   loading?: boolean;
+  selectedLeadTag?: "hot" | "warm" | "cold" | null;
+  onLeadTagChange?: (tag: "hot" | "warm" | "cold" | null) => void;
 }
 
-export default function CallLogsStatsCards({ stats, loading = false }: CallLogsStatsCardsProps) {
+export default function CallLogsStatsCards({ 
+  stats, 
+  loading = false,
+  selectedLeadTag,
+  onLeadTagChange
+}: CallLogsStatsCardsProps) {
   if (loading) {
     return (
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
@@ -154,6 +168,9 @@ export default function CallLogsStatsCards({ stats, loading = false }: CallLogsS
         value={stats.hot_leads || 0} 
         icon={<Flame className="w-6 h-6 text-orange-600" />} 
         bgColor="bg-orange-100" 
+        onClick={() => onLeadTagChange?.(selectedLeadTag === 'hot' ? null : 'hot')}
+        isLeadTag
+        isSelected={selectedLeadTag === 'hot'}
       />
       
       {/* Warm Leads */}
@@ -162,6 +179,9 @@ export default function CallLogsStatsCards({ stats, loading = false }: CallLogsS
         value={stats.warm_leads || 0} 
         icon={<Sun className="w-6 h-6 text-yellow-600" />} 
         bgColor="bg-yellow-100" 
+        onClick={() => onLeadTagChange?.(selectedLeadTag === 'warm' ? null : 'warm')}
+        isLeadTag
+        isSelected={selectedLeadTag === 'warm'}
       />
       
       {/* Cold Leads */}
@@ -170,6 +190,9 @@ export default function CallLogsStatsCards({ stats, loading = false }: CallLogsS
         value={stats.cold_leads || 0} 
         icon={<Snowflake className="w-6 h-6 text-cyan-600" />} 
         bgColor="bg-cyan-100" 
+        onClick={() => onLeadTagChange?.(selectedLeadTag === 'cold' ? null : 'cold')}
+        isLeadTag
+        isSelected={selectedLeadTag === 'cold'}
       />
     </div>
   );

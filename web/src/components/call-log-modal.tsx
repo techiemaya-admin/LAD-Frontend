@@ -786,13 +786,19 @@ export function CallLogModal({
 
 
           <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-4 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
+            <TabsList className="grid grid-cols-5 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
+              <TabsTrigger
+                value="profile"
+                className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+              >
+                <User className="h-4 w-4" /> Profile
+              </TabsTrigger>
               {hasTranscripts && (
                 <TabsTrigger
                   value="transcripts"
                   className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
                 >
-                  <Mic className="h-4 w-4" /> Transcripts
+                  <Mic className="h-4 w-4" /> Call Transcript
                 </TabsTrigger>
               )}
 
@@ -821,6 +827,37 @@ export function CallLogModal({
                 <DollarSign className="h-4 w-4" /> Cost
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="profile" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+              <ScrollArea className="h-full p-4">
+                <Card className="border-orange-200 shadow-lg overflow-hidden">
+                  <CardContent className="p-6 space-y-6 bg-gradient-to-br from-white to-orange-50">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <User className="h-5 w-5 text-[#0b1957]" />
+                      <h3 className="font-bold text-xl text-gray-800">Lead Profile</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Name</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_name || log?.leadName || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Phone</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_phone || log?.leadPhone || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Email</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_email || log?.leadEmail || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Status</span>
+                        <span className="text-gray-800 font-medium">{log?.status || "—"}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ScrollArea>
+            </TabsContent>
 
             {hasTranscripts && (
               <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
