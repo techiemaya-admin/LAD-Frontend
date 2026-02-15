@@ -42,6 +42,10 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
   if (params?.limit) {
     query.append("limit", params.limit.toString());
   }
+  
+  if (params?.lead_category) {
+    query.append("lead_category", params.lead_category);
+  }
 
   const queryString = query.toString();
   const url = `/api/voice-agent/calls?${queryString}`;

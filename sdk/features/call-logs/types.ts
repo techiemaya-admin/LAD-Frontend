@@ -3,6 +3,7 @@
 export interface CallLogResponse {
   call_log_id: string;
   id?: string;
+  lead_id?: string;
   agent_name: string;
   lead_first_name?: string;
   lead_last_name?: string;
@@ -62,6 +63,7 @@ export interface BatchApiResponse {
 export interface CallLog {
   id: string;
   assistant: string;
+  lead_id?: string;
   lead_name: string;
   type: string;
   status: string;
@@ -83,6 +85,7 @@ export interface GetCallLogsParams {
   to_date?: string;
   page?: number;
   limit?: number;
+  lead_category?: string;
 }
 
 export interface EndCallParams {

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen, ChevronDown } from "lucide-react";
+import { FileText, Loader2, Phone, Download, Trash, Eye, EyeOff, SquarePen, ChevronDown, BrainCircuit } from "lucide-react";
 import { useToast } from "@/components/ui/app-toaster";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
@@ -893,10 +893,10 @@ export function CallOptions(props: CallOptionsProps) {
     );
   };
   return (
-    <Card className="rounded-2xl transition-all p-6 bg-white border border-gray-100">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-6 py-3 border border-white/30 dark:border-white/10 mb-4 -mx-6 mt-0">
+    <Card className="rounded-2xl transition-all p-2 bg-white border border-gray-100">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-1 py-1 border border-white/30 dark:border-white/10 mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
-          <Phone className="w-5 h-5 inline mr-2" /> Call Options
+          <BrainCircuit className="w-5 h-5 inline mr-2" /> Call Options
         </CardTitle>
         <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Single or bulk mode</CardDescription>
       </CardHeader>

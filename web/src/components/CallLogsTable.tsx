@@ -14,12 +14,15 @@ import {
   ChevronLeft, 
   ChevronsRight, 
   Plus,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  CalendarRange,
+  Copy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import {
   Table,
@@ -30,6 +33,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
+import api from "@/services/api";
+import { useToast } from "@/components/ui/app-toaster";
+import PipelineLeadCard from "./deals-pipeline/PipelineLeadCard";
+import EditLeadDialog from "./deals-pipeline/EditLeadDialog";
+import BookingSlot from "./deals-pipeline/BookingSlot";
+import type { Lead } from "@/features/deals-pipeline/types";
+import { Stage } from "@/features/deals-pipeline/store/slices/pipelineSlice";
 import {
   useReactTable,
   getCoreRowModel,
@@ -43,6 +53,7 @@ interface CallLog {
   id: string;
   assistant?: string;
   lead_name?: string;
+  lead_id?: string;
   type: string;
   status: string;
   startedAt?: string;
@@ -61,7 +72,8 @@ interface CallLogsTableProps {
   items: CallLog[];
   selectedCalls: Set<string>;
   onSelectCall: (id: string) => void;
-  onSelectAll: (checked: boolean) => void;
+  onSelectAll: (checked: boolean, visibleIds?: string[]) => void;
+  selectAllMode?: 'none' | 'page' | 'all';
   onRowClick: (id: string) => void;
   onEndCall: (id: string) => void;
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
@@ -78,14 +90,17 @@ interface CallLogsTableProps {
   isLoading?: boolean;
   // Backend pagination props
   currentPage?: number;
+  perPage?: number;
   totalPages?: number;
   totalRecords?: number;
   onPageChange?: (page: number) => void;
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
-  pageSize?: number;
-  onPageSizeChange?: (size: number) => void;
-  onSortChange?: (sorting: any) => void;
+  // Lead tag filter
+  leadTagFilter?: "hot" | "warm" | "cold" | null;
+  // Sorting
+  onSortChange?: (sort: any) => void;
+  totalFilteredCount?: number;
 }
 
 export function CallLogsTable({
@@ -93,6 +108,7 @@ export function CallLogsTable({
   selectedCalls,
   onSelectCall,
   onSelectAll,
+  selectAllMode = 'none',
   onRowClick,
   onEndCall,
   batchGroups,
@@ -109,18 +125,80 @@ export function CallLogsTable({
   isLoading = false,
   // Backend pagination props
   currentPage = 1,
+  perPage = 20,
   totalPages = 1,
   totalRecords = 0,
   onPageChange,
   hasNextPage = false,
   hasPreviousPage = false,
-  pageSize = 20,
-  onPageSizeChange,
+  // Lead tag filter
+  leadTagFilter,
+  // Sorting
+  onSortChange,
+  totalFilteredCount,
 }: CallLogsTableProps) {
   const router = useRouter();
+  const { push: toast } = useToast();
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sorting, setSorting] = useState<SortingState>([]);
+  
+  // Schedule dialog states
+  const [pipelineLeadCardOpen, setPipelineLeadCardOpen] = useState(false);
+  const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [bookingUsers, setBookingUsers] = useState<Array<{id: string | number; name: string; email: string}>>([]);
+
+  // Handle schedule button click
+  const handleScheduleClick = async (callLog: CallLog) => {
+    const leadId = callLog.lead_id;
+    if (!leadId) {
+      console.warn('[CallLogsTable] No lead_id available for call:', callLog.id);
+      return;
+    }
+
+    try {
+      // Fetch users for booking
+      const usersRes = await api.get('/api/users');
+      setBookingUsers(usersRes.data?.users || usersRes.data || []);
+      
+      // Create a lead object from call log data
+      const lead: Lead = {
+        id: leadId,
+        name: callLog.lead_name || '',
+        company_name: '',
+        email: '',
+        phone: '',
+        status: callLog.status,
+        stage: '',
+        organization_id: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      setSelectedLead(lead);
+      // Open booking dialog with BookingSlot
+      setBookingDialogOpen(true);
+    } catch (error) {
+      console.error('[CallLogsTable] Error loading booking data:', error);
+      // Still open the dialog with empty users
+      const lead: Lead = {
+        id: leadId,
+        name: callLog.lead_name || '',
+        company_name: '',
+        email: '',
+        phone: '',
+        status: callLog.status,
+        stage: '',
+        organization_id: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setSelectedLead(lead);
+      setBookingDialogOpen(true);
+    }
+  };
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
@@ -192,6 +270,15 @@ export function CallLogsTable({
     );
   }, [filteredItems, globalFilter]);
 
+  // Apply lead tag filter client-side (since backend doesn't support it yet)
+  const leadTagFilteredItems = useMemo(() => {
+    if (!leadTagFilter) return searchFilteredItems;
+    return searchFilteredItems.filter(item => {
+      const tag = getLeadTag(item);
+      return tag === leadTagFilter;
+    });
+  }, [searchFilteredItems, leadTagFilter, getLeadTag]);
+
   // Filter batch groups by status filter
   const filteredBatchGroups = useMemo(() => {
     if (!batchGroups) return null;
@@ -218,21 +305,36 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
-      header: ({ table }) => (
-        <input
-          type="checkbox"
-          checked={table.getIsAllRowsSelected()}
-          onChange={(e) => {
-            e.stopPropagation();
-            onSelectAll(!table.getIsAllRowsSelected());
-          }}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-        />
-      ),
+      header: ({ table }) => {
+        // Check if all rows on current page are selected
+        const visibleIds = table.getRowModel().rows.map(row => row.original.id);
+        const allPageSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCalls.has(id));
+        
+        // Determine checkbox state
+        const isChecked = selectAllMode === 'all' || allPageSelected;
+        const isIndeterminate = selectAllMode === 'page' && !allPageSelected;
+        
+        return (
+          <input
+            type="checkbox"
+            ref={(el) => {
+              if (el) {
+                el.checked = isChecked;
+                el.indeterminate = isIndeterminate;
+              }
+            }}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelectAll(!isChecked, visibleIds);
+            }}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+          />
+        );
+      },
       cell: ({ row }) => (
         <input
           type="checkbox"
-          checked={selectedCalls.has(row.original.id)}
+          checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
           onChange={(e) => {
             e.stopPropagation();
             onSelectCall(row.original.id);
@@ -242,16 +344,54 @@ export function CallLogsTable({
       ),
     },
     {
+      id: 'id',
+      accessorKey: 'id',
+      header: 'Serial No',
+      size: 60,
+      maxSize: 80,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {((currentPage - 1) * perPage) + row.index + 1}
+        </span>
+      ),
+    },
+    {
       id: 'assistant',
       accessorKey: 'assistant',
       header: 'Agent',
-      cell: ({ getValue }) => <span className="font-medium">{(getValue() as string) || "—"}</span>,
+      size: 120,
+      maxSize: 150,
+      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "—"}</span>,
     },
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
       header: 'Lead',
-      cell: ({ getValue }) => <span className="text-muted-foreground">{cleanLeadName(getValue() as string)}</span>,
+      cell: ({ row }) => {
+        const leadName = cleanLeadName(row.original.lead_name);
+        const hasLead = leadName !== "—";
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{leadName}</span>
+            {hasLead && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(leadName);
+                  toast({
+                    title: "Copied!",
+                    description: `Lead name "${leadName}" copied to clipboard`,
+                  });
+                }}
+                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                title="Copy lead name"
+              >
+                <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'type',
@@ -309,12 +449,74 @@ export function CallLogsTable({
         const tag = getLeadTag(row.original);
         const tagConfig = getTagConfig(tag);
         return (
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor}`}
-            title={`${tagConfig.label} priority lead`}
+          <Select
+            value={tag}
+            onValueChange={(newTag) => {
+              // Update the call's lead_category - you'll need to implement the API call
+              console.log(`[CallLogsTable] Tag changed for ${row.original.id} to ${newTag}`);
+            }}
           >
-            {tagConfig.label}
+            <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot" className="text-red-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  Hot
+                </span>
+              </SelectItem>
+              <SelectItem value="warm" className="text-amber-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  Warm
+                </span>
+              </SelectItem>
+              <SelectItem value="cold" className="text-blue-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  Cold
+                </span>
+              </SelectItem>
+              <SelectItem value="unknown" className="text-gray-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                  Unknown
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      },
+    },
+    {
+      id: 'cost',
+      header: 'Cost',
+      cell: ({ row }) => {
+        const cost = row.original.cost || row.original.call_cost;
+        return (
+          <span className="font-mono text-sm">
+            {cost ? `$${Number(cost).toFixed(2)}` : "—"}
           </span>
+        );
+      },
+    },
+    {
+      id: 'schedule',
+      header: 'Schedule',
+      size: 80,
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => handleScheduleClick(item)}
+              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+              title="Schedule"
+            >
+              <CalendarRange className="w-5 h-5" />
+            </button>
+          </div>
         );
       },
     },
@@ -338,11 +540,11 @@ export function CallLogsTable({
         );
       },
     },
-  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag]);
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag, selectAllMode]);
 
   // Setup table instance with filtered data
   const table = useReactTable({
-    data: searchFilteredItems,
+    data: leadTagFilteredItems,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -407,8 +609,8 @@ export function CallLogsTable({
 
   // Render individual call row with optional indent for batch calls
   const renderCallRow = (callLog: CallLog, indent = false) => {
-    // Find the row in the table data (searchFilteredItems)
-    const rowIndex = searchFilteredItems.findIndex(item => item.id === callLog.id);
+    // Find the row in the table data (leadTagFilteredItems)
+    const rowIndex = leadTagFilteredItems.findIndex(item => item.id === callLog.id);
     if (rowIndex === -1) return null;
 
     const tableRow = table.getRowModel().rows[rowIndex];
@@ -813,6 +1015,26 @@ export function CallLogsTable({
     </div>
   </div>
 )}
+
+      {/* Booking Dialog */}
+      <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+          <DialogTitle className="text-lg font-semibold mb-4">
+            Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
+          </DialogTitle>
+          {selectedLead && (
+            <BookingSlot
+              leadId={selectedLead.id}
+              tenantId={undefined}
+              studentId={undefined}
+              assignedUserId={undefined}
+              createdBy={undefined}
+              users={bookingUsers}
+              isEditMode={true}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
