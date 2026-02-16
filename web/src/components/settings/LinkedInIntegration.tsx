@@ -110,10 +110,9 @@ export const LinkedInIntegration: React.FC = () => {
         if (tenantId) {
           const tenantRoom = `tenant:${tenantId}`;
           socket.emit('join', tenantRoom);
-          console.log('[Socket.IO] Joined tenant room:', tenantRoom);
         }
       } catch (e) {
-        console.error('[Socket.IO] Failed to parse user data:', e);
+        // Failed to parse user data
       }
     }
 
@@ -127,7 +126,6 @@ export const LinkedInIntegration: React.FC = () => {
       needsReconnect?: boolean;
       timestamp: string;
     }) => {
-      console.log('[Socket.IO] Account status update received:', data);
 
       const newStatus = data.status || data.dbStatus;
       const isActive = newStatus === 'active' || newStatus === 'connected';
@@ -158,8 +156,6 @@ export const LinkedInIntegration: React.FC = () => {
                                 currentCheckpointAccount.unipileAccount?.id === data.accountId;
         
         if (isCurrentAccount) {
-          console.log('[Socket.IO] Checkpoint resolved! Auto-closing modal');
-          
           // Stop polling if active
           if (yesNoPolling) {
             clearInterval(yesNoPolling);
@@ -191,26 +187,22 @@ export const LinkedInIntegration: React.FC = () => {
       if (data.needsReconnect) {
         const accountName = data.accountName || data.profileName || 'LinkedIn Account';
         alert(`⚠️ LinkedIn Account Update: ${accountName} needs reconnection. Please reconnect to continue using this account.`);
-      } else if (isActive) {
-        const accountName = data.accountName || data.profileName || 'Account';
-        console.log(`✅ ${accountName} is now active`);
       }
     });
 
     socket.on('connect', () => {
-      console.log('[Socket.IO] Connected to server');
+      // Connected to server
     });
 
     socket.on('disconnect', () => {
-      console.log('[Socket.IO] Disconnected from server');
+      // Disconnected from server
     });
 
     socket.on('connect_error', (error) => {
-      console.error('[Socket.IO] Connection error:', error);
+      // Connection error
     });
 
     return () => {
-      console.log('[Socket.IO] Cleaning up connection');
       socket.disconnect();
     };
   }, []); // Run once on mount
@@ -220,8 +212,6 @@ export const LinkedInIntegration: React.FC = () => {
   useEffect(() => {
     // If we have a Yes/No checkpoint, start polling as fallback (webhook should handle this)
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
-      console.log('[LinkedIn] Starting fallback polling for Yes/No checkpoint (webhook is primary)');
-      
       const pollInterval = setInterval(async () => {
         try {
           const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
@@ -233,8 +223,6 @@ export const LinkedInIntegration: React.FC = () => {
           const data = await response.json();
           // If checkpoint is resolved (user clicked Yes on mobile), auto-login
           if (data.connected || data.status === 'connected' || (data.checkpoint && !data.checkpoint.required)) {
-            console.log('[LinkedIn] Fallback polling detected checkpoint resolution');
-            
             // Stop polling
             if (yesNoPolling) {
               clearInterval(yesNoPolling);
@@ -258,9 +246,9 @@ export const LinkedInIntegration: React.FC = () => {
             }, 2000);
           }
         } catch (error) {
-          console.error('[LinkedIn Integration] Error polling checkpoint status:', error);
+          // Error polling checkpoint status
         }
-      }, 5000); // Poll every 5 seconds (less frequent since webhook is primary)
+      }, 2000); // Poll every 2 seconds for fast detection
       setYesNoPolling(pollInterval);
       // Cleanup after 5 minutes (stop polling if user hasn't clicked Yes)
       setTimeout(() => {
@@ -302,9 +290,9 @@ export const LinkedInIntegration: React.FC = () => {
     } catch (error: any) {
       // Silently handle timeout - don't log as error since it's expected when backend is slow/unavailable
       if (error?.timeout) {
-        console.warn('[LinkedIn Integration] Request timed out - LinkedIn service may be unavailable');
+        // Request timed out - LinkedIn service may be unavailable
       } else {
-        console.error('[LinkedIn Integration] Error checking connection:', error);
+        // Error checking connection
       }
       // Set empty connections array to show disconnected state
       setLinkedInConnections([]);
@@ -367,7 +355,7 @@ export const LinkedInIntegration: React.FC = () => {
         }, 1500);
       }
     } catch (error) {
-      console.error('Error connecting LinkedIn:', error);
+      // Error connecting LinkedIn
       setConnectionError(error instanceof Error ? error.message : 'Failed to connect LinkedIn account');
     } finally {
       setConnecting(false);
@@ -417,7 +405,7 @@ export const LinkedInIntegration: React.FC = () => {
         setLiACookie('');
       }, 2000);
     } catch (error) {
-      console.error('Error verifying OTP:', error);
+      // Error verifying OTP
       setOtpError(error instanceof Error ? error.message : 'Failed to verify OTP');
     } finally {
       setVerifyingOtp(false);
@@ -461,7 +449,7 @@ export const LinkedInIntegration: React.FC = () => {
         setLiACookie('');
       }, 2000);
     } catch (error) {
-      console.error('Error solving checkpoint:', error);
+      // Error solving checkpoint
       setOtpError(error instanceof Error ? error.message : `Failed to submit ${answer} answer`);
     } finally {
       setVerifyingOtp(false);
@@ -502,7 +490,7 @@ export const LinkedInIntegration: React.FC = () => {
       setLinkedInConnections(prev => prev.filter(conn => conn.id !== accountId));
       alert('LinkedIn account disconnected successfully');
     } catch (error) {
-      console.error('Error disconnecting LinkedIn:', error);
+      // Error disconnecting LinkedIn
       alert(error instanceof Error ? error.message : 'Failed to disconnect LinkedIn account');
     } finally {
       setDisconnecting(prev => ({ ...prev, [disconnectKey]: false }));
@@ -543,7 +531,7 @@ export const LinkedInIntegration: React.FC = () => {
         setConnectionSuccess(false);
       }, 2000);
     } catch (error) {
-      console.error('Error reconnecting LinkedIn:', error);
+      // Error reconnecting LinkedIn
       setConnectionError(error instanceof Error ? error.message : 'Failed to reconnect LinkedIn account');
       // Open modal if error suggests credentials needed
       if (error instanceof Error && (error.message.includes('provide') || error.message.includes('credentials'))) {
@@ -1057,12 +1045,11 @@ export const LinkedInIntegration: React.FC = () => {
             </div>
             {/* Content */}
             <div className="p-6">
-              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  {currentCheckpointAccount?.checkpoint?.message || 
-                   (currentCheckpointAccount?.checkpoint?.is_yes_no
-                     ? 'On your phone, LinkedIn shows Yes/No. What did you tap?'
-                     : 'Please check your email or phone for the OTP code sent by LinkedIn.')}
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  {currentCheckpointAccount?.checkpoint?.is_yes_no 
+                    ? '📱 Check your phone! LinkedIn sent a notification to verify this login. Open the LinkedIn app and click YES to approve.'
+                    : (currentCheckpointAccount?.checkpoint?.message || 'Please check your email or phone for the OTP code sent by LinkedIn.')}
                 </p>
               </div>
               {/* Auto-resolving indicator for Yes/No */}
@@ -1079,55 +1066,56 @@ export const LinkedInIntegration: React.FC = () => {
               {/* Yes/No Checkpoint */}
               {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-700 text-center">
-                    Did you tap <strong>Yes</strong> or <strong>No</strong> on your phone?
-                  </p>
-                  {/* Show monitoring message if polling is active */}
+                  {/* Instructions to approve in mobile app */}
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xl">📱</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-semibold text-gray-900 mb-2">
+                          Action Required on Your Mobile Device
+                        </p>
+                        <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                          <li>Check your phone for a LinkedIn notification</li>
+                          <li>Open the LinkedIn app</li>
+                          <li>Click <strong className="text-green-600">YES</strong> to approve the login</li>
+                          <li>Return here - we'll automatically detect and connect your account within 1 second!</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Auto-detection status */}
                   {yesNoPolling && !autoResolving && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-xs text-blue-700 text-center">
-                        <Loader2 className="h-3 w-3 animate-spin inline-block mr-1" />
-                        Waiting for verification... Click Yes on your phone notification and we'll detect it automatically.
-                      </p>
+                    <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-green-600" />
+                        <p className="text-sm font-medium text-green-800">
+                          Monitoring for approval... Waiting for you to click YES in the LinkedIn app
+                        </p>
+                      </div>
                     </div>
                   )}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleSolveYesNoCheckpoint('YES')}
-                      disabled={verifyingOtp || autoResolving}
-                      className={`flex-1 px-6 py-4 rounded-lg font-semibold text-lg transition-colors ${
-                        verifyingOtp || autoResolving
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
-                    >
-                      {verifyingOtp || autoResolving ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        'YES'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleSolveYesNoCheckpoint('NO')}
-                      disabled={verifyingOtp || autoResolving}
-                      className={`flex-1 px-6 py-4 rounded-lg font-semibold text-lg transition-colors ${
-                        verifyingOtp || autoResolving
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-red-600 text-white hover:bg-red-700'
-                      }`}
-                    >
-                      {verifyingOtp || autoResolving ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        'NO'
-                      )}
-                    </button>
+
+                  {autoResolving && (
+                    <div className="p-4 bg-green-100 border-2 border-green-400 rounded-lg">
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <p className="text-sm font-semibold text-green-800">
+                          Approval detected! Connecting your account...
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Troubleshooting */}
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-xs text-gray-600">
+                      <strong>Note:</strong> Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
+                    </p>
                   </div>
                 </div>
               ) : (
