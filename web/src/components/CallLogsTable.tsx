@@ -94,6 +94,7 @@ interface CallLogsTableProps {
   totalPages?: number;
   totalRecords?: number;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
   // Lead tag filter
@@ -129,6 +130,7 @@ export function CallLogsTable({
   totalPages = 1,
   totalRecords = 0,
   onPageChange,
+  onPageSizeChange,
   hasNextPage = false,
   hasPreviousPage = false,
   // Lead tag filter
@@ -141,6 +143,7 @@ export function CallLogsTable({
   const { push: toast } = useToast();
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
   
   // Schedule dialog states
   const [pipelineLeadCardOpen, setPipelineLeadCardOpen] = useState(false);
@@ -946,14 +949,14 @@ export function CallLogsTable({
   <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
     <div className="flex items-center gap-2 text-sm text-[#64748B]">
       <span>
-        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} calls
+        Showing {((currentPage - 1) * perPage) + 1} to {Math.min(currentPage * perPage, totalRecords)} of {totalRecords} calls
       </span>
     </div>
 
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2">
         <span className="text-sm text-[#64748B]">Page size:</span>
-        <Select value={pageSize.toString()} onValueChange={(value) => {
+        <Select value={perPage.toString()} onValueChange={(value) => {
           const newSize = parseInt(value, 10);
           onPageSizeChange?.(newSize);
           // Reset to page 1 when page size changes

@@ -129,9 +129,15 @@ export function useChatStepController(
         const msg = bufferedMessages[i];
         if (msg.role === 'user' && msg.messageData?.collectedAnswers) {
           Object.assign(restoredAnswers, msg.messageData.collectedAnswers);
-          // Also include top-level message data properties like linkedin_connection_message
+          // Also include top-level message data properties like linkedin templates
           if (msg.messageData.linkedin_connection_message) {
             restoredAnswers.linkedin_connection_message = msg.messageData.linkedin_connection_message;
+          }
+          if (msg.messageData.linkedin_connection_template) {
+            restoredAnswers.linkedin_connection_template = msg.messageData.linkedin_connection_template;
+          }
+          if (msg.messageData.linkedin_followup_template) {
+            restoredAnswers.linkedin_followup_template = msg.messageData.linkedin_followup_template;
           }
           if (msg.messageData.linkedin_message_template) {
             restoredAnswers.linkedin_message_template = msg.messageData.linkedin_message_template;
@@ -188,14 +194,14 @@ export function useChatStepController(
     setIsLoading(true);
     setIsProcessingAI(true);
     try {
-      const response = await fetchICPQuestionByStep(1, undefined, 'lead_generation');
-      if (!response.success || !response.question) {
-        throw new Error(response.error || 'Failed to fetch first question');
+      const response = await fetchICPQuestionByStep(1, 'lead_generation');
+      if (!response) {
+        throw new Error('Failed to fetch first question');
       }
       const formattedQuestion = formatQuestionForChat(
-        convertAPIQuestionToLegacy(response.question),
+        convertAPIQuestionToLegacy(response),
         1,
-        response.question.stepIndex || 9
+        response.stepIndex || 9
       );
       addAIMessage({
         role: 'ai',
@@ -203,10 +209,8 @@ export function useChatStepController(
         timestamp: new Date(),
       });
       setCurrentStepIndex(0);
-      setQuestions([response.question]);
-      const steps = (response as any).totalSteps || 11;
-      logger.debug('startFlow - setting totalSteps', { steps, apiTotalSteps: (response as any).totalSteps });
-      setTotalSteps(steps);
+      setQuestions([response]);
+      setTotalSteps(11);
     } catch (error: any) {
       logger.error('Error starting flow', error);
       const isConnectionError = error?.message?.includes('Failed to fetch') ||
@@ -346,10 +350,10 @@ export function useChatStepController(
           if (Array.isArray(result.nextQuestion.options) && result.nextQuestion.options.length > 0) {
             if (typeof result.nextQuestion.options[0] === 'string') {
               // Convert string[] to object[]
-              dynamicOptions = (result.nextQuestion.options as string[]).map(opt => ({ label: opt, value: opt }));
+              dynamicOptions = (result.nextQuestion.options as unknown as string[]).map(opt => ({ label: opt, value: opt }));
             } else {
               // Already in correct format
-              dynamicOptions = result.nextQuestion.options as { label: string; value: string }[];
+              dynamicOptions = result.nextQuestion.options as { label: string; value: string; disabled?: boolean }[];
             }
           }
         }
@@ -585,12 +589,12 @@ export function useChatStepController(
       if (!response.success) {
         // If no next question, try fetching from step 5 directly
         logger.debug('processICPAnswer failed, trying fetchICPQuestionByStep');
-        const fallbackResponse = await fetchICPQuestionByStep(5, undefined, 'lead_generation');
-        if (!fallbackResponse.success || !fallbackResponse.question) {
+        const fallbackResponse = await fetchICPQuestionByStep(5, 'lead_generation');
+        if (!fallbackResponse) {
           throw new Error('Failed to get next question');
         }
         const formattedQuestion = formatQuestionForChat(
-          convertAPIQuestionToLegacy(fallbackResponse.question),
+          convertAPIQuestionToLegacy(fallbackResponse),
           5,
           11
         );
@@ -600,13 +604,13 @@ export function useChatStepController(
           timestamp: new Date(),
         });
         setCurrentStepIndex(4);
-        setQuestions([fallbackResponse.question]);
+        setQuestions([fallbackResponse]);
         setTotalSteps(11);
       } else if (response.nextQuestion) {
         const formattedQuestion = formatQuestionForChat(
           convertAPIQuestionToLegacy(response.nextQuestion),
           response.nextStepIndex || 5,
-          response.totalSteps || 11
+          totalSteps
         );
         addAIMessage({
           role: 'ai',
@@ -619,8 +623,6 @@ export function useChatStepController(
         }
         setCurrentStepIndex(response.nextStepIndex ? response.nextStepIndex - 1 : 4);
         setQuestions([response.nextQuestion]);
-        const steps = response.totalSteps || 11;
-        setTotalSteps(steps);
       } else {
         throw new Error('No next question returned from backend');
       }
