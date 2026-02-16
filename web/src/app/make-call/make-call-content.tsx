@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { CallConfigurationSkeleton } from "@/components/skeletons/CallConfigurationSkeleton";
 import { CallOptionsSkeleton } from "@/components/skeletons/CallOptionsSkeleton";
 import { UserStorage } from "@/utils/userStorage";
+import MakeCallStatsCards from "./MakeCallStatsCards";
+import {  BotMessageSquare } from "lucide-react";
 import { 
   useUserAvailableNumbers, 
   useAvailableAgents, 
@@ -246,10 +248,10 @@ export default function MakeCallContent() {
         }
         setLoading(true);
         // Use SDK service directly for resolvePhones
-        const { voiceAgentService } = (
+        const { resolvePhones } = (
           await import("@lad/frontend-features/voice-agent")
         );
-        const json = await voiceAgentService.resolvePhones(idsPayload, qpType as 'company' | 'employee');
+        const json = await resolvePhones(idsPayload, qpType as 'company' | 'employee');
         const totalResolved = Array.isArray(json)
           ? json.length
           : 0;
@@ -537,9 +539,36 @@ export default function MakeCallContent() {
         : undefined,
     [numbers, selectedNumberId]
   );
+  // Calculate unique languages from agents
+  const uniqueLanguages = useMemo(() => {
+    const languages = new Set(agents.map(a => a.language).filter(Boolean));
+    return Array.from(languages);
+  }, [agents]);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-3">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="mb-5 mt-10">
+          <div className="flex items-center gap-2 mb-1">
+            <BotMessageSquare className="w-8 h-8 text-[#1E293B]" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+              AI Caller
+            </h1>
+          </div>
+          <p className="text-sm text-[#64748B] ml-2">
+            Make single or bulk calls with voice agents
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <MakeCallStatsCards
+          totalNumbers={numbers.length}
+          totalAgents={agents.length}
+          totalLanguages={uniqueLanguages.length}
+          totalAccents={uniqueAccents.length}
+          loading={isInitializing}
+        />
         {/* Show skeleton loaders during initialization */}
         {isInitializing ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -36,7 +36,8 @@ import {
 import { 
   selectLeadsLoading, 
   selectLeadsError,
-  selectLeads
+  selectLeads,
+  selectLeadsPagination
 } from '@/features/deals-pipeline/store/slices/leadsSlice';
 import { 
   selectUsers,
@@ -99,6 +100,7 @@ import {
 import { 
   loadPipelineDataAction, 
   refreshPipelineDataAction,
+  fetchLeadsAction,
   moveLeadAction,
   createLeadAction,
   updateLeadAction,
@@ -147,6 +149,8 @@ interface StageUpdateData {
 const PipelineBoard: React.FC = () => {
   const initialPipelineLoadRequestedRef = useRef(false);
   const initialMasterDataLoadRequestedRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isFetchingMoreRef = useRef(false);
 
   // Education vertical context
   const { hasFeature } = useAuth();
@@ -170,6 +174,7 @@ const PipelineBoard: React.FC = () => {
   const reduxLeadsLoading = useSelector(selectLeadsLoading);
   const reduxStagesError = useSelector(selectStagesError);
   const reduxLeadsError = useSelector(selectLeadsError);
+  const pagination = useSelector(selectLeadsPagination);
   // Master data selectors
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
@@ -197,7 +202,7 @@ const PipelineBoard: React.FC = () => {
   const settingsDialogOpen = useSelector(selectSettingsDialogOpen);
   // Selected items from global Redux state
   const selectedLead = useSelector(selectSelectedLead);
-  const activeCard = useSelector((state: { ui: { activeCard: Lead | null } }) => state.ui.activeCard);
+  const activeCardId = useSelector(selectActiveCard);
   // Form states from global Redux state
   const newStageName = useSelector(selectNewStageName);
   const positionStageId = useSelector(selectPositionStageId);
@@ -221,49 +226,6 @@ const PipelineBoard: React.FC = () => {
   // Computed loading state combining all loading states
   const isLoading = reduxStagesLoading || reduxLeadsLoading || masterDataLoading || usersLoading || !preferencesLoaded;
   const currentError = reduxStagesError || reduxLeadsError || usersError || masterDataErrors?.[0] || null;
-
-  const pipelinePriorityCounts = useMemo(() => {
-    return pipelineBoardData.stages.reduce(
-      (acc: { high: number; medium: number; low: number }, stage: any) => {
-        acc.high += stage?.priority?.high || 0;
-        acc.medium += stage?.priority?.medium || 0;
-        acc.low += stage?.priority?.low || 0;
-        return acc;
-      },
-      { high: 0, medium: 0, low: 0 }
-    );
-  }, [pipelineBoardData.stages]);
-
-  const wonClosedCount = useMemo(() => {
-    const allLeads = pipelineBoardData.stages.flatMap((s: any) => s?.leads || []);
-    return allLeads.filter((lead: any) => lead?.status === 'won' || lead?.stage === 'won').length;
-  }, [pipelineBoardData.stages]);
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
-    if (!isLoading) return;
-    console.debug('[PipelineBoard] Loading state:', {
-      reduxStagesLoading,
-      reduxLeadsLoading,
-      masterDataLoading,
-      usersLoading,
-      preferencesLoaded,
-      reduxStagesError,
-      reduxLeadsError,
-      usersError,
-      masterDataErrors
-    });
-  }, [
-    isLoading,
-    reduxStagesLoading,
-    reduxLeadsLoading,
-    masterDataLoading,
-    usersLoading,
-    preferencesLoaded,
-    reduxStagesError,
-    reduxLeadsError,
-    usersError,
-    masterDataErrors
-  ]);
   // Use the filtered data directly from selector instead of manual filtering
   const currentStages = pipelineBoardData.stages;
   // Memoize normalized stages to prevent creating new objects on every render
@@ -278,6 +240,13 @@ const PipelineBoard: React.FC = () => {
       return acc;
     }, {});
   }, [pipelineBoardData]);
+
+  const activeCard = useMemo((): Lead | null => {
+    if (activeCardId === null || activeCardId === undefined) return null;
+    const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads || []);
+    return allLeads.find((l) => String(l.id) === String(activeCardId)) || null;
+  }, [activeCardId, currentLeadsByStage]);
+
   // Use filtered data directly (no manual filtering needed)
   const filteredAndSortedLeadsByStage = currentLeadsByStage;
   // Search and filter state handlers (now dispatch to Redux)
@@ -310,15 +279,15 @@ const PipelineBoard: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Movement threshold before drag starts
-        delay: isTouchDevice() ? 200 : 0, // Delay for touch to prevent accidental drags during scroll
-        tolerance: isTouchDevice() ? 5 : 0 // Tolerance for touch movement
+        distance: 2, // Lower threshold for a more responsive drag start
+        delay: isTouchDevice() ? 80 : 0, // Short delay on touch to reduce accidental drags without feeling stuck
+        tolerance: isTouchDevice() ? 3 : 0 // Slight tolerance for touch movement
       }
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200, // Delay to distinguish touch drag from scroll
-        tolerance: 5 // Tolerance for touch movement
+        delay: 120, // Shorter delay to make drag feel more immediate
+        tolerance: 3 // Slightly lower tolerance for quicker activation
       }
     }),
     useSensor(KeyboardSensor)
@@ -349,6 +318,37 @@ const PipelineBoard: React.FC = () => {
       dispatch(fetchUsersAction());
     }
   }, [isAuthenticated, dispatch]);
+
+  // Infinite scroll handler for Kanban board
+  useEffect(() => {
+    const handleScroll = async () => {
+      if (!scrollContainerRef.current || !pagination.hasMore || reduxLeadsLoading || isFetchingMoreRef.current) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      
+      // If we're within 100px of the bottom, load more
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        try {
+          isFetchingMoreRef.current = true;
+          logger.debug('[PipelineBoard] Reached bottom, loading next page:', pagination.page + 1);
+          await dispatch(fetchLeadsAction(pagination.page + 1, pagination.limit));
+        } finally {
+          isFetchingMoreRef.current = false;
+        }
+      }
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer && pipelineSettings.viewMode === 'kanban') {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [pagination.hasMore, pagination.page, pagination.limit, reduxLeadsLoading, pipelineSettings.viewMode, dispatch]);
   // Calculate totals for toolbar
   const totalLeads = useMemo(() => {
     return Object.values(currentLeadsByStage).reduce((total, stage) => total + stage.leads.length, 0);
@@ -1252,6 +1252,25 @@ const PipelineBoard: React.FC = () => {
       }
     });
   }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
+
+  const handleViewModeChange = useCallback((mode: 'kanban' | 'list'): void => {
+    dispatch(setPipelineSettings({ viewMode: mode }));
+    autoSavePipelinePreferences({
+      viewMode: mode,
+      visibleColumns: pipelineSettings.visibleColumns as unknown as Record<string, boolean>,
+      filters: activeFilters as any,
+      sortConfig: sortConfig,
+      uiSettings: {
+        zoom: zoom,
+        autoRefresh: pipelineSettings.autoRefresh,
+        refreshInterval: pipelineSettings.refreshInterval,
+        compactView: pipelineSettings.compactView,
+        showCardCount: pipelineSettings.showCardCount,
+        showStageValue: pipelineSettings.showStageValue,
+        enableDragAndDrop: pipelineSettings.enableDragAndDrop
+      }
+    });
+  }, [pipelineSettings, activeFilters, sortConfig, dispatch, zoom]);
   // Toolbar dialog handlers
   const handleOpenFilter = useCallback((): void => {
     dispatch(setFilterDialogOpen(true));
@@ -1358,29 +1377,28 @@ const PipelineBoard: React.FC = () => {
   }
   return (
     <div 
-      className="w-full flex flex-col"
+      className="w-full flex flex-col bg-[#f8f9fe] p-1 border border-gray-200 rounded-lg"
       style={{ height: `calc(93vh - ${HEADER_HEIGHT}px)` }}
     >
-      {pipelineSettings.viewMode !== 'list' && (
-        <PipelineBoardToolbar
-          totalLeads={totalLeads}
-          filteredLeadsCount={filteredLeadsCount}
-          stagesCount={currentStages.length}
-          labels={labels}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          zoom={zoom}
-          onZoomChange={handleZoomChange}
-          viewMode={pipelineSettings.viewMode}
-          onAddStage={() => dispatch(setAddStageDialogOpen(true))}
-          onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
-          onOpenFilter={handleOpenFilter}
-          onOpenSort={handleOpenSort}
-          onOpenSettings={handleOpenSettings}
-          onExport={handleExportLeads}
-          onExportWithDateRange={handleExportLeadsWithDateRange}
-        />
-      )}
+      <PipelineBoardToolbar
+        totalLeads={totalLeads}
+        filteredLeadsCount={filteredLeadsCount}
+        stagesCount={currentStages.length}
+        labels={labels}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        zoom={zoom}
+        onZoomChange={handleZoomChange}
+        viewMode={pipelineSettings.viewMode}
+        onViewModeChange={handleViewModeChange}
+        onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+        onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+        onOpenFilter={handleOpenFilter}
+        onOpenSort={handleOpenSort}
+        onOpenSettings={handleOpenSettings}
+        onExport={handleExportLeads}
+        onExportWithDateRange={handleExportLeadsWithDateRange}
+      />
       <EnhancedAddStageDialog
         open={addDialogOpen}
         onClose={() => {
@@ -1422,6 +1440,7 @@ const PipelineBoard: React.FC = () => {
         />
       )}
       <div 
+        ref={scrollContainerRef}
         className={`pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] ${
           pipelineSettings.viewMode === 'kanban' 
             ? 'overflow-x-scroll overflow-y-auto' 
@@ -1480,6 +1499,11 @@ const PipelineBoard: React.FC = () => {
                 showCardCount={pipelineSettings.showCardCount}
                 showTotalValue={pipelineSettings.showStageValue}
               />
+              {reduxLeadsLoading && pagination.page > 1 && (
+                <div className="flex justify-center p-4 w-full sticky bottom-0 bg-white/10 backdrop-blur-sm">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
             </DndContext>
           );
         })()}

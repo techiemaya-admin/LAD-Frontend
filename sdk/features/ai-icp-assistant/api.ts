@@ -100,7 +100,7 @@ function addBufferedMessage(sessionId: string, message: BufferedMessage): void {
   }
 }
 
-function clearBufferedMessages(sessionId: string): void {
+export function clearBufferedMessages(sessionId: string): void {
   if (typeof window === 'undefined') return;
   try {
     const key = `icp_buffered_messages_${sessionId}`;
@@ -108,6 +108,27 @@ function clearBufferedMessages(sessionId: string): void {
     logger.debug('[ICP Buffer] Cleared buffered messages for session', { sessionId });
   } catch (e) {
     logger.error('[ICP Buffer] Error clearing buffered messages', e);
+  }
+}
+
+/**
+ * Clear all buffered messages for any ICP session.
+ */
+export function clearAllBufferedMessages(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const prefix = 'icp_buffered_messages_';
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    logger.debug('[ICP Buffer] Cleared all buffered messages');
+  } catch (e) {
+    logger.error('[ICP Buffer] Error clearing all buffered messages', e);
   }
 }
 

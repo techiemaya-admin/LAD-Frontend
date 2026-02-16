@@ -13,13 +13,15 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, ArrowRight, Building2, Briefcase, MapPin, Users, Smartphone, MessageSquare, Phone, Linkedin, Mail, Zap, Calendar, TrendingUp, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Building2, Briefcase, MapPin, Users, Smartphone, MessageSquare, Phone, Linkedin, Mail, Zap, Calendar, TrendingUp, Shield, AlertTriangle, Loader2, Save } from 'lucide-react';
 import { fetchICPQuestions } from '@lad/frontend-features/ai-icp-assistant';
 import { StepType } from '@/types/campaign';
 import StepLayout from './StepLayout';
 import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
+import type { LinkedInMessageTemplate } from '@lad/frontend-features/campaigns';
+import { TemplateSelector, TemplateSaveModal, TemplateManagerModal } from '@/components/campaigns/linkedin-templates';
 // WhatsApp actions with recommended
 const WHATSAPP_ACTIONS = [
   { value: 'send_broadcast', label: 'Send broadcast', recommended: true },
@@ -140,6 +142,8 @@ interface GuidedAnswers {
   enableConnectionMessage?: boolean;
   linkedinConnectionMessage?: string;
   linkedinMessage?: string;
+  linkedin_connection_template?: string; // From ICP chat
+  linkedin_followup_template?: string; // From ICP chat
   whatsappMessage?: string;
   emailSubject?: string;
   emailMessage?: string;
@@ -268,6 +272,11 @@ export default function GuidedFlowPanel() {
   const [enableConnectionMessage, setEnableConnectionMessage] = useState<boolean>(true);
   const [linkedinConnectionMessage, setLinkedinConnectionMessage] = useState<string>('Hi {{first_name}}, I\'d like to connect with you.');
   const [linkedinMessage, setLinkedinMessage] = useState<string>('Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...');
+  
+  // LinkedIn template management state
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(undefined);
+  const [showTemplateSaveModal, setShowTemplateSaveModal] = useState<boolean>(false);
+  const [showTemplateManagerModal, setShowTemplateManagerModal] = useState<boolean>(false);
   // Delay and Condition configuration defaults
   const [delayDays, setDelayDays] = useState<number>(1);
   const [delayHours, setDelayHours] = useState<number>(0);
@@ -385,10 +394,10 @@ export default function GuidedFlowPanel() {
 
     // Send connection
     if (answers.linkedinActions.includes('send_connection')) {
-      // Use user-configured connection message (from Step 4) - only if enabled
+      // Use user-configured connection message (from ICP chat or Step 4) - only if enabled
       const userEnableConnectionMessage = answers.enableConnectionMessage !== undefined ? answers.enableConnectionMessage : enableConnectionMessage;
       const userConnectionMessage = userEnableConnectionMessage 
-        ? (answers.linkedinConnectionMessage || linkedinConnectionMessage || null)
+        ? (answers.linkedin_connection_template || answers.linkedinConnectionMessage || linkedinConnectionMessage || null)
         : null;
       const nodeId = `linkedin_connect_${Date.now()}`;
       nodes.push({
@@ -454,8 +463,8 @@ export default function GuidedFlowPanel() {
           source: delayNodeId,
           target: conditionNodeId,
         });
-        // Use user-configured LinkedIn message (from Step 4)
-        const userLinkedinMessage = answers.linkedinMessage || linkedinMessage || 'Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...';
+        // Use user-configured LinkedIn followup message (from ICP chat or Step 4)
+        const userLinkedinMessage = answers.linkedin_followup_template || answers.linkedinMessage || linkedinMessage || 'Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...';
         const messageNodeId = `linkedin_message_${Date.now()}`;
         nodes.push({
           id: messageNodeId,
@@ -491,6 +500,8 @@ export default function GuidedFlowPanel() {
         currentNodeId = messageNodeId;
       }
     } else if (answers.linkedinActions.includes('send_message')) {
+      // Direct message without connection - use followup template
+      const userLinkedinMessage = answers.linkedin_followup_template || answers.linkedinMessage || linkedinMessage || 'Hi {{first_name}}, I noticed your work in {{company}} and thought you might be interested in...';
       // Message without connection - not allowed, but handle gracefully
       // In real implementation, this should be prevented in UI
     }
@@ -779,6 +790,31 @@ export default function GuidedFlowPanel() {
       setHasSelectedOption(false);
     }
   };
+
+  // LinkedIn Template Handlers
+  const handleTemplateSelect = (template: LinkedInMessageTemplate | null) => {
+    if (template) {
+      setSelectedTemplateId(template.id);
+      
+      // Populate both connection and followup messages
+      if (template.connection_message) {
+        setLinkedinConnectionMessage(template.connection_message);
+        setEnableConnectionMessage(true);
+      }
+      if (template.followup_message) {
+        setLinkedinMessage(template.followup_message);
+      }
+    } else {
+      // User selected "Custom" - clear template selection but keep existing messages
+      setSelectedTemplateId(undefined);
+    }
+  };
+
+  const handleTemplateSaved = (templateId: string) => {
+    // After saving, select the newly created template
+    setSelectedTemplateId(templateId);
+  };
+
   // Validation function for each step
   const validateStep = (step: GuidedStep): boolean => {
     const errors: Record<string, boolean> = {};
@@ -1727,6 +1763,47 @@ export default function GuidedFlowPanel() {
                   <RenderActions actions={VOICE_ACTIONS} answersKey="voiceActions" answers={answers} setAnswers={setAnswers} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
                 </div>
               </div>
+
+              {/* LinkedIn Message Template Selector */}
+              {(answers.linkedinActions?.includes('send_connection') || answers.linkedinActions?.includes('send_message')) && (
+                <div className="mb-8 p-6 bg-white rounded-xl border-2 border-blue-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-[#1E293B] text-[15px] flex items-center gap-2">
+                        <Linkedin size={18} color="#0077B5" />
+                        LinkedIn Message Template
+                      </h3>
+                      <p className="mt-1 text-[#64748B] text-[13px]">
+                        Select a saved template or create custom messages below
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <TemplateSelector
+                    selectedTemplateId={selectedTemplateId}
+                    onTemplateSelect={handleTemplateSelect}
+                    onManageClick={() => setShowTemplateManagerModal(true)}
+                    className="mb-4"
+                  />
+                  
+                  {/* Save Template Button */}
+                  {(linkedinConnectionMessage || linkedinMessage) && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTemplateSaveModal(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save as Template
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* LinkedIn Connection Message */}
               {answers.linkedinActions?.includes('send_connection') && (
                 <div className="mb-8 p-6 bg-[#FAFBFC] rounded-xl border border-[#E2E8F0]">
@@ -2423,7 +2500,7 @@ export default function GuidedFlowPanel() {
         delayMinutes,
         conditionType,
         enableConnectionMessage,
-        linkedinConnectionMessage: enableConnectionMessage ? linkedinConnectionMessage : null,
+        linkedinConnectionMessage: enableConnectionMessage ? linkedinConnectionMessage : undefined,
         linkedinMessage,
       });
     }
@@ -3225,6 +3302,20 @@ export default function GuidedFlowPanel() {
         {currentStep === 'campaign_settings' && renderStep6()}
         {currentStep === 'confirmation' && renderStep7()}
       </div>
+
+      {/* LinkedIn Message Template Modals */}
+      <TemplateSaveModal
+        open={showTemplateSaveModal}
+        onClose={() => setShowTemplateSaveModal(false)}
+        connectionMessage={linkedinConnectionMessage}
+        followupMessage={linkedinMessage}
+        onTemplateSaved={handleTemplateSaved}
+      />
+
+      <TemplateManagerModal
+        open={showTemplateManagerModal}
+        onClose={() => setShowTemplateManagerModal(false)}
+      />
     </div>
   );
 }

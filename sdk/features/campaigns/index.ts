@@ -77,3 +77,43 @@ export type { UseCampaignReturn } from './hooks/useCampaign';
 export type { UseCampaignStatsReturn } from './hooks/useCampaignStats';
 export type { UseCampaignAnalyticsReturn } from './hooks/useCampaignAnalytics';
 export type { UseCampaignLeadsReturn } from './hooks/useCampaignLeads';
+
+// ============================================================================
+// LINKEDIN MESSAGE TEMPLATES (Sub-Feature)
+// ============================================================================
+export {
+  // Types
+  type LinkedInMessageTemplate,
+  type CreateTemplateRequest as CreateLinkedInTemplateRequest,
+  type UpdateTemplateRequest as UpdateLinkedInTemplateRequest,
+  type TemplateFilters as LinkedInTemplateFilters,
+  type PersonalizedTemplate as PersonalizedLinkedInTemplate,
+  type TemplateCategory as LinkedInTemplateCategory,
+  TEMPLATE_CATEGORIES as LINKEDIN_TEMPLATE_CATEGORIES,
+  MESSAGE_VARIABLES as LINKEDIN_MESSAGE_VARIABLES,
+  CONNECTION_MESSAGE_MAX_LENGTH as LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH,
+  // Hooks
+  useMessageTemplates as useLinkedInMessageTemplates,
+  useMessageTemplate as useLinkedInMessageTemplate,
+  useDefaultMessageTemplate as useDefaultLinkedInMessageTemplate,
+  useCreateMessageTemplate as useCreateLinkedInMessageTemplate,
+  useUpdateMessageTemplate as useUpdateLinkedInMessageTemplate,
+  useDeleteMessageTemplate as useDeleteLinkedInMessageTemplate,
+  usePersonalizeMessage as usePersonalizeLinkedInMessage,
+  useValidateMessageLength as useValidateLinkedInMessageLength,
+  // API Functions
+  linkedInMessageTemplateKeys,
+  getMessageTemplates as getLinkedInMessageTemplates,
+  getMessageTemplatesQueryOptions as getLinkedInMessageTemplatesQueryOptions,
+  getMessageTemplateById as getLinkedInMessageTemplateById,
+  getMessageTemplateByIdQueryOptions as getLinkedInMessageTemplateByIdQueryOptions,
+  getDefaultMessageTemplate as getDefaultLinkedInMessageTemplate,
+  getDefaultMessageTemplateQueryOptions as getDefaultLinkedInMessageTemplateQueryOptions,
+  createMessageTemplate as createLinkedInMessageTemplate,
+  updateMessageTemplate as updateLinkedInMessageTemplate,
+  deleteMessageTemplate as deleteLinkedInMessageTemplate,
+  saveTemplatesToLocalStorage as saveLinkedInTemplatesToLocalStorage,
+  loadTemplatesFromLocalStorage as loadLinkedInTemplatesFromLocalStorage,
+  clearTemplatesFromLocalStorage as clearLinkedInTemplatesFromLocalStorage,
+} from './linkedin-message-templates';
+

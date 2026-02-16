@@ -42,6 +42,10 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
   if (params?.limit) {
     query.append("limit", params.limit.toString());
   }
+  
+  if (params?.lead_category) {
+    query.append("lead_category", params.lead_category);
+  }
 
   const queryString = query.toString();
   const url = `/api/voice-agent/calls?${queryString}`;
@@ -50,6 +54,19 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
   
   const response = await apiGet<CallLogsResponse>(url);
   //console.log('[Call Logs API] Response received:', response);
+  
+  // Extract data property from API client response
+  return response.data;
+}
+
+/**
+ * Get a single call log by ID
+ */
+export async function getCallLog(callId: string): Promise<any> {
+  //console.log('[Call Logs API] Fetching call log for ID:', callId);
+  
+  const response = await apiGet<any>(`/api/voice-agent/calls/${callId}`);
+  //console.log('[Call Logs API] Call log response:', response);
   
   // Extract data property from API client response
   return response.data;

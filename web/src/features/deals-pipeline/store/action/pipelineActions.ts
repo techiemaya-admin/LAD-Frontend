@@ -17,7 +17,9 @@ import {
   updateLead,
   deleteLead,
   bulkUpdateLeads,
-  selectLeadsCacheValid
+  selectLeadsCacheValid,
+  setPagination,
+  loadMoreLeads
 } from '../slices/leadsSlice';
 import * as pipelineService from '@lad/frontend-features/deals-pipeline';
 import { AppDispatch, RootState } from '../../../../store/store';
@@ -140,20 +142,55 @@ export const reorderStagesAction = (stageOrders: Array<{ key: string; order: num
 };
 // ============ LEADS ACTIONS ============
 // Fetch leads with cache management
-export const fetchLeadsAction = (): AppThunk => async (dispatch, getState) => {
+export const fetchLeadsAction = (page: number = 1, limit: number = 50): AppThunk => async (dispatch, getState) => {
   const state = getState();
   // Check cache validity
   const cacheValid = selectLeadsCacheValid(state);
-  if (cacheValid) {
+  // If we're requesting a specific page other than 1, we ignore cache
+  if (cacheValid && page === 1) {
     logger.debug('[Redux] Leads cache valid, skipping fetch');
     return;
   }
   try {
     dispatch(setLeadsLoading(true));
     dispatch(clearLeadsError());
-    logger.debug('[Redux] Fetching leads from API...');
-    const leads = await pipelineService.fetchLeads();
-    dispatch(setLeads(leads));
+    logger.debug('[Redux] Fetching leads from API...', { page, limit });
+    
+    // Use getPipelineData to stay in sync with the board's data fetching behavior
+    const response = await pipelineService.getPipelineData(page, limit);
+    
+    // Robustly extract leads array and pagination info
+    const rawData = response as any;
+    const leads = rawData.leads || (Array.isArray(rawData) ? rawData : []);
+    const pagination = rawData.pagination;
+    
+    if (page === 1) {
+      dispatch(setLeads(leads));
+    } else {
+      dispatch(loadMoreLeads(leads));
+    }
+
+    if (pagination) {
+      // Handle both camelCase and snake_case property names from backend
+      const totalPages = pagination.totalPages || pagination.total_pages || 0;
+      const total = pagination.total || pagination.total_count || leads.length;
+      
+      dispatch(setPagination({
+        page: pagination.page || page,
+        limit: pagination.limit || limit,
+        total: total,
+        hasMore: pagination.hasMore ?? (totalPages > (pagination.page || page))
+      }));
+    } else if (page === 1) {
+      // Default pagination if none provided
+      dispatch(setPagination({
+        page: 1,
+        limit: leads.length,
+        total: leads.length,
+        hasMore: false
+      }));
+    }
+    
     logger.debug('[Redux] Leads loaded successfully:', leads.length);
   } catch (error) {
     const err = error as Error;
@@ -253,9 +290,9 @@ export const bulkUpdateLeadsAction = (updates: Array<{ id: string | number; data
 };
 // ============ COMBINED ACTIONS ============
 // Load all pipeline data (stages + leads)
-export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
+export const loadPipelineDataAction = (page: number = 1, limit: number = 50): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Loading complete pipeline data (single request)...');
+    logger.debug('[Redux] Loading complete pipeline data (single request)...', { page, limit });
     dispatch(setStagesLoading(true));
     dispatch(setLeadsLoading(true));
     dispatch(clearStagesError());
@@ -268,16 +305,36 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
       )
     );
     const data = await Promise.race([
-      pipelineService.fetchPipelineData(),
+      pipelineService.getPipelineData(page, limit),
       timeoutPromise
-    ]) as Awaited<ReturnType<typeof pipelineService.fetchPipelineData>>;
-    const stages = (data as unknown as { stages?: Stage[] }).stages || [];
-    const leads = (data as unknown as { leads?: Lead[] }).leads || [];
+    ]) as Awaited<ReturnType<typeof pipelineService.getPipelineData>>;
+    
+    // cast data to any to access potentially nested structures or normalization info
+    const rawData = data as any;
+    const stages = rawData.stages || [];
+    const leads = rawData.leads || [];
+    const pagination = rawData.pagination;
+
     dispatch(setStages(stages));
     dispatch(setLeads(leads));
+    
+    if (pagination) {
+      const pageNum = pagination.page || page;
+      const totalPages = pagination.totalPages || pagination.total_pages || 0;
+      const total = pagination.total || pagination.total_count || leads.length;
+
+      dispatch(setPagination({
+        page: pageNum,
+        limit: pagination.limit || limit,
+        total: total,
+        hasMore: pagination.hasMore ?? (totalPages > pageNum)
+      }));
+    }
+
     logger.debug('[Redux] Pipeline data loaded successfully:', {
       stages: stages.length,
-      leads: leads.length
+      leads: leads.length,
+      pagination
     });
   } catch (error) {
     const err = error as any;
@@ -313,17 +370,33 @@ export const loadPipelineDataAction = (): AppThunk => async (dispatch) => {
   }
 };
 // Refresh all data (force reload ignoring cache)
-export const refreshPipelineDataAction = (): AppThunk => async (dispatch) => {
+export const refreshPipelineDataAction = (page: number = 1, limit: number = 50): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Refreshing pipeline data...');
+    logger.debug('[Redux] Refreshing pipeline data...', { page, limit });
     // Force refresh by setting loading states
     dispatch(setStagesLoading(true));
     dispatch(setLeadsLoading(true));
-    const data = await pipelineService.fetchPipelineData();
-    const stages = (data as unknown as { stages?: Stage[] }).stages || [];
-    const leads = (data as unknown as { leads?: Lead[] }).leads || [];
+    const data = await pipelineService.getPipelineData(page, limit);
+    const rawData = data as any;
+    const stages = rawData.stages || [];
+    const leads = rawData.leads || [];
+    const pagination = rawData.pagination;
+
     dispatch(setStages(stages));
     dispatch(setLeads(leads));
+
+    if (pagination) {
+      const pageNum = pagination.page || page;
+      const totalPages = pagination.totalPages || pagination.total_pages || 0;
+      const total = pagination.total || pagination.total_count || leads.length;
+
+      dispatch(setPagination({
+        page: pageNum,
+        limit: pagination.limit || limit,
+        total: total,
+        hasMore: pagination.hasMore ?? (totalPages > pageNum)
+      }));
+    }
     logger.debug('[Redux] Pipeline data refreshed successfully');
   } catch (error) {
     const err = error as Error;

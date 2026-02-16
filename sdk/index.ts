@@ -1,5 +1,6 @@
-export * from "./features/voice-agent/features/voice-agent";
+export * from "./features/voice-agent";
 
-// Export shared utilities
-export { safeStorage } from './shared/storage';
-export { apiClient } from './shared/apiClient';
+export * from "./features/call-logs";
+
+export { safeStorage } from "./shared/storage";
+export { apiClient, apiGet, apiPost, apiPut, apiDelete, apiPatch } from "./shared/apiClient";
