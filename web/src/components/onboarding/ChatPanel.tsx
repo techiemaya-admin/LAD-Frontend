@@ -11,6 +11,7 @@ import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
 import { useChatStepController } from '@/components/onboarding/ChatStepController';
 import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
+import { clearBufferedMessages, clearAllBufferedMessages } from '@lad/frontend-features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
 import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
@@ -588,8 +589,14 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             // Get connection message from any of these sources (linkedin_template is from ICP flow)
             connectionMessage: mappedAnswers.linkedinConnectionMessage || 
                               mappedAnswers.linkedin_connection_message || 
+                              mappedAnswers.linkedin_connection_template || 
                               mappedAnswers.linkedin_template || 
                               null,
+            // Store followup message separately for send_message step
+            followupMessage: mappedAnswers.linkedin_followup_template ||
+                            mappedAnswers.linkedinMessage ||
+                            mappedAnswers.linkedin_message ||
+                            null,
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
@@ -2109,25 +2116,13 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             <button
               onClick={() => {
                 if (window.confirm('Are you sure you want to start over? This will remove all messages and workflow.')) {
-                  // Clear chat messages and workflow state, AND reset to initial screen
-                  useOnboardingStore.setState({
-                    aiMessages: [],
-                    workflowPreview: [],
-                    isICPFlowStarted: false, // Reset the flow started flag
-                    workflowNodes: [],
-                    workflowEdges: [],
-                    icpAnswers: null,
-                    icpOnboardingComplete: false,
-                    hasSelectedOption: false, // Reset option selection
-                    selectedPath: null, // Clear selected path
-                    isAIChatActive: false, // Deactivate chat
-                    selectedPlatforms: [], // Clear platforms
-                    platformFeatures: {}, // Clear features
-                    campaignDataType: null, // Reset campaign data type
-                    inboundLeadData: null, // Clear inbound data
-                    inboundAnalysis: null, // Clear analysis
-                    isInboundFormVisible: false, // Hide form
-                  });
+                  useOnboardingStore.persist.clearStorage();
+                  clearBufferedMessages('default_session');
+                  clearAllBufferedMessages();
+                  (window as any).__icpAnswers = undefined;
+                  (window as any).__currentStepIndex = undefined;
+                  chatStepController.reset();
+                  useOnboardingStore.getState().reset();
                   setFlowState('initial');
                   setUserAnswers({});
                   setCurrentUtilityAnswers({});

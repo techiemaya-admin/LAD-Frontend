@@ -233,8 +233,8 @@ export function CallConfiguration({
   const [isRephrasing, setIsRephrasing] = useState(false);
 
   return (
-    <Card className="rounded-2xl transition-all p-6 bg-white border border-gray-100">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-6 py-5 border border-white/30 dark:border-white/10 mb-6 -mx-6 mt-0">
+    <Card className="rounded-2xl transition-all p-2 bg-white border border-gray-100">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-1 py-1 border border-white/30 dark:border-white/10 mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           <Phone className="w-5 h-5 inline mr-2" /> Call Configuration
         </CardTitle>
@@ -243,7 +243,7 @@ export function CallConfiguration({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-3">
         {/* Phone number */}
         <div className="w-full mx-0">
           <label className="text-sm font-medium text-gray-700 mb-1 block">

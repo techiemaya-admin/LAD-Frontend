@@ -170,21 +170,31 @@ export function generateProgressiveWorkflowPreview(
       // }
       // Add connection step
       if (hasConnect) {
+        const connectionMessage = icpAnswers.linkedin_connection_template ||
+          icpAnswers.linkedin_connection_message ||
+          icpAnswers.linkedin_template ||
+          null;
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_connect',
           title: 'Send Connection Request',
-          description: 'Connect with personalized message',
+          description: connectionMessage || 'Connect with personalized message',
           channel: 'linkedin',
         });
       }
       // Add message step
       if (hasMessage) {
+        const followupMessage = icpAnswers.linkedin_followup_template ||
+          icpAnswers.linkedin_message_template ||
+          icpAnswers.linkedinMessage ||
+          icpAnswers.linkedin_message ||
+          icpAnswers.linkedin_template ||
+          'Send personalized message';
         steps.push({
           id: `step_${stepId++}`,
           type: 'linkedin_message',
           title: 'Send LinkedIn Message',
-          description: icpAnswers.linkedin_template || 'Send personalized message',
+          description: followupMessage,
           channel: 'linkedin',
         });
       }
@@ -443,6 +453,7 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
       // Get connection message from any available source (linkedin_template is from ICP flow)
       const connectionMessage = mappedAnswers.linkedinConnectionMessage || 
                                 mappedAnswers.linkedin_connection_message || 
+                                mappedAnswers.linkedin_connection_template ||
                                 mappedAnswers.linkedin_template || 
                                 null;
       steps.push({
@@ -455,11 +466,15 @@ export function generateWorkflowPreview(mappedAnswers: Record<string, any>): Wor
     }
     // Send message (after connection accepted)
     if (hasMessage) {
+      const followupMessage = mappedAnswers.linkedin_followup_template ||
+                              mappedAnswers.linkedinMessage ||
+                              mappedAnswers.linkedin_message ||
+                              'Send personalized message';
       steps.push({
         id: `step_${stepId++}`,
         type: 'linkedin_message',
         title: 'Send LinkedIn Message',
-        description: mappedAnswers.linkedinMessage || mappedAnswers.linkedin_message || 'Send personalized message',
+        description: followupMessage,
         channel: 'linkedin',
       });
     }

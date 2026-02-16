@@ -1,25 +1,23 @@
 "use client";
 import React, { JSX } from 'react';
 import { PipelineBoard } from '@/components/deals-pipeline';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { GraduationCap, TrendingUp } from 'lucide-react';
-import { PipelineSkeleton } from '@/components/skeletons';
 import PipelineStatsCards from '@/components/deals-pipeline/PipelineStatsCards';
 import { useSelector } from 'react-redux';
-import { selectPipelineBoardDataWithFilters } from '@/features/deals-pipeline/store/selector/pipelineSelectors';
+import { usePipelineStats } from '@lad/frontend-features/deals-pipeline';
+import { selectPipelineActiveFilters } from '@/store/slices/uiSlice';
 
-// Force dynamic rendering for this page due to Redux usage
+// Force dynamic rendering for this page due to Redux/Hooks usage
 export const dynamic = 'force-dynamic';
 
 export default function PipelinePage(): JSX.Element {
-  const router = useRouter();
   const { hasFeature, user, isAuthenticated } = useAuth();
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  const pipelineBoardData = useSelector(selectPipelineBoardDataWithFilters);
+  const activeFilters = useSelector(selectPipelineActiveFilters);
 
+  // Fetch real-time statistics using the SDK hook
+  // passing current filters ensures stats stay in sync with board filtering
+  const { data: stats, isLoading } = usePipelineStats(activeFilters as any);
   // Determine if this is education vertical (only after user is loaded)
   const isEducation = isAuthenticated && user ? hasFeature('education_vertical') : false;
 
@@ -30,51 +28,23 @@ export default function PipelinePage(): JSX.Element {
     icon: isEducation ? GraduationCap : TrendingUp
   };
 
-  useEffect(() => {
-    (async () => {    
-      try {
-        await getCurrentUser();
-        setAuthed(true);
-      } catch {
-        setAuthed(false);
-        const redirect = encodeURIComponent('/pipeline');
-        router.replace(`/login?redirect_url=${redirect}`);
-      }
-    })();
-  }, [router]);
-
-  if (authed === null) {
-    return <PipelineSkeleton />;
-  }
-
-  if (!authed) return <></>;
-
-  const IconComponent = labels.icon;
-
-  const stageCounts = (pipelineBoardData?.stages || []).reduce((acc: Record<string, number>, stage: any) => {
-    const label = String(stage?.label || stage?.name || stage?.key || '').toLowerCase();
-    const count = stage?.leadCount ?? stage?.leads?.length ?? 0;
-    if (label) acc[label] = (acc[label] || 0) + count;
-    return acc;
-  }, {});
-
-  const connectionSentCount = stageCounts['connection sent'] || 0;
-  const connectionAcceptedCount = stageCounts['connection accepted'] || 0;
-  const messageSentCount = stageCounts['message sent'] || 0;
-  const totalLeads = pipelineBoardData?.totalLeads || 0;
-
-  // Success count: leads with status === 'success'
-  const successCount = (pipelineBoardData?.stages || []).reduce((sum, stage) => {
-    const successLeads = (stage.leads || []).filter((lead: any) => lead.status === 'success');
-    return sum + successLeads.length;
-  }, 0);
+  // Map backend stats to Card props
+  // Handle both snake_case and camelCase from normalized SDK response
+  const totalLeads = Number(stats?.total_leads ?? stats?.totalLeads ?? 0);
+  const stageStats = stats?.leads_by_stage || {};
+  
+  // Extract specific counts needed for the cards
+  const connectionSentCount = Number(stats?.connectionsSent ?? stageStats['connection sent'] ?? 0);
+  const messageSentCount = Number(stats?.messagesSent ?? stageStats['message sent'] ?? 0);
+  
+  // Success count mapping (aliased to connectionAcceptedCount in UI cards)
+  const successCount = Number(stats?.successRate ?? stats?.leads_converted ?? stageStats['success'] ?? 0);
 
   return (
     <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
       <div className="mb-6 mt-10">
         <div className="flex items-center gap-3 mb-5">
-          {/* <IconComponent className="h-8 w-8 text-blue-600" /> */}
           <div>
             <h1 className="text-3xl font-bold text-[#1e293b]">{labels.title}</h1>
             <p className="text-[#6b7280]">{labels.subtitle}</p>
@@ -82,7 +52,7 @@ export default function PipelinePage(): JSX.Element {
         </div>
 
         <PipelineStatsCards
-          loading={authed === null}
+          loading={isLoading}
           totalLeads={totalLeads}
           connectionSentCount={connectionSentCount}
           connectionAcceptedCount={successCount}

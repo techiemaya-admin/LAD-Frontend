@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, RadioTower } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import CreateCampaignDialog from '@/components/campaigns/CreateCampaignDialog';
 import { 
   startCampaign
 } from '@lad/frontend-features/campaigns';
+import { Goal } from 'lucide-react';
 
 export default function CampaignsListPage() {
   const router = useRouter();
@@ -107,9 +108,13 @@ export default function CampaignsListPage() {
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
-            Campaigns
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <RadioTower className="w-8 h-8 text-[#1E293B]"/>
+            <Goal className="w-8 h-8 text-[#1E293B]"/>
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+              Campaigns
+            </h1>
+          </div>
           <p className="text-sm text-[#64748B] ml-2">
             Manage your multi-channel outreach campaigns
           </p>

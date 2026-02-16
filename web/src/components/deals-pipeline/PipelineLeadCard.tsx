@@ -241,9 +241,102 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const cardRef = useRef<HTMLDivElement>(null);
+  const leadNameRef = useRef<HTMLParagraphElement>(null);
+  const leadNameScrollRafRef = useRef<number | null>(null);
+  const leadNameScrollStateRef = useRef<{ direction: 'forward' | 'backward'; maxScroll: number; el: HTMLElement | null }>({ direction: 'forward', maxScroll: 0, el: null });
+
+  const animateHorizontalScrollInfinite = useCallback((el: HTMLElement, maxScroll: number): void => {
+    // Cancel any existing animation first
+    if (leadNameScrollRafRef.current !== null) {
+      cancelAnimationFrame(leadNameScrollRafRef.current);
+      leadNameScrollRafRef.current = null;
+    }
+
+    // If there's nothing to scroll, don't animate
+    if (maxScroll <= 0) {
+      el.scrollLeft = 0;
+      return;
+    }
+
+    leadNameScrollStateRef.current = { direction: 'forward', maxScroll, el };
+
+    // Slower speed: duration for full travel (in ms) - increased for slower animation
+    const durationMs = 2800;
+
+    let lastTime: number | null = null;
+    let progress = 0; // 0 to 1 for forward, 1 to 0 for backward
+
+    const tick = (now: number) => {
+      const state = leadNameScrollStateRef.current;
+      if (state.el !== el) return; // stale callback
+
+      if (lastTime === null) {
+        lastTime = now;
+      }
+
+      const dt = now - lastTime;
+      lastTime = now;
+
+      // Update progress based on direction
+      if (state.direction === 'forward') {
+        progress += dt / durationMs;
+        if (progress >= 1) {
+          progress = 1;
+          state.direction = 'backward';
+        }
+      } else {
+        progress -= dt / durationMs;
+        if (progress <= 0) {
+          progress = 0;
+          state.direction = 'forward';
+        }
+      }
+
+      // Ease in-out for smooth feel
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      el.scrollLeft = eased * maxScroll;
+
+      // Continue animation
+      leadNameScrollRafRef.current = requestAnimationFrame(tick);
+    };
+
+    leadNameScrollRafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const stopHorizontalScroll = useCallback((el: HTMLElement): void => {
+    if (leadNameScrollRafRef.current !== null) {
+      cancelAnimationFrame(leadNameScrollRafRef.current);
+      leadNameScrollRafRef.current = null;
+    }
+    // Smoothly return to start
+    const from = el.scrollLeft;
+    const durationMs = 600;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.scrollLeft = from * (1 - eased);
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (leadNameScrollRafRef.current !== null) {
+        cancelAnimationFrame(leadNameScrollRafRef.current);
+      }
+    };
+  }, []);
   // Critical: Don't disable sortable - use handle strategy instead to prevent re-initialization issues
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: lead.id,
+    id: String(lead.id),
     data: { type: 'lead', lead },
     disabled: isPreview // Only disable for preview, NOT for dialog state
   });
@@ -506,7 +599,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     return { filename: String(filename), url };
   };
   const handleDownloadAttachment = async (rawAttachment: any) => {
-    const { filename, url } = resolveAttachmentNameAndUrl(rawAttachment);
+    const { filename, url } = resolveAttachmentNameAndUrl(rawAttachment as any);
     if (!url) {
       showSnackbar('Attachment URL missing', 'error');
       return;
@@ -1814,13 +1907,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         role="button"
         tabIndex={0}
       >
-        {/* <div className="absolute top-0 left-0 h-1 w-full rounded-t-2xl bg-gray-100 overflow-hidden">
-          <div
-            className="h-full transition-all duration-300"
-            style={{ width: `${getProgressValue()}%` }}
-          />
-        </div> */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 group">
           {/* CRITICAL: Apply drag listeners ONLY to drag handle */}
           <button
             type="button"
@@ -1834,37 +1921,58 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </button>
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-start gap-2">
-              <p className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 min-w-0">
+              <p
+                ref={leadNameRef}
+                onMouseEnter={() => {
+                  const el = leadNameRef.current;
+                  if (!el) return;
+                  const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+                  animateHorizontalScrollInfinite(el, maxScroll);
+                }}
+                onMouseLeave={() => {
+                  const el = leadNameRef.current;
+                  if (!el) return;
+                  stopHorizontalScroll(el);
+                }}
+                className="text-sm font-semibold text-gray-900 flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis group-hover:overflow-x-auto group-hover:text-clip [scrollbar-width:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar-thumb]:bg-transparent"
+              >
                 {getLeadDisplayName(lead)}
               </p>
-              {/* <div className="flex items-center gap-1 text-xs text-gray-500" title={`Success Probability: ${probability}%`}>
-                <Progress value={probability} className="h-2 w-16" />
-                <span>{probability}%</span>
-              </div> */}
             </div>
-            {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
-              <p className="text-xs text-gray-500 flex items-center gap-1">
-                <Building2 className="h-3.5 w-3.5" />
-                {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}
-              </p>
+            {activityData.length > 0 && (
+              <span
+                className={`text-xs flex items-center gap-1 ${trendValue > 0 ? 'text-green-500' : 'text-red-500'}`}
+                title="Activity trend"
+              >
+                {trendValue > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              </span>
             )}
           </div>
-          {activityData.length > 0 && (
-            <span
-              className={`text-xs flex items-center gap-1 ${trendValue > 0 ? 'text-green-500' : 'text-red-500'}`}
-              title="Activity trend"
-            >
-              {trendValue > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            </span>
-          )}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" data-ignore-card-click className="focus:outline-none">
-                <Badge className="text-xs flex items-center gap-1" style={{ backgroundColor: '#172560', color: 'white' }}>
-                  {getStatusIcon(currentStatus)}
-                  {getStatusLabel(currentStatus, statusOptions)}
-                </Badge>
+                {(() => {
+                  const status = String(currentStatus || '').toLowerCase();
+                  const isSuccess = ['won', 'closed', 'success', 'converted', 'active'].includes(status);
+                  const isFailed = ['lost', 'failed', 'rejected', 'inactive', 'cancelled'].includes(status);
+                  const isNew = ['new'].includes(status);
+                  
+                  let badgeClass = 'text-xs flex items-center gap-1 capitalize bg-primary/10 text-primary';
+                  if (isSuccess) {
+                    badgeClass = 'text-xs flex items-center gap-1 capitalize bg-green-100 text-green-600';
+                  } else if (isFailed) {
+                    badgeClass = 'text-xs flex items-center gap-1 capitalize bg-red-100 text-red-600';
+                  } else if (isNew) {
+                    badgeClass = 'text-xs flex items-center gap-1 capitalize bg-violet-100 text-violet-600';
+                  }
+                  
+                  return (
+                    <Badge className={badgeClass}>
+                      {getStatusIcon(currentStatus)}
+                      {getStatusLabel(currentStatus, statusOptions)}
+                    </Badge>
+                  );
+                })()}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[180px]">
@@ -1923,27 +2031,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         {showDetails && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap justify-between gap-3 text-sm text-gray-700">
-              <span className="flex items-center gap-1 font-semibold text-green-600">
+              {/* <span className="flex items-center gap-1 font-semibold text-green-600">
                 <DollarSign className="h-4 w-4" />
                 {formatCurrency((lead.amount as number) || 0)}
-              </span>
-              {normalizeDisplayValue(
-                getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source,
-                ''
-              ) && (
-                <PipelineBadge
-                  source={normalizeDisplayValue(
-                    getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source
-                  )}
-                  showLabel={false}
-                />
-              )}
-              {normalizeDisplayValue((lead as any)?.phone || lead.phone, '') && (
-                <span className="text-xs text-gray-500 flex items-center gap-1 justify-end" title="Phone">
-                  <Phone className="h-3.5 w-3.5" />
-                  {normalizeDisplayValue((lead as any)?.phone || lead.phone)}
-                </span>
-              )}
+              </span> */}
               {(lead.closeDate as string | undefined) && (
                 <span
                   className={`flex items-center gap-1 text-xs ${
@@ -1959,15 +2050,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
 
             {(lead.description as string | undefined) && (
               <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
-            )}
-            {allTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {allTags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
             )}
           </div>
           
@@ -1997,9 +2079,47 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 {attachments.length}
               </span>
             )}
+             {normalizeDisplayValue(
+                getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source,
+                ''
+              ) && (
+                <PipelineBadge
+                  source={normalizeDisplayValue(
+                    getOptionLabel(sourceOptions, String((lead as any)?.source || undefined)) || (lead as any)?.source
+                  )}
+                  showLabel={false}
+                />
+              )}
+            {/* Separator line between source and temperature badges */}
+            {(() => {
+              // Check for temperature in tags or priority
+              const tags = Array.isArray(lead.tags) ? lead.tags : [];
+              const priority = String(lead.priority || '').toLowerCase();
+              const allTags = tags.map((t: string) => t.toLowerCase());
+              
+              let temperature: string | null = null;
+              // Check for hot/warm/cold in tags (handles "Cold Lead", "Hot Prospect", etc.)
+              const hasHot = allTags.some((t: string) => t.includes('hot'));
+              const hasWarm = allTags.some((t: string) => t.includes('warm'));
+              const hasCold = allTags.some((t: string) => t.includes('cold'));
+              
+              if (hasHot || priority === 'hot') temperature = 'Hot';
+              else if (hasWarm || priority === 'warm') temperature = 'Warm';
+              else if (hasCold || priority === 'cold') temperature = 'Cold';
+              
+              return temperature ? (
+                <>
+                  <div className="w-px h-4 bg-gray-200" />
+                  <PipelineBadge
+                    source={temperature}
+                    showLabel={false}
+                  />
+                </>
+              ) : null;
+            })()}
           </div>
         </div>
-        </div>
+      </div>
       {renderDetailsDialog()}
       <Dialog open={deleteDialogOpen}>
         <DialogContent showCloseButton={false} className="p-6 pt-2">

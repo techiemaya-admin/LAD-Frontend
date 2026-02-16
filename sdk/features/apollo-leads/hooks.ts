@@ -19,26 +19,21 @@ import type {
   ApolloPerson
 } from './types';
 import * as apolloApi from './api';
-// Try to import feature flags helper (when integrated into LAD)
-let isFeatureEnabled: (feature: string) => boolean;
-try {
-  isFeatureEnabled = require('../../featureFlags').isFeatureEnabled;
-} catch {
-  // Fallback for standalone feature repo
-  isFeatureEnabled = () => true;
-}
+import { isFeatureEnabled } from '../../shared/featureFlags';
 export const useApolloLeads = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchCompanies = useCallback(async (
     params: ApolloSearchParams
   ): Promise<ApolloSearchResponse> => {
-    if (!isFeatureEnabled('apollo_leads')) {
-      throw new Error('Apollo Leads feature is not enabled');
-    }
     setLoading(true);
     setError(null);
     try {
+      // Check feature flag
+      const featureEnabled = await isFeatureEnabled('apollo_leads');
+      if (!featureEnabled) {
+        throw new Error('Apollo Leads feature is not enabled');
+      }
       return await apolloApi.searchCompanies(params);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -49,12 +44,14 @@ export const useApolloLeads = () => {
     }
   }, []);
   const getCompanyDetails = useCallback(async (companyId: string): Promise<ApolloCompany> => {
-    if (!isFeatureEnabled('apollo_leads')) {
-      throw new Error('Apollo Leads feature is not enabled');
-    }
     setLoading(true);
     setError(null);
     try {
+      // Check feature flag
+      const featureEnabled = await isFeatureEnabled('apollo_leads');
+      if (!featureEnabled) {
+        throw new Error('Apollo Leads feature is not enabled');
+      }
       return await apolloApi.getCompanyDetails(companyId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -67,12 +64,14 @@ export const useApolloLeads = () => {
   const searchEmployees = useCallback(async (
     params: ApolloEmployeeSearchParams
   ): Promise<ApolloEmployeeSearchResponse> => {
-    if (!isFeatureEnabled('apollo_leads')) {
-      throw new Error('Apollo Leads feature is not enabled');
-    }
     setLoading(true);
     setError(null);
     try {
+      // Check feature flag
+      const featureEnabled = await isFeatureEnabled('apollo_leads');
+      if (!featureEnabled) {
+        throw new Error('Apollo Leads feature is not enabled');
+      }
       return await apolloApi.searchEmployees(params);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -83,12 +82,14 @@ export const useApolloLeads = () => {
     }
   }, []);
   const revealEmail = useCallback(async (personId: string): Promise<string> => {
-    if (!isFeatureEnabled('apollo_leads')) {
-      throw new Error('Apollo Leads feature is not enabled');
-    }
     setLoading(true);
     setError(null);
     try {
+      // Check feature flag
+      const featureEnabled = await isFeatureEnabled('apollo_leads');
+      if (!featureEnabled) {
+        throw new Error('Apollo Leads feature is not enabled');
+      }
       return await apolloApi.revealEmail(personId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -99,12 +100,14 @@ export const useApolloLeads = () => {
     }
   }, []);
   const revealPhone = useCallback(async (personId: string): Promise<string> => {
-    if (!isFeatureEnabled('apollo_leads')) {
-      throw new Error('Apollo Leads feature is not enabled');
-    }
     setLoading(true);
     setError(null);
     try {
+      // Check feature flag
+      const featureEnabled = await isFeatureEnabled('apollo_leads');
+      if (!featureEnabled) {
+        throw new Error('Apollo Leads feature is not enabled');
+      }
       return await apolloApi.revealPhone(personId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -141,4 +144,4 @@ export const useApolloLeads = () => {
     // Utilities
     clearError: () => setError(null)
   };
-};
+};

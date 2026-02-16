@@ -20,6 +20,7 @@ import type {
   UpdateStageParams,
   ReorderStagesParams,
   PipelineData,
+  PaginatedLeads,
   PipelineStats,
   Note,
   CreateNoteParams,
@@ -62,6 +63,28 @@ export async function getLeads(filters?: LeadFilters): Promise<Lead[]> {
     ? `/api/deals-pipeline/leads?${queryString}`
     : "/api/deals-pipeline/leads";
   const response = await apiGet<Lead[]>(url);
+  return response.data;
+}
+
+/**
+ * Get leads with pagination
+ */
+export async function getPaginatedLeads(
+  filters?: LeadFilters
+): Promise<PaginatedLeads> {
+  const query = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.append(key, String(value));
+      }
+    });
+  }
+  const queryString = query.toString();
+  const url = queryString
+    ? `/api/deals-pipeline/leads?${queryString}`
+    : "/api/deals-pipeline/leads";
+  const response = await apiGet<PaginatedLeads>(url);
   return response.data;
 }
 
@@ -239,8 +262,10 @@ export async function reorderStages(
 /**
  * Get complete pipeline board data (stages + leads)
  */
-export async function getPipelineData(): Promise<PipelineData> {
-  const response = await apiGet<PipelineData>("/api/deals-pipeline/pipeline/board");
+export async function getPipelineData(page: number = 1, limit: number = 50): Promise<PipelineData> {
+  const response = await apiGet<PipelineData>("/api/deals-pipeline/pipeline/board", {
+    params: { page, limit }
+  });
   const data = response.data;
 
   // Normalize leads
@@ -267,9 +292,31 @@ export async function getPipelineData(): Promise<PipelineData> {
 /**
  * Get pipeline overview/statistics
  */
-export async function getPipelineStats(): Promise<PipelineStats> {
-  const response = await apiGet<PipelineStats>("/api/deals-pipeline/leads/stats");
-  return response.data;
+export async function getPipelineStats(filters?: LeadFilters): Promise<PipelineStats> {
+  const query = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.append(key, String(value));
+      }
+    });
+  }
+  const queryString = query.toString();
+  const url = queryString
+    ? `/api/deals-pipeline/pipeline/stats?${queryString}`
+    : "/api/deals-pipeline/pipeline/stats";
+    
+  const response = await apiGet<any>(url);
+  const data = response.data;
+
+  // Normalize stats (handle both snake_case and camelCase from backend)
+  return {
+    total_leads: data.total_leads ?? data.totalLeads ?? 0,
+    total_value: data.total_value ?? data.totalValue ?? 0,
+    leads_by_stage: data.leads_by_stage ?? data.leadsByStage ?? {},
+    value_by_stage: data.value_by_stage ?? data.valueByStage ?? {},
+    ...data
+  } as PipelineStats;
 }
 
 /**

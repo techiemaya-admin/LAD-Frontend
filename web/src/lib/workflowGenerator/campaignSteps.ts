@@ -116,6 +116,7 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
       // Get connection message from any available source (linkedin_template is from ICP flow)
       const connectionMessage = mappedAnswers.linkedinConnectionMessage || 
                                 mappedAnswers.linkedin_connection_message || 
+                                mappedAnswers.linkedin_connection_template || 
                                 mappedAnswers.linkedin_template || 
                                 null;
       steps.push({
@@ -143,7 +144,8 @@ export function generateCampaignSteps(mappedAnswers: Record<string, any>): Array
              actionStr === 'send_message_after_accepted';
     });
     if (hasMessageAction) {
-      const messageTemplate = mappedAnswers.linkedinMessage || 
+      const messageTemplate = mappedAnswers.linkedin_followup_template ||
+                            mappedAnswers.linkedinMessage || 
                             mappedAnswers.linkedin_message || 
                             mappedAnswers.linkedinTemplate || 
                             mappedAnswers.linkedin_template;

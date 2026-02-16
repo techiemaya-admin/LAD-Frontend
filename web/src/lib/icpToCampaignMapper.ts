@@ -22,6 +22,8 @@ export interface ICPAnswers {
   voice_actions?: string | string[];
   // Platform-specific templates
   linkedin_template?: string;
+  linkedin_connection_template?: string;
+  linkedin_followup_template?: string;
   whatsapp_template?: string;
   email_template?: string;
   voice_template?: string;
@@ -56,6 +58,10 @@ export interface CampaignFormattedAnswers {
   voice_actions?: string[];
   // Platform templates
   linkedin_template?: string;
+  linkedin_connection_template?: string;
+  linkedin_followup_template?: string;
+  linkedinConnectionMessage?: string;
+  linkedinMessage?: string;
   whatsapp_template?: string;
   email_template?: string;
   voice_template?: string;
@@ -193,6 +199,33 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
   }
   
   // Map platform templates (keep as strings)
+  // LinkedIn connection template (new key from ICP chat)
+  if (icpAnswers.linkedin_connection_template) {
+    const linkedinConnectionTemplate = String(icpAnswers.linkedin_connection_template).trim();
+    if (linkedinConnectionTemplate.toLowerCase() !== 'skip' && linkedinConnectionTemplate.length > 0) {
+      mapped.linkedin_connection_template = linkedinConnectionTemplate;
+      // Also set as connection message for linkedin_connect step (if not already set)
+      if (!mapped.linkedinConnectionMessage) {
+        mapped.linkedinConnectionMessage = linkedinConnectionTemplate;
+      }
+    }
+  }
+  
+  // LinkedIn followup template (new key from ICP chat)
+  if (icpAnswers.linkedin_followup_template || icpAnswers.linkedin_message_template) {
+    const linkedinFollowupTemplate = String(
+      icpAnswers.linkedin_followup_template || icpAnswers.linkedin_message_template
+    ).trim();
+    if (linkedinFollowupTemplate.length > 0) {
+      mapped.linkedin_followup_template = linkedinFollowupTemplate;
+      // Also set as linkedinMessage for send_message step
+      if (!mapped.linkedinMessage) {
+        mapped.linkedinMessage = linkedinFollowupTemplate;
+      }
+    }
+  }
+  
+  // Legacy: Map old linkedin_template key (for backwards compatibility)
   if (icpAnswers.linkedin_template) {
     const linkedinTemplate = String(icpAnswers.linkedin_template).trim();
     // Skip if user typed "skip" - they want connection without message

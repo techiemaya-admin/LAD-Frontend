@@ -162,7 +162,9 @@ function getCompletedPlatforms(allCollectedAnswers: Record<string, any>): string
   const actionRequiresTemplate = (platform: string, actions: string): boolean => {
     const actionsLower = String(actions || '').toLowerCase();
     if (platform === 'linkedin') {
-      return actionsLower.includes('message') && (actionsLower.includes('after accepted') || actionsLower.includes('send message'));
+      const hasConnection = actionsLower.includes('connection') && actionsLower.includes('request');
+      const hasFollowup = actionsLower.includes('message') && (actionsLower.includes('after accepted') || actionsLower.includes('send message'));
+      return hasConnection || hasFollowup;
     }
     if (platform === 'whatsapp') {
       return actionsLower.includes('message') || actionsLower.includes('broadcast');
@@ -178,26 +180,63 @@ function getCompletedPlatforms(allCollectedAnswers: Record<string, any>): string
   // Remove platforms that have actions but need templates and don't have them
   completedPlatforms = completedPlatforms.filter((p) => {
     const actionsKey = `${p}_actions`;
-    const templateKey = `${p}_template`;
     const hasActions = allCollectedAnswers[actionsKey] !== undefined && String(allCollectedAnswers[actionsKey]).trim() !== '';
-    const hasTemplate = allCollectedAnswers[templateKey] !== undefined;
-    if (hasActions) {
-      const needsTemplate = actionRequiresTemplate(p, String(allCollectedAnswers[actionsKey] || ''));
-      return !needsTemplate || hasTemplate;
+    if (!hasActions) return true;
+
+    const actionsLower = String(allCollectedAnswers[actionsKey] || '').toLowerCase();
+    if (p === 'linkedin') {
+      const hasConnection = actionsLower.includes('connection') && actionsLower.includes('request');
+      const hasFollowup = actionsLower.includes('message') && (actionsLower.includes('after accepted') || actionsLower.includes('send message'));
+      const hasConnectionTemplate = allCollectedAnswers.linkedin_connection_template !== undefined ||
+        allCollectedAnswers.linkedin_template !== undefined ||
+        allCollectedAnswers.linkedin_connection_message !== undefined;
+      const hasFollowupTemplate = allCollectedAnswers.linkedin_followup_template !== undefined ||
+        allCollectedAnswers.linkedin_message_template !== undefined ||
+        allCollectedAnswers.linkedin_message !== undefined;
+      const needsTemplate = actionRequiresTemplate(p, actionsLower);
+      if (!needsTemplate) return true;
+      if (hasConnection && hasFollowup) {
+        return hasConnectionTemplate && hasFollowupTemplate;
+      }
+      if (hasFollowup) return hasFollowupTemplate;
+      if (hasConnection) return hasConnectionTemplate;
     }
-    return true;
+
+    const templateKey = `${p}_template`;
+    const hasTemplate = allCollectedAnswers[templateKey] !== undefined;
+    const needsTemplate = actionRequiresTemplate(p, String(allCollectedAnswers[actionsKey] || ''));
+    return !needsTemplate || hasTemplate;
   });
   // Add platforms that have actions and (no template needed OR template provided) but aren't in completed yet
   ['linkedin', 'whatsapp', 'email', 'voice'].forEach((p) => {
     const actionsKey = `${p}_actions`;
-    const templateKey = `${p}_template`;
     const hasActions = allCollectedAnswers[actionsKey] !== undefined && String(allCollectedAnswers[actionsKey]).trim() !== '';
-    const hasTemplate = allCollectedAnswers[templateKey] !== undefined;
-    if (!completedPlatforms.includes(p) && hasActions) {
-      const needsTemplate = actionRequiresTemplate(p, String(allCollectedAnswers[actionsKey] || ''));
-      if (!needsTemplate || hasTemplate) {
+    if (!hasActions || completedPlatforms.includes(p)) return;
+
+    const actionsLower = String(allCollectedAnswers[actionsKey] || '').toLowerCase();
+    if (p === 'linkedin') {
+      const hasConnection = actionsLower.includes('connection') && actionsLower.includes('request');
+      const hasFollowup = actionsLower.includes('message') && (actionsLower.includes('after accepted') || actionsLower.includes('send message'));
+      const hasConnectionTemplate = allCollectedAnswers.linkedin_connection_template !== undefined ||
+        allCollectedAnswers.linkedin_template !== undefined ||
+        allCollectedAnswers.linkedin_connection_message !== undefined;
+      const hasFollowupTemplate = allCollectedAnswers.linkedin_followup_template !== undefined ||
+        allCollectedAnswers.linkedin_message_template !== undefined ||
+        allCollectedAnswers.linkedin_message !== undefined;
+      const needsTemplate = actionRequiresTemplate(p, actionsLower);
+      if (!needsTemplate || (hasConnection && hasFollowup && hasConnectionTemplate && hasFollowupTemplate) ||
+        (hasFollowup && !hasConnection && hasFollowupTemplate) ||
+        (hasConnection && !hasFollowup && hasConnectionTemplate)) {
         completedPlatforms.push(p);
       }
+      return;
+    }
+
+    const templateKey = `${p}_template`;
+    const hasTemplate = allCollectedAnswers[templateKey] !== undefined;
+    const needsTemplate = actionRequiresTemplate(p, String(allCollectedAnswers[actionsKey] || ''));
+    if (!needsTemplate || hasTemplate) {
+      completedPlatforms.push(p);
     }
   });
   return completedPlatforms;
