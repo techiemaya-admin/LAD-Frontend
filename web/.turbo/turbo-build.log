@@ -1,25 +1,22 @@
 
+
 > frontend@0.1.1 build
 > next build
 
-▲ Next.js 16.1.6 (Turbopack)
+[1G[0K[1m[38;2;173;127;168m▲ Next.js 16.1.6[39m[22m (Turbopack)
 - Environments: .env
 - Experiments (use with caution):
-  ✓ externalDir
+  [1m✓[22m externalDir
 
-⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-  Creating an optimized production build ...
-✓ Compiled successfully in 14.0s
-  Skipping validation of types
-  Collecting page data using 9 workers ...
-  Generating static pages using 9 workers (0/24) ...
-  Generating static pages using 9 workers (6/24) 
-  Generating static pages using 9 workers (12/24) 
-  Generating static pages using 9 workers (18/24) 
-✓ Generating static pages using 9 workers (24/24) in 128.6ms
-  Finalizing page optimization ...
+[33m[1m⚠[22m[39m The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[37m[1m [22m[39m Creating an optimized production build ...
+[32m[1m✓[22m[39m Compiled successfully in 9.8s
+[37m[1m [22m[39m Skipping validation of types
+[?25l[37m[1m [22m[39m Collecting page data using 9 workers  [36m.[39m[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m..[39m[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m...[39m[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m.[39m[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m..[39m[2K[1G[?25h[37m[1m [22m[39m Collecting page data using 9 workers in 952.1ms    [32m[1m✓[22m[39m Collecting page data using 9 workers in 952.1ms 
+[?25l[37m[1m [22m[39m Generating static pages using 9 workers (0/24)  [36m[    ][39m[2K[1G[?25h[32m[1m✓[22m[39m Generating static pages using 9 workers (24/24) in 152.5ms
+[?25l[37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G[37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G[37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G[?25h[37m[1m [22m[39m Finalizing page optimization in 454.7ms    [32m[1m✓[22m[39m Finalizing page optimization in 454.7ms 
 
-Route (app)
+[4mRoute (app)[24m
 ┌ ƒ /
 ├ ƒ /_not-found
 ├ ƒ /api/[feature]/[...path]
@@ -80,3 +77,4 @@ Route (app)
 
 ƒ  (Dynamic)  server-rendered on demand
 
+[?25h[1G[0K⠙[1G[0K

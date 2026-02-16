@@ -589,8 +589,14 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             // Get connection message from any of these sources (linkedin_template is from ICP flow)
             connectionMessage: mappedAnswers.linkedinConnectionMessage || 
                               mappedAnswers.linkedin_connection_message || 
+                              mappedAnswers.linkedin_connection_template || 
                               mappedAnswers.linkedin_template || 
                               null,
+            // Store followup message separately for send_message step
+            followupMessage: mappedAnswers.linkedin_followup_template ||
+                            mappedAnswers.linkedinMessage ||
+                            mappedAnswers.linkedin_message ||
+                            null,
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
