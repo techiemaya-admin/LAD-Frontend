@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { RefreshCw, Filter, Loader2 } from 'lucide-react';
+import { RefreshCw, Filter, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 interface LiveActivityTableProps {
@@ -27,14 +27,28 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 }) => {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
-  const { activities, isLoading, isConnected, error, refresh } = useCampaignActivityFeed(
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [platformFilter, actionFilter]);
+
+  const offset = (currentPage - 1) * pageSize;
+
+  const { activities, isLoading, isConnected, error, refresh, total } = useCampaignActivityFeed(
     campaignId,
     {
       limit: pageSize,
+      offset: offset,
       platform: platformFilter !== 'all' ? platformFilter : undefined,
       actionType: actionFilter !== 'all' ? actionFilter : undefined
     }
   );
+
+  const totalPages = Math.ceil(total / pageSize);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
   const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status?.toLowerCase()) {
       case 'success':
@@ -248,6 +262,68 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </TableBody>
         </Table>
       </div>
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-2">
+          <p className="text-sm text-muted-foreground">
+            Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total} results
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={!hasPrevPage}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                // Show first page, last page, current page, and pages around current
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  );
+                }
+                // Show ellipsis
+                if (page === currentPage - 2 || page === currentPage + 2) {
+                  return (
+                    <span key={`ellipsis-${page}`} className="text-muted-foreground px-1">
+                      ...
+                    </span>
+                  );
+                }
+                return null;
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={!hasNextPage}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
