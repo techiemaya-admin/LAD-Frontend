@@ -110,10 +110,9 @@ export const LinkedInIntegration: React.FC = () => {
         if (tenantId) {
           const tenantRoom = `tenant:${tenantId}`;
           socket.emit('join', tenantRoom);
-          console.log('[Socket.IO] Joined tenant room:', tenantRoom);
         }
       } catch (e) {
-        console.error('[Socket.IO] Failed to parse user data:', e);
+        // Failed to parse user data
       }
     }
 
@@ -127,7 +126,6 @@ export const LinkedInIntegration: React.FC = () => {
       needsReconnect?: boolean;
       timestamp: string;
     }) => {
-      console.log('[Socket.IO] Account status update received:', data);
 
       const newStatus = data.status || data.dbStatus;
       const isActive = newStatus === 'active' || newStatus === 'connected';
@@ -158,8 +156,6 @@ export const LinkedInIntegration: React.FC = () => {
                                 currentCheckpointAccount.unipileAccount?.id === data.accountId;
         
         if (isCurrentAccount) {
-          console.log('[Socket.IO] Checkpoint resolved! Auto-closing modal');
-          
           // Stop polling if active
           if (yesNoPolling) {
             clearInterval(yesNoPolling);
@@ -191,26 +187,22 @@ export const LinkedInIntegration: React.FC = () => {
       if (data.needsReconnect) {
         const accountName = data.accountName || data.profileName || 'LinkedIn Account';
         alert(`⚠️ LinkedIn Account Update: ${accountName} needs reconnection. Please reconnect to continue using this account.`);
-      } else if (isActive) {
-        const accountName = data.accountName || data.profileName || 'Account';
-        console.log(`✅ ${accountName} is now active`);
       }
     });
 
     socket.on('connect', () => {
-      console.log('[Socket.IO] Connected to server');
+      // Connected to server
     });
 
     socket.on('disconnect', () => {
-      console.log('[Socket.IO] Disconnected from server');
+      // Disconnected from server
     });
 
     socket.on('connect_error', (error) => {
-      console.error('[Socket.IO] Connection error:', error);
+      // Connection error
     });
 
     return () => {
-      console.log('[Socket.IO] Cleaning up connection');
       socket.disconnect();
     };
   }, []); // Run once on mount
@@ -220,8 +212,6 @@ export const LinkedInIntegration: React.FC = () => {
   useEffect(() => {
     // If we have a Yes/No checkpoint, start polling as fallback (webhook should handle this)
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
-      console.log('[LinkedIn] Starting auto-detection polling for IN_APP_VALIDATION checkpoint');
-      
       const pollInterval = setInterval(async () => {
         try {
           const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
@@ -233,8 +223,6 @@ export const LinkedInIntegration: React.FC = () => {
           const data = await response.json();
           // If checkpoint is resolved (user clicked Yes on mobile), auto-login
           if (data.connected || data.status === 'connected' || (data.checkpoint && !data.checkpoint.required)) {
-            console.log('[LinkedIn] Auto-detection: User approved in mobile app! Connecting account...');
-            
             // Stop polling
             if (yesNoPolling) {
               clearInterval(yesNoPolling);
@@ -258,7 +246,7 @@ export const LinkedInIntegration: React.FC = () => {
             }, 2000);
           }
         } catch (error) {
-          console.error('[LinkedIn Integration] Error polling checkpoint status:', error);
+          // Error polling checkpoint status
         }
       }, 2000); // Poll every 2 seconds for fast detection
       setYesNoPolling(pollInterval);
@@ -302,9 +290,9 @@ export const LinkedInIntegration: React.FC = () => {
     } catch (error: any) {
       // Silently handle timeout - don't log as error since it's expected when backend is slow/unavailable
       if (error?.timeout) {
-        console.warn('[LinkedIn Integration] Request timed out - LinkedIn service may be unavailable');
+        // Request timed out - LinkedIn service may be unavailable
       } else {
-        console.error('[LinkedIn Integration] Error checking connection:', error);
+        // Error checking connection
       }
       // Set empty connections array to show disconnected state
       setLinkedInConnections([]);
@@ -367,7 +355,7 @@ export const LinkedInIntegration: React.FC = () => {
         }, 1500);
       }
     } catch (error) {
-      console.error('Error connecting LinkedIn:', error);
+      // Error connecting LinkedIn
       setConnectionError(error instanceof Error ? error.message : 'Failed to connect LinkedIn account');
     } finally {
       setConnecting(false);
@@ -417,7 +405,7 @@ export const LinkedInIntegration: React.FC = () => {
         setLiACookie('');
       }, 2000);
     } catch (error) {
-      console.error('Error verifying OTP:', error);
+      // Error verifying OTP
       setOtpError(error instanceof Error ? error.message : 'Failed to verify OTP');
     } finally {
       setVerifyingOtp(false);
@@ -461,7 +449,7 @@ export const LinkedInIntegration: React.FC = () => {
         setLiACookie('');
       }, 2000);
     } catch (error) {
-      console.error('Error solving checkpoint:', error);
+      // Error solving checkpoint
       setOtpError(error instanceof Error ? error.message : `Failed to submit ${answer} answer`);
     } finally {
       setVerifyingOtp(false);
@@ -502,7 +490,7 @@ export const LinkedInIntegration: React.FC = () => {
       setLinkedInConnections(prev => prev.filter(conn => conn.id !== accountId));
       alert('LinkedIn account disconnected successfully');
     } catch (error) {
-      console.error('Error disconnecting LinkedIn:', error);
+      // Error disconnecting LinkedIn
       alert(error instanceof Error ? error.message : 'Failed to disconnect LinkedIn account');
     } finally {
       setDisconnecting(prev => ({ ...prev, [disconnectKey]: false }));
@@ -543,7 +531,7 @@ export const LinkedInIntegration: React.FC = () => {
         setConnectionSuccess(false);
       }, 2000);
     } catch (error) {
-      console.error('Error reconnecting LinkedIn:', error);
+      // Error reconnecting LinkedIn
       setConnectionError(error instanceof Error ? error.message : 'Failed to reconnect LinkedIn account');
       // Open modal if error suggests credentials needed
       if (error instanceof Error && (error.message.includes('provide') || error.message.includes('credentials'))) {
