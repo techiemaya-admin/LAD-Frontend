@@ -958,7 +958,7 @@ export function CallLogsTable({
         <span className="text-sm text-[#64748B]">Page size:</span>
         <Select value={perPage.toString()} onValueChange={(value) => {
           const newSize = parseInt(value, 10);
-          onPageSizeChange?.(newSize);
+          onPageChange?.(newSize);
           // Reset to page 1 when page size changes
           onPageChange?.(1);
         }}>
