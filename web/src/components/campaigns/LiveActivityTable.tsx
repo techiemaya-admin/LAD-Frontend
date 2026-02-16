@@ -106,11 +106,11 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Actions</SelectItem>
-              <SelectItem value="connection_request">Connection Request</SelectItem>
-              <SelectItem value="message">Message</SelectItem>
-              <SelectItem value="call">Call</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="reply">Reply</SelectItem>
+              <SelectItem value="CONNECTION_SENT">Connection Sent</SelectItem>
+              <SelectItem value="PROFILE_VISITED">Profile Visited</SelectItem>
+              <SelectItem value="CONNECTION_ACCEPTED">Connection Accepted</SelectItem>
+              <SelectItem value="CONTACTED">Contacted</SelectItem>
+              <SelectItem value="REPLY_RECEIVED">Reply</SelectItem>
             </SelectContent>
           </Select>
           <TooltipProvider>
@@ -183,9 +183,21 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="text-sm font-medium">
-                        {activity.lead_name || 'Unknown'}
-                      </p>
+                      {activity.lead_linkedin ? (
+                        <a
+                          href={activity.lead_linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                          title={`View ${activity.lead_name}'s LinkedIn profile`}
+                        >
+                          {activity.lead_name || 'Unknown'}
+                        </a>
+                      ) : (
+                        <p className="text-sm font-medium">
+                          {activity.lead_name || 'Unknown'}
+                        </p>
+                      )}
                       {activity.lead_phone && (
                         <p className="text-xs text-muted-foreground">
                           {activity.lead_phone}
