@@ -10,7 +10,7 @@ import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
-  Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff, Loader2
+  Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2
 } from 'lucide-react';
 import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
