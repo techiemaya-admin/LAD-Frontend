@@ -164,7 +164,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
   if (loading) {
     return (
-      <WidgetWrapper id={id} title="Voice Agents">
+      <WidgetWrapper id={id} title="Voice Agents" icon={<Bot className="h-4 w-4" />}>
         <div className="flex items-center justify-center h-40">
           <p className="text-sm text-muted-foreground">Loading agents...</p>
         </div>
@@ -173,7 +173,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
   }
 
   return (
-    <WidgetWrapper id={id} title="Voice Agents">
+    <WidgetWrapper id={id} title="Voice Agents" icon={<Bot className="h-4 w-4" />}>
       <div className="space-y-3 h-full flex flex-col overflow-hidden">
         {agents.length === 0 ? (
           <div className="flex items-center justify-center h-40">
