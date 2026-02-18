@@ -112,7 +112,7 @@ export default function CampaignsListPage() {
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <RadioTower className="w-8 h-8 text-[#1E293B]"/>
+           
             <Goal className="w-8 h-8 text-[#1E293B]"/>
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
               Campaigns

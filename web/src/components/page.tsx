@@ -9,14 +9,16 @@ import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
-  Reply, Hand, BarChart3, Timeline, TrendingDown, Rocket, Zap, Lightbulb, 
-  Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff
+  Reply, Hand, BarChart3, TrendingDown, Rocket, Zap, Lightbulb, 
+  Megaphone, Gauge, Trophy, Moon, Sun
 } from 'lucide-react';
 import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
-import { useCampaignStatsLive } from '@lad/frontend-features/campaigns';
+import { useCampaignStats } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { Loader2 } from 'lucide-react';
+import { LiveBadge } from '@/components/LiveBadge';
+
 const platformConfig = {
   linkedin: {
     name: 'LinkedIn',
@@ -51,13 +53,12 @@ export default function CampaignAnalyticsPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { analytics, loading, error } = useCampaignAnalytics(campaignId);
   // Real-time stats
-  const { stats: liveStats, isConnected, error: statsError } = useCampaignStatsLive({ 
-    campaignId,
-    enabled: true 
-  });
+  const { stats: liveStats, error: statsError } = useCampaignStats();
+  const isConnected = !statsError && Boolean(liveStats);
+  const liveStatsAny = liveStats as any;
   useEffect(() => {
     if (error) {
-      push({ variant: 'error', title: 'Error', description: error || 'Failed to load analytics' });
+      push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
       router.push('/campaigns');
     }
   }, [error, push, router]);
@@ -158,12 +159,8 @@ export default function CampaignAnalyticsPage() {
             </div>
           </div>
           <div className="flex gap-4 items-center">
-            <Badge 
-              className={`${isConnected ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} font-semibold`}
-            >
-              {isConnected ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
-              {isConnected ? 'Live' : 'Offline'}
-            </Badge>
+            <LiveBadge isConnected={isConnected} showOffline className="font-semibold" />
+
             <Button 
               variant="ghost" 
               onClick={() => setIsDarkMode(!isDarkMode)} 
@@ -198,7 +195,7 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className={`${theme.textSecondary} text-sm mb-2`}>Total Leads</p>
-          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.leads_count ?? analytics.overview.total_leads}</h2>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStatsAny?.leads_count ?? analytics.overview.total_leads}</h2>
           <div className="flex items-center gap-1 mt-2">
             <TrendingUp className="h-4 w-4 text-emerald-500" />
             <p className="text-emerald-500 text-xs font-semibold">Active Campaign</p>
@@ -211,7 +208,7 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className={`${theme.textSecondary} text-sm mb-2`}>Messages Sent</p>
-          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.sent_count ?? analytics.overview.sent}</h2>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStatsAny?.sent_count ?? analytics.overview.sent}</h2>
           <div className="flex items-center gap-1 mt-2">
             <Zap className="h-4 w-4 text-amber-500" />
             <p className="text-amber-500 text-xs font-semibold">Outreach</p>
@@ -224,7 +221,7 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className={`${theme.textSecondary} text-sm mb-2`}>Connected</p>
-          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.connected_count ?? analytics.overview.connected}</h2>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStatsAny?.connected_count ?? analytics.overview.connected}</h2>
           <div className="flex items-center gap-1 mt-2">
             <CheckCircle className="h-4 w-4 text-blue-600" />
             <p className="text-blue-600 text-xs font-semibold">{analytics.metrics.connection_rate?.toFixed(1) ?? 0}% Rate</p>
@@ -237,7 +234,7 @@ export default function CampaignAnalyticsPage() {
             </Avatar>
           </div>
           <p className={`${theme.textSecondary} text-sm mb-2`}>Replied</p>
-          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStats?.replied_count ?? analytics.overview.replied}</h2>
+          <h2 className={`text-4xl font-extrabold ${theme.textPrimary}`}>{liveStatsAny?.replied_count ?? analytics.overview.replied}</h2>
           <div className="flex items-center gap-1 mt-2">
             <Trophy className="h-4 w-4 text-amber-500" />
             <p className="text-amber-500 text-xs font-semibold">{analytics.metrics.reply_rate?.toFixed(1) ?? 0}% Rate</p>
@@ -270,10 +267,7 @@ export default function CampaignAnalyticsPage() {
               <h2 className={`text-2xl font-bold ${theme.textPrimary}`}>Channel Performance</h2>
               <p className={`${theme.textSecondary} text-sm`}>Real-time analytics for your active channels</p>
             </div>
-            <Badge className="ml-auto bg-emerald-500/10 text-emerald-500 font-semibold animate-pulse">
-              <TrendingDown className="h-3 w-3 mr-1" />
-              Live
-            </Badge>
+            <LiveBadge isConnected={isConnected} className="ml-auto font-semibold animate-pulse text-xs" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {platformAnalytics.map((item: any) => {
