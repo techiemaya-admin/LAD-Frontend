@@ -10,7 +10,8 @@ import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
-  Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower
+  Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
+  SquarePen
 } from 'lucide-react';
 import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
@@ -279,10 +280,11 @@ export default function CampaignAnalyticsPage() {
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
-              <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
+              <ArrowLeft className="w-6 h-6" />
             </Button>
+          <div className="flex items-center gap-3 mb-3">
+            
              <RadioTower className="w-8 h-8 text-[#1E293B]"/>
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] capitalize">
               {analytics.campaign.name} 
@@ -310,6 +312,7 @@ export default function CampaignAnalyticsPage() {
             onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
             className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl"
           >
+            <SquarePen />
             Edit Campaign
           </Button>
         </div>
@@ -453,7 +456,7 @@ export default function CampaignAnalyticsPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
-                  <AvatarFallback><Lightbulb className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
+                  <AvatarFallback><Lightbulb className="w-4 h-4 " /></AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <h6 className="text-lg font-bold text-[#1E293B]">Channel Performance</h6>

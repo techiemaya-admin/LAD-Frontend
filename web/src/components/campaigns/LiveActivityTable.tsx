@@ -35,7 +35,6 @@ import {
   Clock,
   ExternalLink
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import { LiveBadge } from '@/components/LiveBadge';
@@ -74,12 +73,33 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   pageSize = 50,
 }) => {
   const { push: toast } = useToast();
+
+  const formatTimestamp = useCallback((value: string) => {
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }).format(date);
+    } catch {
+      return '-';
+    }
+  }, []);
+
   const [globalFilter, setGlobalFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [actionFilter, setActionFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+
+  const offset = (currentPage - 1) * pageSize;
 
   const {
     activities,
@@ -90,7 +110,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     total = 0,
   } = useCampaignActivityFeed(campaignId, {
     limit: pageSize,
-    offset: (currentPage - 1) * pageSize,
+    offset,
     platform: platformFilter !== 'all' ? platformFilter : undefined,
     actionType: actionFilter !== 'all' ? actionFilter : undefined,
   });
@@ -272,11 +292,11 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 >
                   <TableCell>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(activity.created_at), 'MMM dd, HH:mm:ss')}
+                      {formatTimestamp(activity.created_at)}
                     </p>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="group flex items-center gap-2">
                       <span className="text-muted-foreground">{activity.lead_name || 'Unknown'}</span>
                       {activity.lead_linkedin && (
                         <button
@@ -288,7 +308,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                               description: `LinkedIn URL copied to clipboard`,
                             });
                           }}
-                          className="p-1 rounded hover:bg-gray-100 transition-colors"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
                           title="Copy LinkedIn URL"
                         >
                           <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />

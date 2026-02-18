@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -38,9 +38,11 @@ import {
   Phone,
   LayoutGrid,
   List,
-  Calendar
+  Calendar,
+  Copy
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/components/ui/use-toast';
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
@@ -79,12 +81,10 @@ const COLUMN_LABELS: Record<string, string> = {
   stage: 'Stage',
   status: 'Status',
   priority: 'Priority',
-  amount: 'Amount',
   closeDate: 'Close Date',
   dueDate: 'Due Date',
   expectedCloseDate: 'Expected Close Date',
   source: 'Source',
-  assignee: 'Assignee',
   createdAt: 'Created Date',
   updatedAt: 'Updated Date',
   lastActivity: 'Last Activity'
@@ -179,6 +179,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Redux dispatch
   const dispatch = useDispatch();
   const router = useRouter();
+  const { toast } = useToast();
   const masterDataRequestedRef = useRef<boolean>(false);
   // Get shared state from Redux
   const globalSearchQuery = useSelector(selectPipelineSearchQuery);
@@ -369,7 +370,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       'stage',
       'status',
       'priority',
-      'amount',
       'source',
       'createdAt',
       'updatedAt',
@@ -379,10 +379,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   );
   const visibleColumnKeys = useMemo(() => {
     const ordered = DEFAULT_COLUMN_ORDER.filter(
-      (key) => key !== 'assignee' && visibleColumns[key] !== false
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] !== false
     );
     const extras = Object.keys(visibleColumns).filter(
-      (key) => key !== 'assignee' && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
     );
     return [...ordered, ...extras];
   }, [DEFAULT_COLUMN_ORDER, visibleColumns]);
@@ -406,13 +406,13 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     };
   };
   const columnWidths = getColumnWidths();
-  // Pagination state (client-side, similar to CallLogsTable)
-  const PAGE_SIZE = 20;
+  // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
   const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
     ? totalLeadsCount
     : filteredAndSortedLeads.length;
-  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / pageSize));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
   const handlePageChange = (page: number) => {
@@ -420,10 +420,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     setCurrentPage(nextPage);
   };
   const paginatedLeads = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
     return filteredAndSortedLeads.slice(startIndex, endIndex);
-  }, [filteredAndSortedLeads, currentPage]);
+  }, [filteredAndSortedLeads, currentPage, pageSize]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
@@ -489,9 +489,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     switch (column) {
       case 'name':
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1 min-w-0">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm max-w-[125px] truncate font-medium">
                 {lead.name || 'Unnamed Lead'}
               </p>
               <p className="text-xs text-gray-500 truncate">
@@ -501,16 +501,62 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       case 'email':
+        const handleCopyEmail = async () => {
+          if (lead.email) {
+            await navigator.clipboard.writeText(lead.email);
+            toast({
+              title: 'Copied!',
+              description: 'Email copied to clipboard',
+            });
+          }
+        };
         return (
-          <p className="text-sm">
-            {lead.email || '-'}
-          </p>
+          <div className="group flex items-center gap-2">
+            <p className="text-sm max-w-[125px] truncate" title={lead.email || ''}>
+              {lead.email || '-'}
+            </p>
+            {lead.email && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyEmail();
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-100 rounded"
+                title="Copy email"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         );
       case 'phone':
+        const handleCopyPhone = async () => {
+          if (lead.phone) {
+            await navigator.clipboard.writeText(lead.phone);
+            toast({
+              title: 'Copied!',
+              description: 'Phone number copied to clipboard',
+            });
+          }
+        };
         return (
-          <p className="text-sm">
-            {lead.phone || '-'}
-          </p>
+          <div className="group flex items-center gap-2">
+            <p className="text-sm max-w-[100px] truncate">
+              {lead.phone || '-'}
+            </p>
+            {lead.phone && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyPhone();
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                title="Copy phone"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         );
       case 'stage':
         // Validate that the lead's stage exists in available stages
@@ -527,8 +573,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 handleDropdownChange('stage', newValue);
               }}
             >
-              <SelectTrigger className="min-w-[120px] h-9">
-                <SelectValue placeholder="Select Stage" />
+              <SelectTrigger className="min-w-[100px] h-8 text-xs">
+                <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
                 {stages.map((stage) => (
@@ -596,30 +642,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
-      case 'amount':
-        return (
-          <p className="text-sm font-medium">
-            {formatCurrency(lead.amount)}
-          </p>
-        );
-      case 'closeDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'closeDate'))}
-          </p>
-        );
-      case 'dueDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'dueDate'))}
-          </p>
-        );
-      case 'expectedCloseDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'expectedCloseDate'))}
-          </p>
-        );
       case 'source':
         const sourceValue = (lead.source || 'unknown').toLowerCase();
         const getSourceStyles = (source: string) => {
@@ -659,48 +681,20 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
           }
         };
+        const sourceName = formatSourceName(lead.source || '');
         return (
-          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
-            {getSourceIcon(sourceValue)}
-            {formatSourceName(lead.source || '')}
-          </span>
-        );
-      case 'assignee':
-        // Only show dropdown for admin users, otherwise show read-only display
-        if (isAdmin) {
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              <Select
-                value={getAssigneeValue(lead.assignee) || ''}
-                onValueChange={(newValue) => {
-                  handleDropdownChange('assignee', newValue);
-                }}
-              >
-                <SelectTrigger className="min-w-[150px] h-9">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id || member.name} value={member.id || member._id || ''}>
-                      {member.name || member.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          );
-        }
-        // Non-admin users see read-only display
-        const assigneeDisplayName = getAssigneeDisplayName(lead.assignee);
-        return assigneeDisplayName ? (
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm truncate">{assigneeDisplayName}</p>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Unassigned
-          </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
+                  {getSourceIcon(sourceValue)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{sourceName}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       case 'createdAt':
         return (
@@ -717,7 +711,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       case 'lastActivity':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'lastActivity'))}
+            {formatDate(getFieldValue(lead, 'lastActivity') || getFieldValue(lead, 'updated_at'))}
           </p>
         );
       default:
@@ -889,7 +883,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             ? Array.from({ length: 8 }).map((_, rowIndex) => (
                 <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
                   {visibleColumnKeys.map((column) => (
-                    <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-4">
+                    <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
                       <div className="h-4 bg-gray-200 rounded w-full" />
                     </TableCell>
                   ))}
@@ -910,7 +904,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               {visibleColumnKeys.map((column) => (
                 <TableCell
                   key={column}
-                  className="py-4 whitespace-nowrap px-3"
+                  className="py-2 whitespace-nowrap px-3"
                 >
                   {renderCellContent(lead, column)}
                 </TableCell>
@@ -952,18 +946,35 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           )}
         </TableBody>
       </Table>
-      {/* Pagination Controls – Client-Side Pagination, matching CallLogsTable */}
+      {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+          <div className="flex items-center gap-4 text-sm text-[#64748B]">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+              >
+                {[5, 10, 20, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
             <span>
-              {`Showing ${((currentPage - 1) * PAGE_SIZE) + 1} to ${Math.min(currentPage * PAGE_SIZE, displayTotalRecords)} of ${displayTotalRecords} leads`}
+              {`${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="text-sm text-[#64748B]">
-              {`Page ${currentPage} of ${totalPages}`}
+              Page {currentPage} of {totalPages}
             </div>
 
             <div className="flex items-center gap-1">

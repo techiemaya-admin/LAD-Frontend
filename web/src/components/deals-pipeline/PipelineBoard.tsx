@@ -1472,7 +1472,10 @@ const PipelineBoard: React.FC = () => {
                   leads={normalizedLeads}
                   stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
                   teamMembers={[]}
-                  visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
+                  visibleColumns={Object.fromEntries(
+                    Object.entries((pipelineSettings.visibleColumns as unknown as Record<string, boolean>) || {})
+                      .filter(([key]) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key))
+                  ) as Record<string, boolean>}
                   totalLeadsCount={serverTotalLeadsCount}
                   isLoading={isLoading}
                   viewMode={viewMode}
