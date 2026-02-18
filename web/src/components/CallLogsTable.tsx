@@ -374,7 +374,7 @@ export function CallLogsTable({
         const leadName = cleanLeadName(row.original.lead_name);
         const hasLead = leadName !== "—";
         return (
-          <div className="flex items-center gap-2">
+          <div className="group flex items-center gap-2">
             <span className="text-muted-foreground">{leadName}</span>
             {hasLead && (
               <button
@@ -386,10 +386,10 @@ export function CallLogsTable({
                     description: `Lead name "${leadName}" copied to clipboard`,
                   });
                 }}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
                 title="Copy lead name"
               >
-                <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
               </button>
             )}
           </div>
@@ -648,7 +648,7 @@ export function CallLogsTable({
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+      <div className="p-4 border-b border-[#E2E8F0] bg-red">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />

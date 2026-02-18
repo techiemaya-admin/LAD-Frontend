@@ -894,7 +894,7 @@ export function CallOptions(props: CallOptionsProps) {
   };
   return (
     <Card className="rounded-2xl transition-all p-2 bg-white border border-gray-100">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-1 py-1 border border-white/30 dark:border-white/10 mb-1 -mx-2 mt-2">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-5 py-1 border border-white/30 dark:border-white/10 mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           <BrainCircuit className="w-5 h-5 inline mr-2" /> Call Options
         </CardTitle>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -12,39 +12,108 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { RefreshCw, Filter, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { 
+  RefreshCw, 
+  Filter, 
+  Loader2, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wifi, 
+  WifiOff,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Phone,
+  Send,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ExternalLink
+} from 'lucide-react';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
+import { useToast } from '@/components/ui/app-toaster';
+import { LiveBadge } from '@/components/LiveBadge';
+import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table';
+
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;
   pageSize?: number;
 }
+
+interface ActivityItem {
+  id: string;
+  created_at: string;
+  lead_name?: string;
+  lead_linkedin?: string;
+  lead_phone?: string;
+  action_type: string;
+  platform: string;
+  status: string;
+  message_content?: string;
+  error_message?: string;
+}
+
 export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   campaignId,
   maxHeight = 500,
-  pageSize = 50
+  pageSize = 50,
 }) => {
-  const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [actionFilter, setActionFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const { push: toast } = useToast();
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [platformFilter, actionFilter]);
+  const formatTimestamp = useCallback((value: string) => {
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }).format(date);
+    } catch {
+      return '-';
+    }
+  }, []);
+
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [actionFilter, setActionFilter] = useState('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
   const offset = (currentPage - 1) * pageSize;
 
-  const { activities, isLoading, isConnected, error, refresh, total } = useCampaignActivityFeed(
-    campaignId,
-    {
-      limit: pageSize,
-      offset: offset,
-      platform: platformFilter !== 'all' ? platformFilter : undefined,
-      actionType: actionFilter !== 'all' ? actionFilter : undefined
-    }
-  );
+  const {
+    activities,
+    loading,
+    error,
+    isConnected,
+    refresh,
+    total = 0,
+  } = useCampaignActivityFeed(campaignId, {
+    limit: pageSize,
+    offset,
+    platform: platformFilter !== 'all' ? platformFilter : undefined,
+    actionType: actionFilter !== 'all' ? actionFilter : undefined,
+  });
 
   const totalPages = Math.ceil(total / pageSize);
   const hasNextPage = currentPage < totalPages;
@@ -62,22 +131,34 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         return 'secondary';
     }
   };
-  const getPlatformIcon = (platform: string) => {
-    const icons: Record<string, string> = {
-      linkedin: '🔗',
-      email: '📧',
-      whatsapp: '💬',
-      call: '📞',
-      sms: '💬'
-    };
-    return icons[platform?.toLowerCase()] || '📊';
-  };
   const formatActionType = (actionType: string) => {
     return actionType
       ?.split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ') || '';
   };
+
+  const filteredActivities = useMemo(() => {
+    const list = activities || [];
+    if (!globalFilter) return list;
+
+    const q = globalFilter.toLowerCase();
+    return list.filter((a) => {
+      const haystack = [
+        a.lead_name,
+        a.lead_phone,
+        a.platform,
+        a.status,
+        a.action_type,
+        a.message_content,
+        a.error_message,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [activities, globalFilter]);
   if (error) {
     return (
       <div className="p-6 text-center">
@@ -86,97 +167,116 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     );
   }
   return (
-    <div>
+    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <div className="flex items-center gap-2">
-          <h6 className="text-lg font-semibold">
-            Live Activity Feed
-          </h6>
-          <Badge
-            variant={isConnected ? 'default' : 'secondary'}
-            className={`font-semibold ${isConnected ? 'animate-pulse' : ''}`}
-          >
-            {isConnected ? 'Live' : 'Offline'}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Platform" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
-              <SelectItem value="linkedin">LinkedIn</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-              <SelectItem value="call">Call</SelectItem>
-              <SelectItem value="sms">SMS</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Actions</SelectItem>
-              <SelectItem value="CONNECTION_SENT">Connection Sent</SelectItem>
-              <SelectItem value="PROFILE_VISITED">Profile Visited</SelectItem>
-              <SelectItem value="CONNECTION_ACCEPTED">Connection Accepted</SelectItem>
-              <SelectItem value="CONTACTED">Contacted</SelectItem>
-              <SelectItem value="REPLY_RECEIVED">Reply</SelectItem>
-            </SelectContent>
-          </Select>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={refresh}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Refresh</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      <div className="p-4 border-b border-[#E2E8F0] bg-white">
+        <div className="flex gap-3 flex-col sm:flex-row justify-between items-center">
+          <div className="flex items-center gap-2">
+            <h6 className="text-lg font-semibold">
+              Live Activity Feed
+            </h6>
+            <LiveBadge
+              isConnected={isConnected}
+              showOffline
+              className={`font-semibold ${isConnected ? 'animate-pulse' : ''}`}
+            />
+          </div>
+          <div className="flex gap-3 flex-col sm:flex-row items-center">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search Activity..."
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+              />
+            </div>
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                <SelectItem value="call">Call</SelectItem>
+                <SelectItem value="sms">SMS</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Actions</SelectItem>
+                <SelectItem value="CONNECTION_SENT">Connection Sent</SelectItem>
+                <SelectItem value="PROFILE_VISITED">Profile Visited</SelectItem>
+                <SelectItem value="CONNECTION_ACCEPTED">Connection Accepted</SelectItem>
+                <SelectItem value="CONTACTED">Contacted</SelectItem>
+                <SelectItem value="REPLY_RECEIVED">Reply</SelectItem>
+              </SelectContent>
+            </Select>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={refresh}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="relative max-w-md">
+              
+            </div>
+          </div>
         </div>
       </div>
       {/* Activity Table */}
-      <div className="rounded-lg border shadow-sm overflow-auto" style={{ maxHeight: `${maxHeight}px` }}>
+      <div className="overflow-auto" style={{ maxHeight: `${maxHeight}px` }}>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+            <TableRow className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Timestamp
               </TableHead>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Lead
               </TableHead>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Action
               </TableHead>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Platform
               </TableHead>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Status
               </TableHead>
-              <TableHead className="font-semibold bg-[#F8F9FE]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">
                 Details
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && activities?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : activities?.length === 0 ? (
+            {loading && (activities || []).length === 0 ? (
+              // Skeleton rows (match CallLogsTable style)
+              Array.from({ length: 8 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`} className="animate-pulse">
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
+                      <div className="h-4 bg-gray-200 rounded w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filteredActivities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <p className="text-muted-foreground">
@@ -185,39 +285,41 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              activities?.map((activity, index) => (
+              filteredActivities.map((activity, index) => (
                 <TableRow 
                   key={activity.id || index}
-                  className="hover:bg-[#F8F9FE] transition-colors"
+                  className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] transition-colors"
                 >
                   <TableCell>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(activity.created_at), 'MMM dd, HH:mm:ss')}
+                      {formatTimestamp(activity.created_at)}
                     </p>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      {activity.lead_linkedin ? (
-                        <a
-                          href={activity.lead_linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                          title={`View ${activity.lead_name}'s LinkedIn profile`}
+                    <div className="group flex items-center gap-2">
+                      <span className="text-muted-foreground">{activity.lead_name || 'Unknown'}</span>
+                      {activity.lead_linkedin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(activity.lead_linkedin || '');
+                            toast({
+                              title: "Copied!",
+                              description: `LinkedIn URL copied to clipboard`,
+                            });
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
+                          title="Copy LinkedIn URL"
                         >
-                          {activity.lead_name || 'Unknown'}
-                        </a>
-                      ) : (
-                        <p className="text-sm font-medium">
-                          {activity.lead_name || 'Unknown'}
-                        </p>
-                      )}
-                      {activity.lead_phone && (
-                        <p className="text-xs text-muted-foreground">
-                          {activity.lead_phone}
-                        </p>
+                          <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+                        </button>
                       )}
                     </div>
+                    {activity.lead_phone && (
+                      <p className="text-xs text-muted-foreground">
+                        {activity.lead_phone}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell>
                     <p className="text-sm">
@@ -226,19 +328,20 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span>{getPlatformIcon(activity.platform)}</span>
+                      <div className="flex items-center gap-1">
+                        {activity.platform === 'linkedin' && <Linkedin className="w-4 h-4 text-[#0A66C2]" />}
+                        {activity.platform === 'email' && <Mail className="w-4 h-4 text-[#F59E0B]" />}
+                        {activity.platform === 'whatsapp' && <MessageCircle className="w-4 h-4 text-[#25D366]" />}
+                        {activity.platform === 'call' && <Phone className="w-4 h-4 text-[#8B5CF6]" />}
+                        {activity.platform === 'sms' && <Send className="w-4 h-4 text-[#6366F1]" />}
+                      </div>
                       <p className="text-sm capitalize">
                         {activity.platform}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={getStatusColor(activity.status)}
-                      className="font-medium capitalize"
-                    >
-                      {activity.status || 'Unknown'}
-                    </Badge>
+                    <LiveActivityStatusBadge status={activity.status || 'Unknown'} />
                   </TableCell>
                   <TableCell>
                     <TooltipProvider>

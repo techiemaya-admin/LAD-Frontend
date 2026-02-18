@@ -4,7 +4,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import {
   Plus,
   Filter,
-  ArrowUpDown,
   Search,
   Settings,
   Download,
@@ -42,7 +41,6 @@ interface PipelineBoardToolbarProps {
   onAddStage: () => void;
   onAddLead: () => void;
   onOpenFilter: () => void;
-  onOpenSort: () => void;
   onOpenSettings: () => void;
   onExport: () => void;
   onExportWithDateRange?: (range: 'today' | 'thisMonth' | 'thisYear' | 'custom', startDate?: string, endDate?: string) => void;
@@ -74,7 +72,6 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   onAddStage,
   onAddLead,
   onOpenFilter,
-  onOpenSort,
   onOpenSettings,
   onExport,
   onExportWithDateRange
@@ -120,6 +117,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
             {/* Action buttons (hidden in list view) */}
             {viewMode !== 'list' && (
               <>
+              
                 <Button
                   onClick={onAddStage}
                   className="bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
@@ -138,7 +136,9 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
             )}
             {/* Zoom controls - only show in kanban view */}
             {viewMode === 'kanban' && (
+              
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+                
                 <button
                   onClick={handleZoomOut}
                   disabled={zoom <= 0.5}
@@ -189,14 +189,6 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                 >
                   <Filter className="mr-1.5 h-4 w-4" />
                   Filter
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onOpenSort}
-                  className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
-                >
-                  <ArrowUpDown className="mr-1.5 h-4 w-4" />
-                  Sort
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

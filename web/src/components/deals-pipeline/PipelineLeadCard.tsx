@@ -756,7 +756,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       // Lead Information
       email: String(getFieldValue<string>(lead, 'email') || ''),
       phone: String(getFieldValue<string>(lead, 'phone') || ''),
-      company: String(getFieldValue<string>(lead, 'company') || ''),
+      company: String(
+        getFieldValue<string>(lead, 'company') ||
+          (lead as any).company_name ||
+          (lead as any)?.raw_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.organization?.name ||
+          ''
+      ),
       assignee: String(getFieldValue<string>(lead, 'assignee') || getFieldValue<string>(lead, 'assigned_to_id') || ''),
       source: String(getFieldValue<string>(lead, 'source') || ''),
       // Pipeline Information
@@ -781,7 +788,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       // Lead Information
       email: String(getFieldValue<string>(lead, 'email') || ''),
       phone: String(getFieldValue<string>(lead, 'phone') || ''),
-      company: String(getFieldValue<string>(lead, 'company') || ''),
+      company: String(
+        getFieldValue<string>(lead, 'company') ||
+          (lead as any).company_name ||
+          (lead as any)?.raw_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.organization?.name ||
+          ''
+      ),
       assignee: String(getFieldValue<string>(lead, 'assignee') || getFieldValue<string>(lead, 'assigned_to_id') || ''),
       source: String(getFieldValue<string>(lead, 'source') || ''),
       // Pipeline Information
@@ -1166,8 +1180,40 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">{String(lead.company) || '-'}</span>
+                      <span className="text-gray-900">
+                        {normalizeDisplayValue(
+                          (
+                            lead.company ??
+                            (lead as any).company_name ??
+                            (lead as any)?.raw_data?.company_name ??
+                            (lead as any)?.raw_data?._full_data?.company_name ??
+                            (lead as any)?.raw_data?._full_data?.organization?.name
+                          ) as unknown,
+                          '-'
+                        )}
+                      </span>
                     </div>
+                    {normalizeDisplayValue(
+                      (
+                        (lead as any).title ??
+                        (lead as any)?.raw_data?._full_data?.title ??
+                        (lead as any)?.raw_data?.title
+                      ) as unknown,
+                      ''
+                    ) && (
+                      <div className="flex items-center gap-2">
+                        <UserCircle className="h-4 w-4 text-gray-500" />
+                        <span className="text-gray-900">
+                          {normalizeDisplayValue(
+                            (
+                              (lead as any).title ??
+                              (lead as any)?.raw_data?._full_data?.title ??
+                              (lead as any)?.raw_data?.title
+                            ) as unknown
+                          )}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <UserCircle className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-900">
@@ -1175,10 +1221,28 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
-                        {getOptionLabel(sourceOptions, String(lead.source) || undefined) || 'No source'}
-                      </span>
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500" /> */}
+                      {(() => {
+                        const sourceKey = String((lead as any)?.source || '').toLowerCase();
+                        const sourceLabel = getOptionLabel(sourceOptions, String((lead as any)?.source) || undefined) || '';
+                        const displayLabel = sourceLabel || (sourceKey ? sourceKey : 'No source');
+                        const isLinkedin = sourceKey === 'linkedin' || displayLabel.toLowerCase() === 'linkedin';
+
+                        return (
+                          <span className="text-gray-900">
+                            <span
+                              className={
+                                isLinkedin
+                                  ? 'inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-medium'
+                                  : 'inline-flex items-center gap-2 rounded-full bg-gray-50 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium'
+                              }
+                            >
+                              {isLinkedin && <Linkedin className="h-4 w-4" />}
+                              {isLinkedin ? 'LinkedIn' : displayLabel}
+                            </span>
+                          </span>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
@@ -1252,35 +1316,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="relative">
-                      <Label htmlFor="amount" className="text-sm text-gray-600 mb-1 block">Amount</Label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
-                        <Input
-                          id="amount"
-                          type="number"
-                          value={globalEditFormData.amount || ''}
-                          onChange={(e) => handleFormFieldChange('amount', parseFloat(e.target.value) || 0)}
-                          className="pl-10"
-                          min={0}
-                          step={0.01}
-                        />
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <Label htmlFor="closeDate" className="text-sm text-gray-600 mb-1 block">Close Date</Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="closeDate"
-                          type="date"
-                          value={globalEditFormData.closeDate ? formatDateForInput(globalEditFormData.closeDate) : ''}
-                          onChange={(e) => handleFormFieldChange('closeDate', e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="relative">
+
+                    {/* <div className="relative">
                       <Label htmlFor="expectedCloseDate" className="text-sm text-gray-600 mb-1 block">Expected Close Date</Label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
@@ -1292,7 +1329,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                           className="pl-10"
                         />
                       </div>
-                    </div>
+                    </div> */}
                   </>
                 ) : (
                   <>
@@ -1303,7 +1340,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-gray-500" />
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500" /> */}
                       <span className="text-gray-900">
                         {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
                       </span>
@@ -1314,41 +1351,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         {getOptionLabel(stageOptions, lead.stage) || lead.stage || 'No stage'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-500" />
-                      <span className="text-gray-900">
-                        {formatCurrency((lead.amount as number) || 0)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <span className="text-gray-900">
-                          Close Date: {formatDate(getFieldValueLocal(lead, 'closeDate')) || 'Not set'}
-                        </span>
-                        {(() => { const days = getDaysRemaining(); return days !== null && days < 7 ? (
-                          <Chip className="ml-2 bg-red-100 text-red-600 text-xs">
-                            {`${days} days left`}
-                          </Chip>
-                        ) : null; })()}
-                      </div>
-                    </div>
-                    {getFieldValueLocal(lead, 'expectedCloseDate') && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-900">
-                          Expected Close: {formatDate(getFieldValueLocal(lead, 'expectedCloseDate'))}
-                        </span>
-                      </div>
-                    )}
-                    {getFieldValueLocal(lead, 'lastActivity') && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-purple-500" />
-                        <span className="text-gray-900">
-                          Last Activity: {formatDate(getFieldValueLocal(lead, 'lastActivity'))}
-                        </span>
-                      </div>
-                    )}
+                   
                   </>
                 )}
               </div>

@@ -31,6 +31,8 @@ export interface CallLogResponse {
   };
 }
 
+
+
 export interface CallLogsResponse {
   logs: CallLogResponse[];
 }
