@@ -8,7 +8,7 @@ import { WidgetLibrary } from '@/components/overview/WidgetLibrary';
 const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f6ff] via-[#f5f9ff] to-[#f0f6ff]">
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px]">
+      <main className="min-h-screen bg-gray-50 p-3 md:p-3">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  Phone, PhoneOff, PhoneMissed, PhoneCall, Clock, Flame, Sun, Snowflake, BookUser
+  Phone, PhoneOff, PhoneMissed, PhoneCall, Clock, Flame, Sun, Snowflake, BookUser, CardSim
 } from 'lucide-react';
 import type { CallLogsStats } from '@lad/frontend-features/call-logs';
 

@@ -97,7 +97,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
               >
                 <Checkbox
                   checked={isChecked}
-                  onCheckedChange={() => handleToggle(option.key)}
                   className="mr-2 pointer-events-none"
                 />
                 <span className="text-sm select-none">{option.label}</span>

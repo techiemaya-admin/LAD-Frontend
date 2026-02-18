@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,8 +35,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Linkedin,
-  Phone
+  Phone,
+  LayoutGrid,
+  List,
+  Calendar
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
@@ -64,8 +69,8 @@ import {
   setPipelineSortConfig,
   setSelectedLead,
   setFilterDialogOpen,
-  setSortDialogOpen,
-  setSettingsDialogOpen
+  setSettingsDialogOpen,
+  toggleColumnVisibility
 } from '@/store/slices/uiSlice';
 const COLUMN_LABELS: Record<string, string> = {
   name: 'Lead Name',
@@ -127,19 +132,22 @@ interface PipelineListViewProps {
   leads: Lead[];
   stages: Array<{ key: string; label: string; name?: string }>;
   visibleColumns: Record<string, boolean>;
+  totalLeadsCount?: number;
+  isLoading?: boolean;
   searchQuery?: string;
   selectedLead?: unknown;
+  viewMode?: 'kanban' | 'list';
+  onViewModeChange?: (mode: 'kanban' | 'list') => void;
   onEdit?: (lead: unknown) => void;
-  onDelete?: (leadId: string | number) => void;
+  onDelete?: (id: string) => void;
   onAddStage?: () => void;
   onAddLead?: () => void;
-  onSearchChange?: (query: string) => void;
-  onColumnVisibilityChange?: (columns: Record<string, boolean>) => void;
   onStatusChange?: (leadId: string | number, status: string) => Promise<void> | void;
   onStageChange?: (leadId: string | number, stage: string) => Promise<void> | void;
   onPriorityChange?: (leadId: string | number, priority: string) => Promise<void> | void;
   onAssigneeChange?: (leadId: string | number, assignee: string) => Promise<void> | void;
   onExport?: () => void;
+  onExportWithDateRange?: (range: 'today' | 'thisMonth' | 'thisYear' | 'custom', startDate?: string, endDate?: string) => void;
   teamMembers?: Array<{ id?: string; _id?: string; name?: string; email?: string }>;
   currentUser?: { role?: string; isAdmin?: boolean } | null;
   compactMode?: boolean;
@@ -148,25 +156,30 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   leads, 
   stages, 
   visibleColumns, 
+  totalLeadsCount,
+  isLoading = false,
   searchQuery, 
   selectedLead,
+  viewMode = 'list',
+  onViewModeChange,
   onEdit, 
   onDelete, 
   onAddStage,
   onAddLead,
-  onSearchChange,
-  onColumnVisibilityChange,
   onStatusChange,
   onStageChange,
   onPriorityChange,
   onAssigneeChange,
   onExport,
+  onExportWithDateRange,
   teamMembers = [],
   currentUser = null,
   compactMode = false
 }) => {
   // Redux dispatch
   const dispatch = useDispatch();
+  const router = useRouter();
+  const masterDataRequestedRef = useRef<boolean>(false);
   // Get shared state from Redux
   const globalSearchQuery = useSelector(selectPipelineSearchQuery);
   const globalActiveFilters = useSelector(selectPipelineActiveFilters);
@@ -238,7 +251,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           const { fetchStatuses, fetchPriorities, fetchSources } = await import('@lad/frontend-features/deals-pipeline');
           const [statuses, priorities, sources] = await Promise.all([
             fetchStatuses().catch(err => { 
-              console.warn('Failed to load statuses:', err); 
+              logger.warn('[PipelineListView] Failed to load statuses');
               // Fallback to static statuses matching our backend
               return [
                 { key: 'active', label: 'Active' },
@@ -250,7 +263,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               ];
             }),
             fetchPriorities().catch(err => { 
-              console.warn('Failed to load priorities:', err); 
+              logger.warn('[PipelineListView] Failed to load priorities');
               // Fallback to static priorities
               return [
                 { key: 'low', label: 'Low' },
@@ -260,7 +273,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               ];
             }),
             fetchSources().catch(err => { 
-              console.warn('Failed to load sources:', err); 
+              logger.warn('[PipelineListView] Failed to load sources');
               return [
                 { key: 'website', label: 'Website' },
                 { key: 'linkedin', label: 'LinkedIn' },
@@ -274,7 +287,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           dispatch(setPriorities(priorities)); 
           dispatch(setSources(sources));
           } catch (err) {
-          console.error('[PipelineListView] Failed to load master data:', err);
+          logger.error('[PipelineListView] Failed to load master data', err);
         } finally {
           masterDataRequestedRef.current = false;
         }
@@ -396,8 +409,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Pagination state (client-side, similar to CallLogsTable)
   const PAGE_SIZE = 20;
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const totalRecords = filteredAndSortedLeads.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
+    ? totalLeadsCount
+    : filteredAndSortedLeads.length;
+  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / PAGE_SIZE));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
   const handlePageChange = (page: number) => {
@@ -417,7 +432,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }));
   };
   const handleSearchSubmit = () => {
-    onSearchChange?.(localSearch);
     setSearchAnchorEl(null);
   };
   const handleFilterChange = (type: string, value: string) => {
@@ -431,10 +445,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     dispatch(setPipelineActiveFilters(newFilters));
   };
   const handleColumnToggle = (column: string) => {
-    onColumnVisibilityChange?.({
-      ...visibleColumns,
-      [column]: !visibleColumns[column]
-    });
+    dispatch(toggleColumnVisibility(column as any));
   };
   // Lead details dialog handlers
   const handleRowClick = (lead: Lead) => {
@@ -448,7 +459,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const handleSearchChange = (value: string): void => {
     setLocalSearch(value);
     dispatch(setPipelineSearchQuery(value));
-    onSearchChange?.(value);
   };
   // Check if current user is admin (you can adjust this logic based on your user roles)
   const isAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin;
@@ -507,7 +517,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         const validStageValue = stages.find(stage => stage.key === lead.stage) ? lead.stage : '';
         // Log warning for invalid stage values
         if (lead.stage && !validStageValue) {
-          console.warn(`[PipelineListView] Invalid stage value "${lead.stage}" for lead ${lead.id}. Available stages:`, stages.map(s => s.key));
+          logger.warn(`[PipelineListView] Invalid stage value "${lead.stage}" for lead ${lead.id}.`);
         }
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -535,7 +545,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         const validStatusValue = effectiveStatusOptions.find(option => option.key === lead.status) ? lead.status : '';
         // Log warning for invalid status values
         if (lead.status && !validStatusValue) {
-          console.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}. Available options:`, effectiveStatusOptions.map(s => s.key));
+          logger.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}.`);
         }
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -563,7 +573,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         const validPriorityValue = effectivePriorityOptions.find(option => option.key === lead.priority) ? lead.priority : '';
         // Log warning for invalid priority values
         if (lead.priority && !validPriorityValue) {
-          console.warn(`[PipelineListView] Invalid priority value "${lead.priority}" for lead ${lead.id}. Available options:`, effectivePriorityOptions.map(p => p.key));
+          logger.warn(`[PipelineListView] Invalid priority value "${lead.priority}" for lead ${lead.id}.`);
         }
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -721,6 +731,34 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-between sm:items-center">
           <div className="flex items-center gap-2 justify-start">
+            {/* View mode toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={() => onViewModeChange?.('kanban')}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                  viewMode === 'kanban'
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Kanban
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewModeChange?.('list')}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <List className="h-4 w-4" />
+                List
+              </button>
+            </div>
+            
             <Button
               className="h-10"
               onClick={(e) => {
@@ -729,7 +767,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               }}
               disabled={!onAddStage}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus  />
               Add Stage
             </Button>
             <Button
@@ -740,7 +778,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               }}
               disabled={!onAddLead}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus />
               Add Lead
             </Button>
           </div>
@@ -766,17 +804,52 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
-          <Button
-            variant="outline"
-            className="h-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch(setSortDialogOpen(true));
-            }}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            Sort
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-10"
+                disabled={!onExport && !onExportWithDateRange}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => onExport?.()}
+                disabled={!onExport}
+              >
+                All Leads
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onExportWithDateRange?.('today')}
+                disabled={!onExportWithDateRange}
+              >
+                Today
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onExportWithDateRange?.('thisMonth')}
+                disabled={!onExportWithDateRange}
+              >
+                This Month
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onExportWithDateRange?.('thisYear')}
+                disabled={!onExportWithDateRange}
+              >
+                This Year
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onExportWithDateRange?.('custom')}
+                disabled={!onExportWithDateRange}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Custom Range
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             size="icon"
@@ -798,7 +871,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             {visibleColumnKeys.map((column) => (
               <TableHead
                 key={column}
-                className={`font-semibold text-[#1E293B] whitespace-nowrap ${
+                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${
                   ['name', 'stage', 'status', 'priority', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
                 }`}
                 onClick={() => handleSort(column)}
@@ -812,7 +885,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedLeads.map((lead) => (
+          {isLoading
+            ? Array.from({ length: 8 }).map((_, rowIndex) => (
+                <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+                  {visibleColumnKeys.map((column) => (
+                    <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-4">
+                      <div className="h-4 bg-gray-200 rounded w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            : paginatedLeads.map((lead) => (
             <TableRow
               key={lead.id}
               onClick={(e) => {
@@ -834,7 +917,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               ))}
             </TableRow>
           ))}
-          {filteredAndSortedLeads.length === 0 && (
+          {!isLoading && filteredAndSortedLeads.length === 0 && (
             <TableRow>
               <TableCell
                 colSpan={visibleColumnKeys.length}
@@ -842,16 +925,27 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               >
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Filter className="w-8 h-8 text-primary" />
+                    <Phone className="w-8 h-8 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                      No leads found
+                      Trigger a campaign
                     </h3>
                     <p className="text-sm text-[#64748B] mb-4">
-                      Try adjusting your search or filters
+                      Start a campaign to create leads and see them appear here
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push('/campaigns');
+                    }}
+                    className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Go to Campaigns
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
@@ -863,7 +957,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
           <div className="flex items-center gap-2 text-sm text-[#64748B]">
             <span>
-              {`Showing ${((currentPage - 1) * PAGE_SIZE) + 1} to ${Math.min(currentPage * PAGE_SIZE, totalRecords)} of ${totalRecords} leads`}
+              {`Showing ${((currentPage - 1) * PAGE_SIZE) + 1} to ${Math.min(currentPage * PAGE_SIZE, displayTotalRecords)} of ${displayTotalRecords} leads`}
             </span>
           </div>
 
