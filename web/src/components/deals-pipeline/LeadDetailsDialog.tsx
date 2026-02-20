@@ -17,6 +17,7 @@ import {
   Calendar
 } from 'lucide-react';
 import type { Lead } from '../types';
+import { formatDate } from '@/utils/dateTime';
 interface LeadDetailsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -48,14 +49,6 @@ const formatCurrency = (amount?: number | string | null): string => {
     currency: 'USD',
     minimumFractionDigits: 0
   }).format(Number(amount));
-};
-const formatDate = (dateString?: string | Date | number | null): string => {
-  if (!dateString) return '-';
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch {
-    return '-';
-  }
 };
 const getDaysRemaining = (closeDate?: string | null): number | null => {
   if (!closeDate) return null;

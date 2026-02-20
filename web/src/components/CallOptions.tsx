@@ -1047,14 +1047,16 @@ export function CallOptions(props: CallOptionsProps) {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Summary</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <SquarePen className="w-4 h-4" /> Edit Profile
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
             <label className="text-xs text-gray-600">Phone</label>
             <Input value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600">Name</label>
             <Input value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
-            <label className="text-xs text-gray-600">Identifier ({dataType === 'employee' ? 'employee_data_id' : 'company_data_id'})</label>
+            <label className="text-xs text-gray-600">Company</label>
             <Input
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}

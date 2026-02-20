@@ -46,6 +46,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
+import { formatDateTimeUnified } from '@/utils/dateTime';
 // UI-compatible Lead interface for pipeline list view
 interface Lead {
   id: string | number;
@@ -98,36 +99,6 @@ const formatCurrency = (amount?: number | string): string => {
     minimumFractionDigits: 0
   }).format(numAmount);
 };
-const formatDate = (dateString?: string | Date | number | null): string => {
-  if (!dateString) return '-';
-  try {
-    let date: Date;
-    // If it's already a Date object
-    if (dateString instanceof Date) {
-      date = dateString;
-    } else if (typeof dateString === 'string') {
-      // Handle empty strings, 'null', 'undefined' strings
-      if (dateString.trim() === '' || dateString === 'null' || dateString === 'undefined') {
-        return '-';
-      }
-      date = new Date(dateString);
-    } else if (typeof dateString === 'number') {
-      // Handle Unix timestamps (both seconds and milliseconds)
-      date = new Date(dateString < 10000000000 ? dateString * 1000 : dateString);
-    } else {
-      return '-';
-    }
-    // Check if the date is valid
-    if (isNaN(date.getTime())) return 'Invalid date';
-    // Check for unrealistic dates (before 1900 or too far in future)
-    const year = date.getFullYear();
-    if (year < 1900 || year > 2100) return 'Invalid date';
-    return date.toLocaleDateString();
-  } catch (error) {
-    // Date formatting error - return invalid date message per LAD guidelines
-    return 'Invalid date';
-  }
-};
 interface PipelineListViewProps {
   leads: Lead[];
   stages: Array<{ key: string; label: string; name?: string }>;
@@ -151,6 +122,11 @@ interface PipelineListViewProps {
   teamMembers?: Array<{ id?: string; _id?: string; name?: string; email?: string }>;
   currentUser?: { role?: string; isAdmin?: boolean } | null;
   compactMode?: boolean;
+  // Pagination props for API-driven pagination
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
 }
 const PipelineListView: React.FC<PipelineListViewProps> = ({ 
   leads, 
@@ -174,7 +150,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   onExportWithDateRange,
   teamMembers = [],
   currentUser = null,
-  compactMode = false
+  compactMode = false,
+  // Pagination props
+  currentPage: controlledCurrentPage,
+  pageSize: controlledPageSize,
+  onPageChange,
+  onPageSizeChange
 }) => {
   // Redux dispatch
   const dispatch = useDispatch();
@@ -311,6 +292,56 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       };
     });
   }, [leads, effectiveStatusOptions, effectivePriorityOptions, stages]);
+
+  const getSortableValue = useCallback((lead: Lead & Record<string, unknown>, field: string): string | number => {
+    if (!field) return '';
+
+    // Prefer sorting by the same values the UI displays.
+    if (field === 'stage') return (lead.stageName as string) || '';
+    if (field === 'status') return (lead.statusLabel as string) || '';
+    if (field === 'priority') return (lead.priorityLabel as string) || '';
+    if (field === 'assignee') return getAssigneeDisplayName(lead.assignee as string) || '';
+
+    const rawValue = getFieldValue(lead, field) ?? (lead as any)[field];
+
+    // Date-ish fields
+    if (
+      field === 'createdAt' ||
+      field === 'updatedAt' ||
+      field === 'closeDate' ||
+      field === 'dueDate' ||
+      field === 'expectedCloseDate' ||
+      field === 'lastActivity'
+    ) {
+      // Handle snake_case fallback used in some payloads
+      const altRawValue =
+        field === 'lastActivity'
+          ? (rawValue ?? getFieldValue(lead, 'updated_at'))
+          : rawValue;
+
+      if (altRawValue == null || altRawValue === '' || altRawValue === 'null' || altRawValue === 'undefined') return 0;
+
+      const d = altRawValue instanceof Date
+        ? altRawValue
+        : typeof altRawValue === 'number'
+          ? new Date(altRawValue < 10000000000 ? altRawValue * 1000 : altRawValue)
+          : new Date(String(altRawValue));
+
+      const ts = d.getTime();
+      return Number.isFinite(ts) ? ts : 0;
+    }
+
+    // Numeric fields
+    if (field === 'amount') {
+      if (rawValue == null || rawValue === '') return 0;
+      if (typeof rawValue === 'number') return Number.isFinite(rawValue) ? rawValue : 0;
+      const parsed = parseFloat(String(rawValue).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    // Default to string compare
+    return String(rawValue ?? '').toLowerCase();
+  }, [getAssigneeDisplayName]);
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
     let filtered = [...allLeads];
@@ -337,31 +368,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     // Apply sorting
     if (globalSortConfig && globalSortConfig.field) {
       filtered.sort((a, b) => {
-        let aVal: any = (a as any)[globalSortConfig.field];
-        let bVal: any = (b as any)[globalSortConfig.field];
-        // Handle date fields
-        if (globalSortConfig.field === 'createdAt' || globalSortConfig.field === 'updatedAt' || globalSortConfig.field === 'closeDate' || 
-            globalSortConfig.field === 'dueDate' || globalSortConfig.field === 'expectedCloseDate' || globalSortConfig.field === 'lastActivity') {
-          aVal = new Date((aVal as string) || 0);
-          bVal = new Date((bVal as string) || 0);
-        }
-        // Handle numeric fields
-        else if (globalSortConfig.field === 'amount') {
-          aVal = parseFloat((aVal as string) || '0');
-          bVal = parseFloat((bVal as string) || '0');
-        }
-        // Handle string fields
-        else {
-          aVal = ((aVal as string) || '').toString().toLowerCase();
-          bVal = ((bVal as string) || '').toString().toLowerCase();
-        }
+        const field = globalSortConfig.field;
+        const aVal = getSortableValue(a as any, field);
+        const bVal = getSortableValue(b as any, field);
+
         if (aVal < bVal) return globalSortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return globalSortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
     return filtered;
-  }, [allLeads, localSearch, currentFilters, globalSortConfig]);
+  }, [allLeads, localSearch, currentFilters, globalSortConfig, getSortableValue]);
   const DEFAULT_COLUMN_ORDER = useMemo(
     () => [
       'name',
@@ -406,18 +423,37 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     };
   };
   const columnWidths = getColumnWidths();
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(20);
+  // Pagination state - use controlled props if provided, otherwise local state
+  const isControlledPagination = controlledCurrentPage !== undefined && onPageChange !== undefined;
+  const [localCurrentPage, setLocalCurrentPage] = useState<number>(1);
+  const [localPageSize, setLocalPageSize] = useState<number>(50);
+  
+  const currentPage = isControlledPagination ? controlledCurrentPage : localCurrentPage;
+  const pageSize = controlledPageSize !== undefined ? controlledPageSize : localPageSize;
+  
   const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
     ? totalLeadsCount
     : filteredAndSortedLeads.length;
   const totalPages = Math.max(1, Math.ceil(displayTotalRecords / pageSize));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
+  
   const handlePageChange = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
-    setCurrentPage(nextPage);
+    if (isControlledPagination) {
+      onPageChange?.(nextPage);
+    } else {
+      setLocalCurrentPage(nextPage);
+    }
+  };
+  
+  const handlePageSizeChange = (newSize: number) => {
+    if (onPageSizeChange) {
+      onPageSizeChange(newSize);
+    } else {
+      setLocalPageSize(newSize);
+      setLocalCurrentPage(1); // Reset to page 1 when size changes
+    }
   };
   const paginatedLeads = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -699,19 +735,19 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       case 'createdAt':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'createdAt'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'createdAt'))}
           </p>
         );
       case 'updatedAt':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'updatedAt'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'updatedAt'))}
           </p>
         );
       case 'lastActivity':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'lastActivity') || getFieldValue(lead, 'updated_at'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'lastActivity') || getFieldValue(lead, 'updated_at'))}
           </p>
         );
       default:
@@ -955,8 +991,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               <select
                 value={pageSize}
                 onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
+                  handlePageSizeChange(Number(e.target.value));
                 }}
                 className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
               >

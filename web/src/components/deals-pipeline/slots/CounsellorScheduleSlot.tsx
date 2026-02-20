@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Video, Phone, MessageSquare, Plus } from 'lucide-react';
+import { formatDate } from '@/utils/dateTime';
 interface Appointment {
   id: string;
   date: string;
@@ -85,7 +86,7 @@ export default function CounsellorScheduleSlot({
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  <span>{new Date(apt.date).toLocaleDateString()}</span>
+                  <span>{formatDate(apt.date)}</span>
                   <Clock className="h-3 w-3 ml-2" />
                   <span>{apt.time}</span>
                 </div>
@@ -132,7 +133,7 @@ export default function CounsellorScheduleSlot({
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  <span>{new Date(apt.date).toLocaleDateString()}</span>
+                  <span>{formatDate(apt.date)}</span>
                   <Clock className="h-3 w-3 ml-2" />
                   <span>{apt.time}</span>
                 </div>
@@ -170,4 +171,4 @@ export default function CounsellorScheduleSlot({
       </CardContent>
     </Card>
   );
-}
+}

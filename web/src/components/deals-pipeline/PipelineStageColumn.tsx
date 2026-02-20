@@ -4,7 +4,7 @@ import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
@@ -16,6 +16,7 @@ import { useDispatch } from 'react-redux';
 import { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { User } from '@/store/slices/usersSlice';
+import { logger } from '@/lib/logger';
 interface PipelineStageColumnProps {
   stage: Stage & { name?: string; label?: string; order?: number; display_order?: number; totalStages?: number };
   leads: Lead[];
@@ -130,7 +131,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
           } else {
             newDisplayOrder = (targetStage.order || targetStage.display_order || 0) + 1;
           }
-          updates.displayOrder = newDisplayOrder;
+          updates.display_order = newDisplayOrder;
         }
       }
       const stageKey = stage.key || String(stage.id);
@@ -160,7 +161,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       if (onStageDelete) onStageDelete();
       setDeleteDialogOpen(false);
     } catch (err) {
-      console.error('[PipelineStageColumn] Delete stage error:', err);
+      logger.error('[PipelineStageColumn] Delete stage error:', err);
       setDeleteDialogOpen(false);
       setError('Failed to delete stage');
     }
@@ -169,7 +170,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
     <>
       <div
         ref={setNodeRef}
-        className={`p-3 w-full min-w-0 rounded-2xl transition-all duration-200 flex flex-col h-fit ${
+        className={`p-3 w-full min-w-0 rounded-xl transition-all duration-200 flex flex-col h-fit ${
           isOver ? 'bg-blue-100' : 'bg-gray-50'
         }`}
         style={{
@@ -265,34 +266,50 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
               )}
             </div>
             <h4 className="text-base font-semibold mb-4">Change Position (Optional)</h4>
-            <div className="flex gap-4 mb-4">
-              <div className="flex-1">
-                <Label htmlFor="position-type" className="text-sm font-medium mb-2 block">Position Type</Label>
-                <Select
-                  value={editFormData.positionType}
-                  onValueChange={(value: string) => setEditFormData({ ...editFormData, positionType: value as 'before' | 'after' })}
-                >
-                  <option value="before">Before</option>
-                  <option value="after">After</option>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Label htmlFor="reference-stage" className="text-sm font-medium mb-2 block">Reference Stage</Label>
-                <Select
-                  value={editFormData.position}
-                  onValueChange={(value: string) => setEditFormData({ ...editFormData, position: value })}
-                >
-                  <option value="">No position change</option>
+            <div className="mb-4">
+              <Label htmlFor="stage-position" className="text-sm font-medium mb-2 block">Position</Label>
+              <Select
+                value={
+                  editFormData.position
+                    ? `${editFormData.positionType}:${editFormData.position}`
+                    : '__none__'
+                }
+                onValueChange={(value: string) => {
+                  if (value === '__none__') {
+                    setEditFormData({ ...editFormData, position: '' });
+                    return;
+                  }
+
+                  const [positionType, position] = value.split(':');
+                  setEditFormData({
+                    ...editFormData,
+                    positionType: (positionType as 'before' | 'after') || 'after',
+                    position: position || ''
+                  });
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="No position change" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No position change</SelectItem>
                   {allStages
                     .filter(s => (s.key || s.id) !== (stage.key || stage.id))
                     .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((stageOption) => (
-                      <option key={stageOption.key || stageOption.id} value={stageOption.key || stageOption.id}>
-                        {stageOption.name || stageOption.label}
-                      </option>
-                    ))}
-                </Select>
-              </div>
+                    .flatMap((stageOption) => {
+                      const id = String(stageOption.key || stageOption.id);
+                      const label = stageOption.name || stageOption.label;
+                      return [
+                        <SelectItem key={`before:${id}`} value={`before:${id}`}>
+                          Before: {label}
+                        </SelectItem>,
+                        <SelectItem key={`after:${id}`} value={`after:${id}`}>
+                          After: {label}
+                        </SelectItem>
+                      ];
+                    })}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2 pt-4 border-t mt-6">
               <Button
@@ -357,7 +374,8 @@ export default React.memo(PipelineStageColumn, (prevProps, nextProps) => {
     prevProps.compactView === nextProps.compactView &&
     prevProps.showCardCount === nextProps.showCardCount &&
     prevProps.showTotalValue === nextProps.showTotalValue &&
-    // Deep compare lead IDs to detect if leads array actually changed
-    JSON.stringify(prevProps.leads.map(l => l.id)) === JSON.stringify(nextProps.leads.map(l => l.id))
+    // Deep compare lead IDs and status to detect if leads array actually changed
+    JSON.stringify(prevProps.leads.map(l => ({ id: l.id, status: l.status }))) ===
+    JSON.stringify(nextProps.leads.map(l => ({ id: l.id, status: l.status })))
   );
 });

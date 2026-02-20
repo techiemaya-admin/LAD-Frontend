@@ -14,11 +14,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
 import {
   User as UserIcon, Mail, Phone, Clock, Paperclip, MessageSquare, FileText, GripVertical,
   Trash2, MoreVertical, Building2, DollarSign, Calendar, Flag, CheckCircle2,
   AlertCircle, TrendingUp, TrendingDown, X, Edit, Save, XCircle, Plus,
-  UserCircle, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag, Linkedin
+  UserCircle, UserStar, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag, Linkedin
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -27,6 +28,7 @@ import * as leadsService from '@lad/frontend-features/deals-pipeline';
 import { FileDown } from 'lucide-react';
 import { getStatusLabel } from '@/utils/statusMappings';
 import { getFieldValue } from '@/utils/fieldMappings';
+import { formatDateTimeUnified } from '@/utils/dateTime';
 import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
 import { selectStages } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import { updateLeadAction, deleteLeadAction } from '@/features/deals-pipeline/store/action/pipelineActions';
@@ -152,6 +154,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   onExternalDetailsClose = null,
   hideCard = false
 }) => {
+  const { toast } = useToast();
   const dispatch = useDispatch();
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
@@ -241,6 +244,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const cardRef = useRef<HTMLDivElement>(null);
+  const ignoreNextCardClickRef = useRef(false);
   const leadNameRef = useRef<HTMLParagraphElement>(null);
   const leadNameScrollRafRef = useRef<number | null>(null);
   const leadNameScrollStateRef = useRef<{ direction: 'forward' | 'backward'; maxScroll: number; el: HTMLElement | null }>({ direction: 'forward', maxScroll: 0, el: null });
@@ -470,6 +474,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   // Memoize click handler to prevent stale closures and unnecessary re-renders
   const handleCardClick = useCallback((event?: React.MouseEvent) => {
     if (!event) return;
+    if (ignoreNextCardClickRef.current) {
+      ignoreNextCardClickRef.current = false;
+      return;
+    }
     // Prevent click if event happened during drag
     if (isDragging || isDraggable) {
       return;
@@ -934,42 +942,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       maximumFractionDigits: 0
     }).format(numAmount);
   };
-  const formatDate = (dateString?: string | Date | number | null): string => {
-    if (!dateString) return 'No date set';
-    // Handle various date formats and invalid dates
-    try {
-      let date;
-      // If it's already a Date object
-      if (dateString instanceof Date) {
-        date = dateString;
-      } else if (typeof dateString === 'string') {
-        // Handle empty strings, 'null', 'undefined' strings
-        if (dateString.trim() === '' || dateString === 'null' || dateString === 'undefined') {
-          return 'No date set';
-        }
-        date = new Date(dateString);
-      } else if (typeof dateString === 'number') {
-        // Handle Unix timestamps (both seconds and milliseconds)
-        date = new Date(dateString < 10000000000 ? dateString * 1000 : dateString);
-      } else {
-        return 'Invalid date';
-      }
-      // Check if the date is valid
-      if (isNaN(date.getTime())) return 'Invalid date';
-      // Check for unrealistic dates (before 1900 or too far in future)
-      const year = date.getFullYear();
-      if (year < 1900 || year > 2100) return 'Invalid date';
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-  } catch (error) {
-    const err = error as Error;
-    console.warn('Date formatting error:', { dateString, error: err.message });
-      return 'Invalid date';
-    }
-  };
   const getProgressValue = (): number => {
     return ((currentStage + 1) / totalStages) * 100;
   };
@@ -1032,8 +1004,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     dispatch(setLeadCardActiveTab(0)); 
   };
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
-    setSnackbar({ open: true, message, severity });
-    setTimeout(() => setSnackbar(prev => ({ ...prev, open: false })), 4000);
+    toast({
+      title: message,
+      description: '',
+      variant: severity === 'error' ? 'destructive' : 'default'
+    });
   };
   const handleConfirmDelete = async () => {
     const { type, id } = deleteConfirmation;
@@ -1170,9 +1145,39 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">{lead.email}</span>
+                    <div className="group flex items-center gap-2 min-w-0">
+                      <Mail className="h-4 w-4 text-gray-500 shrink-0" />
+                      <span
+                        className="text-gray-900 truncate flex-1 min-w-0"
+                        title={lead.email || ''}
+                      >
+                        {lead.email || '-'}
+                      </span>
+                      {!!lead.email && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await navigator.clipboard.writeText(lead.email as string);
+                              toast({
+                                title: 'Copied!',
+                                description: 'Email copied to clipboard'
+                              });
+                            } catch {
+                              toast({
+                                title: 'Copy failed',
+                                description: 'Unable to copy email'
+                              });
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded shrink-0"
+                          title="Copy email"
+                          aria-label="Copy email"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-gray-500" />
@@ -1202,7 +1207,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       ''
                     ) && (
                       <div className="flex items-center gap-2">
-                        <UserCircle className="h-4 w-4 text-gray-500" />
+                        <UserStar className="h-4 w-4 text-gray-500" />
                         <span className="text-gray-900">
                           {normalizeDisplayValue(
                             (
@@ -1468,29 +1473,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       index: 1,
       content: (
         <div className="flex flex-col gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <Label htmlFor="new-note" className="text-sm font-medium text-gray-700">
-              Add a private note
-            </Label>
-            <Textarea
-              id="new-note"
-              rows={3}
-              placeholder="Add a private note..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              disabled={isLoading}
-              className="mt-2"
-            />
-            <div className="flex justify-end mt-3">
-              <Button
-                onClick={handleAddNote}
-                disabled={!newNote.trim() || isLoading}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-              >
-                Add Note
-              </Button>
-            </div>
-          </div>
           {notesLoading ? (
             <div className="flex justify-center py-6">
               <p className="text-sm text-gray-500">Loading notes...</p>
@@ -1500,7 +1482,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               {notes.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-500">
-                    No notes yet. Add your first note above.
+                    No notes yet.
                   </p>
                 </div>
               ) : (
@@ -1512,7 +1494,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                           {note.user_name || 'User'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {formatDate(note.created_at)}
+                          {formatDateTimeUnified(note.created_at)}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -1627,7 +1609,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                           {comment.user_name || 'User'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {formatDate(comment.created_at)}
+                          {formatDateTimeUnified(comment.created_at)}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -1862,7 +1844,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleSaveEdit}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    ignoreNextCardClickRef.current = true;
+                    setTimeout(() => {
+                      ignoreNextCardClickRef.current = false;
+                    }, 0);
+                    handleSaveEdit();
+                  }}
                   disabled={isLoading}
                   className="bg-blue-500 hover:bg-blue-600 text-white"
                 >
@@ -2003,7 +1993,20 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[160px]">
               <DropdownMenuItem
-                onSelect={() => setDeleteDialogOpen(true)}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  ignoreNextCardClickRef.current = true;
+                  setTimeout(() => {
+                    ignoreNextCardClickRef.current = false;
+                  }, 0);
+                  setDeleteDialogOpen(true);
+                }}
                 className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
@@ -2046,7 +2049,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   title={(() => { const days = getDaysRemaining(); return days !== null ? `Due in ${days} days` : undefined; })()}
                 >
                   <Calendar className="h-4 w-4" />
-                  {formatDate((lead.closeDate as string) || undefined)}
+                  {formatDateTimeUnified((lead.closeDate as string) || undefined)}
                 </span>
               )}
             </div>
@@ -2055,13 +2058,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
             )}
           </div>
-          
         )}
     
         <div className="mt-4 border-t border-gray-100 pt-2 text-xs text-gray-500 flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            {formatDate(getFieldValueLocal(lead, 'createdAt'))}
+            {formatDateTimeUnified(getFieldValueLocal(lead, 'createdAt'))}
           </span>
           <div className="flex items-center gap-3">
             {notes.length > 0 && (
@@ -2141,7 +2143,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleConfirmDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ignoreNextCardClickRef.current = true;
+                setTimeout(() => {
+                  ignoreNextCardClickRef.current = false;
+                }, 0);
+                handleConfirmDelete();
+              }}
               disabled={isLoading}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
@@ -2169,7 +2179,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleConfirmDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ignoreNextCardClickRef.current = true;
+                setTimeout(() => {
+                  ignoreNextCardClickRef.current = false;
+                }, 0);
+                handleConfirmDelete();
+              }}
               disabled={isLoading}
               className="bg-red-500 hover:bg-red-600 text-white"
             >

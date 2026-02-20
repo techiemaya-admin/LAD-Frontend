@@ -135,7 +135,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               </>
             )}
             {/* Zoom controls - only show in kanban view */}
-            {viewMode === 'kanban' && (
+            {/* {viewMode === 'kanban' && (
               
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
                 
@@ -163,7 +163,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                   <RotateCcw className="h-4 w-4" />
                 </button>
               </div>
-            )}
+            )} */}
           </div>
           {/* Right side - Search and control buttons (hidden in list view) */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:ml-auto">

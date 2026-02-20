@@ -77,7 +77,15 @@ class ApiClient {
           errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
         );
       }
-      const data = await response.json();
+      // Check if response has content before parsing JSON (e.g., 204 No Content)
+      const contentType = response.headers.get('content-type');
+      const hasContent = response.status !== 204 && response.headers.get('content-length') !== '0';
+      let data: T;
+      if (hasContent && contentType?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = undefined as T;
+      }
       return {
         data,
         status: response.status,

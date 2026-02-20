@@ -267,6 +267,9 @@ const PipelineBoard: React.FC = () => {
   // Local states that should remain local (component-specific, not shared globally)
   const [updating, setUpdating] = useState<boolean>(false);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
+  // List view pagination state - for API-driven pagination
+  const [listViewPage, setListViewPage] = useState<number>(1);
+  const [listViewPageSize, setListViewPageSize] = useState<number>(50);
   // Detect if we're on a touch device
   const isTouchDevice = () => {
     return (
@@ -294,7 +297,19 @@ const PipelineBoard: React.FC = () => {
     }),
     useSensor(KeyboardSensor)
   );
-  // Load preferences
+  // List view pagination handlers - trigger API calls
+  const handleListViewPageChange = useCallback((page: number) => {
+    setListViewPage(page);
+    // Trigger API call with new page
+    dispatch(fetchLeadsAction(page, listViewPageSize));
+  }, [dispatch, listViewPageSize]);
+
+  const handleListViewPageSizeChange = useCallback((size: number) => {
+    setListViewPageSize(size);
+    setListViewPage(1); // Reset to page 1 when size changes
+    // Trigger API call with new limit
+    dispatch(fetchLeadsAction(1, size));
+  }, [dispatch]);
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
@@ -1488,6 +1503,11 @@ const PipelineBoard: React.FC = () => {
                   onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
                   onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
                   onAssigneeChange={memoizedHandlers.onAssigneeChange as ((leadId: string | number, assignee: string) => Promise<void>) | undefined}
+                  // Pagination props for API-driven pagination
+                  currentPage={listViewPage}
+                  pageSize={listViewPageSize}
+                  onPageChange={handleListViewPageChange}
+                  onPageSizeChange={handleListViewPageSizeChange}
                 />
               );
             })()}
@@ -1568,7 +1588,7 @@ const PipelineBoard: React.FC = () => {
       />
       {/* Custom Export Date Range Dialog */}
       <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
-        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
           <div className="flex gap-4 mb-2">
             <div className="flex-1">

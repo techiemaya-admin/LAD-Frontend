@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
+import { formatDateTimeUnified } from "@/utils/dateTime";
 import api from "@/services/api";
 import { useToast } from "@/components/ui/app-toaster";
 import PipelineLeadCard from "./deals-pipeline/PipelineLeadCard";
@@ -237,7 +238,7 @@ export function CallLogsTable({
 
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleString();
+    return formatDateTimeUnified(dateStr);
   };
 
   const formatDuration = (seconds?: number) => {
@@ -958,7 +959,8 @@ export function CallLogsTable({
         <span className="text-sm text-[#64748B]">Page size:</span>
         <Select value={perPage.toString()} onValueChange={(value) => {
           const newSize = parseInt(value, 10);
-          onPageChange?.(newSize);
+          // Always update the page size state for UI
+          onPageSizeChange?.(newSize);
           // Reset to page 1 when page size changes
           onPageChange?.(1);
         }}>

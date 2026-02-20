@@ -19,10 +19,12 @@ import {
   bulkUpdateLeads,
   selectLeadsCacheValid
 } from '../slices/leadsSlice';
-import * as pipelineApi from '../../../../../../sdk/features/pipeline/api';
+import * as pipelineApi from '../../../../../../sdk/features/deals-pipeline/api';
 import { AppDispatch, RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
-import { Lead } from '../../../../../../sdk/features/leads/types';
+import { Lead } from '../../types';
+import { logger } from '@/lib/logger';
+import * as pipelineService from '@/services/pipelineService';
 // Thunk type
 type AppThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<void> | void;
 // ============ STAGES ACTIONS ============
@@ -126,11 +128,11 @@ export const reorderStagesAction = (stageOrders: Array<{ key: string; order: num
   }
 };
 // ============ LEADS ACTIONS ============
-// Fetch leads with cache management
-export const fetchLeadsAction = (): AppThunk => async (dispatch, getState) => {
+// Fetch leads with cache management and optional pagination
+export const fetchLeadsAction = (page?: number, limit?: number): AppThunk => async (dispatch, getState) => {
   const state = getState();
-  // Check cache validity
-  const cacheValid = selectLeadsCacheValid(state);
+  // Check cache validity (skip cache if pagination params provided)
+  const cacheValid = !page && !limit && selectLeadsCacheValid(state);
   if (cacheValid) {
     logger.debug('[Redux] Leads cache valid, skipping fetch');
     return;
@@ -138,10 +140,27 @@ export const fetchLeadsAction = (): AppThunk => async (dispatch, getState) => {
   try {
     dispatch(setLeadsLoading(true));
     dispatch(clearLeadsError());
-    logger.debug('[Redux] Fetching leads from API...');
-    const leads = await pipelineService.fetchLeads();
-    dispatch(setLeads(leads));
-    logger.debug('[Redux] Leads loaded successfully:', leads.length);
+    logger.debug('[Redux] Fetching leads from API...', { page, limit });
+    // Use getPipelineData if pagination params provided, otherwise fetch all leads
+    if (page !== undefined || limit !== undefined) {
+      const data = await pipelineApi.getPipelineData(page || 1, limit || 50);
+      // Merge paginated leads with existing leads to avoid losing data
+      const currentLeads = state.leads?.leads || [];
+      const newLeads = data.leads || [];
+      // Create a map of existing leads by ID
+      const leadsMap = new Map(currentLeads.map((l: Lead) => [l.id, l]));
+      // Add/update with new leads
+      newLeads.forEach((lead: Lead) => {
+        leadsMap.set(lead.id, lead);
+      });
+      const mergedLeads = Array.from(leadsMap.values());
+      dispatch(setLeads(mergedLeads));
+      logger.debug('[Redux] Paginated leads loaded:', { page: page || 1, count: newLeads.length, totalMerged: mergedLeads.length });
+    } else {
+      const leads = await pipelineService.fetchLeads();
+      dispatch(setLeads(leads));
+      logger.debug('[Redux] All leads loaded:', leads.length);
+    }
   } catch (error) {
     const err = error as Error;
     logger.error('[Redux] Failed to fetch leads:', error);

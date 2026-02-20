@@ -6,10 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Chip } from '@/components/ui/chip';
 import { Label } from '@/components/ui/label';
 import { X } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { useSelector } from 'react-redux';
 import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '@/store/slices/masterDataSlice';
 import { selectUsers, selectUsersLoading } from '@/store/slices/usersSlice';
-import { Stage } from '../store/slices/pipelineSlice';
+import { Stage } from '../../features/deals-pipeline/store/slices/pipelineSlice';
 interface PipelineActiveFilters {
   stages: string[];
   statuses: string[];
@@ -66,7 +67,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full min-h-[40px] px-3 py-2 text-left border border-gray-300 rounded-md bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+        className="w-full min-h-[44px] px-3 py-2 text-left border border-input rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
       >
         <div className="flex flex-wrap gap-1 flex-1">
           {value.length === 0 ? (
@@ -84,7 +85,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
           {options.map((option, index) => {
             const isChecked = value.includes(option.key);
             // Ensure unique key by combining option.key with index as fallback
@@ -172,19 +173,29 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     if (typeof onFiltersChange === 'function') {
       onFiltersChange({ ...safeFilters, [field]: value });
     } else {
-      console.warn('[PipelineFilterDialog] onFiltersChange is not a function:', onFiltersChange);
+      logger.warn('[PipelineFilterDialog] onFiltersChange is not a function');
     }
   };
   const handleDateRangeChange = (field: 'start' | 'end', value: string): void => {
+    const currentRange = safeFilters.dateRange || { start: null, end: null };
+    const nextRange = { ...currentRange, [field]: value || null };
+
+    const start = nextRange.start;
+    const end = nextRange.end;
+
+    if (start && end && end < start) {
+      nextRange.end = start;
+    }
+
     onFiltersChange({
       ...safeFilters,
-      dateRange: { ...(safeFilters.dateRange || { start: null, end: null }), [field]: value }
+      dateRange: nextRange
     });
   };
   return (
     <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
-        <DialogTitle className="flex justify-between items-center">
+      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto sm:max-w-[640px]">
+        <DialogTitle className="flex justify-between items-center pb-1 mt-4">
           <span className="text-lg font-semibold text-primary">Filter Leads</span>
           <button
             onClick={onClose}
@@ -193,8 +204,8 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             <X className="h-4 w-4" />
           </button>
         </DialogTitle>
-        <div className="flex flex-col gap-6 mt-2">
-          {/* Stages Filter */}
+        <div className="mt-2 rounded-xl border border-gray-200 p-4 bg-[#f9fafb]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <MultiSelect
             label="Stages"
             options={testStages.map(stage => ({
@@ -208,7 +219,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return stage?.label || stage?.name || key;
             }}
           />
-          {/* Statuses Filter */}
           <MultiSelect
             label="Statuses"
             options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
@@ -219,7 +229,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return statusOption?.label || key;
             }}
           />
-          {/* Priorities Filter */}
           <MultiSelect
             label="Priorities"
             options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
@@ -230,7 +239,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return priorityOption?.label || key;
             }}
           />
-          {/* Sources Filter */}
           <MultiSelect
             label="Sources"
             options={Array.isArray(sourceOptions) ? sourceOptions.map(s => ({ key: s.key, label: s.label })) : []}
@@ -241,7 +249,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return sourceOption?.label || key;
             }}
           />
-          {/* Assignee Filter */}
           <MultiSelect
             label="Assignees"
             options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
@@ -253,57 +260,60 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
               return user?.name || key;
             }}
           />
-          {/* Date Range Filter */}
-          <div>
+          <div className="sm:col-span-2">
             <Label className="text-sm font-medium mb-2 block">Date Range</Label>
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="start-date" className="text-xs text-gray-500 mb-1 block">Start Date</Label>
                 <Input
                   id="start-date"
                   type="date"
                   value={safeFilters.dateRange?.start || ''}
+                  max={safeFilters.dateRange?.end || undefined}
                   onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  className="w-full"
+                  className="w-full h-11 rounded-lg"
                 />
               </div>
-              <div className="flex-1">
+              <div>
                 <Label htmlFor="end-date" className="text-xs text-gray-500 mb-1 block">End Date</Label>
                 <Input
                   id="end-date"
                   type="date"
                   value={safeFilters.dateRange?.end || ''}
+                  min={safeFilters.dateRange?.start || undefined}
                   onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  className="w-full"
+                  className="w-full h-11 rounded-lg"
                 />
               </div>
             </div>
           </div>
         </div>
+        </div>
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-4 border-t">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 pt-4 border-t mt-6">
           <Button 
             onClick={onClearFilters}
             variant="outline"
-            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
+            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50 sm:mr-auto"
           >
             <X className="mr-2 h-4 w-4" />
             Clear All
           </Button>
-          <div className="flex-1"></div>
-          <Button 
-            onClick={onClose}
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-gray-600 border-[1.5px] border-gray-300 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={onClose}
-            className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
-          >
-            Apply Filters
-          </Button>
+          <div className="flex items-center justify-end gap-2">
+            {/* <Button 
+              onClick={onClose}
+              variant="outline"
+              className="rounded-lg font-semibold bg-white text-gray-600 border-[1.5px] border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </Button> */}
+            <Button 
+              onClick={onClose}
+              className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
+            >
+              Apply Filters
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
