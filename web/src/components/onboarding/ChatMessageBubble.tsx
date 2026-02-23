@@ -10,6 +10,8 @@ import ConditionSelector from './ConditionSelector';
 import TemplateInput from './TemplateInput';
 import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import { logger } from '@/lib/logger';
+import { apiGet } from '@/lib/api';
+
 interface ChatMessageBubbleProps {
   role: 'ai' | 'user';
   content: string;
@@ -82,6 +84,9 @@ export default function ChatMessageBubble({
       new CustomEvent('aiTyping', { detail: { isTyping } })
     );
   }, [isAI, isLastMessage, isTyping]);
+
+  const [dynamicOptions, setDynamicOptions] = useState<string[] | null>(null);
+
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
@@ -108,7 +113,55 @@ export default function ChatMessageBubble({
   // Parse options from message content (only for last AI message and NOT a template request)
   // If it's a template request, don't parse options even if they exist in the message
   const parsedOptions = isAI && isLastMessage && !isTemplateRequest ? parseMessageOptions(content) : null;
+  const isLeadsPerDay = parsedOptions?.leadsPerDayOptions;
+
+  useEffect(() => {
+    if (isLeadsPerDay && isLastMessage) {
+      apiGet<{ success: boolean; totalDailyLimit?: number | string; remainingDailyLimit?: number | string }>('/api/campaigns/linkedin/limits')
+        .then((res) => {
+          let limit = 25; // default
+          if (res && res.success) {
+            // Use the remaining limit since they have consumed connections already today
+            const valToUse = res.remainingDailyLimit !== undefined ? res.remainingDailyLimit : res.totalDailyLimit;
+            if (valToUse !== undefined && valToUse !== null) {
+              limit = parseInt(String(valToUse), 10);
+              if (isNaN(limit)) limit = 25;
+            }
+          }
+
+          const dynamicOpts: string[] = [];
+          if (limit <= 0) {
+            dynamicOpts.push('0 (Limit exhausted today)');
+          } else {
+            // Always show granular options up to 25, then standard chunks
+            if (limit >= 5) dynamicOpts.push('5');
+            if (limit >= 10) dynamicOpts.push('10');
+            if (limit >= 15) dynamicOpts.push('15');
+            if (limit >= 20) dynamicOpts.push('20');
+            if (limit >= 25) dynamicOpts.push('25');
+            if (limit >= 50) dynamicOpts.push('50');
+            if (limit > 50) dynamicOpts.push(`Max (${limit})`);
+          }
+          // Ensure options are unique and sorted numerically (except for 'Max' and '0')
+          const uniqueSortedOpts = Array.from(new Set(dynamicOpts)).sort((a, b) => {
+            if (a.includes('Max')) return 1;
+            if (b.includes('Max')) return -1;
+            if (a.includes('0')) return -1;
+            if (b.includes('0')) return 1;
+            return parseInt(a, 10) - parseInt(b, 10);
+          });
+          setDynamicOptions(uniqueSortedOpts);
+        })
+        .catch(err => {
+          logger.error('[ChatMessageBubble] Error fetching limits:', err);
+          setDynamicOptions(['10 (Recommended)', '25', 'Max (50)']);
+        });
+    }
+  }, [isLeadsPerDay, isLastMessage]);
+
   const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping;
+  const finalOptions = (isLeadsPerDay && dynamicOptions) ? dynamicOptions : parsedOptions?.options;
+
   return (
     <div
       className={cn(
@@ -161,7 +214,7 @@ export default function ChatMessageBubble({
               />
             ) : (
               <SelectableOptions
-                options={parsedOptions.options}
+                options={finalOptions || []}
                 multiSelect={parsedOptions.multiSelect}
                 onSubmit={onOptionSubmit!}
                 variant={

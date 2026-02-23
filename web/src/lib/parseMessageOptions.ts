@@ -90,9 +90,9 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
           cleanQuestionText = `What ${platformKey.charAt(0).toUpperCase() + platformKey.slice(1)} actions do you want to include?`;
         }
         // Check if message says "pre-selected" or "all actions are pre-selected"
-        const isPreSelected = messageLower.includes('pre-selected') || 
-                             messageLower.includes('all actions are pre-selected') ||
-                             messageLower.includes('all') && messageLower.includes('pre-selected');
+        const isPreSelected = messageLower.includes('pre-selected') ||
+          messageLower.includes('all actions are pre-selected') ||
+          messageLower.includes('all') && messageLower.includes('pre-selected');
         return {
           options,
           multiSelect: true, // Platform actions are always multi-select
@@ -137,10 +137,11 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     .filter(line => line.length > 0 && !line.toLowerCase().includes('modify your selection')); // Filter out helper text
   // Check for multi-select hint
   const multiSelectKeywords = ['multiple', 'choose multiple', 'select multiple', 'one or more', 'any'];
-  const multiSelect = multiSelectKeywords.some(keyword => 
+  const multiSelect = multiSelectKeywords.some(keyword =>
     message.toLowerCase().includes(keyword)
   );
-  const isLeadsPerDay = /leads per day|leads do you want per day|connect with daily/i.test(messageLower);
+  const isLeadsPerDay = /leads per day|leads do you want per day|connect with daily/i.test(messageLower) &&
+    !/summary|ready to launch|campaign setup|here's your campaign/i.test(messageLower);
   // Skip is no longer allowed - all questions are required
   const allowSkip = false;
   if (optionLines.length === 0) {
@@ -172,9 +173,9 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
       totalPlatforms = parseInt(platformIndexMatch[2], 10);
     }
     // Check if message says "pre-selected" or "all actions are pre-selected"
-    const isPreSelected = messageLower.includes('pre-selected') || 
-                         messageLower.includes('all actions are pre-selected') ||
-                         (messageLower.includes('all') && messageLower.includes('pre-selected'));
+    const isPreSelected = messageLower.includes('pre-selected') ||
+      messageLower.includes('all actions are pre-selected') ||
+      (messageLower.includes('all') && messageLower.includes('pre-selected'));
     // If pre-selected, pre-select ALL options
     if (isPreSelected && optionLines.length > 0) {
       preSelectedOptions = [...optionLines]; // Pre-select all extracted options
@@ -189,12 +190,12 @@ export function parseMessageOptions(message: string): ParsedOptions | null {
     stepType = 'condition';
   }
   // Template input
-  else if (messageLower.includes('please provide the message template') || 
-           messageLower.includes('please provide the call script') ||
-           messageLower.includes('provide the message template') ||
-           messageLower.includes('provide the call script') ||
-           (messageLower.includes('template') && messageLower.includes('you\'d like to use')) ||
-           (messageLower.includes('script') && messageLower.includes('you\'d like to use'))) {
+  else if (messageLower.includes('please provide the message template') ||
+    messageLower.includes('please provide the call script') ||
+    messageLower.includes('provide the message template') ||
+    messageLower.includes('provide the call script') ||
+    (messageLower.includes('template') && messageLower.includes('you\'d like to use')) ||
+    (messageLower.includes('script') && messageLower.includes('you\'d like to use'))) {
     stepType = 'template_input';
   }
   // Campaign goal (Step 8)
