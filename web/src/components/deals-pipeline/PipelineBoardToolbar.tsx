@@ -4,7 +4,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import {
   Plus,
   Filter,
-  ArrowUpDown,
   Search,
   Settings,
   Download,
@@ -42,7 +41,6 @@ interface PipelineBoardToolbarProps {
   onAddStage: () => void;
   onAddLead: () => void;
   onOpenFilter: () => void;
-  onOpenSort: () => void;
   onOpenSettings: () => void;
   onExport: () => void;
   onExportWithDateRange?: (range: 'today' | 'thisMonth' | 'thisYear' | 'custom', startDate?: string, endDate?: string) => void;
@@ -74,7 +72,6 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
   onAddStage,
   onAddLead,
   onOpenFilter,
-  onOpenSort,
   onOpenSettings,
   onExport,
   onExportWithDateRange
@@ -86,7 +83,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
     <div className="rounded-3xl px-4 sm:px-2 py-2 sm:py-2">
       <div className="flex flex-col gap-4">
         {/* Top row: All controls */}
-    <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
           {/* Left side - Stats, Action buttons, and Zoom */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* View mode toggle */}
@@ -94,11 +91,10 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               <button
                 type="button"
                 onClick={() => onViewModeChange?.('kanban')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  viewMode === 'kanban'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'kanban'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 <LayoutGrid className="h-4 w-4" />
                 Kanban
@@ -106,20 +102,20 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               <button
                 type="button"
                 onClick={() => onViewModeChange?.('list')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'list'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 <List className="h-4 w-4" />
                 List
               </button>
             </div>
 
-            {/* Action buttons (hidden in list view) */}
-            {viewMode !== 'list' && (
+            {/* Action buttons (hidden in list view and only shown in local development) */}
+            {viewMode !== 'list' && process.env.NODE_ENV === 'development' && (
               <>
+
                 <Button
                   onClick={onAddStage}
                   className="bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
@@ -137,8 +133,10 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
               </>
             )}
             {/* Zoom controls - only show in kanban view */}
-            {viewMode === 'kanban' && (
+            {/* {viewMode === 'kanban' && (
+              
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+                
                 <button
                   onClick={handleZoomOut}
                   disabled={zoom <= 0.5}
@@ -163,7 +161,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                   <RotateCcw className="h-4 w-4" />
                 </button>
               </div>
-            )}
+            )} */}
           </div>
           {/* Right side - Search and control buttons (hidden in list view) */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:ml-auto">
@@ -185,26 +183,18 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                 <Button
                   variant="outline"
                   onClick={onOpenFilter}
-                  className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
+                  className="flex items-center gap-1 rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                 >
-                  <Filter className="mr-1.5 h-4 w-4" />
+                  <Filter className=" h-4 w-4" />
                   Filter
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onOpenSort}
-                  className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
-                >
-                  <ArrowUpDown className="mr-1.5 h-4 w-4" />
-                  Sort
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
+                      className="flex items-center gap-1 rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                     >
-                      <Download className="mr-1.5 h-4 w-4" />
+                      <Download className=" h-4 w-4" />
                       Export
                     </Button>
                   </DropdownMenuTrigger>
@@ -221,8 +211,8 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                     <DropdownMenuItem onClick={() => onExportWithDateRange?.('thisYear')}>
                       This Year
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onExportWithDateRange?.('custom')}>
-                      <Calendar className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => onExportWithDateRange?.('custom')} className="flex items-center gap-1">
+                      <Calendar className=" h-4 w-4" />
                       Custom Range
                     </DropdownMenuItem>
                   </DropdownMenuContent>
