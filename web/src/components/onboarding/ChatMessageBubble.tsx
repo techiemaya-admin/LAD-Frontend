@@ -133,16 +133,14 @@ export default function ChatMessageBubble({
           if (limit <= 0) {
             dynamicOpts.push('0 (Limit exhausted today)');
           } else {
-            // Always show granular options up to 25, then standard chunks
-            if (limit >= 5) dynamicOpts.push('5');
-            if (limit >= 10) dynamicOpts.push('10');
-            if (limit >= 15) dynamicOpts.push('15');
-            if (limit >= 20) dynamicOpts.push('20');
-            if (limit >= 25) dynamicOpts.push('25');
-            if (limit >= 50) dynamicOpts.push('50');
-            if (limit > 50) dynamicOpts.push(`Max (${limit})`);
+            // Generate increments of 5 up to the limit
+            for (let i = 5; i < limit; i += 5) {
+              dynamicOpts.push(String(i));
+            }
+            // Always add the exact limit at the end
+            dynamicOpts.push(String(limit));
           }
-          // Ensure options are unique and sorted numerically (except for 'Max' and '0')
+          // Ensure options are unique and sorted numerically (except for text labels)
           const uniqueSortedOpts = Array.from(new Set(dynamicOpts)).sort((a, b) => {
             if (a.includes('Max')) return 1;
             if (b.includes('Max')) return -1;
@@ -159,7 +157,7 @@ export default function ChatMessageBubble({
     }
   }, [isLeadsPerDay, isLastMessage]);
 
-  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping;
+  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping && (!isLeadsPerDay || dynamicOptions !== null);
   const finalOptions = (isLeadsPerDay && dynamicOptions) ? dynamicOptions : parsedOptions?.options;
 
   return (
