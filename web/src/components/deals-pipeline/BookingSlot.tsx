@@ -5,9 +5,11 @@ import { Calendar, Clock, User, CheckCircle2, XCircle, AlertCircle, X } from 'lu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/ui/dialog';
 import * as bookingService from '@/services/bookingService';
+import * as leadsService from '@lad/frontend-features/deals-pipeline';
 import { selectPipelineSettings } from '@/store/slices/uiSlice';
 import { selectUser } from '@/store/slices/authSlice';
 import { logger } from '@/lib/logger';
@@ -79,6 +81,8 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   const [showAllBookedAppointments, setShowAllBookedAppointments] = useState(false);
   // New bookings payload field
   const [bookingType, setBookingType] = useState<string>('manual_followup');
+  // Optional notes for this appointment
+  const [bookingNotes, setBookingNotes] = useState<string>('');
   // If logged-in user is present, use it as default counsellor/user.
   useEffect(() => {
     if (!selectedUser && createdBy) {
@@ -576,6 +580,15 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
       }
       setConfirmDialogOpen(false);
       setSelectedSlotForBooking(null);
+      // Save notes separately via leads API if provided
+      if (bookingNotes?.trim()) {
+        try {
+          await leadsService.addLeadNote(leadId, bookingNotes.trim());
+        } catch (noteError) {
+          console.warn('Booking succeeded but failed to save note:', noteError);
+        }
+      }
+      setBookingNotes('');
       // Show success toast
       showToast(`Booking confirmed with ${user?.name || 'User'} on ${selectedDate} from ${selectedSlotForBooking.startTime} to ${selectedSlotForBooking.endTime}`, 'success');
     } catch (error: any) {
@@ -942,6 +955,19 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 </div>
               </div>
             )}
+            {/* Appointment Notes */}
+            <div>
+              <Label htmlFor="appointment-notes" className="text-sm text-gray-600 mb-2 block">
+                Notes
+              </Label>
+              <Textarea
+                id="appointment-notes"
+                rows={3}
+                placeholder="Add notes for this appointment (optional)"
+                value={bookingNotes}
+                onChange={(e) => setBookingNotes(e.target.value)}
+              />
+            </div>
             {/* Book Slot Button */}
             {startTime && endTime && endTime > startTime && (
               <Button
@@ -1203,4 +1229,4 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     </>
   );
 };
-export default BookingSlot;
+export default BookingSlot;

@@ -49,6 +49,7 @@ type BackendCallLog = {
   timeline?: Array<{ t: string; title: string; desc?: string }>;
   agentName?: string;
   leadName?: string;
+  duration_seconds?: number;
 };
 
 type PhoneNumber = {
@@ -140,14 +141,21 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     }
   }, []);
 
-  // Format call duration
+  // Format call duration - prefer duration_seconds from API if available
   const formatDuration = (call: BackendCallLog) => {
+    // Use duration_seconds from API if available
+    if (call.duration_seconds !== undefined && call.duration_seconds !== null) {
+      const secs = Math.max(0, Math.round(call.duration_seconds));
+      return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
+    }
+    // Fallback to calculating from timeline
     if (call.timeline && call.timeline.length >= 2) {
       const start = new Date(call.timeline[0].t).getTime();
       const end = new Date(call.timeline[call.timeline.length - 1].t).getTime();
       const secs = Math.max(0, Math.round((end - start) / 1000));
       return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
     }
+    // Fallback to calculating from startedAt/endedAt
     if (call.startedAt && call.endedAt) {
       const secs = Math.max(
         0,
@@ -217,6 +225,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           timeline: r.timeline,
           agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
           leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
+          duration_seconds: r.duration_seconds ?? r.call_duration ?? r.duration ?? undefined,
         };
       });
 

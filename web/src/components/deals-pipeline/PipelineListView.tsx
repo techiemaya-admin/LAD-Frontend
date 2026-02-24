@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -34,11 +35,19 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Linkedin,
-  Phone
+  Phone,
+  LayoutGrid,
+  List,
+  Calendar,
+  Copy
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
+import { useToast } from '@/components/ui/use-toast';
 import { selectStatuses, selectPriorities } from '@/store/slices/masterDataSlice';
 import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
+import { formatDateTimeUnified } from '@/utils/dateTime';
+import { getTagConfig, normalizeLeadCategory, type LeadTag } from '@/utils/leadCategorization';
 // UI-compatible Lead interface for pipeline list view
 interface Lead {
   id: string | number;
@@ -52,9 +61,11 @@ interface Lead {
   amount?: number | string;
   assignee?: string;
   source?: string;
+  lead_tags?: string[];
+  lead_category?: string;
   [key: string]: unknown;
 }
-import { 
+import {
   selectPipelineSearchQuery,
   selectPipelineActiveFilters,
   selectPipelineSortConfig,
@@ -64,8 +75,8 @@ import {
   setPipelineSortConfig,
   setSelectedLead,
   setFilterDialogOpen,
-  setSortDialogOpen,
-  setSettingsDialogOpen
+  setSettingsDialogOpen,
+  toggleColumnVisibility
 } from '@/store/slices/uiSlice';
 const COLUMN_LABELS: Record<string, string> = {
   name: 'Lead Name',
@@ -74,12 +85,11 @@ const COLUMN_LABELS: Record<string, string> = {
   stage: 'Stage',
   status: 'Status',
   priority: 'Priority',
-  amount: 'Amount',
+  tags: 'Tags',
   closeDate: 'Close Date',
   dueDate: 'Due Date',
   expectedCloseDate: 'Expected Close Date',
   source: 'Source',
-  assignee: 'Assignee',
   createdAt: 'Created Date',
   updatedAt: 'Updated Date',
   lastActivity: 'Last Activity'
@@ -93,80 +103,71 @@ const formatCurrency = (amount?: number | string): string => {
     minimumFractionDigits: 0
   }).format(numAmount);
 };
-const formatDate = (dateString?: string | Date | number | null): string => {
-  if (!dateString) return '-';
-  try {
-    let date: Date;
-    // If it's already a Date object
-    if (dateString instanceof Date) {
-      date = dateString;
-    } else if (typeof dateString === 'string') {
-      // Handle empty strings, 'null', 'undefined' strings
-      if (dateString.trim() === '' || dateString === 'null' || dateString === 'undefined') {
-        return '-';
-      }
-      date = new Date(dateString);
-    } else if (typeof dateString === 'number') {
-      // Handle Unix timestamps (both seconds and milliseconds)
-      date = new Date(dateString < 10000000000 ? dateString * 1000 : dateString);
-    } else {
-      return '-';
-    }
-    // Check if the date is valid
-    if (isNaN(date.getTime())) return 'Invalid date';
-    // Check for unrealistic dates (before 1900 or too far in future)
-    const year = date.getFullYear();
-    if (year < 1900 || year > 2100) return 'Invalid date';
-    return date.toLocaleDateString();
-  } catch (error) {
-    // Date formatting error - return invalid date message per LAD guidelines
-    return 'Invalid date';
-  }
-};
 interface PipelineListViewProps {
   leads: Lead[];
   stages: Array<{ key: string; label: string; name?: string }>;
   visibleColumns: Record<string, boolean>;
+  totalLeadsCount?: number;
+  isLoading?: boolean;
   searchQuery?: string;
   selectedLead?: unknown;
+  viewMode?: 'kanban' | 'list';
+  onViewModeChange?: (mode: 'kanban' | 'list') => void;
   onEdit?: (lead: unknown) => void;
-  onDelete?: (leadId: string | number) => void;
+  onDelete?: (id: string) => void;
   onAddStage?: () => void;
   onAddLead?: () => void;
-  onSearchChange?: (query: string) => void;
-  onColumnVisibilityChange?: (columns: Record<string, boolean>) => void;
   onStatusChange?: (leadId: string | number, status: string) => Promise<void> | void;
   onStageChange?: (leadId: string | number, stage: string) => Promise<void> | void;
   onPriorityChange?: (leadId: string | number, priority: string) => Promise<void> | void;
+  onTagChange?: (leadId: string | number, tag: string) => Promise<void> | void;
   onAssigneeChange?: (leadId: string | number, assignee: string) => Promise<void> | void;
   onExport?: () => void;
+  onExportWithDateRange?: (range: 'today' | 'thisMonth' | 'thisYear' | 'custom', startDate?: string, endDate?: string) => void;
   teamMembers?: Array<{ id?: string; _id?: string; name?: string; email?: string }>;
   currentUser?: { role?: string; isAdmin?: boolean } | null;
   compactMode?: boolean;
+  // Pagination props for API-driven pagination
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
 }
-const PipelineListView: React.FC<PipelineListViewProps> = ({ 
-  leads, 
-  stages, 
-  visibleColumns, 
-  searchQuery, 
+const PipelineListView: React.FC<PipelineListViewProps> = ({
+  leads,
+  stages,
+  visibleColumns,
+  totalLeadsCount,
+  isLoading = false,
+  searchQuery,
   selectedLead,
-  onEdit, 
-  onDelete, 
+  viewMode = 'list',
+  onViewModeChange,
+  onEdit,
+  onDelete,
   onAddStage,
   onAddLead,
-  onSearchChange,
-  onColumnVisibilityChange,
   onStatusChange,
   onStageChange,
   onPriorityChange,
+  onTagChange,
   onAssigneeChange,
   onExport,
+  onExportWithDateRange,
   teamMembers = [],
   currentUser = null,
-  compactMode = false
+  compactMode = false,
+  // Pagination props
+  currentPage: controlledCurrentPage,
+  pageSize: controlledPageSize,
+  onPageChange,
+  onPageSizeChange
 }) => {
   // Redux dispatch
   const dispatch = useDispatch();
+  const router = useRouter();
+  const { toast } = useToast();
+  const masterDataRequestedRef = useRef<boolean>(false);
   // Get shared state from Redux
   const globalSearchQuery = useSelector(selectPipelineSearchQuery);
   const globalActiveFilters = useSelector(selectPipelineActiveFilters);
@@ -237,8 +238,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           masterDataRequestedRef.current = true;
           const { fetchStatuses, fetchPriorities, fetchSources } = await import('@lad/frontend-features/deals-pipeline');
           const [statuses, priorities, sources] = await Promise.all([
-            fetchStatuses().catch(err => { 
-              console.warn('Failed to load statuses:', err); 
+            fetchStatuses().catch(err => {
+              logger.warn('[PipelineListView] Failed to load statuses');
               // Fallback to static statuses matching our backend
               return [
                 { key: 'active', label: 'Active' },
@@ -249,8 +250,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 { key: 'inactive', label: 'Inactive' }
               ];
             }),
-            fetchPriorities().catch(err => { 
-              console.warn('Failed to load priorities:', err); 
+            fetchPriorities().catch(err => {
+              logger.warn('[PipelineListView] Failed to load priorities');
               // Fallback to static priorities
               return [
                 { key: 'low', label: 'Low' },
@@ -259,8 +260,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 { key: 'urgent', label: 'Urgent' }
               ];
             }),
-            fetchSources().catch(err => { 
-              console.warn('Failed to load sources:', err); 
+            fetchSources().catch(err => {
+              logger.warn('[PipelineListView] Failed to load sources');
               return [
                 { key: 'website', label: 'Website' },
                 { key: 'linkedin', label: 'LinkedIn' },
@@ -271,10 +272,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           ]);
           const { setStatuses, setPriorities, setSources } = await import('@/store/slices/masterDataSlice');
           dispatch(setStatuses(statuses));
-          dispatch(setPriorities(priorities)); 
+          dispatch(setPriorities(priorities));
           dispatch(setSources(sources));
-          } catch (err) {
-          console.error('[PipelineListView] Failed to load master data:', err);
+        } catch (err) {
+          logger.error('[PipelineListView] Failed to load master data', err);
         } finally {
           masterDataRequestedRef.current = false;
         }
@@ -297,6 +298,56 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       };
     });
   }, [leads, effectiveStatusOptions, effectivePriorityOptions, stages]);
+
+  const getSortableValue = useCallback((lead: Lead & Record<string, unknown>, field: string): string | number => {
+    if (!field) return '';
+
+    // Prefer sorting by the same values the UI displays.
+    if (field === 'stage') return (lead.stageName as string) || '';
+    if (field === 'status') return (lead.statusLabel as string) || '';
+    if (field === 'priority') return (lead.priorityLabel as string) || '';
+    if (field === 'assignee') return getAssigneeDisplayName(lead.assignee as string) || '';
+
+    const rawValue = getFieldValue(lead, field) ?? (lead as any)[field];
+
+    // Date-ish fields
+    if (
+      field === 'createdAt' ||
+      field === 'updatedAt' ||
+      field === 'closeDate' ||
+      field === 'dueDate' ||
+      field === 'expectedCloseDate' ||
+      field === 'lastActivity'
+    ) {
+      // Handle snake_case fallback used in some payloads
+      const altRawValue =
+        field === 'lastActivity'
+          ? (rawValue ?? getFieldValue(lead, 'updated_at'))
+          : rawValue;
+
+      if (altRawValue == null || altRawValue === '' || altRawValue === 'null' || altRawValue === 'undefined') return 0;
+
+      const d = altRawValue instanceof Date
+        ? altRawValue
+        : typeof altRawValue === 'number'
+          ? new Date(altRawValue < 10000000000 ? altRawValue * 1000 : altRawValue)
+          : new Date(String(altRawValue));
+
+      const ts = d.getTime();
+      return Number.isFinite(ts) ? ts : 0;
+    }
+
+    // Numeric fields
+    if (field === 'amount') {
+      if (rawValue == null || rawValue === '') return 0;
+      if (typeof rawValue === 'number') return Number.isFinite(rawValue) ? rawValue : 0;
+      const parsed = parseFloat(String(rawValue).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    // Default to string compare
+    return String(rawValue ?? '').toLowerCase();
+  }, [getAssigneeDisplayName]);
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
     let filtered = [...allLeads];
@@ -323,31 +374,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     // Apply sorting
     if (globalSortConfig && globalSortConfig.field) {
       filtered.sort((a, b) => {
-        let aVal: any = (a as any)[globalSortConfig.field];
-        let bVal: any = (b as any)[globalSortConfig.field];
-        // Handle date fields
-        if (globalSortConfig.field === 'createdAt' || globalSortConfig.field === 'updatedAt' || globalSortConfig.field === 'closeDate' || 
-            globalSortConfig.field === 'dueDate' || globalSortConfig.field === 'expectedCloseDate' || globalSortConfig.field === 'lastActivity') {
-          aVal = new Date((aVal as string) || 0);
-          bVal = new Date((bVal as string) || 0);
-        }
-        // Handle numeric fields
-        else if (globalSortConfig.field === 'amount') {
-          aVal = parseFloat((aVal as string) || '0');
-          bVal = parseFloat((bVal as string) || '0');
-        }
-        // Handle string fields
-        else {
-          aVal = ((aVal as string) || '').toString().toLowerCase();
-          bVal = ((bVal as string) || '').toString().toLowerCase();
-        }
+        const field = globalSortConfig.field;
+        const aVal = getSortableValue(a as any, field);
+        const bVal = getSortableValue(b as any, field);
+
         if (aVal < bVal) return globalSortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return globalSortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
     return filtered;
-  }, [allLeads, localSearch, currentFilters, globalSortConfig]);
+  }, [allLeads, localSearch, currentFilters, globalSortConfig, getSortableValue]);
   const DEFAULT_COLUMN_ORDER = useMemo(
     () => [
       'name',
@@ -355,8 +392,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       'phone',
       'stage',
       'status',
-      'priority',
-      'amount',
+      'tags',
       'source',
       'createdAt',
       'updatedAt',
@@ -366,10 +402,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   );
   const visibleColumnKeys = useMemo(() => {
     const ordered = DEFAULT_COLUMN_ORDER.filter(
-      (key) => key !== 'assignee' && visibleColumns[key] !== false
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] !== false
     );
     const extras = Object.keys(visibleColumns).filter(
-      (key) => key !== 'assignee' && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
     );
     return [...ordered, ...extras];
   }, [DEFAULT_COLUMN_ORDER, visibleColumns]);
@@ -393,22 +429,43 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     };
   };
   const columnWidths = getColumnWidths();
-  // Pagination state (client-side, similar to CallLogsTable)
-  const PAGE_SIZE = 20;
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const totalRecords = filteredAndSortedLeads.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  // Pagination state - use controlled props if provided, otherwise local state
+  const isControlledPagination = controlledCurrentPage !== undefined && onPageChange !== undefined;
+  const [localCurrentPage, setLocalCurrentPage] = useState<number>(1);
+  const [localPageSize, setLocalPageSize] = useState<number>(50);
+
+  const currentPage = isControlledPagination ? controlledCurrentPage : localCurrentPage;
+  const pageSize = controlledPageSize !== undefined ? controlledPageSize : localPageSize;
+
+  const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
+    ? totalLeadsCount
+    : filteredAndSortedLeads.length;
+  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / pageSize));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
+
   const handlePageChange = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
-    setCurrentPage(nextPage);
+    if (isControlledPagination) {
+      onPageChange?.(nextPage);
+    } else {
+      setLocalCurrentPage(nextPage);
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    if (onPageSizeChange) {
+      onPageSizeChange(newSize);
+    } else {
+      setLocalPageSize(newSize);
+      setLocalCurrentPage(1); // Reset to page 1 when size changes
+    }
   };
   const paginatedLeads = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
     return filteredAndSortedLeads.slice(startIndex, endIndex);
-  }, [filteredAndSortedLeads, currentPage]);
+  }, [filteredAndSortedLeads, currentPage, pageSize]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
@@ -417,24 +474,20 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }));
   };
   const handleSearchSubmit = () => {
-    onSearchChange?.(localSearch);
     setSearchAnchorEl(null);
   };
   const handleFilterChange = (type: string, value: string) => {
     const currentFiltersOfType = (currentFilters[type as keyof typeof currentFilters] as string[]) || [];
     const newFilters = {
       ...currentFilters,
-      [type]: currentFiltersOfType.includes(value) 
+      [type]: currentFiltersOfType.includes(value)
         ? currentFiltersOfType.filter(v => v !== value)
         : [...currentFiltersOfType, value]
     };
     dispatch(setPipelineActiveFilters(newFilters));
   };
   const handleColumnToggle = (column: string) => {
-    onColumnVisibilityChange?.({
-      ...visibleColumns,
-      [column]: !visibleColumns[column]
-    });
+    dispatch(toggleColumnVisibility(column as any));
   };
   // Lead details dialog handlers
   const handleRowClick = (lead: Lead) => {
@@ -448,7 +501,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const handleSearchChange = (value: string): void => {
     setLocalSearch(value);
     dispatch(setPipelineSearchQuery(value));
-    onSearchChange?.(value);
   };
   // Check if current user is admin (you can adjust this logic based on your user roles)
   const isAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin;
@@ -479,9 +531,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     switch (column) {
       case 'name':
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1 min-w-0">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm max-w-[125px] truncate font-medium">
                 {lead.name || 'Unnamed Lead'}
               </p>
               <p className="text-xs text-gray-500 truncate">
@@ -491,23 +543,69 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       case 'email':
+        const handleCopyEmail = async () => {
+          if (lead.email) {
+            await navigator.clipboard.writeText(lead.email);
+            toast({
+              title: 'Copied!',
+              description: 'Email copied to clipboard',
+            });
+          }
+        };
         return (
-          <p className="text-sm">
-            {lead.email || '-'}
-          </p>
+          <div className="group flex items-center gap-2">
+            <p className="text-sm max-w-[125px] truncate" title={lead.email || ''}>
+              {lead.email || '-'}
+            </p>
+            {lead.email && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyEmail();
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-gray-100 rounded"
+                title="Copy email"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         );
       case 'phone':
+        const handleCopyPhone = async () => {
+          if (lead.phone) {
+            await navigator.clipboard.writeText(lead.phone);
+            toast({
+              title: 'Copied!',
+              description: 'Phone number copied to clipboard',
+            });
+          }
+        };
         return (
-          <p className="text-sm">
-            {lead.phone || '-'}
-          </p>
+          <div className="group flex items-center gap-2">
+            <p className="text-sm max-w-[100px] truncate">
+              {lead.phone || '-'}
+            </p>
+            {lead.phone && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyPhone();
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                title="Copy phone"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         );
       case 'stage':
         // Validate that the lead's stage exists in available stages
         const validStageValue = stages.find(stage => stage.key === lead.stage) ? lead.stage : '';
         // Log warning for invalid stage values
         if (lead.stage && !validStageValue) {
-          console.warn(`[PipelineListView] Invalid stage value "${lead.stage}" for lead ${lead.id}. Available stages:`, stages.map(s => s.key));
+          logger.warn(`[PipelineListView] Invalid stage value "${lead.stage}" for lead ${lead.id}.`);
         }
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -517,8 +615,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 handleDropdownChange('stage', newValue);
               }}
             >
-              <SelectTrigger className="min-w-[120px] h-9">
-                <SelectValue placeholder="Select Stage" />
+              <SelectTrigger className="min-w-[100px] h-8 text-xs">
+                <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
                 {stages.map((stage) => (
@@ -535,7 +633,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         const validStatusValue = effectiveStatusOptions.find(option => option.key === lead.status) ? lead.status : '';
         // Log warning for invalid status values
         if (lead.status && !validStatusValue) {
-          console.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}. Available options:`, effectiveStatusOptions.map(s => s.key));
+          logger.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}.`);
         }
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -558,58 +656,69 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
-      case 'priority':
-        // Validate that the lead's priority exists in available options
-        const validPriorityValue = effectivePriorityOptions.find(option => option.key === lead.priority) ? lead.priority : '';
-        // Log warning for invalid priority values
-        if (lead.priority && !validPriorityValue) {
-          console.warn(`[PipelineListView] Invalid priority value "${lead.priority}" for lead ${lead.id}. Available options:`, effectivePriorityOptions.map(p => p.key));
+      case 'tags': {
+        // Derive tag from lead_tags / lead_category fields (same logic as CallLogsTable)
+        const rawTags = lead.lead_tags;
+        const primaryTag = Array.isArray(rawTags) && rawTags.length > 0 ? String(rawTags[0]) : '';
+        const normalizedPrimary = primaryTag.toLowerCase();
+        let derivedTag: LeadTag = 'unknown';
+        if (normalizedPrimary.includes('hot')) derivedTag = 'hot';
+        else if (normalizedPrimary.includes('warm')) derivedTag = 'warm';
+        else if (normalizedPrimary.includes('cold')) derivedTag = 'cold';
+        else if (lead.lead_category) {
+          const normalized = normalizeLeadCategory(lead.lead_category as string);
+          if (normalized) derivedTag = normalized;
         }
+        const tagConfig = getTagConfig(derivedTag);
+        const toBackendTagLabel = (t: LeadTag): string | null => {
+          if (t === 'hot') return 'Hot Lead';
+          if (t === 'warm') return 'Warm Lead';
+          if (t === 'cold') return 'Cold Lead';
+          return null;
+        };
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Select
-              value={validPriorityValue}
-              onValueChange={(newValue) => {
-                handleDropdownChange('priority', newValue);
+              value={derivedTag}
+              onValueChange={(newTag) => {
+                const backendLabel = toBackendTagLabel(newTag as LeadTag);
+                if (!backendLabel || !onTagChange) return;
+                onTagChange(lead.id, backendLabel);
               }}
             >
-              <SelectTrigger className="min-w-[120px] h-9">
-                <SelectValue placeholder="Select Priority" />
+              <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
+                <SelectValue placeholder="Tag" />
               </SelectTrigger>
               <SelectContent>
-                {effectivePriorityOptions.map((priority) => (
-                  <SelectItem key={priority.key} value={priority.key}>
-                    {priority.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="hot" className="text-red-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    Hot
+                  </span>
+                </SelectItem>
+                <SelectItem value="warm" className="text-amber-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    Warm
+                  </span>
+                </SelectItem>
+                <SelectItem value="cold" className="text-blue-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    Cold
+                  </span>
+                </SelectItem>
+                <SelectItem value="unknown" className="text-gray-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                    Unknown
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
         );
-      case 'amount':
-        return (
-          <p className="text-sm font-medium">
-            {formatCurrency(lead.amount)}
-          </p>
-        );
-      case 'closeDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'closeDate'))}
-          </p>
-        );
-      case 'dueDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'dueDate'))}
-          </p>
-        );
-      case 'expectedCloseDate':
-        return (
-          <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'expectedCloseDate'))}
-          </p>
-        );
+      }
       case 'source':
         const sourceValue = (lead.source || 'unknown').toLowerCase();
         const getSourceStyles = (source: string) => {
@@ -649,65 +758,37 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
           }
         };
+        const sourceName = formatSourceName(lead.source || '');
         return (
-          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
-            {getSourceIcon(sourceValue)}
-            {formatSourceName(lead.source || '')}
-          </span>
-        );
-      case 'assignee':
-        // Only show dropdown for admin users, otherwise show read-only display
-        if (isAdmin) {
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              <Select
-                value={getAssigneeValue(lead.assignee) || ''}
-                onValueChange={(newValue) => {
-                  handleDropdownChange('assignee', newValue);
-                }}
-              >
-                <SelectTrigger className="min-w-[150px] h-9">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id || member.name} value={member.id || member._id || ''}>
-                      {member.name || member.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          );
-        }
-        // Non-admin users see read-only display
-        const assigneeDisplayName = getAssigneeDisplayName(lead.assignee);
-        return assigneeDisplayName ? (
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm truncate">{assigneeDisplayName}</p>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Unassigned
-          </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
+                  {getSourceIcon(sourceValue)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{sourceName}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       case 'createdAt':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'createdAt'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'createdAt'))}
           </p>
         );
       case 'updatedAt':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'updatedAt'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'updatedAt'))}
           </p>
         );
       case 'lastActivity':
         return (
           <p className="text-sm">
-            {formatDate(getFieldValue(lead, 'lastActivity'))}
+            {formatDateTimeUnified(getFieldValue(lead, 'lastActivity') || getFieldValue(lead, 'updated_at'))}
           </p>
         );
       default:
@@ -721,6 +802,32 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-between sm:items-center">
           <div className="flex items-center gap-2 justify-start">
+            {/* View mode toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={() => onViewModeChange?.('kanban')}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'kanban'
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Kanban
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewModeChange?.('list')}
+                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                <List className="h-4 w-4" />
+                List
+              </button>
+            </div>
+
             <Button
               className="h-10"
               onClick={(e) => {
@@ -729,7 +836,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               }}
               disabled={!onAddStage}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus />
               Add Stage
             </Button>
             <Button
@@ -740,55 +847,90 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               }}
               disabled={!onAddLead}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus />
               Add Lead
             </Button>
           </div>
           <div className="flex gap-3 flex-col sm:flex-row justify-end items-center w-full sm:w-auto">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search leads..."
-              className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
-            />
-          </div>
-          <Button
-            variant="outline"
-            className="h-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch(setFilterDialogOpen(true));
-            }}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button
-            variant="outline"
-            className="h-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch(setSortDialogOpen(true));
-            }}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            Sort
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch(setSettingsDialogOpen(true));
-            }}
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={localSearch}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search leads..."
+                className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="h-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch(setFilterDialogOpen(true));
+              }}
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10"
+                  disabled={!onExport && !onExportWithDateRange}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Download className="h-4 w-4 " />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onExport?.()}
+                  disabled={!onExport}
+                >
+                  All Leads
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onExportWithDateRange?.('today')}
+                  disabled={!onExportWithDateRange}
+                >
+                  Today
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onExportWithDateRange?.('thisMonth')}
+                  disabled={!onExportWithDateRange}
+                >
+                  This Month
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onExportWithDateRange?.('thisYear')}
+                  disabled={!onExportWithDateRange}
+                >
+                  This Year
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onExportWithDateRange?.('custom')}
+                  disabled={!onExportWithDateRange}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Custom Range
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch(setSettingsDialogOpen(true));
+              }}
+              title="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -798,9 +940,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             {visibleColumnKeys.map((column) => (
               <TableHead
                 key={column}
-                className={`font-semibold text-[#1E293B] whitespace-nowrap ${
-                  ['name', 'stage', 'status', 'priority', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
-                }`}
+                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${['name', 'stage', 'status', 'priority', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                  }`}
                 onClick={() => handleSort(column)}
               >
                 <div className="flex items-center gap-2">
@@ -812,29 +953,39 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedLeads.map((lead) => (
-            <TableRow
-              key={lead.id}
-              onClick={(e) => {
-                if ((e.target as HTMLElement).closest('select, button, input')) {
-                  e.stopPropagation();
-                  return;
-                }
-                handleRowClick(lead);
-              }}
-              className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
-            >
-              {visibleColumnKeys.map((column) => (
-                <TableCell
-                  key={column}
-                  className="py-4 whitespace-nowrap px-3"
-                >
-                  {renderCellContent(lead, column)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-          {filteredAndSortedLeads.length === 0 && (
+          {isLoading
+            ? Array.from({ length: 8 }).map((_, rowIndex) => (
+              <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+                {visibleColumnKeys.map((column) => (
+                  <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
+                    <div className="h-4 bg-gray-200 rounded w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+            : paginatedLeads.map((lead) => (
+              <TableRow
+                key={lead.id}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest('select, button, input')) {
+                    e.stopPropagation();
+                    return;
+                  }
+                  handleRowClick(lead);
+                }}
+                className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
+              >
+                {visibleColumnKeys.map((column) => (
+                  <TableCell
+                    key={column}
+                    className="py-2 whitespace-nowrap px-3"
+                  >
+                    {renderCellContent(lead, column)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          {!isLoading && filteredAndSortedLeads.length === 0 && (
             <TableRow>
               <TableCell
                 colSpan={visibleColumnKeys.length}
@@ -842,34 +993,61 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               >
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Filter className="w-8 h-8 text-primary" />
+                    <Phone className="w-8 h-8 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                      No leads found
+                      Trigger a campaign
                     </h3>
                     <p className="text-sm text-[#64748B] mb-4">
-                      Try adjusting your search or filters
+                      Start a campaign to create leads and see them appear here
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push('/campaigns');
+                    }}
+                    className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Go to Campaigns
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
-      {/* Pagination Controls – Client-Side Pagination, matching CallLogsTable */}
+      {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+          <div className="flex items-center gap-4 text-sm text-[#64748B]">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  handlePageSizeChange(Number(e.target.value));
+                }}
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+              >
+                {[5, 10, 20, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
             <span>
-              {`Showing ${((currentPage - 1) * PAGE_SIZE) + 1} to ${Math.min(currentPage * PAGE_SIZE, totalRecords)} of ${totalRecords} leads`}
+              {`${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="text-sm text-[#64748B]">
-              {`Page ${currentPage} of ${totalPages}`}
+              Page {currentPage} of {totalPages}
             </div>
 
             <div className="flex items-center gap-1">

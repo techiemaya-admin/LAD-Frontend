@@ -46,7 +46,18 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
         name: lead.name || '',
         email: lead.email || '',
         phone: lead.phoneNumber || '',
-        company: (lead as { company?: string }).company || '',
+        title:
+          (lead as { title?: string }).title ||
+          (lead as any)?.raw_data?._full_data?.title ||
+          '',
+        company:
+          (lead as { company?: string }).company ||
+          (lead as { company_name?: string }).company_name ||
+          // Nested raw data from enrichment providers
+          (lead as any)?.raw_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.company_name ||
+          (lead as any)?.raw_data?._full_data?.organization?.name ||
+          '',
         stage: lead.stage || '',
         status: lead.status || '',
         priority: (lead as { priority?: string }).priority || '',
@@ -80,6 +91,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
       onSave({
         ...lead,
         ...editingLead,
+        title: editingLead.title,
         email: editingLead.email,
         phoneNumber: editingLead.phone,
         company: editingLead.company,
@@ -165,6 +177,14 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                   {errors.email && (
                     <p className="text-sm text-red-500">{errors.email}</p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={editingLead.title || ''}
+                    onChange={handleChange('title')}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-phone">Phone</Label>
@@ -303,74 +323,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                 </div>
               </div>
             </div>
-            {/* Description */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-500">Additional Information</h3>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  rows={4}
-                  value={editingLead.description || ''}
-                  onChange={handleChange('description')}
-                />
-              </div>
-            </div>
-            {/* Goals and Labels */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Goals</Label>
-                <div className="flex flex-wrap gap-2">
-                  {editingLead.goals?.map((goal, index) => (
-                    <Chip key={index} variant="outline">
-                      {goal}
-                      <button
-                        onClick={() => handleGoalsChange(editingLead.goals?.filter((_, i) => i !== index) || [])}
-                        className="ml-2 text-xs"
-                      >
-                        ×
-                      </button>
-                    </Chip>
-                  ))}
-                  <Input
-                    placeholder="Add goal"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                        e.preventDefault();
-                        handleGoalsChange([...(editingLead.goals || []), e.currentTarget.value.trim()]);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Labels</Label>
-                <div className="flex flex-wrap gap-2">
-                  {editingLead.labels?.map((label, index) => (
-                    <Chip key={index} variant="outline">
-                      {label}
-                      <button
-                        onClick={() => handleLabelsChange(editingLead.labels?.filter((_, i) => i !== index) || [])}
-                        className="ml-2 text-xs"
-                      >
-                        ×
-                      </button>
-                    </Chip>
-                  ))}
-                  <Input
-                    placeholder="Add label"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                        e.preventDefault();
-                        handleLabelsChange([...(editingLead.labels || []), e.currentTarget.value.trim()]);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
+            {/* Notes moved to Schedule Appointment section; Additional Information removed from here */}
           </div>
         </DialogContent>
         <DialogActions className="p-6 pt-2">
@@ -387,4 +340,4 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
     </Dialog>
   );
 };
-export default EditLeadDialog;
+export default EditLeadDialog;

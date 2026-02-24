@@ -3,6 +3,8 @@ export type VoiceAgentTargetType = "company" | "employee";
 export interface UserAvailableNumber {
   id: string;
   phone_number: string;
+  country_code?: string;
+  base_number?: string;
   provider?: string;
   type?: string;
   status?: string;
@@ -100,5 +102,17 @@ export interface UpdateSummaryRequest {
 export interface UpdateSummaryResponse {
   success?: boolean;
   message?: string;
+  [key: string]: unknown;
+}
+
+export interface UpdateCallLeadTagsRequest {
+  callId: string;
+  tags: string[];
+}
+
+export interface UpdateCallLeadTagsResponse {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
   [key: string]: unknown;
 }

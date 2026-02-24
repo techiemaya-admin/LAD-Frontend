@@ -149,6 +149,7 @@ export function Sidebar() {
         : "Manage your sales pipeline and deals.",
       requiredCapability: "view_pipeline",
     },
+
   ];
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated

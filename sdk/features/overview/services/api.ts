@@ -123,17 +123,17 @@ class DashboardApiService {
     }
 
     const query = queryParams.toString();
-    const endpoint = `/bookings${query ? `?${query}` : ''}`;
+    const endpoint = `/api/dashboard/bookings${query ? `?${query}` : ''}`;
     
     return this.request<LeadBookingListResponse>(endpoint);
   }
 
   async getLeadBookingById(bookingId: string): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>(`/bookings/${bookingId}`);
+    return this.request<LeadBookingResponse>(`/api/dashboard/bookings/${bookingId}`);
   }
 
   async createLeadBooking(data: CreateLeadBookingParams): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>('/bookings', {
+    return this.request<LeadBookingResponse>('/api/dashboard/bookings', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -143,7 +143,7 @@ class DashboardApiService {
     bookingId: string,
     data: UpdateLeadBookingParams
   ): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>(`/bookings/${bookingId}`, {
+    return this.request<LeadBookingResponse>(`/api/dashboard/bookings/${bookingId}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
@@ -151,7 +151,7 @@ class DashboardApiService {
 
   // Users APIs
   async getTenantUsers(): Promise<UsersListResponse> {
-    return this.request<UsersListResponse>('/users');
+    return this.request<UsersListResponse>('/api/dashboard/users');
   }
 }
 
