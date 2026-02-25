@@ -86,6 +86,7 @@ export default function ChatMessageBubble({
   }, [isAI, isLastMessage, isTyping]);
 
   const [dynamicOptions, setDynamicOptions] = useState<string[] | null>(null);
+  const [hasExhaustedLimit, setHasExhaustedLimit] = useState(false);
 
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
@@ -131,8 +132,10 @@ export default function ChatMessageBubble({
 
           const dynamicOpts: string[] = [];
           if (limit <= 0) {
+            setHasExhaustedLimit(true);
             dynamicOpts.push('0 (Limit exhausted today)');
           } else {
+            setHasExhaustedLimit(false);
             // Generate increments of 5 up to the limit
             for (let i = 5; i < limit; i += 5) {
               dynamicOpts.push(String(i));
@@ -226,6 +229,13 @@ export default function ChatMessageBubble({
                 platformName={parsedOptions.platformName}
                 leadsPerDayOptions={parsedOptions.leadsPerDayOptions}
               />
+            )}
+
+            {hasExhaustedLimit && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+                <p className="font-semibold mb-1 text-amber-900">⚠️ Daily Limit Reached</p>
+                <p>If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
+              </div>
             )}
           </div>
         )}

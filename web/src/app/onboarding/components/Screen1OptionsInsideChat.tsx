@@ -28,7 +28,7 @@ export default function Screen1OptionsInsideChat() {
     if (option === 'leads' && limits && limits.total > 0 && limits.remaining <= 0) {
       toast({
         title: "Daily Limit Reached",
-        description: "You have reached your daily LinkedIn connection limit. Your limit will reset tomorrow.",
+        description: "If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.",
         variant: "destructive",
       });
       return;
@@ -99,8 +99,16 @@ export default function Screen1OptionsInsideChat() {
             </div>
           </button>
         </div>
+
+        {limits && limits.total > 0 && limits.remaining <= 0 && (
+          <div className="w-full max-w-4xl mx-auto -mb-2 mt-4 flex items-center gap-3 bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p><strong>Daily Limit Reached.</strong> If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
+          </div>
+        )}
+
         {/* Chat Input Bar - Below options, wider */}
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl mx-auto mt-6">
           <ChatInputClaude
             onSend={() => { }}
             disabled={true}

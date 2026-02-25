@@ -42,7 +42,7 @@ export default function Screen1MainOptions() {
     if (option === 'leads' && limits && limits.total > 0 && limits.remaining <= 0) {
       toast({
         title: "Daily Limit Reached",
-        description: "You have reached your daily LinkedIn connection limit. Your limit will reset tomorrow.",
+        description: "If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.",
         variant: "destructive",
       });
       return;
@@ -195,6 +195,13 @@ export default function Screen1MainOptions() {
               </div>
             </div>
           </div>
+
+          {limits && limits.total > 0 && limits.remaining <= 0 && (
+            <div className="mt-8 max-w-4xl mx-auto flex items-center gap-3 bg-red-50 text-red-700 px-5 py-4 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in slide-in-from-bottom-2 shadow-sm">
+              <AlertCircle className="w-6 h-6 flex-shrink-0" />
+              <p><strong>Daily Limit Reached.</strong> If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

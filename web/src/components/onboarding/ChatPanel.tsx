@@ -1976,6 +1976,14 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               </div>
             </button>
           </div>
+
+          {limits && limits.total > 0 && limits.remaining <= 0 && (
+            <div className="w-full max-w-4xl mx-auto -mb-2 mt-4 flex items-center gap-3 bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p><strong>Daily Limit Reached.</strong> If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
+            </div>
+          )}
+
           {/* Chat Input Bar - Below options, wider */}
           <div className="w-full max-w-4xl mx-auto">
             <ChatInputClaude
@@ -2131,13 +2139,15 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
           </div>
         </div>
         {/* Workflow Library Modal - Initial Screen */}
-        {showWorkflowLibrary && (
-          <WorkflowLibrary
-            onSelectWorkflow={handleWorkflowSelect}
-            onClose={() => setShowWorkflowLibrary(false)}
-          />
-        )}
-      </div>
+        {
+          showWorkflowLibrary && (
+            <WorkflowLibrary
+              onSelectWorkflow={handleWorkflowSelect}
+              onClose={() => setShowWorkflowLibrary(false)}
+            />
+          )
+        }
+      </div >
     );
   }
   // Show GuidedFlowPanel for Lead Generation & Outreach (only if in FORM mode)
@@ -2548,7 +2558,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             <AlertCircle className="w-4 h-4" />
             {limits.total === 0
               ? "LinkedIn connection required. Please connect an account in settings to create lead campaigns."
-              : "Daily limit reached. You cannot create new lead campaigns until tomorrow."
+              : "Daily limit reached. If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today."
             }
           </div>
         )}
@@ -2739,11 +2749,6 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               setIsProcessingAI(false);
             }
           }}
-          placeholder={
-            (showOptions || (aiMessages.length > 0 && aiMessages[aiMessages.length - 1]?.role === 'ai' && aiMessages[aiMessages.length - 1]?.options && aiMessages[aiMessages.length - 1]?.options!.length > 0))
-              ? 'Select an option above or type your message...'
-              : 'How can I help you today?'
-          }
         />
       </div>
       {/* Workflow Library Modal */}
