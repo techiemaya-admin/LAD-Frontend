@@ -31,11 +31,13 @@ import { VoiceAgentsWidget } from './widgets/VoiceAgentsWidget';
 import { AIInsightsWidget } from './widgets/AIInsightsWidget';
 import { QuickActionsWidget } from './widgets/QuickActionsWidget';
 import { CalendarWidget } from './widgets/CalendarWidget';
-import { cn } from '@/lib/utils';
-
 // Utilities
-import { apiGet } from '@/lib/api';
-import { safeStorage } from '@/utils/storage';
+import { cn } from '@/lib/utils';
+import {
+  useDashboardCalls,
+  useWalletStats,
+  useAvailableNumbers
+} from '@lad/frontend-features/overview';
 
 // Types
 type BackendCallLog = {
@@ -81,65 +83,44 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   // Data states
-  const [calls, setCalls] = useState<BackendCallLog[]>([]);
+  // SDK Data
   const [chartMode, setChartMode] = useState<'month' | 'year'>('month');
-  const [countToday, setCountToday] = useState(0);
-  const [countYesterday, setCountYesterday] = useState(0);
-  const [countThisMonth, setCountThisMonth] = useState(0);
-  const [countLastMonth, setCountLastMonth] = useState(0);
-  const [answerRate, setAnswerRate] = useState<number>(0);
-  const [answerRateLastWeek, setAnswerRateLastWeek] = useState<number>(0);
-  const [creditsData, setCreditsData] = useState<{
-    balance: number;
-    totalMinutes: number;
-    remainingMinutes: number;
-    usageThisMonth: number;
-  } | null>(null);
-  const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
 
-  // Fetch credits data
-  const fetchCredits = useCallback(async () => {
-    try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
-      if (!token) return;
+  // Stats from hook - will be populated by API or calculated by hook
+  const [statsData, setStatsData] = useState<{
+    countToday: number;
+    countYesterday: number;
+    countThisMonth: number;
+    countLastMonth: number;
+    answerRate: number;
+    answerRateLastWeek: number;
+  }>({
+    countToday: 0,
+    countYesterday: 0,
+    countThisMonth: 0,
+    countLastMonth: 0,
+    answerRate: 0,
+    answerRateLastWeek: 0,
+  });
 
-      const walletData = await apiGet<{
-        wallet?: {
-          currentBalance?: number;
-          availableBalance?: number;
-        };
-        credits?: number;
-        balance?: number;
-        monthly_usage?: number;
-      }>('/api/billing/wallet');
-
-      // Try new API response format first, fall back to legacy format
-      const balance = walletData?.wallet?.availableBalance || 
-                     walletData?.wallet?.currentBalance || 
-                     walletData?.credits || 
-                     walletData?.balance || 
-                     0;
-      
-      const usageThisMonth = walletData?.monthly_usage || 0;
-      const totalMinutes = balance * 3.7;
-      const remainingMinutes = totalMinutes * (1 - usageThisMonth / 100);
-
-      setCreditsData({
-        balance,
-        totalMinutes,
-        remainingMinutes,
-        usageThisMonth,
-      });
-    } catch (error) {
-      // Error already logged by apiGet - set default values
-      setCreditsData({
-        balance: 0,
-        totalMinutes: 0,
-        remainingMinutes: 0,
-        usageThisMonth: 0,
-      });
+  // SDK Hooks
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
+    if (chartMode === 'month') {
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - (DAYS_RANGE - 1));
+    } else {
+      startDate = new Date(now);
+      startDate.setFullYear(now.getFullYear() - 1);
     }
-  }, []);
+    return { startDate: startDate.toISOString(), endDate: now.toISOString() };
+  }, [chartMode]);
+
+  const { calls, summary, stats: apiStats, loading: callsLoading } = useDashboardCalls(dateRange);
+  const { stats: creditsData, loading: creditsLoading } = useWalletStats();
+  const { numbers, loading: numbersLoading } = useAvailableNumbers();
+
 
   // Format call duration - prefer duration_seconds from API if available
   const formatDuration = (call: BackendCallLog) => {
@@ -185,122 +166,97 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     );
   };
 
-  // Fetch call logs
-  const fetchCallLogs = useCallback(async () => {
-    try {
-      const now = new Date();
-      let startDate: Date;
+  // Calculate/Update metrics when calls or summary change
+  useEffect(() => {
+    // If API provides stats, we use them as a baseline, but we'll override
+    // the monthly counts with summary-based calculation for stability if possible.
+    const baseStats = (Object.keys(apiStats || {}).length > 0) ? apiStats : null;
 
-      if (chartMode === 'month') {
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - (DAYS_RANGE - 1));
-      } else {
-        startDate = new Date(now);
-        startDate.setFullYear(now.getFullYear() - 1);
-      }
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-      const startDateISO = startDate.toISOString();
-      const endDateISO = now.toISOString();
-      let qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
+    // Filter calls for high-frequency stats (today/yesterday)
+    const todayCalls = calls.filter((i) => {
+      const start = i.startedAt || i.call_date;
+      return start && new Date(start) >= todayStart;
+    });
 
-      const res = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
-        `/api/dashboard/calls${qs}`
-      );
+    const yesterdayCalls = calls.filter((i) => {
+      const start = i.startedAt || i.call_date;
+      const callDate = start ? new Date(start) : null;
+      return callDate && callDate >= yesterdayStart && callDate < todayStart;
+    });
 
-      const rows: any[] = Array.isArray(res) ? res : (res.data || res.logs || res.calls || []);
-      const mapped: BackendCallLog[] = rows.map((r: any) => {
-        const leadFullName = [r.lead_first_name, r.lead_last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
+    // Calendar Month Logic for "Monthly" stats
+    // This Month: 1st of current month to now
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Last Month: 1st of previous month to end of previous month
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-        return {
-          id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? crypto.randomUUID()),
-          from: r.agent || r.initiated_by || r.from || r.from_number || r.fromnum || r.source || r.from_number_id || '-',
-          to: r.to || r.to_number || r.tonum || '-',
-          startedAt: r.startedAt || r.started_at || r.created_at || r.createdAt || r.start_time || r.timestamp || '',
-          endedAt: r.endedAt ?? r.ended_at ?? r.end_time ?? undefined,
-          status: r.status || r.call_status || r.result || 'unknown',
-          recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
-          timeline: r.timeline,
-          agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
-          leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
-          duration_seconds: r.duration_seconds ?? r.call_duration ?? r.duration ?? undefined,
-        };
+    let thisMonthCount = 0;
+    let lastMonthCount = 0;
+
+    // Use summary for stable monthly counts (preferred over truncated 'calls' list)
+    if (summary && summary.length > 0) {
+      summary.forEach(item => {
+        const itemDate = new Date(item.call_date);
+        if (itemDate >= monthStart) {
+          thisMonthCount += item.total_calls;
+        } else if (itemDate >= lastMonthStart && itemDate <= lastMonthEnd) {
+          lastMonthCount += item.total_calls;
+        }
       });
+    } else {
+      // Fallback: local calculation from calls array
+      thisMonthCount = calls.filter((i) => {
+        const start = i.startedAt || i.call_date;
+        return start && new Date(start) >= monthStart;
+      }).length;
 
-      setCalls(mapped);
-
-      // Calculate metrics
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayCalls = mapped.filter((i) => new Date(i.startedAt) >= todayStart);
-      setCountToday(todayCalls.length);
-
-      const yesterdayStart = new Date(todayStart);
-      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-      const yesterdayCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= yesterdayStart && callDate < todayStart;
-      });
-      setCountYesterday(yesterdayCalls.length);
-
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const thisMonthCalls = mapped.filter((i) => new Date(i.startedAt) >= monthStart);
-      setCountThisMonth(thisMonthCalls.length);
-
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-      const lastMonthCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= lastMonthStart && callDate <= lastMonthEnd;
-      });
-      setCountLastMonth(lastMonthCalls.length);
-
-      // Answer rate calculations
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      const thisWeekCalls = mapped.filter((i) => new Date(i.startedAt) >= weekStart);
-      const answeredThisWeek = thisWeekCalls.filter(
-        (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
-      ).length;
-      const answerRateThisWeek = thisWeekCalls.length > 0 ? Math.round((answeredThisWeek / thisWeekCalls.length) * 100) : 0;
-      setAnswerRate(answerRateThisWeek);
-
-      const lastWeekStart = new Date(weekStart);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-      const lastWeekEnd = new Date(weekStart);
-      const lastWeekCalls = mapped.filter((i) => {
-        const callDate = new Date(i.startedAt);
-        return callDate >= lastWeekStart && callDate < lastWeekEnd;
-      });
-      const answeredLastWeek = lastWeekCalls.filter(
-        (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
-      ).length;
-      const answerRateLastWeekValue = lastWeekCalls.length > 0 ? Math.round((answeredLastWeek / lastWeekCalls.length) * 100) : 0;
-      setAnswerRateLastWeek(answerRateLastWeekValue);
-    } catch (error) {
-      console.error('[Dashboard] Error fetching call logs:', error);
-      setCalls([]);
+      lastMonthCount = calls.filter((i) => {
+        const start = i.startedAt || i.call_date;
+        const callDate = start ? new Date(start) : null;
+        return callDate && callDate >= lastMonthStart && callDate <= lastMonthEnd;
+      }).length;
     }
-  }, [chartMode]);
 
-  // Fetch phone numbers
-  useEffect(() => {
-    const loadNumbers = async () => {
-      try {
-        const data = await apiGet<{ numbers?: PhoneNumber[]; items?: PhoneNumber[] }>('/api/voice-agent/user/available-numbers');
-        setNumbers(data?.numbers || data?.items || []);
-      } catch {}
-    };
-    loadNumbers();
-  }, []);
+    // Answer rate logic remains weekly based on fetched calls
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const thisWeekCalls = calls.filter((i) => {
+      const start = i.startedAt || i.call_date;
+      return start && new Date(start) >= weekStart;
+    });
+    const answeredThisWeekCount = thisWeekCalls.filter(
+      (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+    ).length;
 
-  // Fetch all data on mount and when chartMode changes
-  useEffect(() => {
-    fetchCallLogs();
-    fetchCredits();
-  }, [fetchCallLogs, fetchCredits]);
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(weekStart);
+    const lastWeekCalls = calls.filter((i) => {
+      const start = i.startedAt || i.call_date;
+      const callDate = start ? new Date(start) : null;
+      return callDate && callDate >= lastWeekStart && callDate < lastWeekEnd;
+    });
+    const answeredLastWeekCount = lastWeekCalls.filter(
+      (i) => i.status === 'completed' || i.status === 'answered' || i.status === 'ended'
+    ).length;
+
+    setStatsData({
+      countToday: baseStats?.countToday ?? todayCalls.length,
+      countYesterday: baseStats?.countYesterday ?? yesterdayCalls.length,
+      countThisMonth: thisMonthCount, // Prioritize our stable calendar-month calculation
+      countLastMonth: lastMonthCount,
+      answerRate: baseStats?.answerRate ?? (thisWeekCalls.length > 0 ? Math.round((answeredThisWeekCount / thisWeekCalls.length) * 100) : 0),
+      answerRateLastWeek: baseStats?.answerRateLastWeek ?? (lastWeekCalls.length > 0 ? Math.round((answeredLastWeekCount / lastWeekCalls.length) * 100) : 0),
+    });
+  }, [calls, summary, apiStats]);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -324,31 +280,57 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     if (over && active.id !== over.id) {
       const oldIndex = layout.findIndex((item) => item.i === active.id);
       const newIndex = layout.findIndex((item) => item.i === over.id);
-      
+
       const newLayout = arrayMove(layout, oldIndex, newIndex);
       setLayout(newLayout);
     }
   };
 
   // Calculate chart data
+  // Calculate chart data
   const chartData = useMemo(() => {
-    if (chartMode === 'month') {
-      const counts = new Map<string, number>();
+    const counts = new Map<string, number>();
+
+    // Helper to get local date key "YYYY-MM-DD" or "YYYY-MM"
+    const getLocalKey = (date: Date, mode: 'month' | 'year') => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return mode === 'month' ? `${yyyy}-${mm}-${dd}` : `${yyyy}-${mm}`;
+    };
+
+    // Fill map from summary if available
+    if (summary && summary.length > 0) {
+      summary.forEach(item => {
+        // Normalize YYYY-MM-DD to YYYY-MM if in year mode
+        const key = chartMode === 'month'
+          ? item.call_date
+          : item.call_date.slice(0, 7);
+
+        counts.set(key, (counts.get(key) || 0) + item.total_calls);
+      });
+    } else {
+      // Fallback: fill map from local calls
       for (const c of calls) {
-        const d = new Date(c.startedAt);
-        if (isNaN(d.getTime())) continue;
-        const key = d.toISOString().slice(0, 10);
+        const start = c.startedAt || c.call_date;
+        const d = start ? new Date(start) : null;
+        if (!d || isNaN(d.getTime())) continue;
+
+        const key = getLocalKey(d, chartMode);
         counts.set(key, (counts.get(key) || 0) + 1);
       }
+    }
 
-      const out: Array<{ dateKey: string; date: string; calls: number }> = [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    const out: Array<{ dateKey: string; date: string; calls: number }> = [];
+    const today = new Date();
+
+    if (chartMode === 'month') {
       const start = new Date(today);
+      start.setHours(0, 0, 0, 0);
       start.setDate(today.getDate() - (DAYS_RANGE - 1));
 
-      for (let dt = new Date(start); dt <= today; ) {
-        const key = dt.toISOString().slice(0, 10);
+      for (let dt = new Date(start); dt <= today;) {
+        const key = getLocalKey(dt, 'month');
         out.push({
           dateKey: key,
           date: dt.toLocaleDateString('en-GB', {
@@ -359,41 +341,27 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         });
         dt.setDate(dt.getDate() + 1);
       }
-      
-      return out;
-    }
+    } else {
+      // Year mode - group by 12 months ending today
+      const start = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+      const cursor = new Date(start);
 
-    // Year mode - group by month
-    const monthly = new Map<string, number>();
-    for (const c of calls) {
-      const d = new Date(c.startedAt);
-      if (isNaN(d.getTime())) continue;
-      const key = d.toISOString().slice(0, 7);
-      monthly.set(key, (monthly.get(key) || 0) + 1);
-    }
-
-    const out: Array<{ dateKey: string; date: string; calls: number }> = [];
-    const now = new Date();
-    const yearAgo = new Date();
-    yearAgo.setFullYear(now.getFullYear() - 1);
-
-    const cursor = new Date(yearAgo.getFullYear(), yearAgo.getMonth(), 1);
-
-    while (cursor <= now) {
-      const key = cursor.toISOString().slice(0, 7);
-      out.push({
-        dateKey: key,
-        date: cursor.toLocaleDateString('en-GB', {
-          month: 'short',
-          year: 'numeric',
-        }),
-        calls: monthly.get(key) ?? 0,
-      });
-      cursor.setMonth(cursor.getMonth() + 1);
+      while (cursor <= today) {
+        const key = getLocalKey(cursor, 'year');
+        out.push({
+          dateKey: key,
+          date: cursor.toLocaleDateString('en-GB', {
+            month: 'short',
+            year: 'numeric',
+          }),
+          calls: counts.get(key) ?? 0,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
     }
 
     return out;
-  }, [calls, chartMode]);
+  }, [calls, summary, chartMode]);
 
   // Transform calls to widget format
   const latestCalls: CallLog[] = useMemo(
@@ -403,8 +371,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         leadName: call.leadName || 'Unknown Lead',
         agentName: call.agentName || 'AI Assistant',
         status: call.status,
-        duration: formatDuration(call),
-        date: formatCallDate(call.startedAt),
+        duration: formatDuration(call as any),
+        date: formatCallDate(call.startedAt || call.call_date || ''),
       })),
     [calls]
   );
@@ -422,15 +390,15 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
   const renderWidget = (widgetId: string, isOverlay = false) => {
     const widgetType = getWidgetTypeFromId(widgetId);
-    
+
     switch (widgetType) {
       case 'calls-today':
         return (
           <StatWidget
             id={widgetId}
             title="Calls Today"
-            value={countToday}
-            trend={countToday - countYesterday}
+            value={statsData.countToday}
+            trend={statsData.countToday - statsData.countYesterday}
             trendLabel="vs yesterday"
             icon="phone"
           />
@@ -440,9 +408,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           <StatWidget
             id={widgetId}
             title="Answer Rate"
-            value={`${answerRate}%`}
+            value={`${statsData.answerRate}%`}
             subtitle="This week"
-            trend={answerRate - answerRateLastWeek}
+            trend={statsData.answerRate - statsData.answerRateLastWeek}
             trendLabel="vs last week"
             icon="check"
           />
@@ -452,8 +420,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
           <StatWidget
             id={widgetId}
             title="Monthly Calls"
-            value={countThisMonth}
-            trend={countThisMonth - countLastMonth}
+            value={statsData.countThisMonth}
+            trend={statsData.countThisMonth - statsData.countLastMonth}
             trendLabel="vs last month"
             icon="trending"
           />
@@ -499,7 +467,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       minHeight: `${item.h * 80}px`,
     };
   };
-  
+
   // Get responsive grid style for mobile
   const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
     // On mobile (< 768px), ignore gridColumn span. On desktop, use it.
@@ -540,9 +508,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
 
         <DragOverlay>
           {activeId ? (
-            <div 
+            <div
               className="opacity-90 shadow-2xl"
-              style={{ 
+              style={{
                 width: '400px',
                 minHeight: '160px',
               }}
@@ -556,7 +524,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
       {isEditMode && (
         <div className="mt-6 p-4 border-2 border-dashed border-accent/30 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">
-            🎯 <span className="font-medium">Drag widgets</span> by their header to reorder • 
+            🎯 <span className="font-medium">Drag widgets</span> by their header to reorder •
             <span className="font-medium"> Click "+ Add Widget"</span> to add more
           </p>
         </div>

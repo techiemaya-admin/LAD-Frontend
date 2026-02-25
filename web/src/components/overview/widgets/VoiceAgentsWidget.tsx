@@ -5,8 +5,8 @@ import { Bot, Phone, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { apiGet } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAvailableAgents, useDashboardCalls } from '@lad/frontend-features/overview';
 
 interface VoiceAgent {
   id: string;
@@ -40,7 +40,6 @@ const determineStatus = (callsToday: number, successRate: number): 'active' | 'b
 
 export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
   const [agents, setAgents] = useState<VoiceAgent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 3;
@@ -53,114 +52,94 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
     [agents, currentPage]
   );
 
-  useEffect(() => {
-    const abortController = new AbortController();
+  // Fetch agents data
+  const { agents: availableAgents, loading: agentsLoading } = useAvailableAgents();
 
-    const fetchAgentMetrics = async () => {
-      try {
-        setLoading(true);
-
-        // Fetch available agents
-        const availableAgentsRes = await apiGet<{ success: boolean; data?: any[]; agents?: any[] }>(
-          '/api/voice-agent/user/available-agents',
-          { signal: abortController.signal }
-        );
-        const availableAgents = availableAgentsRes.data || availableAgentsRes.agents || [];
-
-        // Fetch call logs for metrics
-        const now = new Date();
-        const startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30); // Last 30 days
-
-        const startDateISO = startDate.toISOString();
-        const endDateISO = now.toISOString();
-        const qs = `?startDate=${encodeURIComponent(startDateISO)}&endDate=${encodeURIComponent(endDateISO)}`;
-
-        const callsRes = await apiGet<{ success: boolean; logs?: any[]; calls?: any[]; data?: any[] }>(
-          `/api/dashboard/calls${qs}`
-        );
-        const logs = Array.isArray(callsRes) ? callsRes : (callsRes.data || callsRes.logs || callsRes.calls || []);
-
-        // Group call logs by agent
-        const agentMetrics = new Map<string, {
-          totalCalls: number;
-          todayCalls: number;
-          successCalls: number;
-        }>();
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        for (const log of logs) {
-          const agentName = getFullAgentName(log.agent_name || log.agent || 'Unknown Agent');
-          const status = log.status?.toLowerCase() || '';
-          const isToday = new Date(log.startedAt || log.created_at).toDateString() === today.toDateString();
-
-          if (!agentMetrics.has(agentName)) {
-            agentMetrics.set(agentName, {
-              totalCalls: 0,
-              todayCalls: 0,
-              successCalls: 0,
-            });
-          }
-
-          const metric = agentMetrics.get(agentName)!;
-          metric.totalCalls++;
-
-          if (isToday) {
-            metric.todayCalls++;
-          }
-
-          // Count as success: ended, completed, answered
-          if (status === 'ended' || status === 'completed' || status === 'answered') {
-            metric.successCalls++;
-          }
-        }
-
-        // Map available agents to display format
-        const agentList: VoiceAgent[] = availableAgents
-          .map((agent: any, idx: number) => {
-            const agentName = getFullAgentName(
-              agent.name || agent.agent_name || agent.label || 'Unknown Agent'
-            );
-            const metrics = agentMetrics.get(agentName) || {
-              totalCalls: 0,
-              todayCalls: 0,
-              successCalls: 0,
-            };
-
-            const successRate =
-              metrics.totalCalls > 0
-                ? Math.round((metrics.successCalls / metrics.totalCalls) * 100)
-                : 0;
-
-            return {
-              id: agent.id || `agent-${idx}`,
-              name: agentName,
-              status: determineStatus(metrics.todayCalls, successRate),
-              callsToday: metrics.todayCalls,
-              successRate,
-            };
-          })
-          .sort((a, b) => b.callsToday - a.callsToday); // Sort by calls today descending
-
-        setAgents(agentList.length > 0 ? agentList : []);
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('Error fetching agent metrics:', error);
-          setAgents([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAgentMetrics();
-
-    return () => {
-      abortController.abort();
-    };
+  // Metrics date range
+  const metricsDateRange = useMemo(() => {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 30); // Last 30 days
+    return { startDate: startDate.toISOString(), endDate: now.toISOString() };
   }, []);
+
+  // Fetch calls for metrics
+  const { calls: logs, loading: callsLoading } = useDashboardCalls(metricsDateRange);
+
+  const loading = agentsLoading || callsLoading;
+
+  useEffect(() => {
+    if (loading || !availableAgents) return;
+
+    // Group call logs by agent
+    const agentMetrics = new Map<string, {
+      totalCalls: number;
+      todayCalls: number;
+      successCalls: number;
+    }>();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const log of logs) {
+      const agentName = getFullAgentName(log.agentName || 'Unknown Agent');
+      const status = log.status?.toLowerCase() || '';
+      const dateStr = log.startedAt || log.call_date;
+      if (!dateStr) continue;
+
+      const logDate = new Date(dateStr);
+      if (isNaN(logDate.getTime())) continue;
+
+      const isToday = logDate.toDateString() === today.toDateString();
+
+      if (!agentMetrics.has(agentName)) {
+        agentMetrics.set(agentName, {
+          totalCalls: 0,
+          todayCalls: 0,
+          successCalls: 0,
+        });
+      }
+
+      const metric = agentMetrics.get(agentName)!;
+      metric.totalCalls++;
+
+      if (isToday) {
+        metric.todayCalls++;
+      }
+
+      // Count as success: ended, completed, answered
+      if (status === 'ended' || status === 'completed' || status === 'answered') {
+        metric.successCalls++;
+      }
+    }
+
+    // Map available agents to display format
+    const agentList: VoiceAgent[] = availableAgents
+      .map((agent: any, idx: number) => {
+        const agentName = getFullAgentName(agent.name || 'Unknown Agent');
+        const metrics = agentMetrics.get(agentName) || {
+          totalCalls: 0,
+          todayCalls: 0,
+          successCalls: 0,
+        };
+
+        const successRate =
+          metrics.totalCalls > 0
+            ? Math.round((metrics.successCalls / metrics.totalCalls) * 100)
+            : 0;
+
+        return {
+          id: agent.id || `agent-${idx}`,
+          name: agentName,
+          status: determineStatus(metrics.todayCalls, successRate),
+          callsToday: metrics.todayCalls,
+          successRate,
+        };
+      })
+      .sort((a, b) => b.callsToday - a.callsToday); // Sort by calls today descending
+
+    setAgents(agentList);
+  }, [availableAgents, logs, loading]);
 
   if (loading) {
     return (
