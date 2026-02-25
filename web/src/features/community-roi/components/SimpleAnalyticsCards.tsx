@@ -40,16 +40,16 @@ export default function SimpleAnalyticsCards() {
   // Log full data structure
   console.log('🟦 [SimpleAnalyticsCards] Full Data:', JSON.stringify(data, null, 2));
 
-  // Try to get values with various property names
-  const members = data.connectivityAnalysis?.memberCount || data.members || 0;
-  const meetings = data.networkBreakdown?.meetings || data.meetings || 0;
-  const referrals = data.networkBreakdown?.referrals || data.referrals || 0;
-  const density = data.connectivityAnalysis?.networkDensity || data.density || 0;
+  // Extract values from nested data structure
+  const members = data.connectivityAnalysis?.memberCount || 0;
+  const meetings = data.networkBreakdown?.meetings || 0;
+  const referrals = data.networkBreakdown?.referrals || 0;
+  const density = data.connectivityAnalysis?.networkDensity || 0;
 
   // New KPIs
   const avgConnectionsPerMember = data.connectivityAnalysis?.avgConnectionsPerMember || 0;
   const avgRelationshipScore = data.relationshipStrength?.avgStrengthScore || 0;
-  const totalBusinessValue = data.businessValue?.totalValue || 0;
+  const totalBusinessValue = data.businessValue?.totalBusinessValue || 0;
   const avgReferralValue = data.businessValue?.avgReferralValue || 0;
   
   // Last refresh date

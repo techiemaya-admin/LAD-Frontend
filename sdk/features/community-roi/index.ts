@@ -103,5 +103,6 @@ export type {
   HeatmapColorLegend,
   RelationshipHeatmapResponse,
   UpdateRelationshipScoresResponse,
+  UUID,
 } from './types';
 

@@ -73,29 +73,25 @@ export default function NetworkStatsPanel() {
       'color: #2196F3; font-weight: bold;'
     );
     
-    const result = refetch();
-    if (result && 'then' in result) {
-      result
-        .then(queryResult => {
-          console.log(
-            '%c[NetworkStatsPanel] ✅ Refetch completed',
-            'color: #4CAF50; font-weight: bold;',
-            {
-              hasData: !!queryResult.data,
-              hasError: !!queryResult.error,
-              status: queryResult.status || 'unknown',
-              dataKeys: queryResult.data ? Object.keys(queryResult.data) : [],
-            }
-          );
-        })
-        .catch(err => {
-          console.error(
-            '%c[NetworkStatsPanel] ❌ Refetch failed',
-            'color: #F44336; font-weight: bold;',
-            err
-          );
-        });
-    }
+    // Refetch returns a Promise
+    refetch().then((queryResult: any) => {
+      console.log(
+        '%c[NetworkStatsPanel] ✅ Refetch completed',
+        'color: #4CAF50; font-weight: bold;',
+        {
+          hasData: !!queryResult?.data,
+          hasError: !!queryResult?.error,
+          status: (queryResult as any)?.status || 'unknown',
+          dataKeys: queryResult?.data ? Object.keys(queryResult.data) : [],
+        }
+      );
+    }).catch((err: unknown) => {
+      console.error(
+        '%c[NetworkStatsPanel] ❌ Refetch failed',
+        'color: #F44336; font-weight: bold;',
+        err
+      );
+    });
   }, [isAuthenticated, token, isEnabled, refetch]);
 
   // Log stats changes and validate structure
@@ -175,12 +171,15 @@ export default function NetworkStatsPanel() {
       hasError: !!error,
       hasData: !!stats,
     });
-    refetch().then(result => {
+    // Refetch returns a Promise
+    refetch().then((result: any) => {
       console.log('[NetworkStatsPanel] Manual refetch completed:', {
-        hasData: !!result.data,
-        hasError: !!result.error,
-        dataKeys: result.data ? Object.keys(result.data) : [],
+        hasData: !!result?.data,
+        hasError: !!result?.error,
+        dataKeys: result?.data ? Object.keys(result.data) : [],
       });
+    }).catch((err: unknown) => {
+      console.error('[NetworkStatsPanel] Manual refetch failed:', err);
     });
   };
 

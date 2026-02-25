@@ -38,7 +38,7 @@ export function ImportDataDialog() {
       console.log('[ImportDataDialog] Starting upload with file:', { 
         name: file.name, 
         size: file.size, 
-        type: file.mimetype 
+        type: file.type 
       })
       
       const response = await contributionApi.importData(file)
