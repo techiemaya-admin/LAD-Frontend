@@ -2,12 +2,11 @@
 
 import React from 'react';
 import { useMemberRecentActivity } from '@lad/frontend-features/community-roi';
-import { UUID } from '@lad/frontend-features/community-roi/types';
 import { format, parseISO } from 'date-fns';
 import { Users, Send, Calendar, ArrowRight } from 'lucide-react';
 
 interface EngagementFeedProps {
-  memberId: UUID;
+  memberId: string;
 }
 
 export const EngagementFeed: React.FC<EngagementFeedProps> = ({ memberId }) => {

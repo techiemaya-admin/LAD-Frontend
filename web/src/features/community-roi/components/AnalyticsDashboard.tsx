@@ -59,27 +59,14 @@ export default function AnalyticsDashboard() {
     console.log('🟢 [AnalyticsDashboard] connectivityAnalysis keys:', Object.keys(data.connectivityAnalysis));
   }
 
-  // Extract values with multiple fallback attempts
-  const members = data.connectivityAnalysis?.memberCount 
-    || data.connectivityAnalysis?.members 
-    || data.connectivityAnalysis?.totalMembers
-    || data.members
-    || 0;
+  // Extract values using correct property names from types
+  const members = data.connectivityAnalysis?.memberCount || 0;
 
-  const meetings = data.networkBreakdown?.meetings 
-    || data.networkBreakdown?.totalMeetings
-    || data.meetings
-    || 0;
+  const meetings = data.networkBreakdown?.meetings || 0;
 
-  const referrals = data.networkBreakdown?.referrals 
-    || data.networkBreakdown?.totalReferrals
-    || data.referrals
-    || 0;
+  const referrals = data.networkBreakdown?.referrals || 0;
 
-  const density = data.connectivityAnalysis?.networkDensity 
-    || data.connectivityAnalysis?.density
-    || data.density
-    || 0;
+  const density = data.connectivityAnalysis?.networkDensity || 0;
 
   console.log('🟡 [AnalyticsDashboard] EXTRACTED VALUES:', {
     members,

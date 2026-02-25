@@ -16,7 +16,7 @@ export interface UseNetworkStatsReturn {
   loading: boolean;
   error: Error | null;
   isError: boolean;
-  refetch: () => void;
+  refetch: () => Promise<any>;
   isFetching: boolean;
   isStale: boolean;
 }

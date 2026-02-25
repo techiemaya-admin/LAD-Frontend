@@ -19,8 +19,7 @@ import {
   ArrowUpRight,
   Handshake
 } from 'lucide-react'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/store'
+
 import { useListMembers } from '@lad/frontend-features/community-roi'
 import SimpleAnalyticsCards from '@/features/community-roi/components/SimpleAnalyticsCards'
 import RelationshipHeatmap from '@/features/community-roi/components/RelationshipHeatmap'
@@ -35,9 +34,9 @@ export default function CommunityROIDashboard() {
   const [selectedCommunity, setSelectedCommunity] = useState('BNI')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const user = useSelector((state: RootState) => state.auth.user);
-  const tenantId = user?.tenant_id;
-  const { data: members, isLoading: membersLoading } = useListMembers({ tenantId: tenantId || '' })
+  // Get tenant ID from environment or props (without Redux dependency)
+  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || '';
+  const { data: members, isLoading: membersLoading } = useListMembers({ tenantId })
 
   const communities = [
     { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, color: 'text-red-600', bg: 'bg-red-50' },
