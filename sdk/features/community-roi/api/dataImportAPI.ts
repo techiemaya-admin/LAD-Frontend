@@ -1,4 +1,4 @@
-import { api } from '../../../api';
+import { apiClient } from '../../../shared/apiClient';
 
 /**
  * Data Import API client
@@ -9,7 +9,7 @@ export const dataImportAPI = {
    * Get available import sheet options
    */
   getOptions: async () => {
-    const response = await api.get('/community-roi/data-import/options');
+    const response = await apiClient.get('/api/community-roi/data-import/options');
     return response.data;
   },
 
@@ -17,7 +17,7 @@ export const dataImportAPI = {
    * Extract data from Excel file
    */
   extract: async (excelFilePath: string, sheetType: string = 'all') => {
-    const response = await api.post('/community-roi/data-import/extract', {
+    const response = await apiClient.post('/api/community-roi/data-import/extract', {
       excelFilePath,
       sheetType,
     });
@@ -28,7 +28,7 @@ export const dataImportAPI = {
    * Execute SQL import for extracted data
    */
   executeImport: async (sheetTypes?: string[]) => {
-    const response = await api.post('/community-roi/data-import/execute', {
+    const response = await apiClient.post('/api/community-roi/data-import/execute', {
       sheetTypes: sheetTypes || ['all'],
     });
     return response.data;
@@ -38,7 +38,7 @@ export const dataImportAPI = {
    * Get import status and pending files
    */
   getStatus: async () => {
-    const response = await api.get('/community-roi/data-import/status');
+    const response = await apiClient.get('/api/community-roi/data-import/status');
     return response.data;
   },
 };
