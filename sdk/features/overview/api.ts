@@ -18,7 +18,7 @@ import {
   PhoneNumberListResponse,
   VoiceAgentListResponse,
   GetDashboardCallsParams
-} from '../types';
+} from './types';
 
 // Support both React (REACT_APP_) and Next.js (NEXT_PUBLIC_) environment variable conventions
 const getApiBaseUrl = (): string => {
@@ -198,7 +198,19 @@ class DashboardApiService {
       };
     });
 
-    return { success: true, data: mapped };
+    return { 
+      success: true, 
+      data: {
+        summary: [],
+        logs: mapped,
+        countToday: 0,
+        countYesterday: 0,
+        countThisMonth: 0,
+        countLastMonth: 0,
+        answerRate: 0,
+        answerRateLastWeek: 0
+      }
+    };
   }
 
   // Wallet/Credits API
