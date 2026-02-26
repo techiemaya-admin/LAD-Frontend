@@ -37,6 +37,10 @@
     "./overview": {
       "types": "./features/overview/index.ts",
       "default": "./features/overview/index.ts"
+    },
+    "./call-logs": {
+      "types": "./features/call-logs/index.ts",
+      "default": "./features/call-logs/index.ts"
     }
   },
   "scripts": {

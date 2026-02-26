@@ -11,6 +11,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { PhoneOutgoing } from 'lucide-react';
 import { WidgetWrapper } from '../WidgetWrapper';
 import { Button } from '@/components/ui/button';
 interface ChartWidgetProps {
@@ -42,6 +43,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
     <WidgetWrapper
       id={id}
       title="Calls Made"
+      icon={<PhoneOutgoing className="h-4 w-4" />}
       headerActions={
         <div className="flex gap-1">
           <Button
@@ -115,4 +117,4 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
       </div>
     </WidgetWrapper>
   );
-};
+};

@@ -10,10 +10,12 @@ export * from './types';
 export { dashboardApiService } from './services/api';
 
 // Hooks
-export {
-  useLeadBookings,
-  useLeadBooking,
-  useCreateLeadBooking,
-  useUpdateLeadBooking,
-  useTenantUsers
-} from './hooks';
+export { useLeadBookings } from './hooks/useLeadBookings';
+export { useLeadBooking } from './hooks/useLeadBooking';
+export { useCreateLeadBooking } from './hooks/useCreateLeadBooking';
+export { useUpdateLeadBooking } from './hooks/useUpdateLeadBooking';
+export { useTenantUsers } from './hooks/useTenantUsers';
+export { useDashboardCalls } from './hooks/useDashboardCalls';
+export { useWalletStats } from './hooks/useWalletStats';
+export { useAvailableNumbers } from './hooks/useAvailableNumbers';
+export { useAvailableAgents } from './hooks/useAvailableAgents';

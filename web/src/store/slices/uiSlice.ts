@@ -42,6 +42,7 @@ interface EditingLeadForm {
   name: string;
   email: string;
   phone: string;
+  title: string;
   company: string;
   stage: string;
   status: string;
@@ -237,6 +238,7 @@ const initialState: UIState = {
       name: '',
       email: '',
       phone: '',
+      title: '',
       company: '',
       stage: '',
       status: '',
@@ -426,6 +428,7 @@ const uiSlice = createSlice({
           name: '',
           email: '',
           phone: '',
+          title: '',
           company: '',
           stage: '',
           status: '',
@@ -462,6 +465,11 @@ const uiSlice = createSlice({
           name: action.payload.name || '',
           email: action.payload.email || '',
           phone: action.payload.phoneNumber || '',
+          title:
+            (action.payload as { title?: string }).title ||
+            (action.payload as any)?.raw_data?._full_data?.title ||
+            (action.payload as any)?.raw_data?.title ||
+            '',
           company: (action.payload as { company?: string }).company || '',
           stage: action.payload.stage || '',
           status: action.payload.status || '',
@@ -556,6 +564,7 @@ const uiSlice = createSlice({
         name: '',
         email: '',
         phone: '',
+        title: '',
         company: '',
         stage: '',
         status: '',

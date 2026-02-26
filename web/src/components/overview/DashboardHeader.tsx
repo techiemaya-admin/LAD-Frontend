@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { cn } from '@/lib/utils';
+import HeroSection from '../landing/HeroSection';
 export const DashboardHeader: React.FC = () => {
   const { 
     isEditMode, 
@@ -57,11 +58,12 @@ export const DashboardHeader: React.FC = () => {
     setEditMode(false);
   };
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-5 mt-10">
+
       <div className="flex items-center gap-3">
-        <TvMinimalPlay className="h-20 w-8" color="#0b1957" />
+        <TvMinimalPlay className="w-8 h-8 text-[#1E293B] " color="#0b1957" />
         <div>
-          <h1 className="text-2xl font-bold font-display tracking-tight">Smart Overview</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">Smart Overview</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {currentLayout ? currentLayout.name : 'Default Layout'}
             {isEditMode && (
