@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Agent, AgentFormData, AgentGender, DEFAULT_AGENT_FORM } from '@/types/agent';
+import { Agent, AgentFormData, AgentGender, DEFAULT_AGENT_FORM, Voice } from '@/types/agent';
 import { useAgentForm } from '@/hooks/useAgentForm';
 import { useToast } from '../../hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -15,6 +15,8 @@ export function VoiceAgentSettings() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [selectedAgentVoiceSampleUrl, setSelectedAgentVoiceSampleUrl] = useState<string | undefined>(undefined);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isLoadingAgent, setIsLoadingAgent] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -63,25 +65,50 @@ export function VoiceAgentSettings() {
 
         // Now fetch agents through proxy
         logger.debug('[VoiceAgentSettings] Fetching agents from proxy');
-        const response = await fetch(`/api/voice-agent/available-agents`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-          },
-          credentials: "include", // Include httpOnly cookies
-        });
+        const [agentsResponse, voicesResponse] = await Promise.all([
+          fetch(`/api/voice-agent/settings/agents`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            },
+            credentials: "include",
+          }),
+          fetch(`/api/voice-agent/settings/voices`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            },
+            credentials: "include",
+          })
+        ]);
 
-        logger.debug('[VoiceAgentSettings] Agents response received', { status: response.status, statusText: response.statusText });
+        logger.debug('[VoiceAgentSettings] Agents response received', { status: agentsResponse.status, statusText: agentsResponse.statusText });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error('[VoiceAgentSettings] Agents fetch failed', { error: errorText, status: response.status });
-          throw new Error(`Failed to fetch agents: ${response.status} ${response.statusText}`);
+        if (!agentsResponse.ok) {
+          const errorText = await agentsResponse.text();
+          logger.error('[VoiceAgentSettings] Agents fetch failed', { error: errorText, status: agentsResponse.status });
+          throw new Error(`Failed to fetch agents: ${agentsResponse.status} ${agentsResponse.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await agentsResponse.json();
         logger.debug('[VoiceAgentSettings] Agents fetched successfully', { count: Array.isArray(data) ? data.length : data.data?.length });
+        
+        // Fetch voices
+        if (voicesResponse.ok) {
+          const voicesData = await voicesResponse.json();
+          const voicesArray = Array.isArray(voicesData) ? voicesData : (voicesData.data || []);
+          setVoices(voicesArray.map((v: any) => ({
+            id: v.id,
+            description: v.description,
+            gender: v.gender,
+            accent: v.accent,
+            provider: v.provider,
+            voice_sample_url: v.voice_sample_url,
+            provider_voice_id: v.provider_voice_id,
+          })));
+        }
         
         // Map API response to Agent interface
         const agentsArray = Array.isArray(data) ? data : (data.data ? data.data : []);
@@ -119,6 +146,7 @@ export function VoiceAgentSettings() {
         setAgents([]);
       } finally {
         setIsLoadingAgents(false);
+        setIsLoadingVoices(false);
       }
     };
 
@@ -145,6 +173,7 @@ export function VoiceAgentSettings() {
             name: agent.name || agent.agent_name || '',
             gender: (agent.gender || agent.voice_gender || 'neutral') as AgentGender,
             language: agent.language || agent.agent_language || 'en-US',
+            voice_id: agent.voice_id || '',
             agent_instructions: agent.agent_instructions || '',
             system_instructions: agent.system_instructions || '',
             outbound_starter_prompt: agent.outbound_starter_prompt || '',
@@ -190,14 +219,43 @@ export function VoiceAgentSettings() {
 
     setIsSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      const token = safeStorage.getItem("token");
+      
       if (selectedAgentId) {
         // Update existing agent
+        const response = await fetch(`/api/voice-agent/settings/agents/${selectedAgentId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            agent_name: formData.name,
+            voice_gender: formData.gender,
+            agent_language: formData.language,
+            voice_id: formData.voice_id,
+            agent_instructions: formData.agent_instructions,
+            system_instructions: formData.system_instructions,
+            outbound_starter_prompt: formData.outbound_starter_prompt,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update agent: ${response.status} ${errorText}`);
+        }
+
+        const updatedAgent = await response.json();
         setAgents(prev => prev.map(agent => 
           agent.id === selectedAgentId
-            ? { ...agent, ...formData, updated_at: new Date().toISOString() }
+            ? { 
+                ...agent, 
+                ...formData, 
+                voice_id: formData.voice_id,
+                voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url || agent.voice_sample_url,
+                updated_at: new Date().toISOString() 
+              }
             : agent
         ));
         toast({
@@ -206,15 +264,51 @@ export function VoiceAgentSettings() {
         });
       } else {
         // Create new agent
-        const newAgent: Agent = {
-          id: Date.now().toString(),
-          ...formData,
-          status: 'draft',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+        const response = await fetch(`/api/voice-agent/settings/agents`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            agent_name: formData.name,
+            voice_gender: formData.gender,
+            agent_language: formData.language,
+            voice_id: formData.voice_id,
+            agent_instructions: formData.agent_instructions,
+            system_instructions: formData.system_instructions,
+            outbound_starter_prompt: formData.outbound_starter_prompt,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create agent: ${response.status} ${errorText}`);
+        }
+
+        const newAgent = await response.json();
+        const mappedAgent: Agent = {
+          id: newAgent.agent_id || newAgent.id,
+          agent_id: newAgent.agent_id,
+          agent_name: newAgent.agent_name,
+          name: newAgent.agent_name,
+          voice_gender: newAgent.voice_gender,
+          gender: newAgent.voice_gender,
+          agent_language: newAgent.agent_language,
+          language: newAgent.agent_language,
+          voice_id: newAgent.voice_id,
+          voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url,
+          agent_instructions: newAgent.agent_instructions,
+          system_instructions: newAgent.system_instructions,
+          outbound_starter_prompt: newAgent.outbound_starter_prompt,
+          status: newAgent.status || 'active',
+          created_at: newAgent.created_at,
+          updated_at: newAgent.updated_at,
         };
-        setAgents(prev => [...prev, newAgent]);
-        setSelectedAgentId(newAgent.id);
+        
+        setAgents(prev => [...prev, mappedAgent]);
+        setSelectedAgentId(mappedAgent.id!);
         toast({
           title: 'Agent Created',
           description: `"${formData.name}" has been created successfully.`,
@@ -243,6 +337,7 @@ export function VoiceAgentSettings() {
           name: agent.name || agent.agent_name || '',
           gender: (agent.gender || agent.voice_gender || 'neutral') as AgentGender,
           language: agent.language || agent.agent_language || 'en-US',
+          voice_id: agent.voice_id || '',
           agent_instructions: agent.agent_instructions || '',
           system_instructions: agent.system_instructions || '',
           outbound_starter_prompt: agent.outbound_starter_prompt || '',
@@ -298,6 +393,8 @@ export function VoiceAgentSettings() {
                 isSaving={isSaving}
                 isEditMode={!!selectedAgentId}
                 voiceSampleUrl={selectedAgentVoiceSampleUrl}
+                voices={voices}
+                isLoadingVoices={isLoadingVoices}
                 onUpdateField={updateField}
                 onSave={handleSave}
                 onReset={handleReset}
