@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -17,16 +16,32 @@ import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 import { MiniStepper } from './MiniStepper';
 import { StatusStepper } from './StatusStepper';
+import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
+import { LiveBadge } from '@/components/LiveBadge';
 
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;
   pageSize?: number;
 }
+
+interface ActivityItem {
+  id: string;
+  created_at: string;
+  lead_name?: string;
+  lead_linkedin?: string;
+  lead_phone?: string;
+  action_type: string;
+  platform: string;
+  status: string;
+  message_content?: string;
+  error_message?: string;
+}
+
 export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   campaignId,
   maxHeight = 500,
-  pageSize = 50
+  pageSize = 50,
 }) => {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
@@ -239,12 +254,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           <h6 className="text-lg font-semibold text-[#1E293B]">
             Live Activity Feed
           </h6>
-          <Badge
-            variant={isConnected ? 'default' : 'secondary'}
-            className={`font-semibold ${isConnected ? 'animate-pulse' : ''}`}
-          >
-            {isConnected ? 'Live' : 'Offline'}
-          </Badge>
+          <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-xs" />
         </div>
         <div className="flex items-center gap-2">
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
@@ -361,14 +371,14 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                         </p>
                       )}
                     </div>
+                    {lead.leadPhone && (
+                      <p className="text-xs text-muted-foreground">
+                        {lead.leadPhone}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="w-[80px]">
-                    <Badge
-                      variant={getStatusColor(lead.latestStatus)}
-                      className="font-medium capitalize"
-                    >
-                      {lead.latestStatus || 'Unknown'}
-                    </Badge>
+                    <LiveActivityStatusBadge status={lead.latestStatus} />
                   </TableCell>
                   <TableCell className="w-[150px]">
                     <TooltipProvider>

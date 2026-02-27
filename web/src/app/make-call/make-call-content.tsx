@@ -10,15 +10,17 @@ import { CallConfigurationSkeleton } from "@/components/skeletons/CallConfigurat
 import { CallOptionsSkeleton } from "@/components/skeletons/CallOptionsSkeleton";
 import { UserStorage } from "@/utils/userStorage";
 import MakeCallStatsCards from "./MakeCallStatsCards";
-import {  BotMessageSquare } from "lucide-react";
-import { 
-  useUserAvailableNumbers, 
-  useAvailableAgents, 
-  useResolvePhones 
+import { BotMessageSquare,  Speech } from "lucide-react";
+import {
+  useUserAvailableNumbers,
+  useAvailableAgents,
+  useResolvePhones
 } from "@lad/frontend-features/voice-agent";
 type NumberItem = {
   id: string;
   phone_number: string;
+  country_code?: string;
+  base_number?: string;
   provider?: string;
   type?: string;
   status?: string;
@@ -61,6 +63,7 @@ export default function MakeCallContent() {
   const [uniqueAccents, setUniqueAccents] = useState<string[]>([]);
   // ----- Selections -----
   const [selectedNumberId, setSelectedNumberId] = useState<string | undefined>();
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | undefined>();
   const [agentId, setAgentId] = useState<string | undefined>();
   const [selectedLanguageId, setSelectedLanguageId] = useState<string>("en");
   const [selectedAccentId, setSelectedAccentId] = useState<string | undefined>();
@@ -278,9 +281,9 @@ export default function MakeCallContent() {
               summary:
                 (qpType === "employee"
                   ? row.company_sales_summary ||
-                    row.employee?.company_sales_summary
+                  row.employee?.company_sales_summary
                   : row.sales_summary ||
-                    row.company?.sales_summary) || undefined,
+                  row.company?.sales_summary) || undefined,
             }))
           : []);
         // Dedupe by phone + name/company
@@ -367,17 +370,17 @@ export default function MakeCallContent() {
     if (qpIds) return;
     try {
       let raw: string | null = null;
-      
+
       // Try user-scoped storage first, then fallback to regular localStorage
       if (userStorageRef.current) {
         raw = userStorageRef.current.getItem("bulk_call_targets") ||
-              userStorageRef.current.getItem("make_call_targets");
+          userStorageRef.current.getItem("make_call_targets");
       }
       if (!raw) {
         raw = localStorage.getItem("bulk_call_targets") ||
-              localStorage.getItem("make_call_targets");
+          localStorage.getItem("make_call_targets");
       }
-      
+
       let arrayLike: any[] | undefined;
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -445,6 +448,8 @@ export default function MakeCallContent() {
       const formatted = (availableNumbers || []).map((n: any) => ({
         id: String(n.id),
         phone_number: normalizeE164Like(n.phone_number),
+        country_code: n.country_code,
+        base_number: n.base_number,
         provider: n.provider,
         type: n.type,
         assignedAgentId: n.assignedAgentId,
@@ -545,13 +550,41 @@ export default function MakeCallContent() {
     return Array.from(languages);
   }, [agents]);
 
+  // Derive unique country codes from available numbers
+  const uniqueCountryCodes = useMemo(() => {
+    const codes = new Set(numbers.map(n => n.country_code).filter(Boolean) as string[]);
+    return Array.from(codes).sort();
+  }, [numbers]);
+
+  // Auto-seed country code to the first available code on initial load
+  useEffect(() => {
+    if (selectedCountryCode === undefined && uniqueCountryCodes.length > 0) {
+      setSelectedCountryCode(uniqueCountryCodes[0]);
+    }
+  }, [uniqueCountryCodes, selectedCountryCode]);
+
+  // Filter numbers by selected country code
+  const filteredNumbers = useMemo(() => {
+    if (!selectedCountryCode) return numbers;
+    return numbers.filter(n => n.country_code === selectedCountryCode);
+  }, [numbers, selectedCountryCode]);
+
+  // When country code changes, reset the selected number if it's not in the filtered list
+  useEffect(() => {
+    if (!selectedCountryCode) return;
+    const stillValid = filteredNumbers.some(n => n.id === selectedNumberId);
+    if (!stillValid) {
+      setSelectedNumberId(filteredNumbers[0]?.id ?? undefined);
+    }
+  }, [selectedCountryCode, filteredNumbers]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-3 md:p-3">
       <div className="space-y-6">
         {/* Header */}
         <div className="mb-5 mt-10">
           <div className="flex items-center gap-2 mb-1">
-            <BotMessageSquare className="w-8 h-8 text-[#1E293B]" />
+            <Speech className="w-8 h-8 text-[#1E293B]" />
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
               AI Caller
             </h1>
@@ -579,7 +612,12 @@ export default function MakeCallContent() {
           // Show actual content once data is loaded
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <CallConfiguration
-              numbers={numbers}
+              numbers={filteredNumbers}
+              countryCodes={uniqueCountryCodes}
+              selectedCountryCode={selectedCountryCode}
+              onSelectedCountryCodeChange={(code) => {
+                setSelectedCountryCode(code === "__all__" ? undefined : code);
+              }}
               agents={agents}
               selectedNumberId={selectedNumberId}
               onSelectedNumberChange={setSelectedNumberId}

@@ -7,6 +7,7 @@ import { rehydrateAuth } from "@/store/slices/authSlice";
 import { rehydrateSettings } from "@/store/slices/settingsSlice";
 import { StripeProvider } from "../contexts/StripeContext";
 import { AuthProvider } from "../contexts/AuthContext";
+import { TenantProvider } from "../contexts/TenantContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Suppress Chrome extension message passing errors
@@ -61,10 +62,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ReduxProvider store={store}>
         <AuthProvider>
-          {/* Stripe often touches window; gate Stripe only if needed */}
-          <ClientOnly>
-            <StripeProvider>{children}</StripeProvider>
-          </ClientOnly>
+          <TenantProvider>
+            {/* Stripe often touches window; gate Stripe only if needed */}
+            <ClientOnly>
+              <StripeProvider>{children}</StripeProvider>
+            </ClientOnly>
+          </TenantProvider>
         </AuthProvider>
       </ReduxProvider>
     </QueryClientProvider>

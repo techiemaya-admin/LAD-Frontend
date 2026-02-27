@@ -16,7 +16,6 @@ export interface CampaignActivity {
   lead_name?: string;
   lead_phone?: string;
   lead_email?: string;
-  lead_linkedin?: string; // LinkedIn profile URL
   message_content?: string;
   error_message?: string;
   response_data?: any;
