@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,35 +24,40 @@ interface ExtendedCampaignLead extends CampaignLead {
   apollo_person_id?: string;
   enriched_email?: string | null;
   enriched_linkedin_url?: string | null;
+  has_sent?: boolean;
+  has_connected?: boolean;
+  has_replied?: boolean;
 }
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterParams = searchParams.get('filter') || 'all';
   const campaignId = params.id as string;
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  
+
   // Fetch campaign to get campaign_type
   const { campaign, loading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
-  
+
   // Use SDK hook for leads
   const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
     useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
   );
-  
+
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
   const loading = leadsLoading || campaignLoading;
-  
+
   // Get all lead IDs for batch summary fetching
   const leadIds = useMemo(() => leads.map(lead => lead.id), [leads]);
-  
+
   // Fetch summaries for all leads using the SDK hook
   const { summaries, loading: summariesLoading } = useLeadsSummaries(campaignId, leadIds);
-  
+
   // Debug: Log first lead to check photo_url
   useEffect(() => {
     if (leads.length > 0) {
@@ -96,7 +101,7 @@ export default function CampaignLeadsPage() {
       setTotalPages(Math.ceil(leads.length / 50));
     }
   }, [leads]);
-  
+
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
@@ -129,18 +134,18 @@ export default function CampaignLeadsPage() {
         // Store the revealed email value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: response.email } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], email: true } }));
-        
+
         // Update the employee object with enriched email
         employee.enriched_email = response.email;
         employee.email = response.email;
-        
-        push({ 
-          title: 'Success', 
-          description: response.from_database 
-            ? 'Email retrieved (no credits used)' 
-            : `Email revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)` 
+
+        push({
+          title: 'Success',
+          description: response.from_database
+            ? 'Email retrieved (no credits used)'
+            : `Email revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)`
         });
-        
+
         // Trigger re-render
         refetch();
       } else {
@@ -162,13 +167,13 @@ export default function CampaignLeadsPage() {
         // Store the revealed LinkedIn URL value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin_url: response.linkedin_url } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
-        
+
         // Update the employee object with the revealed LinkedIn URL
         const updatedEmployee = { ...employee, linkedin_url: response.linkedin_url, enriched_linkedin_url: response.linkedin_url };
-        
-        push({ 
-          title: 'Success', 
-          description: response.from_database ? 'LinkedIn profile retrieved (no credits used)' : 'LinkedIn profile revealed' 
+
+        push({
+          title: 'Success',
+          description: response.from_database ? 'LinkedIn profile retrieved (no credits used)' : 'LinkedIn profile revealed'
         });
       } else {
         push({ title: 'Info', description: response.error || 'LinkedIn URL not available for this lead' });
@@ -199,7 +204,7 @@ export default function CampaignLeadsPage() {
         }
       } catch (getError) {
         // If getting existing summary fails, proceed to generate new one
-        }
+      }
       // Generate new summary using apiPost
       const response = await apiPost<{ success: boolean; summary: string; generated_at?: string }>(
         `/api/campaigns/${campaignId}/leads/${employee.id}/summary`,
@@ -241,15 +246,27 @@ export default function CampaignLeadsPage() {
     setSummaryError(null);
   };
   const filteredLeads = useMemo(() => {
-    if (!searchQuery) return leads;
+    let result = leads;
+
+    if (filterParams !== 'all') {
+      result = result.filter(lead => {
+        const status = lead.status?.toLowerCase() || '';
+        if (filterParams === 'sent') return lead.has_sent === true || status.includes('sent') || status.includes('invit');
+        if (filterParams === 'connected') return lead.has_connected === true || status.includes('connect') || status.includes('accept') || status.includes('contacted');
+        if (filterParams === 'replied') return lead.has_replied === true || status.includes('repli') || status.includes('respond');
+        return true;
+      });
+    }
+
+    if (!searchQuery) return result;
     const query = searchQuery.toLowerCase();
-    return leads.filter(lead =>
+    return result.filter(lead =>
       lead.name?.toLowerCase().includes(query) ||
       lead.email?.toLowerCase().includes(query) ||
       lead.company?.toLowerCase().includes(query) ||
       lead.title?.toLowerCase().includes(query)
     );
-  }, [leads, searchQuery]);
+  }, [leads, searchQuery, filterParams]);
   if (loading && leads.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
@@ -279,7 +296,7 @@ export default function CampaignLeadsPage() {
                 {campaign?.name || 'Campaign Leads'}
               </h4>
               <p className="text-sm text-slate-500">
-                {filteredLeads.length} leads
+                {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
               </p>
             </div>
           </div>
@@ -296,87 +313,87 @@ export default function CampaignLeadsPage() {
             />
           </div>
         </div>
-      {/* Employee Cards Grid */}
-      {filteredLeads.length === 0 ? (
-        <Card className="rounded-2xl border border-slate-200 shadow-sm">
-          <CardContent className="text-center py-12">
-            <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h6 className="text-lg font-semibold text-slate-500 mb-2">
-              {searchQuery ? 'No leads match your search' : 'No leads found'}
-            </h6>
-            <p className="text-sm text-slate-400">
-              {searchQuery ? 'Try adjusting your search terms' : 'Leads will appear here once the campaign starts generating them'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredLeads.map((lead: CampaignLead, index: number) => {
-              return (
-                <EmployeeCard
-                  key={lead.id}
-                  employee={{
-                    id: lead.id,
-                    name: lead.name,
-                    first_name: lead.first_name,
-                    last_name: lead.last_name,
-                    title: lead.title,
-                    company: lead.lead_data?.company_name || lead.lead_data?._full_data?.company_name,
-                    email: lead.email,
-                    phone: lead.phone,
-                    linkedin_url: lead.linkedin_url,
-                    enriched_email: lead.enriched_email,
-                    enriched_linkedin_url: lead.enriched_linkedin_url,
-                    photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
-                    is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
-                  }}
-                  employeeViewMode="grid"
-                  revealedContacts={revealedContacts}
-                  revealingContacts={revealingContacts}
-                  handleRevealPhone={handleRevealPhone}
-                  handleRevealEmail={handleRevealEmail}
-                  handleRevealLinkedIn={handleRevealLinkedIn}
-                  onViewSummary={handleViewSummary}
-                  profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
-                  hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
-                />
-              );
-            })}
-          </div>
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-4 mt-8">
-              <Button
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                variant="outline"
-              >
-                Previous
-              </Button>
-              <p className="flex items-center text-slate-500">
-                Page {page} of {totalPages}
+        {/* Employee Cards Grid */}
+        {filteredLeads.length === 0 ? (
+          <Card className="rounded-2xl border border-slate-200 shadow-sm">
+            <CardContent className="text-center py-12">
+              <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h6 className="text-lg font-semibold text-slate-500 mb-2">
+                {searchQuery ? 'No leads match your search' : 'No leads found'}
+              </h6>
+              <p className="text-sm text-slate-400">
+                {searchQuery ? 'Try adjusting your search terms' : 'Leads will appear here once the campaign starts generating them'}
               </p>
-              <Button
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-                variant="outline"
-              >
-                Next
-              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredLeads.map((lead: CampaignLead, index: number) => {
+                return (
+                  <EmployeeCard
+                    key={lead.id}
+                    employee={{
+                      id: lead.id,
+                      name: lead.name,
+                      first_name: lead.first_name,
+                      last_name: lead.last_name,
+                      title: lead.title,
+                      company: lead.lead_data?.company_name || lead.lead_data?._full_data?.company_name,
+                      email: lead.email,
+                      phone: lead.phone,
+                      linkedin_url: lead.linkedin_url,
+                      enriched_email: lead.enriched_email,
+                      enriched_linkedin_url: lead.enriched_linkedin_url,
+                      photo_url: lead.photo_url,  // Backend already extracts this from lead_data.photo_url
+                      is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
+                    }}
+                    employeeViewMode="grid"
+                    revealedContacts={revealedContacts}
+                    revealingContacts={revealingContacts}
+                    handleRevealPhone={handleRevealPhone}
+                    handleRevealEmail={handleRevealEmail}
+                    handleRevealLinkedIn={handleRevealLinkedIn}
+                    onViewSummary={handleViewSummary}
+                    profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
+                    hideUnlockFeatures={isInboundCampaign} // Hide unlock features for inbound campaigns
+                  />
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
-      {/* Profile Summary Dialog */}
-      <ProfileSummaryDialog
-        open={summaryDialogOpen}
-        onClose={handleCloseSummaryDialog}
-        employee={selectedEmployee}
-        summary={profileSummary}
-        loading={summaryLoading}
-        error={summaryError}
-      />
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-4 mt-8">
+                <Button
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <p className="flex items-center text-slate-500">
+                  Page {page} of {totalPages}
+                </p>
+                <Button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                  variant="outline"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+        {/* Profile Summary Dialog */}
+        <ProfileSummaryDialog
+          open={summaryDialogOpen}
+          onClose={handleCloseSummaryDialog}
+          employee={selectedEmployee}
+          summary={profileSummary}
+          loading={summaryLoading}
+          error={summaryError}
+        />
       </div>
     </div>
   );
