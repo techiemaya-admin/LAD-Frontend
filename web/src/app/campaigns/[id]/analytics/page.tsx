@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
-  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
+  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
   Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
   SquarePen
 } from 'lucide-react';
@@ -176,48 +176,48 @@ export default function CampaignAnalyticsPage() {
 
   // Calculate the primary sent count based on campaign type
   const analyticsAny = analytics as any;
-  const primarySentCount = hasLinkedIn 
+  const primarySentCount = hasLinkedIn
     ? (analyticsAny?.platform_metrics?.linkedin?.sent ?? 0)
-    : hasEmail 
-    ? (analyticsAny?.platform_metrics?.email?.sent ?? 0)
-    : hasWhatsApp
-    ? (analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
-    : hasVoice
-    ? (analyticsAny?.platform_metrics?.voice?.sent ?? 0)
-    : (analytics.overview.sent);
+    : hasEmail
+      ? (analyticsAny?.platform_metrics?.email?.sent ?? 0)
+      : hasWhatsApp
+        ? (analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
+        : hasVoice
+          ? (analyticsAny?.platform_metrics?.voice?.sent ?? 0)
+          : (analytics.overview.sent);
 
   const platformAnalytics = [
-    hasLinkedIn && { 
-      platform: 'linkedin', 
-      actions: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0, 
-      replied: analyticsAny?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.linkedin?.sent ? ((analyticsAny.platform_metrics.linkedin.connected / analyticsAny.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0) 
+    hasLinkedIn && {
+      platform: 'linkedin',
+      actions: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0,
+      replied: analyticsAny?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.linkedin?.sent ? ((analyticsAny.platform_metrics.linkedin.connected / analyticsAny.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0)
     },
-    hasEmail && { 
-      platform: 'email', 
-      actions: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0, 
-      replied: analyticsAny?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.email?.sent ? ((analyticsAny.platform_metrics.email.replied / analyticsAny.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0) 
+    hasEmail && {
+      platform: 'email',
+      actions: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0,
+      replied: analyticsAny?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.email?.sent ? ((analyticsAny.platform_metrics.email.replied / analyticsAny.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0)
     },
-    hasWhatsApp && { 
-      platform: 'whatsapp', 
-      actions: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0, 
-      replied: analyticsAny?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.whatsapp?.sent ? ((analyticsAny.platform_metrics.whatsapp.replied / analyticsAny.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0) 
+    hasWhatsApp && {
+      platform: 'whatsapp',
+      actions: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0,
+      replied: analyticsAny?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.whatsapp?.sent ? ((analyticsAny.platform_metrics.whatsapp.replied / analyticsAny.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0)
     },
-    hasVoice && { 
-      platform: 'voice', 
-      actions: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      sent: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      connected: analyticsAny?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0, 
-      replied: analyticsAny?.platform_metrics?.voice?.replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.voice?.sent ? ((analyticsAny.platform_metrics.voice.connected / analyticsAny.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
+    hasVoice && {
+      platform: 'voice',
+      actions: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0,
+      sent: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0,
+      connected: analyticsAny?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0,
+      replied: analyticsAny?.platform_metrics?.voice?.replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.voice?.sent ? ((analyticsAny.platform_metrics.voice.connected / analyticsAny.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100)
     },
   ].filter(Boolean);
 
@@ -226,17 +226,17 @@ export default function CampaignAnalyticsPage() {
   const leadsOverTime = extendedAnalytics?.charts?.leads_over_time?.length
     ? extendedAnalytics.charts.leads_over_time
     : [
-        { date: 'Today', leads: analytics?.overview?.total_leads ?? 0 },
-        { date: 'Yesterday', leads: Math.max((analytics?.overview?.total_leads ?? 0) - 2, 0) },
-      ];
+      { date: 'Today', leads: analytics?.overview?.total_leads ?? 0 },
+      { date: 'Yesterday', leads: Math.max((analytics?.overview?.total_leads ?? 0) - 2, 0) },
+    ];
 
   const channelBreakdownRaw = extendedAnalytics?.charts?.channel_breakdown?.length
     ? extendedAnalytics.charts.channel_breakdown
     : [
-        { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
-        { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
-        { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
-      ];
+      { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
+      { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
+      { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
+    ];
 
   const channelBreakdownFiltered = channelBreakdownRaw.filter((c: any) => c.value > 0);
   // Ensure at least one item for the pie chart
@@ -244,23 +244,23 @@ export default function CampaignAnalyticsPage() {
 
   // Dynamic funnel stage label based on campaign type
   const funnelStageLabel = hasLinkedIn ? 'Connected' : hasEmail ? 'Delivered' : hasWhatsApp ? 'Delivered' : hasVoice ? 'Answered' : 'Messaged';
-  const funnelStageCount = hasLinkedIn 
+  const funnelStageCount = hasLinkedIn
     ? (analytics?.overview?.connected ?? 0)
     : hasEmail
-    ? (analytics?.overview?.delivered ?? 0)
-    : hasWhatsApp
-    ? (analytics?.overview?.delivered ?? 0)
-    : hasVoice
-    ? (analytics?.overview?.connected ?? 0)
-    : (analytics?.metrics?.linkedin_messages_sent ?? 0);
+      ? (analytics?.overview?.delivered ?? 0)
+      : hasWhatsApp
+        ? (analytics?.overview?.delivered ?? 0)
+        : hasVoice
+          ? (analytics?.overview?.connected ?? 0)
+          : (analytics?.metrics?.linkedin_messages_sent ?? 0);
 
   const funnel = extendedAnalytics?.charts?.funnel?.length
     ? extendedAnalytics.charts.funnel
     : [
-        { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
-        { stage: funnelStageLabel, count: funnelStageCount },
-        { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
-      ];
+      { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
+      { stage: funnelStageLabel, count: funnelStageCount },
+      { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
+    ];
 
   // Theme colors
   const theme = {
@@ -281,13 +281,13 @@ export default function CampaignAnalyticsPage() {
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
         <div className="flex-1">
           <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
-              <ArrowLeft className="w-6 h-6" />
-            </Button>
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
           <div className="flex items-center gap-3 mb-3">
-            
-             <RadioTower className="w-8 h-8 text-[#1E293B]"/>
+
+            <RadioTower className="w-8 h-8 text-[#1E293B]" />
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] capitalize">
-              {analytics.campaign.name} 
+              {analytics.campaign.name}
             </h1>
           </div>
           <div className="flex items-center gap-3 ml-11 flex-wrap">
@@ -321,7 +321,10 @@ export default function CampaignAnalyticsPage() {
       {/* Quick Stats Row */}
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
         {/* Total Leads */}
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=all`)}
+        >
           <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
@@ -346,7 +349,10 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Sent (Dynamic) */}
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=sent`)}
+        >
           <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
@@ -371,7 +377,10 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Connected */}
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=connected`)}
+        >
           <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
@@ -396,7 +405,10 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Replied */}
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=replied`)}
+        >
           <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
@@ -409,7 +421,7 @@ export default function CampaignAnalyticsPage() {
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
                   <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    Replied
+                    Lead Contact Back
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800">
                     {analytics.overview.replied}
@@ -472,8 +484,8 @@ export default function CampaignAnalyticsPage() {
                   const computedRate = item.sent
                     ? ((item.connected + item.replied) / item.sent) * 100
                     : item.actions
-                    ? ((item.connected + item.replied) / item.actions) * 100
-                    : 0;
+                      ? ((item.connected + item.replied) / item.actions) * 100
+                      : 0;
                   const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
 
                   return (
@@ -530,7 +542,7 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         )}
-        
+
 
         <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
@@ -566,7 +578,7 @@ export default function CampaignAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">

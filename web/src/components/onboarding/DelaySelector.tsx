@@ -22,31 +22,31 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
   // Parse backend options to match our format
   const delayOptions = options && options.length > 0
     ? options.map(opt => {
-        // Extract label from options like "No delay (run immediately)"
-        const match = opt.match(/^([^(]+)(?:\s*\([^)]+\))?$/);
-        const label = match ? match[1].trim() : opt;
-        // Determine description based on label
-        let description = '';
-        if (opt.toLowerCase().includes('no delay') || opt.toLowerCase().includes('immediately')) {
-          description = 'Actions run immediately';
-        } else if (opt.toLowerCase().includes('custom')) {
-          description = 'Specify your own delay';
+      // Extract label from options like "No delay (run immediately)"
+      const match = opt.match(/^([^(]+)(?:\s*\([^)]+\))?$/);
+      const label = match ? match[1].trim() : opt;
+      // Determine description based on label
+      let description = '';
+      if (opt.toLowerCase().includes('no delay') || opt.toLowerCase().includes('immediately')) {
+        description = 'Actions run immediately';
+      } else if (opt.toLowerCase().includes('custom')) {
+        description = 'Specify your own delay';
+      } else {
+        const numberMatch = opt.match(/(\d+)\s*(hour|day)s?/i);
+        if (numberMatch) {
+          const num = numberMatch[1];
+          const unit = numberMatch[2].toLowerCase();
+          description = `Wait ${num} ${unit}${parseInt(num) > 1 ? 's' : ''} between actions`;
         } else {
-          const numberMatch = opt.match(/(\d+)\s*(hour|day)s?/i);
-          if (numberMatch) {
-            const num = numberMatch[1];
-            const unit = numberMatch[2].toLowerCase();
-            description = `Wait ${num} ${unit}${parseInt(num) > 1 ? 's' : ''} between actions`;
-          } else {
-            description = '';
-          }
+          description = '';
         }
-        return {
-          value: opt, // Send full option text to backend
-          label,
-          description,
-        };
-      })
+      }
+      return {
+        value: opt, // Send full option text to backend
+        label,
+        description,
+      };
+    })
     : defaultDelayOptions;
   const handleSelect = (value: string) => {
     setSelected(value);
@@ -65,7 +65,7 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
   return (
     <div className="mt-4 space-y-4">
       {/* Delay Options */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="flex flex-col w-full gap-2">
         {delayOptions.map((option) => {
           const isSelected = selected === option.value;
           return (
@@ -75,15 +75,15 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
               onClick={() => handleSelect(option.value)}
               className={cn(
                 'relative flex items-start gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                'focus:outline-none focus:ring-2 focus:ring-[#172560] focus:ring-offset-2',
                 isSelected
-                  ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-sm'
-                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  ? 'bg-[#172560]/5 border-[#172560] text-[#172560] shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-[#172560]/40 hover:bg-[#172560]/5'
               )}
               aria-pressed={isSelected}
             >
               <div className="flex-shrink-0 mt-0.5">
-                <Clock className={cn('w-5 h-5', isSelected ? 'text-blue-600' : 'text-gray-400')} />
+                <Clock className={cn('w-5 h-5', isSelected ? 'text-[#172560]' : 'text-gray-400')} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm">{option.label}</div>
@@ -91,7 +91,7 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
               </div>
               {isSelected && (
                 <div className="flex-shrink-0">
-                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-[#172560] flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
         })}
       </div>
       {/* Custom Input */}
-      {selected === 'Custom' && (
+      {selected?.toLowerCase().includes('custom') && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Enter delay in days
@@ -113,19 +113,26 @@ export default function DelaySelector({ onSubmit, onSkip, options }: DelaySelect
               value={customDays}
               onChange={(e) => setCustomDays(e.target.value)}
               placeholder="e.g., 5"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#172560] focus:border-transparent"
             />
             <button
               type="button"
               onClick={handleCustomSubmit}
               disabled={!customDays.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#172560] text-white rounded-lg font-medium hover:bg-[#0f1840] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Apply
             </button>
           </div>
         </div>
       )}
+
+      {/* Action/Submit Button */}
+      {selected && !selected.toLowerCase().includes('custom') && (
+        <div className="flex pt-2 w-full">
+          {/* If you want an explicit continue button when auto-submit is not instant, but we use setTimeout. Let's keep it purely for layout spacing or skip. */}
+        </div>
+      )}
     </div>
   );
-}
+}

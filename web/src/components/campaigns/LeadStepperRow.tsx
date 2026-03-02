@@ -89,7 +89,7 @@ const getConnectorColor = (currentState: StepState, nextState: StepState) => {
 
 const getPlatformIcon = (platform?: string) => {
   const platformLower = platform?.toLowerCase() || 'linkedin';
-  
+
   switch (platformLower) {
     case 'linkedin':
       return <Linkedin className="w-3 h-3" />;
@@ -139,14 +139,14 @@ export const LeadStepperRow: React.FC<LeadStepperRowProps> = ({
 }) => {
   // Step 1: Profile Visit
   const profileVisitState: StepState = profileVisited ? 'COMPLETED' : 'PENDING';
-  const profileVisitTooltip = profileVisited 
-    ? 'Profile visited successfully' 
+  const profileVisitTooltip = profileVisited
+    ? 'Profile visited successfully'
     : 'Profile visit pending';
 
   // Step 2: Connection Sent
   let connectionState: StepState = 'PENDING';
   let connectionTooltip = 'Connection not sent yet';
-  
+
   if (connectionStatus === 'PAUSED') {
     connectionState = 'PAUSED';
     if (pauseReason === 'DAILY_LIMIT') {
@@ -173,7 +173,7 @@ export const LeadStepperRow: React.FC<LeadStepperRowProps> = ({
   let connectionWithMessageState: StepState = 'PENDING';
   let connectionWithMessageTooltip = 'Waiting for connection to be sent';
   let connectionWithMessageHelper = '';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     // Connection not sent - show as pending
     connectionWithMessageState = 'PENDING';
@@ -199,7 +199,7 @@ export const LeadStepperRow: React.FC<LeadStepperRowProps> = ({
   // Step 4: Connection Accepted
   let acceptedState: StepState = 'PENDING';
   let acceptedTooltip = 'Waiting for connection acceptance';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     acceptedState = 'SKIPPED';
     acceptedTooltip = 'Skipped: Connection not sent';
@@ -216,7 +216,7 @@ export const LeadStepperRow: React.FC<LeadStepperRowProps> = ({
   // Step 5: Contacted (Message after acceptance)
   let contactedState: StepState = 'PENDING';
   let contactedTooltip = 'Waiting for connection acceptance';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     contactedState = 'PENDING';
     contactedTooltip = 'Waiting for connection to be established';
@@ -241,7 +241,7 @@ export const LeadStepperRow: React.FC<LeadStepperRowProps> = ({
   // Step 6: Lead Contacted Back (Reply received)
   let repliedState: StepState = 'PENDING';
   let repliedTooltip = 'Waiting for lead to reply';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     repliedState = 'SKIPPED';
     repliedTooltip = 'Skipped: Connection not established';
