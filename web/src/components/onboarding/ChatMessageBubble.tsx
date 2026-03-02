@@ -172,8 +172,8 @@ export default function ChatMessageBubble({
     >
       {isAI && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-sm">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-[#172560]/10 border border-[#172560]/20 flex items-center justify-center shadow-sm">
+            <Bot className="w-4 h-4 text-[#172560]" />
           </div>
         </div>
       )}
@@ -183,14 +183,14 @@ export default function ChatMessageBubble({
         isAI ? 'flex flex-col items-start' : 'flex flex-col items-end'
       )}>
         <div className={cn(
-          'rounded-2xl px-4 py-3 shadow-sm',
+          'px-5 py-3.5 shadow-sm',
           isAI
-            ? 'bg-white border border-gray-200'
-            : 'bg-blue-600 text-white'
+            ? 'bg-white border border-gray-100 rounded-2xl rounded-tl-[4px]'
+            : 'bg-[#172560] text-white rounded-2xl rounded-tr-[4px]'
         )}>
           <div className={cn(
-            'whitespace-pre-wrap leading-relaxed text-sm',
-            isAI ? 'text-gray-900' : 'text-white'
+            'whitespace-pre-wrap leading-relaxed text-[15px]',
+            isAI ? 'text-gray-800' : 'text-white'
           )}>
             {showOptions && parsedOptions ? parsedOptions.questionText : typedText}
           </div>

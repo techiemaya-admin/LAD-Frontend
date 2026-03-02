@@ -68,7 +68,7 @@ const getMiniConnectorColor = (currentState: StepState) => {
 const getPlatformIcon = (platform?: string) => {
   const platformLower = platform?.toLowerCase() || 'linkedin';
   const iconClass = "w-3.5 h-3.5";
-  
+
   switch (platformLower) {
     case 'linkedin':
       return <Linkedin className={`${iconClass} text-blue-600`} />;
@@ -114,14 +114,14 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
 }) => {
   // Step 1: Profile Visit
   const profileVisitState: StepState = profileVisited ? 'COMPLETED' : 'PENDING';
-  const profileVisitTooltip = profileVisited 
-    ? 'Profile visited' 
+  const profileVisitTooltip = profileVisited
+    ? 'Profile visited'
     : 'Profile visit pending';
 
   // Step 2: Connection Sent
   let connectionState: StepState = 'PENDING';
   let connectionTooltip = 'Connection not sent yet';
-  
+
   if (connectionStatus === 'PAUSED') {
     connectionState = 'PAUSED';
     if (pauseReason === 'DAILY_LIMIT') {
@@ -147,7 +147,7 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
   // Step 3: With Message
   let connectionWithMessageState: StepState = 'PENDING';
   let connectionWithMessageTooltip = 'Waiting for connection';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     connectionWithMessageState = 'PENDING';
     connectionWithMessageTooltip = 'Waiting for connection';
@@ -165,7 +165,7 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
   // Step 4: Connection Accepted
   let acceptedState: StepState = 'PENDING';
   let acceptedTooltip = 'Waiting for acceptance';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     acceptedState = 'SKIPPED';
     acceptedTooltip = 'Skipped';
@@ -182,7 +182,7 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
   // Step 5: Contacted
   let contactedState: StepState = 'PENDING';
   let contactedTooltip = 'Waiting for connection';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     contactedState = 'PENDING';
     contactedTooltip = 'Waiting for connection';
@@ -206,7 +206,7 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
   // Step 6: Lead Replied
   let repliedState: StepState = 'PENDING';
   let repliedTooltip = 'Waiting for lead to contact back';
-  
+
   if (connectionStatus === 'PAUSED' || connectionStatus === 'FAILED') {
     repliedState = 'SKIPPED';
     repliedTooltip = 'Skipped';
@@ -250,7 +250,7 @@ export const MiniStepper: React.FC<MiniStepperProps> = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           {index < steps.length - 1 && (
             <div className={`h-[2px] w-2 flex-shrink-0 ${getMiniConnectorColor(step.state)}`} />
           )}

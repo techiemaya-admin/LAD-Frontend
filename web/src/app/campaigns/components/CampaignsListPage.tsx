@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, RadioTower, Gauge, Zap, Trophy, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { deleteCampaign, pauseCampaign, stopCampaign, useCampaigns, useCampaignStats, type Campaign } from '@lad/frontend-features/campaigns';
 import CampaignStatsCards from '@/components/campaigns/CampaignStatsCards';
 import CampaignsTable from '@/components/campaigns/CampaignsTable';
@@ -19,9 +19,21 @@ import { Goal } from 'lucide-react';
 
 export default function CampaignsListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Read ?status= from URL — synced every time URL changes
+  const [statusFilter, setStatusFilter] = useState<string>(
+    searchParams.get('status') || 'all'
+  );
+
+  // Sync statusFilter whenever URL searchParams change
+  // This ensures clicking stat cards (which push new URL) updates the filter
+  useEffect(() => {
+    const urlStatus = searchParams.get('status') || 'all';
+    setStatusFilter(urlStatus);
+  }, [searchParams]);
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -274,8 +286,8 @@ export default function CampaignsListPage() {
                   <div className="text-center">
                     <p className="text-xs text-[#64748B] mb-1">Capacity Used</p>
                     <p className={`text-2xl font-bold ${parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 90 ? 'text-red-600' :
-                        parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 70 ? 'text-amber-600' :
-                          'text-green-600'
+                      parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 70 ? 'text-amber-600' :
+                        'text-green-600'
                       }`}>
                       {stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0}%
                     </p>
@@ -284,6 +296,24 @@ export default function CampaignsListPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+      )}
+
+      {/* Active Filter Banner */}
+      {statusFilter !== 'all' && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-[#0b1957]/8 border border-[#0b1957]/20 rounded-xl">
+          <span className="text-sm font-semibold text-[#0b1957]">
+            Filtered: <span className="capitalize">{statusFilter}</span> campaigns
+          </span>
+          <button
+            onClick={() => {
+              setStatusFilter('all');
+              router.push('/campaigns');
+            }}
+            className="ml-auto text-xs text-slate-500 hover:text-red-500 underline"
+          >
+            Clear filter
+          </button>
         </div>
       )}
 

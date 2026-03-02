@@ -2403,7 +2403,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                               );
                             }
                           }}
-                          className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-blue-500 hover:bg-blue-50"
+                          className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-[#172560]/40 hover:bg-[#172560]/5"
                         >
                           {option.label}
                         </button>
@@ -2415,8 +2415,8 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
           ))}
           {isProcessingAI && (
             <div className="flex gap-3 w-full max-w-4xl mx-auto px-4 py-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Bot className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full bg-[#172560]/10 border border-[#172560]/20 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Bot className="w-4 h-4 text-[#172560]" />
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-2">
@@ -2443,9 +2443,9 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               </button>
               <button
                 onClick={() => handleCampaignDataTypeSelect('outbound')}
-                className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all shadow-sm hover:shadow-md flex items-center gap-4"
+                className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#172560]/40 hover:bg-[#172560]/5 transition-all shadow-sm hover:shadow-md flex items-center gap-4"
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-[#172560] flex items-center justify-center flex-shrink-0">
                   <ArrowUpFromLine className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -2540,7 +2540,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                       }
                       handleAnswer(option.value, questionKey);
                     }}
-                    className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-blue-500 hover:bg-blue-50"
+                    className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-[#172560]/40 hover:bg-[#172560]/5"
                   >
                     {option.label}
                   </button>
@@ -2552,7 +2552,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
         </div>
       </div>
       {/* Bottom Input */}
-      <div className="border-t border-gray-200 bg-white py-4 px-4 flex-shrink-0">
+      <div className="bg-gradient-to-t from-white via-white to-white/0 pt-6 pb-6 px-4 flex-shrink-0 relative z-10 -mt-2">
         {selectedPath === 'leads' && limits && (limits.total === 0 || limits.remaining <= 0) && (
           <div className="max-w-3xl mx-auto mb-3 flex items-center gap-2 bg-red-50 text-red-700 px-4 py-2 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
             <AlertCircle className="w-4 h-4" />
