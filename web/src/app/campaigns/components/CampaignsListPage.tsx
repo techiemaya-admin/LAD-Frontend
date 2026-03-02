@@ -12,7 +12,7 @@ import CreateCampaignDialog from '@/components/campaigns/CreateCampaignDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   startCampaign
 } from '@lad/frontend-features/campaigns';
 import { Goal } from 'lucide-react';
@@ -41,7 +41,7 @@ export default function CampaignsListPage() {
       [searchQuery, statusFilter]
     )
   );
-  
+
   const { stats, error: statsError } = useCampaignStats();
   // Handle errors from SDK hooks
   useEffect(() => {
@@ -112,8 +112,8 @@ export default function CampaignsListPage() {
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
-           
-            <Goal className="w-8 h-8 text-[#1E293B]"/>
+
+            <Goal className="w-8 h-8 text-[#1E293B]" />
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
               Campaigns
             </h1>
@@ -231,13 +231,15 @@ export default function CampaignsListPage() {
                 {/* Simple Bar Chart for 7-Day Activity */}
                 <div className="space-y-3">
                   {stats?.linkedin_rate_limits?.usage?.daily_breakdown?.length > 0 ? (
-                    <>
-                      {stats?.linkedin_rate_limits?.usage?.daily_breakdown?.map((day: any, idx: number) => {
-                        const maxDaily = stats?.linkedin_rate_limits?.daily?.max || 1;
-                        const percentage = (parseInt(day.sent) / maxDaily) * 100;
+                    (() => {
+                      const maxInBreakdown = Math.max(...(stats?.linkedin_rate_limits?.usage?.daily_breakdown?.map((d: any) => parseInt(d.sent)) || [1]));
+                      const maxCapacity = Math.max(stats?.linkedin_rate_limits?.daily?.total || 1, maxInBreakdown);
+
+                      return stats?.linkedin_rate_limits?.usage?.daily_breakdown?.map((day: any, idx: number) => {
+                        const percentage = (parseInt(day.sent) / maxCapacity) * 100;
                         const date = new Date(day.date);
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                        
+
                         return (
                           <div key={idx} className="space-y-1">
                             <div className="flex justify-between items-center text-xs">
@@ -252,8 +254,8 @@ export default function CampaignsListPage() {
                             </div>
                           </div>
                         );
-                      })}
-                    </>
+                      });
+                    })()
                   ) : (
                     <p className="text-sm text-[#64748B] py-4 text-center">No activity in the last 7 days</p>
                   )}
@@ -271,11 +273,10 @@ export default function CampaignsListPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-[#64748B] mb-1">Capacity Used</p>
-                    <p className={`text-2xl font-bold ${
-                      parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 90 ? 'text-red-600' :
+                    <p className={`text-2xl font-bold ${parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 90 ? 'text-red-600' :
                       parseInt(String(stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0)) > 70 ? 'text-amber-600' :
-                      'text-green-600'
-                    }`}>
+                        'text-green-600'
+                      }`}>
                       {stats?.linkedin_rate_limits?.usage?.weekly_percentage ?? 0}%
                     </p>
                   </div>

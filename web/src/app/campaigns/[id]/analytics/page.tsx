@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
-  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
+  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
   Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
   SquarePen
 } from 'lucide-react';
@@ -281,13 +281,13 @@ export default function CampaignAnalyticsPage() {
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
         <div className="flex-1">
           <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
-              <ArrowLeft className="w-6 h-6" />
-            </Button>
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
           <div className="flex items-center gap-3 mb-3">
-            
-             <RadioTower className="w-8 h-8 text-[#1E293B]"/>
+
+            <RadioTower className="w-8 h-8 text-[#1E293B]" />
             <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] capitalize">
-              {analytics.campaign.name} 
+              {analytics.campaign.name}
             </h1>
           </div>
           <div className="flex items-center gap-3 ml-11 flex-wrap">
@@ -421,7 +421,7 @@ export default function CampaignAnalyticsPage() {
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
                   <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    Replied
+                    Lead Contact Back
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800">
                     {analytics.overview.replied}
