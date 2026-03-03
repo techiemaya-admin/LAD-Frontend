@@ -45,6 +45,7 @@ export default function PipelinePage(): JSX.Element {
       {/* Header */}
       <div className="mb-6 mt-10">
         <div className="flex items-center gap-3 mb-5">
+          <labels.icon className="w-8 h-8 text-[#1e293b]" />
           <div>
             <h1 className="text-3xl font-bold text-[#1e293b]">{labels.title}</h1>
             <p className="text-[#6b7280]">{labels.subtitle}</p>

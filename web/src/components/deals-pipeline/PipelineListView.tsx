@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
@@ -39,7 +40,11 @@ import {
   LayoutGrid,
   List,
   Calendar,
-  Copy
+  Copy,
+  Globe,
+  Target,
+  UserPlus,
+  Goal
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { useToast } from '@/components/ui/use-toast';
@@ -48,6 +53,7 @@ import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
 import { formatDateTimeUnified } from '@/utils/dateTime';
 import { getTagConfig, normalizeLeadCategory, type LeadTag } from '@/utils/leadCategorization';
+import { useUpdateLeadTags } from '@lad/frontend-features/deals-pipeline';
 // UI-compatible Lead interface for pipeline list view
 interface Lead {
   id: string | number;
@@ -61,8 +67,9 @@ interface Lead {
   amount?: number | string;
   assignee?: string;
   source?: string;
-  lead_tags?: string[];
-  lead_category?: string;
+  tags?: string[]; // API returns this field
+  lead_tags?: string[]; // Legacy field
+  lead_category?: string; // Legacy field
   [key: string]: unknown;
 }
 import {
@@ -80,11 +87,11 @@ import {
 } from '@/store/slices/uiSlice';
 const COLUMN_LABELS: Record<string, string> = {
   name: 'Lead Name',
+  company: 'Company',
   email: 'Email',
   phone: 'Phone',
   stage: 'Stage',
   status: 'Status',
-  priority: 'Priority',
   tags: 'Tags',
   closeDate: 'Close Date',
   dueDate: 'Due Date',
@@ -164,10 +171,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   onPageSizeChange
 }) => {
   // Redux dispatch
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { toast } = useToast();
   const masterDataRequestedRef = useRef<boolean>(false);
+  // SDK hooks for lead mutations
+  const updateLeadTagsMutation = useUpdateLeadTags();
   // Get shared state from Redux
   const globalSearchQuery = useSelector(selectPipelineSearchQuery);
   const globalActiveFilters = useSelector(selectPipelineActiveFilters);
@@ -183,6 +192,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLElement | null>(null);
   // Lead details dialog state (component-specific)
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // Optimistic tag updates - track pending tag changes per lead
+  const [optimisticTags, setOptimisticTags] = useState<Record<string | number, string>>({});
   // Helper function to get assignee display name from UUID or return name if already a name
   const getAssigneeDisplayName = useCallback((assigneeValue?: string | null): string => {
     if (!assigneeValue) return '';
@@ -388,6 +399,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const DEFAULT_COLUMN_ORDER = useMemo(
     () => [
       'name',
+      'company',
       'email',
       'phone',
       'stage',
@@ -402,10 +414,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   );
   const visibleColumnKeys = useMemo(() => {
     const ordered = DEFAULT_COLUMN_ORDER.filter(
-      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] !== false
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && visibleColumns[key] !== false
     );
     const extras = Object.keys(visibleColumns).filter(
-      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
     );
     return [...ordered, ...extras];
   }, [DEFAULT_COLUMN_ORDER, visibleColumns]);
@@ -432,7 +444,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Pagination state - use controlled props if provided, otherwise local state
   const isControlledPagination = controlledCurrentPage !== undefined && onPageChange !== undefined;
   const [localCurrentPage, setLocalCurrentPage] = useState<number>(1);
-  const [localPageSize, setLocalPageSize] = useState<number>(50);
+  const [localPageSize, setLocalPageSize] = useState<number>(20);
 
   const currentPage = isControlledPagination ? controlledCurrentPage : localCurrentPage;
   const pageSize = controlledPageSize !== undefined ? controlledPageSize : localPageSize;
@@ -536,12 +548,27 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               <p className="text-sm max-w-[125px] truncate font-medium">
                 {lead.name || 'Unnamed Lead'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {lead.company || ''}
-              </p>
             </div>
           </div>
         );
+      case 'company': {
+        // Extract company name from raw_data if company is null
+        const rawData = lead.raw_data as Record<string, unknown> | undefined;
+        const fullData = rawData?._full_data as Record<string, unknown> | undefined;
+        const employeeData = rawData?.employee_data as Record<string, unknown> | undefined;
+        const fullOrg = fullData?.organization as Record<string, string> | undefined;
+        const empOrg = employeeData?.organization as Record<string, string> | undefined;
+        const companyFromRaw = (rawData?.company_name as string) ||
+          (fullData?.company_name as string) ||
+          fullOrg?.name ||
+          empOrg?.name;
+        const displayCompany = lead.company || companyFromRaw || '-';
+        return (
+          <p className="text-sm max-w-[150px] truncate" title={String(displayCompany)}>
+            {displayCompany}
+          </p>
+        );
+      }
       case 'email':
         const handleCopyEmail = async () => {
           if (lead.email) {
@@ -657,9 +684,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       case 'tags': {
-        // Derive tag from lead_tags / lead_category fields (same logic as CallLogsTable)
-        const rawTags = lead.lead_tags;
-        const primaryTag = Array.isArray(rawTags) && rawTags.length > 0 ? String(rawTags[0]) : '';
+        // Check for optimistic tag update first
+        const optimisticTag = optimisticTags[lead.id];
+        // Use API tags field, fallback to legacy lead_tags / lead_category
+        const apiTags = lead.tags || [];
+        const rawTags = apiTags.length > 0 ? apiTags : lead.lead_tags;
+        const primaryTag = optimisticTag || (Array.isArray(rawTags) && rawTags.length > 0 ? String(rawTags[0]) : '');
         const normalizedPrimary = primaryTag.toLowerCase();
         let derivedTag: LeadTag = 'unknown';
         if (normalizedPrimary.includes('hot')) derivedTag = 'hot';
@@ -680,10 +710,38 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={derivedTag}
-              onValueChange={(newTag) => {
+              onValueChange={async (newTag) => {
                 const backendLabel = toBackendTagLabel(newTag as LeadTag);
-                if (!backendLabel || !onTagChange) return;
-                onTagChange(lead.id, backendLabel);
+                if (!backendLabel) return;
+                
+                // Optimistically update UI immediately
+                setOptimisticTags(prev => ({ ...prev, [lead.id]: backendLabel }));
+                
+                // Call the SDK mutation to update tags
+                try {
+                  await updateLeadTagsMutation.mutateAsync({
+                    leadId: lead.id,
+                    tags: [backendLabel]
+                  });
+                  
+                  // Notify parent component
+                  if (onTagChange) {
+                    onTagChange(lead.id, backendLabel);
+                  }
+                } catch (error) {
+                  // Revert optimistic update on error
+                  setOptimisticTags(prev => {
+                    const next = { ...prev };
+                    delete next[lead.id];
+                    return next;
+                  });
+                  logger.error('[PipelineListView] Failed to update lead tags:', error);
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to update lead tag. Please try again.',
+                    variant: 'destructive'
+                  });
+                }
               }}
             >
               <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
@@ -754,6 +812,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               return <Linkedin className="w-4 h-4" />;
             case 'voice_agent':
               return <Phone className="w-4 h-4" />;
+            case 'website':
+              return <Globe className="w-4 h-4" />;
             default:
               return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
           }
@@ -828,28 +888,32 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               </button>
             </div>
 
-            <Button
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddStage?.();
-              }}
-              disabled={!onAddStage}
-            >
-              <Plus />
-              Add Stage
-            </Button>
-            <Button
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddLead?.();
-              }}
-              disabled={!onAddLead}
-            >
-              <Plus />
-              Add Lead
-            </Button>
+            {process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true' && (
+              <>
+                <Button
+                  className="h-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddStage?.();
+                  }}
+                  disabled={!onAddStage}
+                >
+                  <Plus />
+                  Add Stage
+                </Button>
+                <Button
+                  className="h-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddLead?.();
+                  }}
+                  disabled={!onAddLead}
+                >
+                  <Plus />
+                  Add Lead
+                </Button>
+              </>
+            )}
           </div>
           <div className="flex gap-3 flex-col sm:flex-row justify-end items-center w-full sm:w-auto">
             <div className="relative max-w-md">
@@ -940,7 +1004,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             {visibleColumnKeys.map((column) => (
               <TableHead
                 key={column}
-                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${['name', 'stage', 'status', 'priority', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
                   }`}
                 onClick={() => handleSort(column)}
               >
@@ -992,28 +1056,11 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 className="text-center py-16"
               >
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Phone className="w-8 h-8 text-primary" />
+                  <UserPlus className="w-8 h-8" />
+                  <div className="text-lg font-semibold text-[#1E293B] mb-2">
+                    No leads found
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                      Trigger a campaign
-                    </h3>
-                    <p className="text-sm text-[#64748B] mb-4">
-                      Start a campaign to create leads and see them appear here
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push('/campaigns');
-                    }}
-                    className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Go to Campaigns
-                  </Button>
+                  
                 </div>
               </TableCell>
             </TableRow>
@@ -1042,6 +1089,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </div>
             <span>
               {`${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
+              {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (
+                <span className="text-xs text-[#94A3B8] ml-1">(filtered from {totalLeadsCount} total)</span>
+              )}
             </span>
           </div>
 

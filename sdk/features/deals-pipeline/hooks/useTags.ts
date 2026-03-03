@@ -37,3 +37,29 @@ export function useAddTagToLead() {
     },
   });
 }
+
+/**
+ * Hook to update lead tags (replace all tags)
+ */
+export function useUpdateLeadTags() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ leadId, tags }: { leadId: string | number; tags: string[] }) =>
+      api.updateLeadTags(leadId, tags),
+    onSuccess: (_, variables) => {
+      // Invalidate tags for the specific lead
+      queryClient.invalidateQueries({
+        queryKey: ["deals-pipeline", "leads", variables.leadId, "tags"],
+      });
+      // Also invalidate the lead itself since tags are part of lead data
+      queryClient.invalidateQueries({
+        queryKey: ["deals-pipeline", "leads", variables.leadId],
+      });
+      // Invalidate leads list
+      queryClient.invalidateQueries({
+        queryKey: ["deals-pipeline", "leads"],
+      });
+    },
+  });
+}

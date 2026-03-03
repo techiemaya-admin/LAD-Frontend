@@ -40,6 +40,8 @@ import type {
   PriorityOption,
   SourceOption,
   AssignLeadsParams,
+  BookingFollowup,
+  DeleteBookingFollowupParams,
 } from "./types";
 
 // ============================================================================
@@ -440,7 +442,7 @@ export async function addLeadComment(
 ): Promise<Comment> {
   const response = await apiPost<Comment>(
     `/api/deals-pipeline/leads/${leadId}/comments`,
-    { content }
+    { text: content }
   );
   return response.data;
 }
@@ -557,6 +559,20 @@ export async function addTagToLead(
   return response.data;
 }
 
+/**
+ * Update lead tags (replace all tags)
+ */
+export async function updateLeadTags(
+  leadId: string | number,
+  tags: string[]
+): Promise<{ tags: string[] }> {
+  const response = await apiPut<{ tags: string[] }>(
+    `/api/deals-pipeline/leads/${leadId}/tags`,
+    { tags }
+  );
+  return response.data;
+}
+
 // ============================================================================
 // ACTIVITY API FUNCTIONS
 // ============================================================================
@@ -605,6 +621,65 @@ export async function getPriorities(): Promise<PriorityOption[]> {
     "/api/deals-pipeline/reference/priorities"
   );
   return response.data;
+}
+
+/**
+ * Get signed URL for downloading an attachment
+ */
+export async function getAttachmentSignedUrl(
+  leadId: string | number,
+  fileUrl: string
+): Promise<{ signed_url: string; expires_in_minutes?: number }> {
+  const response = await apiGet<{ signed_url: string; expires_in_minutes?: number }>(
+    `/api/deals-pipeline/leads/${leadId}/attachments/signed-url?file_url=${encodeURIComponent(fileUrl)}`
+  );
+  return response.data;
+}
+
+// ============================================================================
+// BOOKING FOLLOWUP API FUNCTIONS
+// ============================================================================
+
+/**
+ * Delete a booking followup schedule
+ */
+export async function deleteBookingFollowup(
+  bookingId: string | number,
+  followupId: string | number
+): Promise<void> {
+  await apiDelete(`/api/deals-pipeline/bookings/${bookingId}/followup`);
+}
+
+/**
+ * Download attachment using signed URL
+ */
+export async function downloadAttachment(
+  leadId: string | number,
+  fileUrl: string,
+  filename?: string
+): Promise<void> {
+  // Get signed URL (API returns snake_case)
+  const { signed_url } = await getAttachmentSignedUrl(leadId, fileUrl);
+  
+  // Fetch the file using the signed URL
+  const response = await fetch(signed_url);
+  if (!response.ok) {
+    throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+  }
+  
+  // Create blob and download
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename || 'attachment';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Clean up
+  window.URL.revokeObjectURL(objectUrl);
 }
 
 // ============================================================================

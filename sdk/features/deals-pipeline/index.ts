@@ -12,6 +12,9 @@
  *   useCreateLead,
  *   useUpdateLead,
  *   useDeleteLead,
+ *   useDeleteBookingFollowup,
+ *   useDownloadAttachment,
+ *   useGetAttachmentSignedUrl,
  *   useStages,
  *   usePipelineData,
  *   usePipelineStats,
@@ -84,16 +87,25 @@ export {
   useUploadLeadAttachment,
   useDeleteLeadAttachment,
 } from "./hooks/useAttachments";
+export {
+  useGetAttachmentSignedUrl,
+  useDownloadAttachment,
+} from "./hooks/useAttachmentDownload";
 
 // ============================================================================
 // HOOKS - TAGS
 // ============================================================================
-export { useLeadTags, useAddTagToLead } from "./hooks/useTags";
+export { useLeadTags, useAddTagToLead, useUpdateLeadTags } from "./hooks/useTags";
 
 // ============================================================================
 // HOOKS - ACTIVITIES
 // ============================================================================
 export { useLeadActivities } from "./hooks/useActivities";
+
+// ============================================================================
+// HOOKS - BOOKING FOLLOWUPS
+// ============================================================================
+export { useDeleteBookingFollowup } from "./hooks/useBookingFollowups";
 
 // ============================================================================
 // HOOKS - REFERENCE DATA

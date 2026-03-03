@@ -265,11 +265,12 @@ export function CallLogsTable({
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  // Add computed tag to items
-  const itemsWithTags = useMemo(() => items.map(item => ({
+  // Add computed tag and serial number to items
+  const itemsWithTags = useMemo(() => items.map((item, index) => ({
     ...item,
     tag: getLeadTag(item),
-  })), [items, getLeadTag]);
+    serialNo: ((currentPage - 1) * perPage) + index + 1,
+  })), [items, getLeadTag, currentPage, perPage]);
 
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
@@ -365,14 +366,15 @@ export function CallLogsTable({
       ),
     },
     {
-      id: 'id',
-      accessorKey: 'id',
+      id: 'serialNo',
+      accessorKey: 'serialNo',
       header: 'Serial No',
       size: 60,
       maxSize: 80,
-      cell: ({ row }) => (
+      enableSortingRemoval: false,
+      cell: ({ getValue }) => (
         <span className="font-mono text-xs text-muted-foreground">
-          {((currentPage - 1) * perPage) + row.index + 1}
+          {getValue() as number}
         </span>
       ),
     },
@@ -796,12 +798,13 @@ export function CallLogsTable({
         </div>
         {/* Custom Date Inputs (only show when custom is selected) */}
         {dateFilter === 'custom' && (
-          <div className="flex gap-3 px-4">
+          <div className="flex gap-3 px-4 justify-end mt-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">From:</label>
               <input
                 type="date"
                 value={fromDate || ""}
+                max={toDate || undefined}
                 onChange={(e) => onFromDateChange?.(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
@@ -811,8 +814,20 @@ export function CallLogsTable({
               <input
                 type="date"
                 value={toDate || ""}
-                onChange={(e) => onToDateChange?.(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                min={fromDate || undefined}
+                onChange={(e) => {
+                  const newToDate = e.target.value;
+                  if (fromDate && newToDate < fromDate) {
+                    toast({
+                      title: "Invalid Date Range",
+                      description: "To date cannot be before From date",
+                      variant: "error",
+                    });
+                    return;
+                  }
+                  onToDateChange?.(newToDate);
+                }}
+                className={`px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${fromDate && toDate && toDate < fromDate ? 'border-destructive' : 'border-[#E2E8F0]'}`}
               />
             </div>
           </div>
@@ -1081,7 +1096,10 @@ export function CallLogsTable({
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span>of {totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            <span>of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (
+              <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
+            )}
             {callFilter === 'batch' && batchStats && (
               <div className="ml-4 flex items-center gap-3 border-l pl-4">
                 <span className="text-xs">

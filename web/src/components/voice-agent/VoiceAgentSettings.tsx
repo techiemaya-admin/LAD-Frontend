@@ -363,11 +363,11 @@ export function VoiceAgentSettings() {
   }, [isDirty]);
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-2 md:p-2 lg:p-2">
+      <div className="mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
           {/* Sidebar - Agent Selector */}
-          <aside className="lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+          <aside className="w-full min-w-0 max-w-none lg:w-[320px] lg:flex-none lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
             {isLoadingAgents ? (
               <SidebarSkeleton />
             ) : (

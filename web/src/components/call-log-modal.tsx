@@ -945,7 +945,7 @@ export function CallLogModal({
                     value="lead"
                     className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
                   >
-                    <User className="h-4 w-4" /> Lead
+                    <User className="h-4 w-4" /> Profile
                   </TabsTrigger>
                   {hasTranscripts && (
                     <TabsTrigger

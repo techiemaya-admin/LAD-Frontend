@@ -20,6 +20,7 @@ import {
   Send,
   GraduationCap,
   MessageSquare,
+   Goal
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
@@ -114,7 +115,7 @@ export function Sidebar() {
     {
       href: "/campaigns",
       label: "Campaigns",
-      icon: Send,
+      icon: Goal,
       details:
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",

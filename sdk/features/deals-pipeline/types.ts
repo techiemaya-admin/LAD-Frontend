@@ -30,7 +30,7 @@ export interface Lead {
   next_followup?: string | null;
   notes?: string | null;
   description?: string | null;
-  tags?: string[] | string | null;
+  tags?: string[];
   goals?: string[] | string | null;
   metadata?: Record<string, any>;
   is_deleted?: boolean;
@@ -74,7 +74,7 @@ export interface CreateLeadParams {
   assigned_to?: string | number | null;
   notes?: string | null;
   description?: string | null;
-  tags?: string[] | string | null;
+  tags?: string[];
   [key: string]: any;
 }
 
@@ -92,7 +92,7 @@ export interface UpdateLeadParams {
   assigned_to?: string | number | null;
   notes?: string | null;
   description?: string | null;
-  tags?: string[] | string | null;
+  tags?: string[];
   [key: string]: any;
 }
 
@@ -229,7 +229,10 @@ export interface Comment {
   id: string | number;
   lead_id: string | number;
   content: string;
+  text?: string; // API returns this field
   created_by?: string | number | null;
+  user_id?: string | number | null; // Alternative field from API
+  user_name?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -340,4 +343,26 @@ export interface SourceOption {
 export interface AssignLeadsParams {
   userId: string;
   leadIds: (string | number)[];
+}
+
+// ============================================================================
+// BOOKING FOLLOWUP TYPES
+// ============================================================================
+
+export interface BookingFollowup {
+  id: string | number;
+  booking_id: string | number;
+  scheduled_date: string;
+  scheduled_time: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  notes?: string | null;
+  created_by?: string | number | null;
+  created_at: string;
+  updated_at?: string;
+  [key: string]: any;
+}
+
+export interface DeleteBookingFollowupParams {
+  bookingId: string | number;
+  followupId: string | number;
 }

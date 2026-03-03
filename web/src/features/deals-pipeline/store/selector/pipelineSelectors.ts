@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
-import { Lead } from '../../../../components/leads/types';
+import { Lead } from '../../../../features/deals-pipeline/types';
 import { User } from '../../../../store/slices/usersSlice';
 import { logger } from '@/lib/logger';
 
@@ -208,6 +208,7 @@ interface PipelineActiveFilters {
   sources?: string[];
   assignees?: string[];
   tags?: string[];
+  dateRange?: { start: string | null; end: string | null } | null;
 }
 
 // Get filtered leads based on UI filters and search query
@@ -215,6 +216,18 @@ export const selectFilteredLeadsFromUI = createSelector(
   [selectLeads, selectPipelineActiveFilters, selectPipelineSearchQuery],
   (leads: Lead[], activeFilters: PipelineActiveFilters, searchQuery: string): Lead[] => {
     let filteredLeads = [...leads];
+
+    const parseDateRangeBoundary = (value: string, boundary: 'start' | 'end'): Date | null => {
+      if (!value) return null;
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return null;
+      if (boundary === 'start') {
+        d.setHours(0, 0, 0, 0);
+      } else {
+        d.setHours(23, 59, 59, 999);
+      }
+      return d;
+    };
     
     // Search query filter
     if (searchQuery && searchQuery.trim()) {
@@ -269,6 +282,25 @@ export const selectFilteredLeadsFromUI = createSelector(
       filteredLeads = filteredLeads.filter(lead => {
         const leadTags = (lead as any).tags || [];
         return activeFilters.tags!.some(tag => leadTags.includes(tag));
+      });
+    }
+
+    // Date range filter (Created At) - inclusive
+    // NOTE: UI date inputs are in YYYY-MM-DD. We treat:
+    // - start as local start-of-day
+    // - end as local end-of-day
+    const dateRange = activeFilters.dateRange;
+    const startBoundary = dateRange?.start ? parseDateRangeBoundary(dateRange.start, 'start') : null;
+    const endBoundary = dateRange?.end ? parseDateRangeBoundary(dateRange.end, 'end') : null;
+    if (startBoundary || endBoundary) {
+      filteredLeads = filteredLeads.filter(lead => {
+        const created = (lead as any).createdAt || (lead as any).created_at;
+        if (!created) return false;
+        const createdDate = new Date(created);
+        if (Number.isNaN(createdDate.getTime())) return false;
+        if (startBoundary && createdDate < startBoundary) return false;
+        if (endBoundary && createdDate > endBoundary) return false;
+        return true;
       });
     }
     
