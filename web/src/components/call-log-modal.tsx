@@ -5,13 +5,12 @@ import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 // SDK Imports
-import {
-  useCallLogs,
-  useBatchStatus,
-  useEndCall,
+import { 
+  useCallLogs, 
+  useBatchStatus, 
+  useEndCall, 
   useRetryFailedCalls,
   useRecordingSignedUrl,
-  useCallLead,
   getCallLog,
   type CallLog,
   type BatchPayload,
@@ -20,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PhoneCall, SquarePen } from "lucide-react";
 import {
   Play,
@@ -46,7 +44,6 @@ import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
 import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
-import { formatDateTimeUnified } from "@/utils/dateTime";
 
 // shadcn + recharts
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,7 +67,7 @@ function normalizeList(value: any): string[] {
       try {
         const parsed = JSON.parse(v);
         if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
-      } catch { }
+      } catch {}
     }
     if (v.includes(",")) return v.split(",").map((x) => x.trim()).filter(Boolean);
     return [v];
@@ -125,8 +122,8 @@ const TranscriptsTab = ({
         >
           {((msg.speaker || "").toLowerCase() === "assistant" ||
             (msg.speaker || "").toLowerCase() === "agent") && (
-              <Bot className="h-5 w-5 text-blue-500 mt-1" />
-            )}
+            <Bot className="h-5 w-5 text-blue-500 mt-1" />
+          )}
           <div
             className={cn(
               "p-3 rounded-2xl max-w-xs shadow-md",
@@ -173,7 +170,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
       icon: MinusCircle,
     };
   };
-
+  
   // Color mapping derived from disposition
   const getDispositionVariant = (disposition: string) => {
     const lower = (disposition || "").toLowerCase();
@@ -545,119 +542,6 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
   );
 };
 
-/* ----------------- Lead Tab ------------------ */
-const LeadField = ({ label, value }: { label: string; value?: any }) => (
-  <div className="bg-white/60 p-3 rounded-xl border border-gray-200">
-    <span className="text-xs text-gray-500 block mb-0.5 font-medium uppercase tracking-wide">{label}</span>
-    <span className="text-gray-900 font-medium text-sm break-all">
-      {value !== null && value !== undefined && value !== '' ? String(value) : '—'}
-    </span>
-  </div>
-);
-
-const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boolean }) => {
-  if (isLoading) {
-    return (
-      <ScrollArea className="h-full p-4">
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-14 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      </ScrollArea>
-    );
-  }
-
-  // Unwrap: API returns { success, data: { ...lead } }
-  const lead = leadData?.data || leadData?.lead || null;
-
-  if (!lead) {
-    return (
-      <ScrollArea className="h-full p-4">
-        <div className="flex flex-col items-center justify-center h-40 gap-3 text-gray-400">
-          <User className="h-10 w-10 opacity-40" />
-          <p className="text-sm">No lead data available for this call.</p>
-        </div>
-      </ScrollArea>
-    );
-  }
-
-  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
-
-  const contactFields = [
-    { label: 'Full Name', value: fullName },
-    { label: 'Phone', value: lead.to_base_number },
-    { label: 'Email', value: lead.email },
-    { label: 'Company', value: lead.company_name },
-    { label: 'Title', value: lead.title },
-    { label: 'Location', value: lead.location },
-    { label: 'LinkedIn', value: lead.linkedin_url },
-    { label: 'Source', value: lead.source },
-  ];
-
-  const pipelineFields = [
-    { label: 'Stage', value: lead.stage },
-    { label: 'Status', value: lead.status },
-    { label: 'Priority', value: lead.priority !== undefined ? String(lead.priority) : undefined },
-    { label: 'Tags', value: Array.isArray(lead.tags) && lead.tags.length ? lead.tags.join(', ') : undefined },
-    { label: 'Estimated Value', value: lead.estimated_value !== null && lead.estimated_value !== undefined ? `${lead.currency || 'USD'} ${lead.estimated_value}` : undefined },
-    { label: 'Assigned User ID', value: lead.assigned_user_id },
-    { label: 'Assigned At', value: lead.assigned_at ? formatDateTimeUnified(lead.assigned_at) : undefined },
-    { label: 'Next Follow-up', value: lead.next_follow_up_at ? formatDateTimeUnified(lead.next_follow_up_at) : undefined },
-    { label: 'Last Contacted', value: lead.last_contacted_at ? formatDateTimeUnified(lead.last_contacted_at) : undefined },
-  ];
-
-  const metaFields = [
-    { label: 'Lead ID', value: lead.lead_id },
-    { label: 'Created At', value: lead.created_at ? formatDateTimeUnified(lead.created_at) : undefined },
-    { label: 'Updated At', value: lead.updated_at ? formatDateTimeUnified(lead.updated_at) : undefined },
-    { label: 'Archived', value: lead.is_archived !== undefined ? (lead.is_archived ? 'Yes' : 'No') : undefined },
-  ];
-
-  const hasContact = contactFields.some(f => f.value);
-  const hasPipeline = pipelineFields.some(f => f.value);
-
-  return (
-    <ScrollArea className="h-full p-4">
-      <div className="space-y-5">
-        {/* Contact Info */}
-        {hasContact && (
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-              <User className="h-4 w-4 text-orange-500" /> Contact Information
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {contactFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
-            </div>
-          </div>
-        )}
-
-        {/* Pipeline Info */}
-        {hasPipeline && (
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-orange-500" /> Pipeline & CRM
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {pipelineFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
-            </div>
-          </div>
-        )}
-
-        {/* Meta */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-            <Info className="h-4 w-4 text-orange-500" /> Record Info
-          </h4>
-          <div className="grid grid-cols-2 gap-2">
-            {metaFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
-          </div>
-        </div>
-      </div>
-    </ScrollArea>
-  );
-};
-
 /* ----------------- Main Modal ------------------ */
 export function CallLogModal({
   id,
@@ -669,20 +553,20 @@ export function CallLogModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const [log, setLog] = useState<any | null>(null);
-  const [logLoading, setLogLoading] = useState(false);
-  const [segments, setSegments] = useState<Array<{ time?: string; speaker?: string; text: string }>>([]
+  const [segments, setSegments] = useState<Array<{ time?: string; speaker?: string; text: string }>>(
+    []
   );
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [messages, setMessages] = useState<any | null>(null);
   const [isDownloadingRecording, setIsDownloadingRecording] = useState(false);
   const { push } = useToast();
-
+  
   // Get callId for recording URL query
   const callId = log?.call_id ?? log?.callId ?? log?.voice_call_id ?? log?.id;
-
+  
   // Use SDK hook to fetch signed recording URL
   const recordingUrlQuery = useRecordingSignedUrl(callId);
-
+  
   // Determine the final recording URL (SDK signed URL > fallback URLs from log)
   const signedRecordingUrl = useMemo(() => {
     if (recordingUrlQuery.data?.signed_url) {
@@ -709,11 +593,6 @@ export function CallLogModal({
     return undefined;
   }, [recordingUrlQuery.data, log]);
 
-  // Fetch lead data using the SDK hook
-  const callLeadQuery = useCallLead(open && id ? id : null);
-  const leadData = callLeadQuery.data ?? null;
-  const leadLoading = callLeadQuery.isLoading;
-
   useEffect(() => {
     async function load() {
       if (!open || !id) {
@@ -725,7 +604,6 @@ export function CallLogModal({
       }
 
       try {
-        setLogLoading(true);
         // Call log - Using call-logs SDK API
         const res: any = await getCallLog(id);
         const l = res.data || res.log || res;
@@ -746,7 +624,7 @@ export function CallLogModal({
             const parsed = JSON.parse(raw);
             const arr =
               Array.isArray(parsed?.segments) ? parsed.segments :
-                Array.isArray(parsed) ? parsed : [];
+              Array.isArray(parsed) ? parsed : [];
             segs = arr.map((s: any) => {
               const text = (s.text || s.intended_text || s.message || "").trim();
               return {
@@ -758,7 +636,7 @@ export function CallLogModal({
           } else if (raw && typeof raw === "object") {
             const arr =
               Array.isArray(raw?.segments) ? raw.segments :
-                Array.isArray(raw) ? raw : [];
+              Array.isArray(raw) ? raw : [];
             segs = arr.map((s: any) => {
               const text = (s.text || s.intended_text || s.message || "").trim();
               return {
@@ -791,8 +669,6 @@ export function CallLogModal({
         setSegments([]);
         setAnalysis(null);
         setMessages(null);
-      } finally {
-        setLogLoading(false);
       }
     }
 
@@ -828,10 +704,10 @@ export function CallLogModal({
     } catch (error) {
       logger.error("Failed to download recording:", error);
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      const description = errorMsg.includes('CORS')
+      const description = errorMsg.includes('CORS') 
         ? "Recording downloads work in production. This is a localhost development limitation."
         : `Could not download recording: ${errorMsg}`;
-
+      
       push({
         variant: 'error',
         title: 'Download Failed',
@@ -880,9 +756,9 @@ export function CallLogModal({
           </div>
           <div className="flex items-center space-x-2">
             {hasAudio && (
-              <Button
-                variant="outline"
-                size="sm"
+              <Button 
+                variant="outline" 
+                size="sm" 
                 onClick={handleDownloadRecording}
                 disabled={isDownloadingRecording}
                 className="hover:bg-orange-100"
@@ -890,7 +766,7 @@ export function CallLogModal({
                 <Download className="h-4 w-4 mr-2" />
                 {isDownloadingRecording ? "Downloading..." : "Call Recording Download"}
               </Button>
-            )}
+            )}  
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
               <X className="h-4 w-4" />
             </Button>
@@ -899,117 +775,112 @@ export function CallLogModal({
 
         {/* Body */}
         <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
+          {/* Audio (only if present) */}
+          {/* {hasAudio && <AgentAudioPlayer src={signedRecordingUrl} />} */}
 
-          {logLoading ? (
-            /* ── Skeleton while initial data loads ── */
-            <div className="flex-1 flex flex-col space-y-4">
-              {/* Tab bar skeleton */}
-              <div className="flex gap-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-9 flex-1 rounded-xl" />
-                ))}
-              </div>
-              {/* Content skeleton */}
-              <div className="flex-1 border border-gray-200 rounded-2xl p-6 space-y-4">
-                {/* Avatar + name row */}
-                <div className="flex items-center space-x-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-28" />
-                  </div>
-                </div>
-                {/* Field grid */}
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="space-y-2 p-4 rounded-xl border border-gray-100">
-                      <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-4 w-full" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              {hasAudio && (
-                <div className="w-full">
-                  <AgentAudioPlayer src={signedRecordingUrl} />
-                </div>
+          {hasAudio && (
+  <div className="w-full">
+    <AgentAudioPlayer src={signedRecordingUrl} />
+  </div>
+)}
+
+
+          <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid grid-cols-5 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
+              <TabsTrigger
+                value="profile"
+                className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+              >
+                <User className="h-4 w-4" /> Profile
+              </TabsTrigger>
+              {hasTranscripts && (
+                <TabsTrigger
+                  value="transcripts"
+                  className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                >
+                  <Mic className="h-4 w-4" /> Call Transcript
+                </TabsTrigger>
               )}
 
+              {hasAnalysis && (
+                <TabsTrigger
+                  value="analysis"
+                  className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                >
+                  <Info className="h-4 w-4" /> Analysis
+                </TabsTrigger>
+              )}
 
-              <Tabs key={defaultTab} defaultValue="lead" className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="grid grid-cols-5 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
-                  <TabsTrigger
-                    value="lead"
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
-                  >
-                    <User className="h-4 w-4" /> Lead
-                  </TabsTrigger>
-                  {hasTranscripts && (
-                    <TabsTrigger
-                      value="transcripts"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
-                    >
-                      <Mic className="h-4 w-4" /> Call Transcript
-                    </TabsTrigger>
-                  )}
+              {hasAnalysis && (
+                <TabsTrigger
+                  value="messages"
+                  className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                >
+                  <MessageSquare className="h-4 w-4" /> Messages
+                </TabsTrigger>
+              )}
 
-                  {hasAnalysis && (
-                    <TabsTrigger
-                      value="analysis"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
-                    >
-                      <Info className="h-4 w-4" /> Analysis
-                    </TabsTrigger>
-                  )}
+              <TabsTrigger
+                value="cost"
+                className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+              >
+                <DollarSign className="h-4 w-4" /> Cost
+              </TabsTrigger>
+            </TabsList>
 
-                  {hasAnalysis && (
-                    <TabsTrigger
-                      value="messages"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
-                    >
-                      <MessageSquare className="h-4 w-4" /> Messages
-                    </TabsTrigger>
-                  )}
+            <TabsContent value="profile" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+              <ScrollArea className="h-full p-4">
+                <Card className="border-orange-200 shadow-lg overflow-hidden">
+                  <CardContent className="p-6 space-y-6 bg-gradient-to-br from-white to-orange-50">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <User className="h-5 w-5 text-[#0b1957]" />
+                      <h3 className="font-bold text-xl text-gray-800">Lead Profile</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Name</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_name || log?.leadName || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Phone</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_phone || log?.leadPhone || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Email</span>
+                        <span className="text-gray-800 font-medium">{log?.lead_email || log?.leadEmail || "—"}</span>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-500 block mb-1">Status</span>
+                        <span className="text-gray-800 font-medium">{log?.status || "—"}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ScrollArea>
+            </TabsContent>
 
-                  <TabsTrigger
-                    value="cost"
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
-                  >
-                    <DollarSign className="h-4 w-4" /> Cost
-                  </TabsTrigger>
-                </TabsList>
+            {hasTranscripts && (
+              <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                <TranscriptsTab segments={segments} />
+              </TabsContent>
+            )}
 
-                <TabsContent value="lead" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                  <LeadTab leadData={leadData} isLoading={leadLoading} />
-                </TabsContent>
+            {hasAnalysis && (
+              <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                <AnalysisTab analysis={analysis} />
+              </TabsContent>
+            )}
 
-                {hasTranscripts && (
-                  <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <TranscriptsTab segments={segments} />
-                  </TabsContent>
-                )}
+            {hasAnalysis && (
+              <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                <MessagesTab messages={messages} />
+              </TabsContent>
+            )}
 
-                {hasAnalysis && (
-                  <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <AnalysisTab analysis={analysis} />
-                  </TabsContent>
-                )}
-
-                {hasAnalysis && (
-                  <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <MessagesTab messages={messages} />
-                  </TabsContent>
-                )}
-
-                <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
-                  <CallCostTab log={log} analysis={analysis} />
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
+            <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
+              <CallCostTab log={log} analysis={analysis} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

@@ -100,8 +100,9 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except static files and images
-     * This ensures middleware runs on ALL routes including /dalos and API routes
+     * This ensures middleware runs on ALL routes including API routes
+     * But excludes: Next.js internals, static assets, and common file types
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|mp3|wav)).*)',
   ],
 };

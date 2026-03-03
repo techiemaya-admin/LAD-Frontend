@@ -9,11 +9,11 @@ function extractTenantFromJWT(token: string): string | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-
+    
     const payload = JSON.parse(
       Buffer.from(parts[1], 'base64').toString('utf-8')
     );
-
+    
     return payload.tenant_id || payload.tenantId || null;
   } catch {
     return null;
@@ -25,11 +25,11 @@ export async function GET(req: NextRequest) {
     // Try to get token from Authorization header first, then fall back to cookies
     const authHeader = req.headers.get('Authorization');
     let token = authHeader?.replace('Bearer ', '');
-
+    
     if (!token) {
       token = req.cookies.get('token')?.value;
     }
-
+    
     // Token validation - no logging of cookie details for security
     if (!token) {
       return NextResponse.json({ error: 'Access token required' }, { status: 401 });
@@ -48,13 +48,13 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
-
+    
     const backend = getBackendUrl();
     const apiUrl = `${backend}/api/voice-agent/user/available-agents`;
 
     const resp = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
+      headers: { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'X-Tenant-Id': tenantId,

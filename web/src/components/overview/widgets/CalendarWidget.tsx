@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useMemo } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Phone,
-  Bot,
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Phone, 
+  Bot, 
   UserCheck,
   Calendar as CalendarIcon,
   Loader2
@@ -30,51 +30,40 @@ interface CalendarWidgetProps {
   id: string;
 }
 const eventTypeConfig = {
-  call: {
-    icon: Phone,
+  call: { 
+    icon: Phone, 
     className: 'event-call',
     label: 'Scheduled Call'
   },
-  'ai-task': {
-    icon: Bot,
+  'ai-task': { 
+    icon: Bot, 
     className: 'event-ai',
     label: 'AI Task'
   },
-  followup: {
-    icon: UserCheck,
+  followup: { 
+    icon: UserCheck, 
     className: 'event-followup',
     label: 'Follow-up'
   },
-  meeting: {
-    icon: CalendarIcon,
+  meeting: { 
+    icon: CalendarIcon, 
     className: 'event-meeting',
     label: 'Meeting'
   },
 };
-const formatBookingType = (type: string) => {
-  if (type === 'auto_followup') return 'Auto Follow-Up';
-  return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
-};
-
-const formatBookingSource = (source: string) => {
-  if (source === 'user_ui') return 'Dashboard';
-  if (source?.toLowerCase() === 'system') return 'System';
-  return source.charAt(0).toUpperCase() + source.slice(1).replace(/_/g, ' ');
-};
-
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
-  const {
-    calendarViewMode,
+  const { 
+    calendarViewMode, 
     setCalendarViewMode,
     selectedDate,
     setSelectedDate,
   } = useDashboardStore();
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  
   // Fetch users and bookings using SDK hooks
   const { users = [], loading: isLoadingUsers } = useTenantUsers();
-  const { bookings = [], loading: isLoadingBookings } = useLeadBookings(selectedUserId ? { user_id: selectedUserId } : undefined);
+  const { bookings = [], loading: isLoadingBookings } = useLeadBookings(selectedUserId || undefined);
 
   // Calendar calculations
   const monthStart = startOfMonth(selectedDate);
@@ -87,7 +76,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
   const getEventsForDate = (date: Date) => {
-    return bookings.filter((booking: any) =>
+    return bookings.filter((booking: any) => 
       isSameDay(new Date(booking.scheduled_at), date)
     );
   };
@@ -155,7 +144,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h3 className="font-semibold text-sm">
-            {calendarViewMode === 'month'
+            {calendarViewMode === 'month' 
               ? format(selectedDate, 'MMMM yyyy')
               : `${format(weekStart, 'MMM d')} - ${format(addDays(weekStart, 6), 'MMM d, yyyy')}`
             }
@@ -227,7 +216,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                                 (booking.assigned_user_name ? `\nAssigned User: ${booking.assigned_user_name}` : '')}
                             >
                               <div className="text-[9px] opacity-75 truncate">
-                                {formatBookingType(booking.booking_type)} · {formatBookingSource(booking.booking_source)}
+                                {booking.booking_type} · {booking.booking_source}
                                 {booking.lead_name && (
                                   <>
                                     <br /><span className="font-medium">Lead:</span> {booking.lead_name}
@@ -311,7 +300,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                                 title={`Type: ${booking.booking_type}\nSource: ${booking.booking_source}\nStatus: ${booking.status}`}
                               >
                                 <Icon className="h-3 w-3 shrink-0" />
-                                <span className="truncate text-[9px]">{formatBookingType(booking.booking_type)} · {formatBookingSource(booking.booking_source)}</span>
+                                <span className="truncate text-[9px]">{booking.booking_type} · {booking.booking_source}</span>
                               </div>
                             );
                           })}
@@ -332,12 +321,12 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                 {format(selectedDate, 'EEEE, MMMM d, yyyy')}
               </DialogTitle>
             </DialogHeader>
-
+            
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
                 {getEventsForDate(selectedDate).length} booking{getEventsForDate(selectedDate).length !== 1 ? 's' : ''} scheduled
               </div>
-
+              
               {getEventsForDate(selectedDate).length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   No bookings scheduled for this date
@@ -370,10 +359,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs">
-                              <span className="font-medium">Type:</span> {formatBookingType(booking.booking_type)}
+                              <span className="font-medium">Type:</span> {booking.booking_type}
                             </p>
                             <p className="text-xs">
-                              <span className="font-medium">Source:</span> {formatBookingSource(booking.booking_source)}
+                              <span className="font-medium">Source:</span> {booking.booking_source}
                             </p>
                             {booking.lead_name && (
                               <p className="text-xs">

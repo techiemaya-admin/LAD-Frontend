@@ -106,11 +106,6 @@ function normalizeToNumber(value: number | string | undefined): number | undefin
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
-    // Check if it's "Max (60)" or similar
-    const match = value.match(/max\s*\((\d+)\)/i);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
     const parsed = parseInt(value, 10);
     return isNaN(parsed) ? undefined : parsed;
   }
@@ -193,7 +188,7 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
   if (icpAnswers.voice_actions) {
     mapped.voice_actions = normalizeToArray(icpAnswers.voice_actions);
   }
-
+  
   // Map linkedin_connection_message from top-level message_data (set by StepEditor)
   if (icpAnswers.linkedin_connection_message) {
     const connectionMessage = String(icpAnswers.linkedin_connection_message).trim();
@@ -202,7 +197,7 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
       mapped.linkedin_connection_message = connectionMessage;
     }
   }
-
+  
   // Map platform templates (keep as strings)
   // LinkedIn connection template (new key from ICP chat)
   if (icpAnswers.linkedin_connection_template) {
@@ -215,7 +210,7 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
       }
     }
   }
-
+  
   // LinkedIn followup template (new key from ICP chat)
   if (icpAnswers.linkedin_followup_template || icpAnswers.linkedin_message_template) {
     const linkedinFollowupTemplate = String(
@@ -229,7 +224,7 @@ export function mapICPAnswersToCampaign(icpAnswers: ICPAnswers): CampaignFormatt
       }
     }
   }
-
+  
   // Legacy: Map old linkedin_template key (for backwards compatibility)
   if (icpAnswers.linkedin_template) {
     const linkedinTemplate = String(icpAnswers.linkedin_template).trim();

@@ -30,7 +30,6 @@ export default function SelectableOptions({
     new Set(preSelectedOptions.length > 0 ? preSelectedOptions : [])
   );
   const [showLeadsWarning, setShowLeadsWarning] = useState(false);
-  const [customValue, setCustomValue] = useState<string>('');
   // Update workflow in real-time when selections change (for platform actions)
   useEffect(() => {
     const platform = detectPlatform();
@@ -48,8 +47,8 @@ export default function SelectableOptions({
       // Store updated answers globally
       (window as any).__icpAnswers = updatedAnswers;
       // Trigger workflow update event
-      const updateEvent = new CustomEvent('workflowUpdate', {
-        detail: { answers: updatedAnswers, stepIndex: (window as any).__currentStepIndex || 0 }
+      const updateEvent = new CustomEvent('workflowUpdate', { 
+        detail: { answers: updatedAnswers, stepIndex: (window as any).__currentStepIndex || 0 } 
       });
       window.dispatchEvent(updateEvent);
     }
@@ -69,41 +68,24 @@ export default function SelectableOptions({
     });
     setShowLeadsWarning(showWarning);
   }, [selected, leadsPerDayOptions]);
-  const hasCustomSelected = Array.from(selected).some(opt => opt.toLowerCase().includes('custom'));
-
   const handleSubmit = useCallback(() => {
     if (selected.size > 0) {
-      if (hasCustomSelected && customValue.trim()) {
-        if (multiSelect) {
-          const finalValues = Array.from(selected).map(opt =>
-            opt.toLowerCase().includes('custom') ? customValue.trim() : opt
-          );
-          onSubmit(finalValues);
-        } else {
-          onSubmit([customValue.trim()]);
-        }
-      } else {
-        onSubmit(Array.from(selected));
-      }
+      onSubmit(Array.from(selected));
     }
-  }, [selected, hasCustomSelected, customValue, multiSelect, onSubmit]);
+  }, [selected, onSubmit]);
 
   // Handle Enter key to submit
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle Enter if we're not typing in the custom input (the input has its own onKeyDown)
-      if (document.activeElement?.tagName !== 'INPUT') {
-        const isSubmitDisabled = selected.size === 0 || (hasCustomSelected && !customValue.trim());
-        if (event.key === 'Enter' && !isSubmitDisabled) {
-          event.preventDefault();
-          handleSubmit();
-        }
+      if (event.key === 'Enter' && selected.size > 0) {
+        event.preventDefault();
+        handleSubmit();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selected, hasCustomSelected, customValue, handleSubmit]);
+  }, [selected, handleSubmit]);
   // Detect platform from props or options (for platform actions)
   const detectPlatform = (): string | null => {
     // Use platformName prop if provided
@@ -180,17 +162,17 @@ export default function SelectableOptions({
                 onClick={() => toggleOption(option)}
                 className={cn(
                   'relative flex flex-col items-center justify-center px-6 py-5 rounded-xl border-2 transition-all duration-200',
-                  'focus:outline-none focus:ring-2 focus:ring-[#172560] focus:ring-offset-2',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   isSelected
-                    ? 'bg-[#172560]/5 border-[#172560] text-[#172560] shadow-md scale-105'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-[#172560]/50 hover:bg-[#172560]/5 hover:shadow-sm'
+                    ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-md scale-105'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm'
                 )}
                 aria-pressed={isSelected}
               >
                 <span className="font-semibold text-base mb-1">{option}</span>
                 {isSelected && (
                   <div className="absolute top-2 right-2">
-                    <div className="w-6 h-6 rounded-full bg-[#172560] flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
                   </div>
@@ -213,9 +195,9 @@ export default function SelectableOptions({
                 onClick={() => toggleOption(option)}
                 className={cn(
                   'w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all duration-200 text-left',
-                  'focus:outline-none focus:ring-2 focus:ring-[#172560] focus:ring-offset-2',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   isSelected
-                    ? 'bg-[#172560]/5 border-[#172560] text-[#172560]'
+                    ? 'bg-blue-50 border-blue-500 text-blue-900'
                     : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 )}
                 aria-pressed={isSelected}
@@ -223,7 +205,7 @@ export default function SelectableOptions({
                 <div className={cn(
                   'w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0',
                   isSelected
-                    ? 'bg-[#172560] border-[#172560]'
+                    ? 'bg-blue-500 border-blue-500'
                     : 'border-gray-300 bg-white'
                 )}>
                   {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -235,9 +217,9 @@ export default function SelectableOptions({
         </div>
       );
     } else {
-      // Default style (sleek full-width buttons to ensure consistent sizing and no overlap)
+      // Default style (original)
       return (
-        <div className="flex flex-col w-full gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {options.map((option) => {
             const isSelected = selected.has(option);
             return (
@@ -246,18 +228,20 @@ export default function SelectableOptions({
                 type="button"
                 onClick={() => toggleOption(option)}
                 className={cn(
-                  'relative flex items-center justify-between w-full px-4 py-3 rounded-xl border transition-all duration-200 text-left shadow-sm',
-                  'focus:outline-none focus:ring-2 focus:ring-[#172560] focus:ring-offset-2 hover:-translate-y-0.5',
+                  'relative flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   isSelected
-                    ? 'bg-[#172560] border-[#172560] text-white shadow-md shadow-[#172560]/20'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-[#172560]/50 hover:text-[#172560]'
+                    ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 )}
                 aria-pressed={isSelected}
               >
-                <span className="font-medium text-[14px] leading-snug pr-4">{option}</span>
+                <span className="font-medium text-sm">{option}</span>
                 {isSelected && (
                   <div className="flex-shrink-0 ml-2">
-                    <Check className="w-3.5 h-3.5 text-white" />
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
                   </div>
                 )}
               </button>
@@ -277,41 +261,17 @@ export default function SelectableOptions({
       )}
       {/* Options */}
       {renderOptions()}
-      {/* Custom Input Box */}
-      {hasCustomSelected && (
-        <div className="mt-3 animate-in fade-in slide-in-from-top-2">
-          <input
-            type="text"
-            className="w-full px-4 py-3 bg-white text-gray-900 rounded-xl border-2 border-[#172560]/40 focus:outline-none focus:ring-2 focus:ring-[#172560] focus:border-[#172560] shadow-sm transition-all"
-            placeholder={
-              Array.from(selected).some(opt => opt.toLowerCase().includes('days'))
-                ? "e.g., Monday, Wednesday"
-                : "Enter your custom value here..."
-            }
-            value={customValue}
-            onChange={(e) => setCustomValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && customValue.trim()) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            autoFocus
-          />
-        </div>
-      )}
-
       {/* Action Buttons */}
-      <div className="flex pt-3 w-full">
+      <div className="flex gap-2 pt-2">
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={selected.size === 0 || (hasCustomSelected && !customValue.trim())}
+          disabled={selected.size === 0}
           className={cn(
-            'w-full px-6 py-3 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[#172560] focus:ring-offset-2',
-            (selected.size > 0 && !(hasCustomSelected && !customValue.trim()))
-              ? 'bg-[#172560] text-white hover:bg-[#0f1840] shadow-md hover:shadow-lg'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-70'
+            'flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            selected.size > 0
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           )}
         >
           Continue

@@ -112,23 +112,21 @@ export function clearBufferedMessages(sessionId: string): void {
 }
 
 /**
- * Remove all ICP buffered messages across every session stored in localStorage.
- * Used when the user chooses to start over completely.
+ * Clear all buffered messages for any ICP session.
  */
 export function clearAllBufferedMessages(): void {
   if (typeof window === 'undefined') return;
   try {
     const prefix = 'icp_buffered_messages_';
-    // collect keys first because removing while iterating can skip items
-    const keys: string[] = [];
+    const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(prefix)) {
-        keys.push(key);
+        keysToRemove.push(key);
       }
     }
-    keys.forEach(k => localStorage.removeItem(k));
-    logger.debug('[ICP Buffer] Cleared all buffered messages', { count: keys.length });
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    logger.debug('[ICP Buffer] Cleared all buffered messages');
   } catch (e) {
     logger.error('[ICP Buffer] Error clearing all buffered messages', e);
   }

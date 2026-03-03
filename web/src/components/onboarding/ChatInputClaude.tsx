@@ -59,8 +59,8 @@ export default function ChatInputClaude({
     }
   };
   return (
-    <form
-      onSubmit={handleSubmit}
+    <form 
+      onSubmit={handleSubmit} 
       className="w-full max-w-3xl mx-auto"
       onClick={(e) => {
         // Ensure clicking the form focuses the textarea
@@ -71,11 +71,11 @@ export default function ChatInputClaude({
     >
       <div
         className={cn(
-          'relative flex items-center justify-center gap-3 px-6 py-3 border transition-all rounded-[32px]',
+          'relative flex items-center justify-center gap-2 px-4 py-3 bg-white border rounded-2xl shadow-sm transition-all',
           isFocused
-            ? 'border-[#172560]/40 shadow-md bg-white ring-2 ring-[#172560]/20'
-            : 'border-gray-300 hover:border-gray-400 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.03)]',
-          disabled && 'opacity-60 bg-gray-50'
+            ? 'border-gray-400 shadow-md'
+            : 'border-gray-200 hover:border-gray-300',
+          disabled && 'opacity-60'
         )}
         style={{ zIndex: 1 }}
       >
@@ -89,7 +89,7 @@ export default function ChatInputClaude({
                 e.stopPropagation();
                 onShowWorkflowLibrary();
               }}
-              className="p-1.5 text-[#172560] hover:text-[#0f1840] hover:bg-[#172560]/5 rounded-lg transition-colors"
+              className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
               title="Workflow Library"
             >
               <Library className="w-4 h-4" />
@@ -103,11 +103,11 @@ export default function ChatInputClaude({
           onChange={(e) => {
             // Always allow onChange - disabled attribute will handle visual state
             const newValue = e.target.value;
-            logger.debug('onChange', {
-              value: newValue,
-              disabled,
+            logger.debug('onChange', { 
+              value: newValue, 
+              disabled, 
               valueLength: newValue.length,
-              canUpdate: !disabled
+              canUpdate: !disabled 
             });
             setInput(newValue);
           }}
@@ -131,14 +131,14 @@ export default function ChatInputClaude({
         />
         {/* Right Icons */}
         <div className="flex items-center gap-1">
-
+     
           <button
             type="submit"
             disabled={!input.trim() || disabled}
             className={cn(
-              'p-2.5 rounded-full transition-colors ml-1 flex items-center justify-center',
+              'p-2 rounded-lg transition-colors',
               input.trim() && !disabled
-                ? 'bg-[#172560] text-white hover:bg-[#0f1840] shadow-md hover:shadow-lg hover:-translate-y-0.5 transform transition-all'
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             )}
             title="Send message"

@@ -30,6 +30,7 @@ export const AUTH_ROUTES = [
   '/campaigns',
   '/call-logs',
   '/conversations',
+  '/followups',
   '/phone-numbers',
   '/settings',
   '/billing',
@@ -37,6 +38,7 @@ export const AUTH_ROUTES = [
   '/make-call',
   '/pipeline',
   '/onboarding',
+  '/community-roi',
   '/api/protected', // Mark all protected API routes with /api/protected prefix
 ];
 
@@ -61,9 +63,9 @@ export function isOpenRoute(pathname: string): boolean {
     ...OPEN_ROUTES.health,
   ];
   return allOpenRoutes.some(path => {
+    if (path === '/') return pathname === '/';
     if (path.endsWith('/') && pathname.startsWith(path)) return true;
-    if (!path.endsWith('/') && pathname.startsWith(path + '/')) return true;
-    if (!path.endsWith('/') && pathname.startsWith(path)) return true;
+    if (!path.endsWith('/') && (pathname === path || pathname.startsWith(path + '/'))) return true;
     return false;
   });
 }

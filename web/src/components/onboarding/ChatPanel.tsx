@@ -9,17 +9,16 @@ import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import WorkflowLibrary from '@/components/onboarding/WorkflowLibrary';
 import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
 import { useChatStepController } from '@/components/onboarding/ChatStepController';
-import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { clearBufferedMessages, clearAllBufferedMessages } from '@lad/frontend-features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
 import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
-import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
-import { toast } from '@/hooks/use-toast';
 type FlowState =
   | 'initial'
   | 'platform_selection'
@@ -91,30 +90,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     isInboundFormVisible,
     setIsInboundFormVisible,
   } = useOnboardingStore();
-
-  const [limits, setLimits] = useState<{ remaining: number; total: number } | null>(null);
-  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
-
-  useEffect(() => {
-    setIsLoadingLimits(true);
-    apiGet<{ success: boolean; totalDailyLimit: number; remainingDailyLimit: number }>('/api/campaigns/linkedin/limits')
-      .then(res => {
-        logger.debug('LinkedIn limits received', res);
-        if (res.success) {
-          setLimits({
-            remaining: res.remainingDailyLimit,
-            total: res.totalDailyLimit
-          });
-        }
-      })
-      .catch(err => {
-        logger.error('Failed to fetch limits', err);
-        // Fallback to 0 if error, to be safe
-        setLimits({ remaining: 0, total: 0 });
-      })
-      .finally(() => setIsLoadingLimits(false));
-  }, []);
-
+  
   // State for duplicate lead detection
   const [duplicateLeadsInfo, setDuplicateLeadsInfo] = useState<any>(null);
   const [pendingLeadsData, setPendingLeadsData] = useState<any>(null);
@@ -261,9 +237,9 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       } else if (flowState === 'inbound_campaign_name') {
         // Store campaign name and complete the flow
         const leadsPerDay = (inboundCollectedAnswers as any).leads_per_day || 10;
-        const totalLeads = inboundLeadData?.linkedinProfiles?.filter(Boolean).length ||
-          inboundLeadData?.emailIds?.filter(Boolean).length ||
-          inboundLeadData?.phoneNumbers?.filter(Boolean).length || 0;
+        const totalLeads = inboundLeadData?.linkedinProfiles?.filter(Boolean).length || 
+                          inboundLeadData?.emailIds?.filter(Boolean).length || 
+                          inboundLeadData?.phoneNumbers?.filter(Boolean).length || 0;
         // Calculate campaign days based on leads and leads per day
         const campaignDays = Math.ceil(totalLeads / leadsPerDay);
         const finalAnswers = {
@@ -358,89 +334,89 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         }
         if (leadsToSave.length > 0) {
           try {
-            const saveResult = await saveInboundLeads({
-              leads: leadsToSave,
-              skipDuplicates
+            const saveResult = await saveInboundLeads({ 
+              leads: leadsToSave, 
+              skipDuplicates 
             });
-
+            
             if (!saveResult.success) {
               logger.warn('Failed to save leads to database, continuing with analysis', {
                 error: saveResult.message
               });
             } else {
-
-              // Check if duplicates were found
-              if (saveResult.duplicatesFound && saveResult.data?.duplicates) {
-                // Store duplicate info and pending data
-                setDuplicateLeadsInfo(saveResult.data);
-                setPendingLeadsData(data);
-                setIsSubmittingInbound(false);
-
-                // Show duplicate leads information to user
-                const duplicates = saveResult.data.duplicates;
-                let duplicateMessage = `⚠️ **Found ${duplicates.length} Existing Lead(s)**\n\n`;
-                duplicateMessage += `I found the following leads already in your database:\n\n`;
-
-                duplicates.forEach((dup: any, idx: number) => {
-                  const existing = dup.existingLead;
-                  const matched = dup.matchedOn.join(', ');
-                  duplicateMessage += `**${idx + 1}. ${existing.first_name || ''} ${existing.last_name || ''}** (${existing.company_name || 'No company'})\n`;
-                  duplicateMessage += `   • Matched on: ${matched}\n`;
-
-                  // Show booking information if available
-                  if (dup.bookings && dup.bookings.length > 0) {
-                    const activeBookings = dup.bookings.filter((b: any) => b.status !== 'cancelled');
-                    if (activeBookings.length > 0) {
-                      duplicateMessage += `   • **Scheduled Follow-ups:** ${activeBookings.length}\n`;
-                      activeBookings.slice(0, 2).forEach((booking: any) => {
-                        const date = new Date(booking.scheduled_at).toLocaleString();
-                        duplicateMessage += `     - ${booking.booking_type || 'Follow-up'} on ${date} (${booking.status})\n`;
-                      });
-                      if (activeBookings.length > 2) {
-                        duplicateMessage += `     - ... and ${activeBookings.length - 2} more\n`;
-                      }
+            
+            // Check if duplicates were found
+            if (saveResult.duplicatesFound && saveResult.data?.duplicates) {
+              // Store duplicate info and pending data
+              setDuplicateLeadsInfo(saveResult.data);
+              setPendingLeadsData(data);
+              setIsSubmittingInbound(false);
+              
+              // Show duplicate leads information to user
+              const duplicates = saveResult.data.duplicates;
+              let duplicateMessage = `⚠️ **Found ${duplicates.length} Existing Lead(s)**\n\n`;
+              duplicateMessage += `I found the following leads already in your database:\n\n`;
+              
+              duplicates.forEach((dup: any, idx: number) => {
+                const existing = dup.existingLead;
+                const matched = dup.matchedOn.join(', ');
+                duplicateMessage += `**${idx + 1}. ${existing.first_name || ''} ${existing.last_name || ''}** (${existing.company_name || 'No company'})\n`;
+                duplicateMessage += `   • Matched on: ${matched}\n`;
+                
+                // Show booking information if available
+                if (dup.bookings && dup.bookings.length > 0) {
+                  const activeBookings = dup.bookings.filter((b: any) => b.status !== 'cancelled');
+                  if (activeBookings.length > 0) {
+                    duplicateMessage += `   • **Scheduled Follow-ups:** ${activeBookings.length}\n`;
+                    activeBookings.slice(0, 2).forEach((booking: any) => {
+                      const date = new Date(booking.scheduled_at).toLocaleString();
+                      duplicateMessage += `     - ${booking.booking_type || 'Follow-up'} on ${date} (${booking.status})\n`;
+                    });
+                    if (activeBookings.length > 2) {
+                      duplicateMessage += `     - ... and ${activeBookings.length - 2} more\n`;
                     }
-                  } else {
-                    duplicateMessage += `   • No scheduled follow-ups\n`;
                   }
-                  duplicateMessage += `\n`;
-                });
-
-                duplicateMessage += `**What would you like to do?**\n\n`;
-                duplicateMessage += `• **Skip duplicates** - Only add the ${saveResult.data.newLeadsCount} new lead(s)\n`;
-                duplicateMessage += `• **Override & include all** - Add all ${leadsToSave.length} leads (may create duplicates)\n`;
-                duplicateMessage += `• **Trigger immediate follow-up** - Schedule follow-up actions for existing leads\n`;
-
-                addAIMessage({
-                  role: 'ai',
-                  content: duplicateMessage,
-                  timestamp: new Date(),
-                  options: [
-                    { label: 'Skip Duplicates (Recommended)', value: 'skip_duplicates' },
-                    { label: 'Include All Leads', value: 'include_all' },
-                    { label: 'Trigger Immediate Follow-up', value: 'trigger_followup' }
-                  ]
-                });
-
-                return; // Stop here and wait for user decision
-              }
-
-              logger.info('Leads saved to database successfully', {
-                saved: saveResult.data?.saved,
-                total: saveResult.data?.total,
-                skipped: saveResult.data?.skippedDuplicates
+                } else {
+                  duplicateMessage += `   • No scheduled follow-ups\n`;
+                }
+                duplicateMessage += `\n`;
               });
-              // Store lead IDs in the inbound data for later use when creating campaign
-              if (saveResult.data?.leadIds && saveResult.data.leadIds.length > 0) {
-                data.leadIds = saveResult.data.leadIds;
-                setInboundLeadData({ ...data, leadIds: saveResult.data.leadIds }); // Update store
-                logger.info('✅ Stored lead IDs in inbound data', { count: saveResult.data.leadIds.length });
-              } else {
-                logger.warn('❌ No lead IDs returned from server', {
-                  hasData: !!saveResult.data,
-                  hasLeadIds: !!saveResult.data?.leadIds
-                });
-              }
+              
+              duplicateMessage += `**What would you like to do?**\n\n`;
+              duplicateMessage += `• **Skip duplicates** - Only add the ${saveResult.data.newLeadsCount} new lead(s)\n`;
+              duplicateMessage += `• **Override & include all** - Add all ${leadsToSave.length} leads (may create duplicates)\n`;
+              duplicateMessage += `• **Trigger immediate follow-up** - Schedule follow-up actions for existing leads\n`;
+              
+              addAIMessage({
+                role: 'ai',
+                content: duplicateMessage,
+                timestamp: new Date(),
+                options: [
+                  { label: 'Skip Duplicates (Recommended)', value: 'skip_duplicates' },
+                  { label: 'Include All Leads', value: 'include_all' },
+                  { label: 'Trigger Immediate Follow-up', value: 'trigger_followup' }
+                ]
+              });
+              
+              return; // Stop here and wait for user decision
+            }
+            
+            logger.info('Leads saved to database successfully', {
+              saved: saveResult.data?.saved,
+              total: saveResult.data?.total,
+              skipped: saveResult.data?.skippedDuplicates
+            });
+            // Store lead IDs in the inbound data for later use when creating campaign
+            if (saveResult.data?.leadIds && saveResult.data.leadIds.length > 0) {
+              data.leadIds = saveResult.data.leadIds;
+              setInboundLeadData({ ...data, leadIds: saveResult.data.leadIds }); // Update store
+              logger.info('✅ Stored lead IDs in inbound data', { count: saveResult.data.leadIds.length });
+            } else {
+              logger.warn('❌ No lead IDs returned from server', {
+                hasData: !!saveResult.data,
+                hasLeadIds: !!saveResult.data?.leadIds
+              });
+            }
             }
           } catch (innerError) {
             const err = innerError as any;
@@ -478,9 +454,9 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         setIsInboundFormVisible(false);
         // Get available platforms from analysis
         const availablePlatforms = analysisResult.analysis.availablePlatforms;
-        const leadCount = data.linkedinProfiles?.filter(Boolean).length ||
-          data.emailIds?.filter(Boolean).length ||
-          data.phoneNumbers?.filter(Boolean).length || 1;
+        const leadCount = data.linkedinProfiles?.filter(Boolean).length || 
+                         data.emailIds?.filter(Boolean).length || 
+                         data.phoneNumbers?.filter(Boolean).length || 1;
         // Show brief summary message (3-4 lines only)
         let summaryMessage = `✅ **Lead Data Imported Successfully!**\n\n`;
         summaryMessage += `I've analyzed your data and found **${leadCount} lead(s)** with contact information for **${availablePlatforms.length} platform(s)**.\n\n`;
@@ -568,7 +544,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     async (answers, conversationId) => {
       // On completion, create and start campaign automatically
       logger.info('🎯 [ICP COMPLETION] ICP onboarding completed', { answers, conversationId });
-      logger.info('🎯 [ICP COMPLETION] inboundLeadData status:', {
+      logger.info('🎯 [ICP COMPLETION] inboundLeadData status:', { 
         exists: !!inboundLeadData,
         leadIds: inboundLeadData?.leadIds,
         leadIdsLength: inboundLeadData?.leadIds?.length
@@ -611,40 +587,40 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             lead_gen_offset: 0,
             last_lead_gen_date: null,
             // Get connection message from any of these sources (linkedin_template is from ICP flow)
-            connectionMessage: mappedAnswers.linkedinConnectionMessage ||
-              mappedAnswers.linkedin_connection_message ||
-              mappedAnswers.linkedin_connection_template ||
-              mappedAnswers.linkedin_template ||
-              null,
+            connectionMessage: mappedAnswers.linkedinConnectionMessage || 
+                              mappedAnswers.linkedin_connection_message || 
+                              mappedAnswers.linkedin_connection_template || 
+                              mappedAnswers.linkedin_template || 
+                              null,
             // Store followup message separately for send_message step
             followupMessage: mappedAnswers.linkedin_followup_template ||
-              mappedAnswers.linkedinMessage ||
-              mappedAnswers.linkedin_message ||
-              null,
+                            mappedAnswers.linkedinMessage ||
+                            mappedAnswers.linkedin_message ||
+                            null,
           },
           leads_per_day: mappedAnswers.leads_per_day || 10,
         };
         // If inbound lead data exists, include the uploaded lead IDs
         if (inboundLeadData) {
           const leadIds = inboundLeadData.leadIds || [];
-
+          
           // Check if we have lead IDs
           if (leadIds.length > 0) {
             campaignData.inbound_lead_ids = leadIds;
             campaignData.config.campaign_type = 'inbound'; // Store in config, not top-level
-            logger.info('🔧 [Campaign Creation] ✅ Adding inbound lead IDs to campaign', {
+            logger.info('🔧 [Campaign Creation] ✅ Adding inbound lead IDs to campaign', { 
               leadIdsCount: leadIds.length
             });
           } else {
             // No lead IDs found - this happens when leads are uploaded but IDs aren't returned from backend
-            const leadCount =
+            const leadCount = 
               (inboundLeadData.linkedinProfiles?.filter(Boolean).length || 0) +
               (inboundLeadData.emailIds?.filter(Boolean).length || 0) +
               (inboundLeadData.phoneNumbers?.filter(Boolean).length || 0);
-
+            
             if (leadCount > 0) {
               // We have lead data but no IDs - this means backend didn't save them properly
-              logger.warn('🔧 [Campaign Creation] ⚠️ Lead data exists but no IDs were returned', {
+              logger.warn('🔧 [Campaign Creation] ⚠️ Lead data exists but no IDs were returned', { 
                 leadCount,
                 companyName: inboundLeadData.companyName
               });
@@ -657,7 +633,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
               // For now, we'll proceed without explicit IDs - the backend can handle this
             } else {
               // No lead data and no IDs - genuinely missing data
-              logger.error('🔧 [Campaign Creation] ❌ No lead data or IDs found in inbound data!', {
+              logger.error('🔧 [Campaign Creation] ❌ No lead data or IDs found in inbound data!', { 
                 campaignName: campaignData.name,
                 note: 'Please upload your leads again before creating the campaign.'
               });
@@ -675,13 +651,13 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         } else {
           logger.info('🔧 [Campaign Creation] No inbound lead data - this is an outbound campaign');
         }
-        logger.info('🚀 [Campaign Creation] Final campaign payload', {
+        logger.info('🚀 [Campaign Creation] Final campaign payload', { 
           name: campaignData.name,
           hasInboundLeadIds: !!campaignData.inbound_lead_ids,
           inboundLeadIdsCount: campaignData.inbound_lead_ids?.length,
           campaignType: campaignData.config?.campaign_type
         });
-
+        
         // Use conversationId passed from the ICP flow completion
         // This conversationId was captured when messages were saved on the last ICP step
         if (conversationId) {
@@ -690,8 +666,8 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         } else {
           logger.warn('⚠️ [Campaign Creation] No conversationId available - messages may not be linked to campaign');
         }
-
-        logger.debug('[Campaign Creation] Sending campaign creation request', {
+        
+        logger.debug('[Campaign Creation] Sending campaign creation request', { 
           campaignData,
           hasConversationId: !!conversationId
         });
@@ -871,7 +847,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     const hasICPChoiceOptions = lastAIMessage?.options?.some(
       opt => opt.value === 'start_icp_discovery' || opt.value === 'skip_to_specific'
     );
-
+    
     if (
       !campaignId && // Don't start if editing existing campaign
       hasSelectedOption &&
@@ -958,41 +934,6 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   };
   const handleOptionSelect = (option: 'automation' | 'leads') => {
     logger.debug('handleOptionSelect called', { option });
-
-    // Check limits for lead generation
-    if (option === 'leads') {
-      if (isLoadingLimits) {
-        toast({
-          title: "Please wait",
-          description: "Fetching account limits...",
-        });
-        return;
-      }
-
-      if (limits) {
-        if (limits.total > 0 && limits.remaining <= 0) {
-          toast({
-            title: "Daily Limit Reached",
-            description: "You have reached your daily LinkedIn connection limit and cannot create new campaigns today.",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (limits.total === 0) {
-          toast({
-            title: "No LinkedIn Account",
-            description: "Please connect a LinkedIn account in settings to use Lead Generation.",
-            variant: "destructive",
-          });
-          return;
-        }
-      } else {
-        // Limits not loaded - block just in case or allow? 
-        // Better to allow if we can't fetch, or show error.
-        // Given user requirement, we should probably ensure it works first.
-      }
-    }
-
     setSelectedPath(option);
     setHasSelectedOption(true);
     setIsAIChatActive(true);
@@ -1110,7 +1051,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       description: f.description,
     }));
     // For inbound flow, show which platform we're configuring (e.g., "1 of 2")
-    const platformProgress = campaignDataType === 'inbound'
+    const platformProgress = campaignDataType === 'inbound' 
       ? ` (${currentPlatformIndex + 1} of ${selectedPlatforms.length})`
       : '';
     addAIMessage({
@@ -1372,7 +1313,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       } else if (answerText === 'skip_to_specific') {
         logger.info('[ICP Discovery] User selected "Skip to Specific Ask" - starting structured discovery mode');
         setIsProcessingAI(false);
-
+        
         // Use ICP discovery mode but with a more structured approach
         addAIMessage({
           role: 'ai',
@@ -1384,7 +1325,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         logger.info('[ICP Discovery] Flow state set to icp_discovery_mode (structured path)');
         return;
       }
-
+      
       // Handle duplicate lead options
       if (duplicateLeadsInfo && pendingLeadsData) {
         if (answerText === 'skip_duplicates') {
@@ -1437,14 +1378,14 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         } else if (answerText.startsWith('followup_')) {
           // Handle follow-up action scheduling
           const actionType = answerText.replace('followup_', '');
-
+          
           if (actionType === 'skip_followup') {
             // Show confirmation before cancelling bookings
             const duplicateLeadIds = duplicateLeadsInfo?.duplicates?.map((dup: any) => dup.existingLead.id).filter(Boolean) || [];
             const totalBookings = duplicateLeadsInfo?.duplicates?.reduce((sum: number, dup: any) => {
               return sum + (dup.bookings?.filter((b: any) => b.status !== 'cancelled').length || 0);
             }, 0) || 0;
-
+            
             if (totalBookings > 0) {
               addAIMessage({
                 role: 'ai',
@@ -1473,7 +1414,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
               timestamp: new Date(),
             });
           }
-
+          
           setIsProcessingAI(false);
           setIsSubmittingInbound(true); // Set loading state
           if (pendingLeadsData) {
@@ -1483,7 +1424,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
         } else if (answerText === 'confirm_skip_followup') {
           // User confirmed - proceed with cancellation
           const duplicateLeadIds = duplicateLeadsInfo?.duplicates?.map((dup: any) => dup.existingLead.id).filter(Boolean) || [];
-
+          
           if (duplicateLeadIds.length > 0) {
             try {
               addAIMessage({
@@ -1491,10 +1432,10 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
                 content: `🔄 Cancelling existing follow-ups and re-nurturing ${duplicateLeadIds.length} lead(s)...`,
                 timestamp: new Date(),
               });
-
+              
               // Cancel bookings via API
               const cancelResult = await cancelLeadBookingsForReNurturing(duplicateLeadIds);
-
+              
               addAIMessage({
                 role: 'ai',
                 content: `✅ Cancelled ${cancelResult.data.cancelledBookings} scheduled follow-up(s). These leads will now be treated as new leads in your campaign.\n\nProcessing ${duplicateLeadsInfo?.newLeadsCount || 0} new lead(s)...`,
@@ -1511,7 +1452,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
               });
             }
           }
-
+          
           setIsProcessingAI(false);
           setIsSubmittingInbound(true); // Set loading state
           if (pendingLeadsData) {
@@ -1534,7 +1475,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           return;
         }
       }
-
+      
       // Handle ICP discovery mode - conversational ICP profiling
       if (flowState === 'icp_discovery_mode') {
         const historyWithTimestamp = aiMessages.map(msg => ({
@@ -1542,7 +1483,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           content: msg.content,
           timestamp: msg.timestamp,
         }));
-
+        
         // Prepend ICP discovery context to the message
         const icpContextPrefix = `[ICP Discovery Mode - You are an expert business consultant helping identify the user's IDEAL CUSTOMER PROFILE (who they want to SELL TO).
 
@@ -1583,7 +1524,7 @@ After gathering sufficient information (typically 8-12 questions), synthesize yo
 - Use the example answers as a reference for the depth and specificity you're looking for
 
 When complete, present the comprehensive ICP profile focused on the TARGET CUSTOMER and ask for confirmation before proceeding.]\n\nUser response: `;
-
+        
         // Send to AI with ICP discovery context
         const response = await sendGeminiPrompt(
           icpContextPrefix + answer,
@@ -1601,13 +1542,13 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             currentState: 'STATE_1'
           }
         );
-
+        
         // Check if ICP discovery is complete (AI signals readiness to move forward)
         const completionKeywords = ['icp profile complete', 'ready to proceed', 'start setting up', 'begin campaign', 'icp_complete'];
-        const isComplete = completionKeywords.some(keyword =>
+        const isComplete = completionKeywords.some(keyword => 
           response.text.toLowerCase().includes(keyword)
         );
-
+        
         if (isComplete) {
           // Show final ICP summary and transition to campaign setup
           addAIMessage({
@@ -1615,7 +1556,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             content: response.text + '\n\n✅ **Great! Now let\'s set up your targeted outreach campaign.**',
             timestamp: new Date(),
           });
-
+          
           // Switch to regular ICP flow
           setFlowState('initial');
           setIsICPOnboardingActive(true);
@@ -1632,11 +1573,11 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             timestamp: new Date(),
           });
         }
-
+        
         setIsProcessingAI(false);
         return;
       }
-
+      
       // STRICT WAITING RULE: Check for platform confirmation
       if (flowState === 'platform_confirmation' || workflowState === 'STATE_2') {
         const confirmationKeywords = ['continue', 'done', 'no more', 'that\'s all', 'finish', 'proceed', 'that\'s it', 'no'];
@@ -1943,28 +1884,10 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             </button>
             <button
               onClick={() => handleOptionSelect('leads')}
-              className={`w-64 text-left p-4 bg-white border-2 rounded-xl transition-all group shadow-sm hover:shadow-md relative ${limits && (limits.total === 0 || limits.remaining <= 0)
-                ? 'border-red-100 opacity-80 cursor-not-allowed'
-                : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
-                }`}
+              className="w-64 text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all group shadow-sm hover:shadow-md"
             >
-              {limits && limits.total > 0 && limits.remaining <= 0 && (
-                <div className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg z-10 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  LIMIT REACHED
-                </div>
-              )}
-              {limits && limits.total === 0 && (
-                <div className="absolute -top-3 -right-3 bg-amber-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg z-10 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  NO ACCOUNT
-                </div>
-              )}
               <div className="flex flex-col items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform ${limits && (limits.total === 0 || limits.remaining <= 0)
-                  ? 'bg-gray-400'
-                  : 'bg-gradient-to-br from-green-500 to-teal-600'
-                  }`}>
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-center">
@@ -1976,14 +1899,6 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               </div>
             </button>
           </div>
-
-          {limits && limits.total > 0 && limits.remaining <= 0 && (
-            <div className="w-full max-w-4xl mx-auto -mb-2 mt-4 flex items-center gap-3 bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p><strong>Daily Limit Reached.</strong> If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
-            </div>
-          )}
-
           {/* Chat Input Bar - Below options, wider */}
           <div className="w-full max-w-4xl mx-auto">
             <ChatInputClaude
@@ -2123,31 +2038,27 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                   setIsProcessingAI(false);
                 }
               }}
-              disabled={isProcessingAI || (selectedPath === 'leads' && (isLoadingLimits || !limits || (limits.total === 0 || limits.remaining <= 0)))}
+              disabled={isProcessingAI}
               placeholder={
-                selectedPath === 'leads' && (isLoadingLimits || !limits || (limits.total === 0 || limits.remaining <= 0))
-                  ? limits?.total === 0 ? 'Connection required...' : 'Daily limit exhausted...'
-                  : isICPOnboardingActive && !chatStepController.isComplete
-                    ? chatStepController.currentQuestion?.type === 'boolean'
-                      ? 'Type "yes" or "no"...'
-                      : chatStepController.currentQuestion?.type === 'select'
-                        ? 'Type your answer or select from options...'
-                        : 'Type your answer...'
-                    : 'How can I help you today?'
+                isICPOnboardingActive && !chatStepController.isComplete
+                  ? chatStepController.currentQuestion?.type === 'boolean'
+                    ? 'Type "yes" or "no"...'
+                    : chatStepController.currentQuestion?.type === 'select'
+                      ? 'Type your answer or select from options...'
+                      : 'Type your answer...'
+                  : 'How can I help you today?'
               }
             />
           </div>
         </div>
         {/* Workflow Library Modal - Initial Screen */}
-        {
-          showWorkflowLibrary && (
-            <WorkflowLibrary
-              onSelectWorkflow={handleWorkflowSelect}
-              onClose={() => setShowWorkflowLibrary(false)}
-            />
-          )
-        }
-      </div >
+        {showWorkflowLibrary && (
+          <WorkflowLibrary
+            onSelectWorkflow={handleWorkflowSelect}
+            onClose={() => setShowWorkflowLibrary(false)}
+          />
+        )}
+      </div>
     );
   }
   // Show GuidedFlowPanel for Lead Generation & Outreach (only if in FORM mode)
@@ -2309,114 +2220,114 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 // Only render custom options if NOT using ICP flow's built-in option handling
                 !(isICPOnboardingActive && !chatStepController.isComplete && !message.isInboundPlatformSelection)
               ) && (
-                  <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-2">
-                    {/* Inbound Platform Selection - Toggle style */}
-                    {message.isInboundPlatformSelection ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          {message.options.map((option, index) => {
-                            const isSelected = selectedPlatforms.includes(option.value);
-                            const platformValue = option.value === 'voice' ? 'voice' : option.value;
-                            return (
-                              <button
-                                key={option.value || `option-${index}`}
-                                onClick={() => {
-                                  // Handle disabled platform click - show notification
-                                  if (option.disabled) {
-                                    // Quick toast-style notification - just add briefly then continue
-                                    const toast = document.createElement('div');
-                                    toast.className = 'fixed top-4 right-4 z-50 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top';
-                                    toast.innerHTML = `<span>⚠️</span><span><strong>${option.label}</strong> has no data in your upload</span>`;
-                                    document.body.appendChild(toast);
-                                    setTimeout(() => toast.remove(), 3000);
-                                    return;
-                                  }
-                                  // Toggle platform selection
-                                  if (isSelected) {
-                                    setSelectedPlatforms(selectedPlatforms.filter(p => p !== platformValue));
-                                  } else {
-                                    setSelectedPlatforms([...selectedPlatforms, platformValue]);
-                                  }
-                                }}
-                                disabled={option.disabled}
-                                className={`relative p-4 border-2 rounded-xl transition-all ${option.disabled
-                                  ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                <div className="w-full max-w-3xl mx-auto px-4 py-4 space-y-2">\n                  {/* Inbound Platform Selection - Toggle style */}
+                  {message.isInboundPlatformSelection ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        {message.options.map((option, index) => {
+                          const isSelected = selectedPlatforms.includes(option.value);
+                          const platformValue = option.value === 'voice' ? 'voice' : option.value;
+                          return (
+                            <button
+                              key={option.value || `option-${index}`}
+                              onClick={() => {
+                                // Handle disabled platform click - show notification
+                                if (option.disabled) {
+                                  // Quick toast-style notification - just add briefly then continue
+                                  const toast = document.createElement('div');
+                                  toast.className = 'fixed top-4 right-4 z-50 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top';
+                                  toast.innerHTML = `<span>⚠️</span><span><strong>${option.label}</strong> has no data in your upload</span>`;
+                                  document.body.appendChild(toast);
+                                  setTimeout(() => toast.remove(), 3000);
+                                  return;
+                                }
+                                // Toggle platform selection
+                                if (isSelected) {
+                                  setSelectedPlatforms(selectedPlatforms.filter(p => p !== platformValue));
+                                } else {
+                                  setSelectedPlatforms([...selectedPlatforms, platformValue]);
+                                }
+                              }}
+                              disabled={option.disabled}
+                              className={`relative p-4 border-2 rounded-xl transition-all ${
+                                option.disabled 
+                                  ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' 
                                   : isSelected
                                     ? 'bg-green-50 border-green-500 text-green-700 shadow-md'
                                     : 'bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50'
-                                  }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">{option.label}</span>
-                                  {option.disabled ? (
-                                    <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded">No data</span>
-                                  ) : isSelected ? (
-                                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                  ) : (
-                                    <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {/* Continue button */}
-                        {selectedPlatforms.length > 0 && (
-                          <button
-                            onClick={async () => {
-                              // Continue with selected platforms - use same ICP flow as outbound
-                              setPlatformsConfirmed(true);
-                              // Clear old inbound flow state to prevent conflicts
-                              setFlowState('initial');
-                              // Switch to ICP flow mode (keep inboundLeadData for reference)
-                              setIsICPOnboardingActive(true);
-                              // Start ICP flow with pre-selected platforms
-                              // This will show same questions as outbound: LinkedIn actions → daily leads → campaign name → etc.
-                              await chatStepController.startFlowWithPlatforms(selectedPlatforms, inboundLeadData);
-                            }}
-                            className="w-full mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium shadow-lg"
-                          >
-                            Continue with {selectedPlatforms.length} Platform{selectedPlatforms.length > 1 ? 's' : ''}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      /* Regular options - Use ICP flow if active, otherwise old handlers */
-                      message.options.map((option, index) => (
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{option.label}</span>
+                                {option.disabled ? (
+                                  <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded">No data</span>
+                                ) : isSelected ? (
+                                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                ) : (
+                                  <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Continue button */}
+                      {selectedPlatforms.length > 0 && (
                         <button
-                          key={option.value || `option-${index}`}
-                          onClick={() => {
-                            // If ICP flow is active and we have the controller, use it
-                            if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
-                              chatStepController.handleOptionSubmit([option.value]);
-                            }
-                            // For old inbound flow state (before platform selection), use handleInboundAnswer
-                            else if (flowState === 'inbound_leads_per_day' || flowState === 'inbound_campaign_name' || flowState === 'inbound_campaign_days') {
-                              handleInboundAnswer(option.value);
-                            } else {
-                              handleAnswer(
-                                option.value,
-                                flowState === 'platform_selection' ? 'platforms' :
-                                  flowState === 'platform_features' ? `features_${currentPlatform}` :
-                                    flowState === 'initial' ? 'icp_choice' :
-                                      currentUtilityQuestion || 'unknown'
-                              );
-                            }
+                          onClick={async () => {
+                            // Continue with selected platforms - use same ICP flow as outbound
+                            setPlatformsConfirmed(true);
+                            // Clear old inbound flow state to prevent conflicts
+                            setFlowState('initial');
+                            // Switch to ICP flow mode (keep inboundLeadData for reference)
+                            setIsICPOnboardingActive(true);
+                            // Start ICP flow with pre-selected platforms
+                            // This will show same questions as outbound: LinkedIn actions → daily leads → campaign name → etc.
+                            await chatStepController.startFlowWithPlatforms(selectedPlatforms, inboundLeadData);
                           }}
-                          className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-[#172560]/40 hover:bg-[#172560]/5"
+                          className="w-full mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium shadow-lg"
                         >
-                          {option.label}
+                          Continue with {selectedPlatforms.length} Platform{selectedPlatforms.length > 1 ? 's' : ''}
                         </button>
-                      ))
-                    )}
-                  </div>
-                )}
+                      )}
+                    </>
+                  ) : (
+                    /* Regular options - Use ICP flow if active, otherwise old handlers */
+                    message.options.map((option, index) => (
+                      <button
+                        key={option.value || `option-${index}`}
+                        onClick={() => {
+                          // If ICP flow is active and we have the controller, use it
+                          if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
+                            chatStepController.handleOptionSubmit([option.value]);
+                          }
+                          // For old inbound flow state (before platform selection), use handleInboundAnswer
+                          else if (flowState === 'inbound_leads_per_day' || flowState === 'inbound_campaign_name' || flowState === 'inbound_campaign_days') {
+                            handleInboundAnswer(option.value);
+                          } else {
+                            handleAnswer(
+                              option.value,
+                              flowState === 'platform_selection' ? 'platforms' :
+                                flowState === 'platform_features' ? `features_${currentPlatform}` :
+                                  flowState === 'initial' ? 'icp_choice' :
+                                    currentUtilityQuestion || 'unknown'
+                            );
+                          }
+                        }}
+                        className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-blue-500 hover:bg-blue-50"
+                      >
+                        {option.label}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </React.Fragment>
           ))}
           {isProcessingAI && (
             <div className="flex gap-3 w-full max-w-4xl mx-auto px-4 py-3">
-              <div className="w-8 h-8 rounded-full bg-[#172560]/10 border border-[#172560]/20 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Bot className="w-4 h-4 text-[#172560]" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Bot className="w-4 h-4 text-white" />
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-2">
@@ -2443,9 +2354,9 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               </button>
               <button
                 onClick={() => handleCampaignDataTypeSelect('outbound')}
-                className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#172560]/40 hover:bg-[#172560]/5 transition-all shadow-sm hover:shadow-md flex items-center gap-4"
+                className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all shadow-sm hover:shadow-md flex items-center gap-4"
               >
-                <div className="w-12 h-12 rounded-lg bg-[#172560] flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                   <ArrowUpFromLine className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -2490,14 +2401,16 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                               : [...currentFeatures, option.value];
                             setPlatformFeatures(currentPlatform || '', newFeatures);
                           }}
-                          className={`w-full text-left px-5 py-3 border-2 rounded-xl transition-all flex items-center gap-3 ${isSelected
-                            ? 'border-green-500 bg-green-50'
-                            : 'bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50'
-                            }`}
+                          className={`w-full text-left px-5 py-3 border-2 rounded-xl transition-all flex items-center gap-3 ${
+                            isSelected
+                              ? 'border-green-500 bg-green-50'
+                              : 'bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                          }`}
                         >
                           {/* Checkbox */}
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                            }`}>
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                          }`}>
                             {isSelected && (
                               <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -2540,7 +2453,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                       }
                       handleAnswer(option.value, questionKey);
                     }}
-                    className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-[#172560]/40 hover:bg-[#172560]/5"
+                    className="w-full text-left px-6 py-3 bg-white border-2 border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md hover:border-blue-500 hover:bg-blue-50"
                   >
                     {option.label}
                   </button>
@@ -2552,20 +2465,10 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
         </div>
       </div>
       {/* Bottom Input */}
-      <div className="bg-gradient-to-t from-white via-white to-white/0 pt-6 pb-6 px-4 flex-shrink-0 relative z-10 -mt-2">
-        {selectedPath === 'leads' && limits && (limits.total === 0 || limits.remaining <= 0) && (
-          <div className="max-w-3xl mx-auto mb-3 flex items-center gap-2 bg-red-50 text-red-700 px-4 py-2 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
-            <AlertCircle className="w-4 h-4" />
-            {limits.total === 0
-              ? "LinkedIn connection required. Please connect an account in settings to create lead campaigns."
-              : "Daily limit reached. If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today."
-            }
-          </div>
-        )}
+      <div className="border-t border-gray-200 bg-white py-4 px-4 flex-shrink-0">
         <ChatInputClaude
           onShowWorkflowLibrary={() => setShowWorkflowLibrary(true)}
           disabled={
-            (selectedPath === 'leads' && (isLoadingLimits || !limits || (limits.total === 0 || limits.remaining <= 0))) ||
             // Disable input if last AI message has selectable options OR template input
             (() => {
               if (aiMessages.length === 0) return false;
@@ -2591,11 +2494,6 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               }
               return false;
             })() || isProcessingAI
-          }
-          placeholder={
-            selectedPath === 'leads' && limits && (limits.total === 0 || limits.remaining <= 0)
-              ? limits.total === 0 ? 'Connection required...' : 'Daily limit exhausted...'
-              : 'How can I help you today?'
           }
           onSend={async (msg) => {
             logger.debug('User sent message', { msg });
@@ -2749,6 +2647,11 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               setIsProcessingAI(false);
             }
           }}
+          placeholder={
+            (showOptions || (aiMessages.length > 0 && aiMessages[aiMessages.length - 1]?.role === 'ai' && aiMessages[aiMessages.length - 1]?.options && aiMessages[aiMessages.length - 1]?.options!.length > 0))
+              ? 'Select an option above or type your message...'
+              : 'How can I help you today?'
+          }
         />
       </div>
       {/* Workflow Library Modal */}

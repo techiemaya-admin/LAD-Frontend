@@ -1,51 +1,104 @@
-export interface VoiceAgent {
-  id: string;
-  name: string;
-  description?: string;
-  voice_id?: string;
-  prompt_template?: string;
-  created_at: string;
-  updated_at: string;
-}
+export type VoiceAgentTargetType = "company" | "employee";
 
-export interface CallLog {
+export interface UserAvailableNumber {
   id: string;
-  voice_agent_id: string;
   phone_number: string;
-  status: 'initiated' | 'ringing' | 'answered' | 'completed' | 'failed' | 'busy' | 'no_answer';
-  duration?: number;
-  recording_url?: string;
-  transcript?: string;
-  created_at: string;
-  updated_at: string;
+  provider?: string;
+  type?: string;
+  status?: string;
+  label?: string;
+  assignedAgentId?: string;
 }
 
-export interface PhoneNumber {
-  id: string;
-  tenant_id: string;
-  country_code: string;
-  base_number: string;
-  provider: string;
-  number_type?: string;
-  capabilities?: Record<string, unknown> | string[];
-  is_active?: boolean;
-  metadata?: Record<string, unknown>;
-  created_at?: string;
-  updated_at?: string;
+export interface UserAvailableAgent {
+  agent_id?: string;
+  id?: string;
+  agent_name?: string;
+  name?: string;
+  agent_language?: string;
+  language?: string;
+  accent?: string;
+  gender?: string;
+  provider?: string;
+  description?: string;
+  voice_sample_url?: string | null;
 }
 
-export interface BatchCallLogEntry {
-  call_log_id: string | null;
-  batch_id: string;
-  batch_entry_id: string | null;
-  to_number: string | null;
-  status: string;
-  index: number;
-  lead_id: string | null;
-  added_context: string | null;
-  room_name: string | null;
-  dispatch_id: string | null;
-  error: string | null;
-  started_at: string | null;
-  ended_at: string | null;
+export interface ResolvePhonesRow {
+  phone?: string;
+  name?: string;
+  employee_name?: string;
+  company_name?: string;
+  requested_id?: string;
+  sales_summary?: string;
+  company_sales_summary?: string;
+  raw?: unknown;
+  company?: {
+    sales_summary?: string;
+  };
+  employee?: {
+    company_sales_summary?: string;
+  };
+}
+
+export type ResolvePhonesResponse = ResolvePhonesRow[];
+
+export interface MakeCallRequest {
+  voiceAgentId: string;
+  phoneNumber: string;
+  context?: string;
+  fromNumber?: string;
+}
+
+export interface MakeCallResponse {
+  success?: boolean;
+  call_id?: string;
+  id?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface BatchCallEntry {
+  to_number: string;
+  lead_name?: string;
+  added_context?: string;
+  lead_id?: string;
+  knowledge_base_store_ids?: string[];
+}
+
+export interface TriggerBatchCallRequest {
+  voice_id: string;
+  agent_id: string;
+  from_number: string;
+  added_context?: string;
+  entries: BatchCallEntry[];
+  initiated_by?: string;
+}
+
+export interface TriggerBatchCallResponse {
+  success?: boolean;
+  job_id?: string;
+  batch?: {
+    job_id?: string;
+  };
+  result?: {
+    job_id?: string;
+  };
+  [key: string]: unknown;
+}
+
+export interface UpdateSummaryRequest {
+  type: VoiceAgentTargetType;
+  company_data_id?: string;
+  employee_data_id?: string;
+  name?: string;
+  summary?: string;
+  sales_summary?: string;
+  company_sales_summary?: string;
+}
+
+export interface UpdateSummaryResponse {
+  success?: boolean;
+  message?: string;
+  [key: string]: unknown;
 }

@@ -12,7 +12,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { logger } from '@/lib/logger';
 import type { Stage } from '@/features/deals-pipeline/store/slices/pipelineSlice';
-import { usePipelineStats } from '@lad/frontend-features/deals-pipeline';
 // Pipeline component imports
 import PipelineBoardToolbar from './PipelineBoardToolbar';
 import PipelineStageColumn from './PipelineStageColumn';
@@ -20,6 +19,7 @@ import PipelineLeadCard from './PipelineLeadCard';
 import EnhancedAddStageDialog from './EnhancedAddStageDialog';
 import CreateCardDialog from './CreateCardDialog';
 import PipelineFilterDialog from './PipelineFilterDialog';
+import PipelineSortDialog from './PipelineSortDialog';
 import PipelineBoardSettings from './PipelineBoardSettings';
 import PipelineListView from './PipelineListView';
 import PipelineKanbanView from './PipelineKanbanView';
@@ -50,10 +50,12 @@ import {
   selectPipelineZoom,
   selectPipelineSearchQuery,
   selectPipelineActiveFilters,
+  selectPipelineSortConfig,
   selectAddStageDialogOpen,
   selectCreateLeadDialogOpen,
   selectEditLeadDialogOpen,
   selectFilterDialogOpen,
+  selectSortDialogOpen,
   selectSettingsDialogOpen,
   selectSelectedLead,
   selectActiveCard,
@@ -71,10 +73,12 @@ import {
   setPipelineSearchQuery,
   setPipelineActiveFilters,
   clearPipelineFilters,
+  setPipelineSortConfig,
   setAddStageDialogOpen,
   setCreateLeadDialogOpen,
   setEditLeadDialogOpen,
   setFilterDialogOpen,
+  setSortDialogOpen,
   setSettingsDialogOpen,
   setSelectedLead,
   setActiveCard,
@@ -189,15 +193,12 @@ const PipelineBoard: React.FC = () => {
   const zoom = useSelector(selectPipelineZoom);
   const searchQuery = useSelector(selectPipelineSearchQuery);
   const activeFilters = useSelector(selectPipelineActiveFilters);
-
-  const { data: pipelineStats } = usePipelineStats(activeFilters as any);
-  const serverTotalLeadsCount = Number(
-    (pipelineStats as any)?.total_leads ?? (pipelineStats as any)?.totalLeads ?? 0
-  );
+  const sortConfig = useSelector(selectPipelineSortConfig);
   // Dialog states from global Redux state
   const addDialogOpen = useSelector(selectAddStageDialogOpen);
   const createCardDialogOpen = useSelector(selectCreateLeadDialogOpen);
   const filterDialogOpen = useSelector(selectFilterDialogOpen);
+  const sortDialogOpen = useSelector(selectSortDialogOpen);
   const settingsDialogOpen = useSelector(selectSettingsDialogOpen);
   // Selected items from global Redux state
   const selectedLead = useSelector(selectSelectedLead);
@@ -235,13 +236,7 @@ const PipelineBoard: React.FC = () => {
   );
   const currentLeadsByStage = useMemo<LeadsByStage>(() => {
     return pipelineBoardData.stages.reduce((acc: LeadsByStage, stage: any) => {
-      // Sort leads by updated_at (most recent first)
-      const sortedLeads = (stage.leads || []).sort((a: any, b: any) => {
-        const dateA = new Date(a.updated_at || a.updatedAt || 0);
-        const dateB = new Date(b.updated_at || b.updatedAt || 0);
-        return dateB.getTime() - dateA.getTime();
-      });
-      acc[stage.key] = { stage: { key: stage.key, label: stage.label || stage.name || stage.key }, leads: sortedLeads };
+      acc[stage.key] = { stage: { key: stage.key, label: stage.label || stage.name || stage.key }, leads: stage.leads };
       return acc;
     }, {});
   }, [pipelineBoardData]);
@@ -264,12 +259,12 @@ const PipelineBoard: React.FC = () => {
   const handleClearFilters = useCallback(() => {
     dispatch(clearPipelineFilters());
   }, [dispatch]);
+  const handleSortConfigChange = useCallback((config: typeof sortConfig) => {
+    dispatch(setPipelineSortConfig(config));
+  }, [dispatch]);
   // Local states that should remain local (component-specific, not shared globally)
   const [updating, setUpdating] = useState<boolean>(false);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
-  // List view pagination state - for API-driven pagination
-  const [listViewPage, setListViewPage] = useState<number>(1);
-  const [listViewPageSize, setListViewPageSize] = useState<number>(50);
   // Detect if we're on a touch device
   const isTouchDevice = () => {
     return (
@@ -297,19 +292,7 @@ const PipelineBoard: React.FC = () => {
     }),
     useSensor(KeyboardSensor)
   );
-  // List view pagination handlers - trigger API calls
-  const handleListViewPageChange = useCallback((page: number) => {
-    setListViewPage(page);
-    // Trigger API call with new page
-    dispatch(fetchLeadsAction(page, listViewPageSize));
-  }, [dispatch, listViewPageSize]);
-
-  const handleListViewPageSizeChange = useCallback((size: number) => {
-    setListViewPageSize(size);
-    setListViewPage(1); // Reset to page 1 when size changes
-    // Trigger API call with new limit
-    dispatch(fetchLeadsAction(1, size));
-  }, [dispatch]);
+  // Load preferences
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
@@ -375,13 +358,7 @@ const PipelineBoard: React.FC = () => {
   }, [currentLeadsByStage]);
   // Flattened leads for ListView
   const sortedAndFilteredLeads = useMemo(() => {
-    return Object.values(currentLeadsByStage)
-      .flatMap(stageData => stageData.leads)
-      .sort((a, b) => {
-        const dateA = new Date(a.updated_at || a.updatedAt || 0);
-        const dateB = new Date(b.updated_at || b.updatedAt || 0);
-        return dateB.getTime() - dateA.getTime(); // Most recent first
-      });
+    return Object.values(currentLeadsByStage).flatMap(stageData => stageData.leads);
   }, [currentLeadsByStage]);
 
   const handleExportLeads = useCallback(async (): Promise<void> => {
@@ -1263,7 +1240,7 @@ const PipelineBoard: React.FC = () => {
       viewMode: pipelineSettings.viewMode,
       visibleColumns: pipelineSettings.visibleColumns as unknown as Record<string, boolean>,
       filters: activeFilters as any,
-      sortConfig: { field: 'createdAt', direction: 'desc' as const },
+      sortConfig: sortConfig,
       uiSettings: {
         zoom: constrainedZoom,
         autoRefresh: pipelineSettings.autoRefresh,
@@ -1274,7 +1251,7 @@ const PipelineBoard: React.FC = () => {
         enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
     });
-  }, [pipelineSettings, activeFilters, dispatch]);
+  }, [pipelineSettings, activeFilters, sortConfig, dispatch]);
 
   const handleViewModeChange = useCallback((mode: 'kanban' | 'list'): void => {
     dispatch(setPipelineSettings({ viewMode: mode }));
@@ -1282,7 +1259,7 @@ const PipelineBoard: React.FC = () => {
       viewMode: mode,
       visibleColumns: pipelineSettings.visibleColumns as unknown as Record<string, boolean>,
       filters: activeFilters as any,
-      sortConfig: { field: 'createdAt', direction: 'desc' as const },
+      sortConfig: sortConfig,
       uiSettings: {
         zoom: zoom,
         autoRefresh: pipelineSettings.autoRefresh,
@@ -1293,10 +1270,13 @@ const PipelineBoard: React.FC = () => {
         enableDragAndDrop: pipelineSettings.enableDragAndDrop
       }
     });
-  }, [pipelineSettings, activeFilters, dispatch, zoom]);
+  }, [pipelineSettings, activeFilters, sortConfig, dispatch, zoom]);
   // Toolbar dialog handlers
   const handleOpenFilter = useCallback((): void => {
     dispatch(setFilterDialogOpen(true));
+  }, [dispatch]);
+  const handleOpenSort = useCallback((): void => {
+    dispatch(setSortDialogOpen(true));
   }, [dispatch]);
   const handleOpenSettings = useCallback((): void => {
     dispatch(setSettingsDialogOpen(true));
@@ -1330,7 +1310,7 @@ const PipelineBoard: React.FC = () => {
           assignees: activeFilters.assignees || [],
           dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || { start: null, end: null }
         },
-        sortConfig: { field: 'createdAt', direction: 'desc' as const }
+        sortConfig: sortConfig
       };
       await savePipelinePreferences({
         viewMode: preferences.viewMode,
@@ -1342,7 +1322,7 @@ const PipelineBoard: React.FC = () => {
           assignees: preferences.filters.assignees,
           dateRange: (preferences.filters.dateRange as { start: string | null; end: string | null }) || { start: null, end: null }
         },
-        sortConfig: { field: 'createdAt', direction: 'desc' as const },
+        sortConfig: preferences.sortConfig,
         uiSettings: preferences.uiSettings
       });
       // Show success message
@@ -1357,7 +1337,7 @@ const PipelineBoard: React.FC = () => {
         severity: 'error'
       }));
     }
-  }, [zoom, activeFilters, dispatch]);
+  }, [zoom, activeFilters, sortConfig, dispatch]);
   // Memoized handlers object to prevent prop changes - defined after all handlers
   const memoizedHandlers = useMemo(() => ({
     onStageUpdate: handleStageUpdate,
@@ -1397,123 +1377,28 @@ const PipelineBoard: React.FC = () => {
   }
   return (
     <div 
-      className={
-        pipelineSettings.viewMode === 'kanban'
-          ? 'w-full flex flex-col bg-[#f8f9fe] p-1 border border-gray-200 rounded-lg'
-          : 'w-full flex flex-col'
-      }
+      className="w-full flex flex-col bg-[#f8f9fe] p-1 border border-gray-200 rounded-lg"
       style={{ height: `calc(93vh - ${HEADER_HEIGHT}px)` }}
     >
-      {(() => {
-        if (pipelineSettings.viewMode === 'kanban') {
-          return (
-            <>
-              <PipelineBoardToolbar
-                totalLeads={totalLeads}
-                filteredLeadsCount={filteredLeadsCount}
-                stagesCount={currentStages.length}
-                labels={labels}
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                zoom={zoom}
-                onZoomChange={handleZoomChange}
-                viewMode={pipelineSettings.viewMode}
-                onViewModeChange={handleViewModeChange}
-                onAddStage={() => dispatch(setAddStageDialogOpen(true))}
-                onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
-                onOpenFilter={handleOpenFilter}
-                onOpenSettings={handleOpenSettings}
-                onExport={handleExportLeads}
-                onExportWithDateRange={handleExportLeadsWithDateRange}
-              />
-              <div 
-                ref={scrollContainerRef}
-                className="pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] overflow-x-scroll overflow-y-auto"
-                style={{ height: 0 }} // Force flex item to respect container height
-              >
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCorners}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  onDragCancel={handleDragCancel}
-                >
-                  <PipelineKanbanView
-                    stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
-                    leadsByStage={currentLeadsByStage}
-                    activeCard={activeCard}
-                    zoom={zoom}
-                    teamMembers={[]}
-                    handlers={memoizedHandlers}
-                    enableDragAndDrop={pipelineSettings.enableDragAndDrop}
-                    compactView={pipelineSettings.compactView}
-                    showCardCount={pipelineSettings.showCardCount}
-                    showTotalValue={pipelineSettings.showStageValue}
-                  />
-                  {reduxLeadsLoading && pagination.page > 1 && (
-                    <div className="flex justify-center p-4 w-full sticky bottom-0 bg-white/10 backdrop-blur-sm">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  )}
-                </DndContext>
-              </div>
-            </>
-          );
-        }
-        
-        // List view - separate without toolbar
-        return (
-          <div 
-            ref={scrollContainerRef}
-            className="pipeline-board-scrollable flex-1 relative overflow-visible"
-            style={{ height: 0 }} // Force flex item to respect container height
-          >
-            {(() => {
-              // Normalize leads to ensure compatibility with PipelineListView's Lead interface
-              const normalizedLeads = sortedAndFilteredLeads.map(lead => ({
-                ...lead,
-                name: lead.name ?? undefined, // Convert null to undefined
-                email: lead.email ?? undefined,
-                company: lead.company ?? undefined,
-                phone: lead.phone ?? undefined,
-                status: lead.status ?? undefined,
-                priority: lead.priority ?? undefined,
-                source: lead.source ?? undefined,
-                amount: lead.amount ?? undefined, // Convert null to undefined for amount
-                assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
-              }));
-              return (
-                <PipelineListView
-                  leads={normalizedLeads}
-                  stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
-                  teamMembers={[]}
-                  visibleColumns={Object.fromEntries(
-                    Object.entries((pipelineSettings.visibleColumns as unknown as Record<string, boolean>) || {})
-                      .filter(([key]) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key))
-                  ) as Record<string, boolean>}
-                  totalLeadsCount={serverTotalLeadsCount}
-                  isLoading={isLoading}
-                  viewMode={viewMode}
-                  onViewModeChange={handleViewModeChange}
-                  onAddStage={() => dispatch(setAddStageDialogOpen(true))}
-                  onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
-                  onExport={handleExportLeads}
-                  onExportWithDateRange={handleExportLeadsWithDateRange}
-                  onStatusChange={memoizedHandlers.onStatusChange as ((leadId: string | number, status: string) => Promise<void>) | undefined}
-                  onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
-                  onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
-                  onAssigneeChange={memoizedHandlers.onAssigneeChange as ((leadId: string | number, assignee: string) => Promise<void>) | undefined}
-                  // Pagination props for API-driven pagination
-                  currentPage={listViewPage}
-                  pageSize={listViewPageSize}
-                  onPageChange={handleListViewPageChange}
-                  onPageSizeChange={handleListViewPageSizeChange}
-                />
-              );
-            })()}
-          </div>
-        );
-      })()}
+      <PipelineBoardToolbar
+        totalLeads={totalLeads}
+        filteredLeadsCount={filteredLeadsCount}
+        stagesCount={currentStages.length}
+        labels={labels}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        zoom={zoom}
+        onZoomChange={handleZoomChange}
+        viewMode={pipelineSettings.viewMode}
+        onViewModeChange={handleViewModeChange}
+        onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+        onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+        onOpenFilter={handleOpenFilter}
+        onOpenSort={handleOpenSort}
+        onOpenSettings={handleOpenSettings}
+        onExport={handleExportLeads}
+        onExportWithDateRange={handleExportLeadsWithDateRange}
+      />
       <EnhancedAddStageDialog
         open={addDialogOpen}
         onClose={() => {
@@ -1554,6 +1439,75 @@ const PipelineBoard: React.FC = () => {
           leads={USE_REDUX_PIPELINE ? Object.values(currentLeadsByStage).flatMap(stage => stage.leads) : []}
         />
       )}
+      <div 
+        ref={scrollContainerRef}
+        className={`pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] ${
+          pipelineSettings.viewMode === 'kanban' 
+            ? 'overflow-x-scroll overflow-y-auto' 
+            : 'overflow-visible'
+        }`}
+        style={{ height: 0 }} // Force flex item to respect container height
+      >
+        {(() => {
+          if (pipelineSettings.viewMode === 'list') {
+            // Normalize leads to ensure compatibility with PipelineListView's Lead interface
+            const normalizedLeads = sortedAndFilteredLeads.map(lead => ({
+              ...lead,
+              name: lead.name ?? undefined, // Convert null to undefined
+              email: lead.email ?? undefined,
+              company: lead.company ?? undefined,
+              phone: lead.phone ?? undefined,
+              status: lead.status ?? undefined,
+              priority: lead.priority ?? undefined,
+              source: lead.source ?? undefined,
+              amount: lead.amount ?? undefined, // Convert null to undefined for amount
+              assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
+            }));
+            return (
+              <PipelineListView
+                leads={normalizedLeads}
+                stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
+                teamMembers={[]}
+                visibleColumns={pipelineSettings.visibleColumns as unknown as Record<string, boolean>}
+                onAddStage={() => dispatch(setAddStageDialogOpen(true))}
+                onAddLead={() => dispatch(setCreateLeadDialogOpen(true))}
+                onExport={handleExportLeads}
+                onStatusChange={memoizedHandlers.onStatusChange as ((leadId: string | number, status: string) => Promise<void>) | undefined}
+                onStageChange={memoizedHandlers.onStageChange as ((leadId: string | number, stage: string) => Promise<void>) | undefined}
+                onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
+                onAssigneeChange={memoizedHandlers.onAssigneeChange as ((leadId: string | number, assignee: string) => Promise<void>) | undefined}
+              />
+            );
+          }
+          return (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <PipelineKanbanView
+                stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
+                leadsByStage={currentLeadsByStage}
+                activeCard={activeCard}
+                zoom={zoom}
+                teamMembers={[]}
+                handlers={memoizedHandlers}
+                enableDragAndDrop={pipelineSettings.enableDragAndDrop}
+                compactView={pipelineSettings.compactView}
+                showCardCount={pipelineSettings.showCardCount}
+                showTotalValue={pipelineSettings.showStageValue}
+              />
+              {reduxLeadsLoading && pagination.page > 1 && (
+                <div className="flex justify-center p-4 w-full sticky bottom-0 bg-white/10 backdrop-blur-sm">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </DndContext>
+          );
+        })()}
+      </div>
       <PipelineFilterDialog
         open={filterDialogOpen}
         onClose={() => dispatch(setFilterDialogOpen(false))}
@@ -1577,9 +1531,15 @@ const PipelineBoard: React.FC = () => {
             dateRange: null
           };
           dispatch(setPipelineActiveFilters(clearedFilters));
-          // Also call handler to save cleared state
+          // Also call the handler to save the cleared state
           handleFiltersChange(clearedFilters);
         }}
+      />
+      <PipelineSortDialog
+        open={sortDialogOpen}
+        onClose={() => dispatch(setSortDialogOpen(false))}
+        sortConfig={sortConfig}
+        onSortConfigChange={handleSortConfigChange}
       />
       <PipelineBoardSettings
         open={settingsDialogOpen}
@@ -1588,7 +1548,7 @@ const PipelineBoard: React.FC = () => {
       />
       {/* Custom Export Date Range Dialog */}
       <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
-        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
           <div className="flex gap-4 mb-2">
             <div className="flex-1">

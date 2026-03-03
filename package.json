@@ -1,24 +1,9 @@
 {
-  "name": "lad-frontend-monorepo",
+  "name": "lad-ui-monorepo",
   "version": "1.0.0",
-  "description": "LAD Frontend Monorepo - SDK + Web",
   "private": true,
-  "packageManager": "npm@10.2.0",
   "workspaces": [
-    "sdk",
-    "web"
-  ],
-  "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
-  },
-  "devDependencies": {
-    "turbo": "^2.0.0"
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.90.20"
-  }
+    "web",
+    "sdk"
+  ]
 }

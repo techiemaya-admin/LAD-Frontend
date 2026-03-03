@@ -1,20 +1,18 @@
 import React, { useMemo, useCallback } from "react";
-import { useSelector } from "react-redux";
-import { selectUser } from "@/store/slices/authSlice";
-import {
-  PhoneIncoming,
-  PhoneOutgoing,
-  StopCircle,
-  ChevronDown,
-  ChevronRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Search,
-  Phone,
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronsRight,
+import { 
+  PhoneIncoming, 
+  PhoneOutgoing, 
+  StopCircle, 
+  ChevronDown, 
+  ChevronRight, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Search, 
+  Phone, 
+  ChevronsLeft, 
+  ChevronLeft, 
+  ChevronsRight, 
   Plus,
   ChevronRight as ChevronRightIcon,
   CalendarRange,
@@ -35,12 +33,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
-import { formatDateTimeUnified } from "@/utils/dateTime";
 import api from "@/services/api";
 import { useToast } from "@/components/ui/app-toaster";
-import { logger } from "@/lib/logger";
-import { useUpdateCallLeadTags } from "@lad/frontend-features/voice-agent";
-import { type BatchStats } from "@lad/frontend-features/call-logs";
 import PipelineLeadCard from "./deals-pipeline/PipelineLeadCard";
 import EditLeadDialog from "./deals-pipeline/EditLeadDialog";
 import BookingSlot from "./deals-pipeline/BookingSlot";
@@ -68,7 +62,6 @@ interface CallLog {
   call_cost?: number;
   batch_id?: string;
   lead_category?: string;
-  lead_tags?: string[];
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
@@ -109,7 +102,6 @@ interface CallLogsTableProps {
   // Sorting
   onSortChange?: (sort: any) => void;
   totalFilteredCount?: number;
-  batchStats?: BatchStats;
 }
 
 export function CallLogsTable({
@@ -146,29 +138,26 @@ export function CallLogsTable({
   // Sorting
   onSortChange,
   totalFilteredCount,
-  batchStats,
 }: CallLogsTableProps) {
   const router = useRouter();
   const { push: toast } = useToast();
-  const updateCallLeadTagsMutation = useUpdateCallLeadTags();
-  const currentUser = useSelector(selectUser) as any;
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sorting, setSorting] = useState<SortingState>([]);
-
+  
   // Schedule dialog states
   const [pipelineLeadCardOpen, setPipelineLeadCardOpen] = useState(false);
   const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
-  const [bookingUsers, setBookingUsers] = useState<Array<{ id: string | number; name: string; email: string }>>([]);
+  const [bookingUsers, setBookingUsers] = useState<Array<{id: string | number; name: string; email: string}>>([]);
 
   // Handle schedule button click
   const handleScheduleClick = async (callLog: CallLog) => {
     const leadId = callLog.lead_id;
     if (!leadId) {
-      logger.warn("[CallLogsTable] No lead_id available for call", { callId: callLog.id });
+      console.warn('[CallLogsTable] No lead_id available for call:', callLog.id);
       return;
     }
 
@@ -176,7 +165,7 @@ export function CallLogsTable({
       // Fetch users for booking
       const usersRes = await api.get('/api/users');
       setBookingUsers(usersRes.data?.users || usersRes.data || []);
-
+      
       // Create a lead object from call log data
       const lead: Lead = {
         id: leadId,
@@ -190,12 +179,12 @@ export function CallLogsTable({
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-
+      
       setSelectedLead(lead);
       // Open booking dialog with BookingSlot
       setBookingDialogOpen(true);
     } catch (error) {
-      logger.error("[CallLogsTable] Error loading booking data", error);
+      console.error('[CallLogsTable] Error loading booking data:', error);
       // Still open the dialog with empty users
       const lead: Lead = {
         id: leadId,
@@ -216,13 +205,6 @@ export function CallLogsTable({
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    const tags = item.lead_tags;
-    const primary = Array.isArray(tags) && tags.length > 0 ? String(tags[0]) : "";
-    const normalizedPrimary = primary.toLowerCase();
-    if (normalizedPrimary.includes("hot")) return "hot";
-    if (normalizedPrimary.includes("warm")) return "warm";
-    if (normalizedPrimary.includes("cold")) return "cold";
-
     if (item.lead_category) {
       const normalized = normalizeLeadCategory(item.lead_category);
       if (normalized) return normalized;
@@ -233,7 +215,7 @@ export function CallLogsTable({
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
     if (!leadName || !leadName.trim()) return "—";
-
+    
     const cleaned = leadName.trim();
     const placeholders = [
       'optional name',
@@ -243,19 +225,19 @@ export function CallLogsTable({
       'enter name',
       'name here',
     ];
-
+    
     const lowerName = cleaned.toLowerCase();
     // Check if the entire name is a placeholder
     if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
       return "—";
     }
-
+    
     return cleaned;
   };
 
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
-    return formatDateTimeUnified(dateStr);
+    return new Date(dateStr).toLocaleString();
   };
 
   const formatDuration = (seconds?: number) => {
@@ -274,7 +256,7 @@ export function CallLogsTable({
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
     if (statusFilter === 'all') return itemsWithTags;
-    return itemsWithTags.filter(item =>
+    return itemsWithTags.filter(item => 
       item.status?.toLowerCase().includes(statusFilter.toLowerCase())
     );
   }, [itemsWithTags, statusFilter]);
@@ -283,7 +265,7 @@ export function CallLogsTable({
   const searchFilteredItems = useMemo(() => {
     if (!globalFilter) return filteredItems;
     const lowerSearch = globalFilter.toLowerCase();
-    return filteredItems.filter(item =>
+    return filteredItems.filter(item => 
       item.lead_name?.toLowerCase().includes(lowerSearch) ||
       item.assistant?.toLowerCase().includes(lowerSearch) ||
       item.id?.toLowerCase().includes(lowerSearch) ||
@@ -304,21 +286,21 @@ export function CallLogsTable({
   const filteredBatchGroups = useMemo(() => {
     if (!batchGroups) return null;
     if (statusFilter === 'all') return batchGroups;
-
+    
     const filteredGroups: Record<string, CallLog[]> = {};
     Object.entries(batchGroups.groups).forEach(([batchId, calls]) => {
-      const filteredCalls = calls.filter(call =>
+      const filteredCalls = calls.filter(call => 
         call.status?.toLowerCase().includes(statusFilter.toLowerCase())
       );
       if (filteredCalls.length > 0) {
         filteredGroups[batchId] = filteredCalls;
       }
     });
-
+    
     const filteredNoBatchCalls = batchGroups.noBatchCalls.filter(call =>
       call.status?.toLowerCase().includes(statusFilter.toLowerCase())
     );
-
+    
     return { groups: filteredGroups, noBatchCalls: filteredNoBatchCalls };
   }, [batchGroups, statusFilter]);
 
@@ -330,11 +312,11 @@ export function CallLogsTable({
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
         const allPageSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCalls.has(id));
-
+        
         // Determine checkbox state
         const isChecked = selectAllMode === 'all' || allPageSelected;
         const isIndeterminate = selectAllMode === 'page' && !allPageSelected;
-
+        
         return (
           <input
             type="checkbox"
@@ -392,7 +374,7 @@ export function CallLogsTable({
         const leadName = cleanLeadName(row.original.lead_name);
         const hasLead = leadName !== "—";
         return (
-          <div className="group flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-muted-foreground">{leadName}</span>
             {hasLead && (
               <button
@@ -404,10 +386,10 @@ export function CallLogsTable({
                     description: `Lead name "${leadName}" copied to clipboard`,
                   });
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
+                className="p-1 rounded hover:bg-gray-100 transition-colors"
                 title="Copy lead name"
               >
-                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
               </button>
             )}
           </div>
@@ -422,10 +404,11 @@ export function CallLogsTable({
         const type = getValue() as string;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${type === "Outbound"
-              ? "bg-warning/15 text-warning border border-warning/30"
-              : "bg-primary/15 text-primary border border-primary/30"
-              }`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+              type === "Outbound"
+                ? "bg-warning/15 text-warning border border-warning/30"
+                : "bg-primary/15 text-primary border border-primary/30"
+            }`}
           >
             {type === "Outbound" ? (
               <PhoneOutgoing className="w-3.5 h-3.5" />
@@ -468,39 +451,12 @@ export function CallLogsTable({
       cell: ({ row }) => {
         const tag = getLeadTag(row.original);
         const tagConfig = getTagConfig(tag);
-
-        const toBackendTagLabel = (t: LeadTag): string | null => {
-          if (t === "hot") return "Hot Lead";
-          if (t === "warm") return "Warm Lead";
-          if (t === "cold") return "Cold Lead";
-          return null;
-        };
-
         return (
           <Select
             value={tag}
             onValueChange={(newTag) => {
-              const backendLabel = toBackendTagLabel(newTag as LeadTag);
-              if (!backendLabel) return;
-
-              updateCallLeadTagsMutation.mutate(
-                { callId: row.original.id, tags: [backendLabel] },
-                {
-                  onSuccess: () => {
-                    toast({
-                      title: "Updated",
-                      description: "Lead tag updated",
-                    });
-                  },
-                  onError: (err) => {
-                    toast({
-                      title: "Update failed",
-                      description: err?.message || "Failed to update lead tag",
-                      variant: "error",
-                    });
-                  },
-                },
-              );
+              // Update the call's lead_category - you'll need to implement the API call
+              console.log(`[CallLogsTable] Tag changed for ${row.original.id} to ${newTag}`);
             }}
           >
             <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
@@ -608,17 +564,10 @@ export function CallLogsTable({
 
   // Render batch header row                                                                                                                     
   const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
-    const isExpanded = expandedBatches.has(batchId);
-    const headerRow = calls.find((c) => (c as any)?.is_batch_header);
-    const detailCalls = calls.filter((c) => !(c as any)?.is_batch_header);
-
-    const totalCalls =
-      (headerRow as any)?.batch_total_calls ??
-      detailCalls.length;
-    const completedCalls =
-      (headerRow as any)?.batch_completed_calls ??
-      detailCalls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
-    const totalCost = detailCalls.reduce((sum, call) => {
+    const isExpanded = expandedBatches.has(batchId);                                                                          
+    const totalCalls = calls.length;
+    const completedCalls = calls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
+    const totalCost = calls.reduce((sum, call) => {
       const cost = Number(call.cost || call.call_cost || 0);
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
@@ -663,71 +612,23 @@ export function CallLogsTable({
 
   // Render individual call row with optional indent for batch calls
   const renderCallRow = (callLog: CallLog, indent = false) => {
-    const callId = String((callLog as any)?.id ?? "");
-    const tableRow = table
-      .getRowModel()
-      .rows.find((r) => String((r.original as any)?.id ?? "") === callId);
+    // Find the row in the table data (leadTagFilteredItems)
+    const rowIndex = leadTagFilteredItems.findIndex(item => item.id === callLog.id);
+    if (rowIndex === -1) return null;
 
-    // DEBUG: Log what's happening with batch calls
-    if (indent) {
-      logger.debug("[renderCallRow] Batch call:", {
-        callId,
-        hasTableRow: !!tableRow,
-        callLogData: callLog,
-        batchId: (callLog as any)?.batch_id,
-      });
-    }
-
-    // If row not in table model (e.g., batch calls just loaded), create cells manually
-    if (!tableRow) {
-      return (
-        <TableRow
-          key={callId}
-          onClick={() => onRowClick(callId)}
-          className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-            } ${indent ? "bg-[#F8FAFC]" : ""}`}
-        >
-          {columns.map((column, cellIndex) => {
-            // Build proper cell context that matches tanstack table's expected format
-            const rowContext = {
-              original: callLog,
-              getValue: (key?: string) => {
-                // If key provided, use it; otherwise use column's accessorKey
-                const accessor = key || (column as any).accessorKey || column.id;
-                return (callLog as any)[accessor];
-              },
-            };
-            const cellContext = {
-              row: rowContext,
-              getValue: rowContext.getValue,
-            };
-            return (
-              <TableCell
-                key={`${callId}-${column.id}`}
-                onClick={(e) => {
-                  if (column.id === 'select' || column.id === 'actions') {
-                    e.stopPropagation();
-                  }
-                }}
-                className={cellIndex === 0 && indent ? "pl-8" : ""}
-              >
-                {flexRender(column.cell, cellContext as any)}
-              </TableCell>
-            );
-          })}
-        </TableRow>
-      );
-    }
+    const tableRow = table.getRowModel().rows[rowIndex];
+    if (!tableRow) return null;
 
     return (
       <TableRow
-        key={callId}
-        onClick={() => onRowClick(callId)}
-        className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-          } ${indent ? "bg-[#F8FAFC]" : ""}`}
+        key={callLog.id}
+        onClick={() => onRowClick(callLog.id)}
+        className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${
+          selectedCalls.has(callLog.id) ? "bg-primary/5" : ""
+        } ${indent ? "bg-[#F8FAFC]" : ""}`}
       >
         {tableRow.getVisibleCells().map((cell, cellIndex) => (
-          <TableCell
+          <TableCell 
             key={cell.id}
             onClick={(e) => {
               // Prevent row click for checkbox and actions columns
@@ -747,19 +648,19 @@ export function CallLogsTable({
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-red">
+      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
-            <input
-              type="text"
-              placeholder="Search Call Logs..."
-              value={globalFilter ?? ''}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
+          <input
+            type="text"
+            placeholder="Search Call Logs..."
+            value={globalFilter ?? ''}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="min-w-[150px] h-10">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -825,8 +726,9 @@ export function CallLogsTable({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                    }`}
+                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${
+                    header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                  }`}
                   onClick={header.column.getToggleSortingHandler()}
                 >
                   {header.isPlaceholder ? null : (
@@ -838,8 +740,8 @@ export function CallLogsTable({
                             asc: <ArrowUp className="w-4 h-4 text-primary" />,
                             desc: <ArrowDown className="w-4 h-4 text-primary" />,
                           }[header.column.getIsSorted() as string] ?? (
-                              <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
-                            )}
+                            <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                          )}
                         </span>
                       )}
                     </div>
@@ -865,42 +767,31 @@ export function CallLogsTable({
             (() => {
               // Create timeline items combining batches and individual calls
               const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
-
-              const visibleRowIds = new Set(
-                table.getRowModel().rows.map((r) => (r.original as any)?.id),
-              );
-
+              
               // Use filteredBatchGroups instead of batchGroups
               const groupsToRender = filteredBatchGroups || batchGroups;
-
+              
               // Add batch groups with their earliest timestamp
               Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
-                // For expanded batches, show all calls; for collapsed batches, only show headers
-                const callsToRender = expandedBatches.has(batchId)
-                  ? calls  // Show all calls when expanded
-                  : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
-
-                if (callsToRender.length === 0) return;
                 const earliestTimestamp = Math.min(
-                  ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                  ...calls.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
                 );
                 timelineItems.push({
                   type: 'batch',
-                  data: { batchId, calls: callsToRender },
+                  data: { batchId, calls },
                   timestamp: earliestTimestamp
                 });
               });
-
+              
               // Add individual calls
               groupsToRender.noBatchCalls.forEach(call => {
-                if (!visibleRowIds.has((call as any)?.id)) return;
                 timelineItems.push({
                   type: 'call',
                   data: call,
                   timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
                 });
               });
-
+              
               // Check if there's any data
               if (timelineItems.length === 0) {
                 return (
@@ -956,18 +847,10 @@ export function CallLogsTable({
                   </TableRow>
                 );
               }
-
-              // DEBUG: Log batch rendering state
-              logger.debug("[Batch Render] Timeline items:", {
-                count: timelineItems.length,
-                batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
-                  batchId: i.data.batchId,
-                  callCount: i.data.calls.length,
-                  isExpanded: expandedBatches.has(i.data.batchId),
-                })),
-                expandedBatches: Array.from(expandedBatches),
-              });
-
+              
+              // Sort by timestamp (newest first)
+              timelineItems.sort((a, b) => b.timestamp - a.timestamp);
+              
               return timelineItems.map((item, index) => {
                 if (item.type === 'batch') {
                   const { batchId, calls } = item.data;
@@ -975,9 +858,7 @@ export function CallLogsTable({
                     <React.Fragment key={`batch-group-${batchId}`}>
                       {renderBatchHeader(batchId, calls)}
                       {expandedBatches.has(batchId) &&
-                        calls
-                          .filter((c: CallLog) => !(c as any)?.is_batch_header)
-                          .map((call: CallLog) => renderCallRow(call, true))}
+                        calls.map((call: CallLog) => renderCallRow(call, true))}
                     </React.Fragment>
                   );
                 } else {
@@ -1041,11 +922,12 @@ export function CallLogsTable({
               <TableRow
                 key={row.id}
                 onClick={() => onRowClick(row.original.id)}
-                className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
-                  }`}
+                className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${
+                  selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                }`}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell
+                  <TableCell 
                     key={cell.id}
                     onClick={(e) => {
                       // Prevent row click for checkbox and actions columns
@@ -1063,87 +945,79 @@ export function CallLogsTable({
         </TableBody>
       </Table>
       {/* Pagination Controls – Server-Side Pagination */}
-      {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          {/* Left: Show [N] of X calls + batch stats */}
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
-            <span>Show</span>
-            <select
-              value={perPage}
-              onChange={(e) => {
-                const newSize = parseInt(e.target.value, 10);
-                onPageSizeChange?.(newSize);
-                onPageChange?.(1);
-              }}
-              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <span>of {totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
-            {callFilter === 'batch' && batchStats && (
-              <div className="ml-4 flex items-center gap-3 border-l pl-4">
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> completed
-                </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> running
-                </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.failed_batches}</span> failed
-                </span>
-              </div>
-            )}
-          </div>
+{table.getRowModel().rows.length > 0 && onPageChange && (
+  <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+    <div className="flex items-center gap-2 text-sm text-[#64748B]">
+      <span>
+        Showing {((currentPage - 1) * perPage) + 1} to {Math.min(currentPage * perPage, totalRecords)} of {totalRecords} calls
+      </span>
+    </div>
 
-          {/* Right: Page N of N + nav buttons */}
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(1)}
-                disabled={!hasPreviousPage}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={!hasPreviousPage}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={!hasNextPage}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(totalPages)}
-                disabled={!hasNextPage}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-[#64748B]">Page size:</span>
+        <Select value={perPage.toString()} onValueChange={(value) => {
+          const newSize = parseInt(value, 10);
+          onPageChange?.(newSize);
+          // Reset to page 1 when page size changes
+          onPageChange?.(1);
+        }}>
+          <SelectTrigger className="w-[80px] h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="20">20</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
+      <div className="text-sm text-[#64748B]">
+        Page {currentPage} of {totalPages}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(1)}
+          disabled={!hasPreviousPage}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={!hasPreviousPage}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={!hasNextPage}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(totalPages)}
+          disabled={!hasNextPage}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
@@ -1154,10 +1028,10 @@ export function CallLogsTable({
           {selectedLead && (
             <BookingSlot
               leadId={selectedLead.id}
-              tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
-              studentId={String(selectedLead.id)}
-              assignedUserId={currentUser?.id || undefined}
-              createdBy={currentUser?.id || undefined}
+              tenantId={undefined}
+              studentId={undefined}
+              assignedUserId={undefined}
+              createdBy={undefined}
               users={bookingUsers}
               isEditMode={true}
             />

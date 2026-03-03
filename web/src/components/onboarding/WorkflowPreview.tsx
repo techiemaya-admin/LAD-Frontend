@@ -48,10 +48,10 @@ interface WorkflowPreviewProps {
 }
 export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewProps = {}) {
   const router = useRouter();
-  const {
-    workflowPreview,
-    channels,
-    setWorkflowPreview,
+  const { 
+    workflowPreview, 
+    channels, 
+    setWorkflowPreview, 
     setCurrentScreen,
     setManualFlow,
     completeOnboarding,
@@ -334,7 +334,7 @@ export default function WorkflowPreview({ currentIntentKey }: WorkflowPreviewPro
                 });
                 setIsEditMode(true); // Enable split view mode
               }}
-              className="flex-1 px-4 py-2 bg-[#172560] text-white rounded-lg hover:bg-[#0f1840] transition-colors font-medium flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Edit className="w-4 h-4" />
               Edit

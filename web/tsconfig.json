@@ -29,7 +29,6 @@
       "@lad/frontend-features/ai-icp-assistant": ["../sdk/features/ai-icp-assistant"],
       "@lad/frontend-features/billing": ["../sdk/features/billing"],
       "@lad/frontend-features/campaigns": ["../sdk/features/campaigns"],
-      "@lad/frontend-features/community-roi": ["../sdk/features/community-roi"],
       "@lad/sdk/features/ai-icp-assistant": ["../sdk/features/ai-icp-assistant"],
       "@lad/frontend-features/conversations": ["../sdk/features/conversations"],
       "@lad/frontend-features/overview": ["../sdk/features/overview"],
@@ -39,7 +38,9 @@
       "@lad/frontend-features/dashboard": ["../sdk/features/dashboard"],
       "@lad/frontend-features/bookings": ["../sdk/features/bookings"],
       "@lad/frontend-features/social-integration": ["../sdk/features/social-integration"],
-      "@lad/frontend-features/call-logs": ["../sdk/features/call-logs"]
+      "@lad/frontend-features/call-logs": ["../sdk/features/call-logs"],
+      "@lad/frontend-features/followups": ["../sdk/features/followups"],
+      "@lad/frontend-features/community-roi": ["../sdk/features/community-roi"]
     }
   },
   "include": [

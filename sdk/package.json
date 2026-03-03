@@ -38,9 +38,13 @@
       "types": "./features/overview/index.ts",
       "default": "./features/overview/index.ts"
     },
-    "./call-logs": {
-      "types": "./features/call-logs/index.ts",
-      "default": "./features/call-logs/index.ts"
+    "./conversations": {
+      "types": "./features/conversations/index.ts",
+      "default": "./features/conversations/index.ts"
+    },
+    "./followups": {
+      "types": "./features/followups/index.ts",
+      "default": "./features/followups/index.ts"
     }
   },
   "scripts": {

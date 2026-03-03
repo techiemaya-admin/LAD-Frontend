@@ -58,32 +58,22 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
               <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
             )}
           </div>
-          <div className={cn(
-            "p-2 rounded-lg",
-            icon === 'check' ? "bg-green-100" : icon === 'trending' ? "bg-blue-100" : "bg-primary/10"
-          )}>
-            <IconComponent className={cn(
-              "h-5 w-5",
-              icon === 'check' ? "text-green-600" : icon === 'trending' ? "text-blue-600" : "text-primary"
-            )} />
+          <div className="p-2 rounded-lg bg-primary/10">
+            <IconComponent className="h-5 w-5 text-primary" />
           </div>
         </div>
         {trend !== undefined && (
-          <div className="flex items-center gap-2 mt-4">
-            <div className="p-1 rounded bg-blue-100">
-              <span className={cn('flex items-center gap-1 text-xs', getTrendColor())}>
-                {getTrendIcon()}
-              </span>
-            </div>
-            <span className={cn('text-xs font-medium', getTrendColor())}>
+          <div className={cn('flex items-center gap-1 text-xs mt-4', getTrendColor())}>
+            {getTrendIcon()}
+            <span className="font-medium">
               {trend > 0 ? '+' : ''}{trend}%
             </span>
             {trendLabel && (
-              <span className="text-xs text-muted-foreground">{trendLabel}</span>
+              <span className="text-muted-foreground ml-1">{trendLabel}</span>
             )}
           </div>
         )}
       </div>
     </WidgetWrapper>
   );
-};
+};

@@ -1,62 +1,25 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useOnboardingStore } from '@/store/onboardingStore';
-import { apiPost, apiGet } from '@/lib/api';
+import { apiPost } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import { useToast } from '@/components/ui/use-toast';
-import {
-  Zap,
-  Users,
-  Linkedin,
-  Instagram,
-  MessageSquare,
-  Reply,
-  Send,
-  Phone,
-  Search,
-  FileText,
+import { 
+  Zap, 
+  Users, 
+  Linkedin, 
+  Instagram, 
+  MessageSquare, 
+  Reply, 
+  Send, 
+  Phone, 
+  Search, 
+  FileText, 
   Mail,
-  ArrowRight,
-  AlertCircle
+  ArrowRight
 } from 'lucide-react';
-
 export default function Screen1MainOptions() {
   const { setCurrentScreen, setOnboardingMode, setSelectedPath, setHasSelectedOption, setIsAIChatActive } = useOnboardingStore();
-  const { toast } = useToast();
-  const [limits, setLimits] = useState<{ remaining: number; total: number } | null>(null);
-
-  useEffect(() => {
-    apiGet<{ success: boolean; totalDailyLimit: number; remainingDailyLimit: number }>('/api/campaigns/linkedin/limits')
-      .then(res => {
-        if (res.success) {
-          setLimits({
-            remaining: res.remainingDailyLimit,
-            total: res.totalDailyLimit
-          });
-        }
-      })
-      .catch(err => console.error('Failed to fetch limits', err));
-  }, []);
-
   const handleSelect = async (option: 'automation' | 'leads') => {
-    if (option === 'leads' && limits && limits.total > 0 && limits.remaining <= 0) {
-      toast({
-        title: "Daily Limit Reached",
-        description: "If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (option === 'leads' && limits && limits.total === 0) {
-      toast({
-        title: "No LinkedIn Account",
-        description: "Please connect a LinkedIn account in settings to use Lead Generation.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSelectedPath(option);
     setHasSelectedOption(true);
     setIsAIChatActive(true);
@@ -141,22 +104,10 @@ export default function Screen1MainOptions() {
             {/* Option B - Lead Generation & Outreach */}
             <div
               onClick={() => handleSelect('leads')}
-              className={`group relative bg-white rounded-2xl p-8 shadow-lg transition-all duration-300 cursor-pointer border-2 ${limits && limits.total > 0 && limits.remaining <= 0
-                ? 'border-red-100 opacity-90 cursor-not-allowed'
-                : 'border-transparent hover:border-green-500 hover:shadow-2xl'
-                }`}
+              className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-green-500"
             >
-              {limits && limits.total > 0 && limits.remaining <= 0 && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md flex items-center gap-1 animate-pulse">
-                  <AlertCircle className="w-4 h-4" />
-                  DAILY LIMIT REACHED
-                </div>
-              )}
               <div className="flex items-center gap-4 mb-6">
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${limits && limits.total > 0 && limits.remaining <= 0
-                  ? 'bg-gray-400'
-                  : 'bg-gradient-to-br from-green-500 to-teal-600'
-                  }`}>
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
                   <Users className="w-8 h-8 text-white" />
                 </div>
                 <div>
@@ -186,24 +137,14 @@ export default function Screen1MainOptions() {
                   <span>Voice agent for calls</span>
                 </div>
               </div>
-              <div className={`flex items-center gap-2 font-semibold transition-all ${limits && limits.total > 0 && limits.remaining <= 0
-                ? 'text-gray-400'
-                : 'text-green-600 group-hover:gap-4'
-                }`}>
-                <span>{limits && limits.total > 0 && limits.remaining <= 0 ? 'Wait for reset' : 'Select this option'}</span>
+              <div className="flex items-center gap-2 text-green-600 font-semibold group-hover:gap-4 transition-all">
+                <span>Select this option</span>
                 <ArrowRight className="w-5 h-5" />
               </div>
             </div>
           </div>
-
-          {limits && limits.total > 0 && limits.remaining <= 0 && (
-            <div className="mt-8 max-w-4xl mx-auto flex items-center gap-3 bg-red-50 text-red-700 px-5 py-4 rounded-xl border border-red-100 text-sm font-medium animate-in fade-in slide-in-from-bottom-2 shadow-sm">
-              <AlertCircle className="w-6 h-6 flex-shrink-0" />
-              <p><strong>Daily Limit Reached.</strong> If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
-}
+}

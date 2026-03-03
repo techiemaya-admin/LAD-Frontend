@@ -14,7 +14,6 @@ export interface BookingParams {
   bookingType?: string;
   bookingSource?: string;
   timezone?: string;
-  notes?: string;
 }
 export interface BookingResponse {
   id: string | number;
@@ -321,7 +320,6 @@ export const bookSlot = async (bookingData: BookingParams): Promise<BookingRespo
       scheduled_at,
       created_by: bookingData.createdBy,
       timezone: bookingData.timezone || 'UTC',
-      notes: bookingData.notes,
     };
     // Remove undefined keys to avoid backend validation issues.
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
@@ -420,4 +418,4 @@ export const fetchUsers = async (): Promise<User[]> => {
       'Failed to fetch users'
     );
   }
-};
+};

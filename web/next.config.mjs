@@ -30,6 +30,8 @@ const nextConfig = {
       '@lad/frontend-features/deals-pipeline': path.resolve(__dirname, '../sdk/features/deals-pipeline'),
       '@lad/frontend-features/apollo-leads': path.resolve(__dirname, '../sdk/features/apollo-leads'),
       '@lad/frontend-features/dashboard': path.resolve(__dirname, '../sdk/features/dashboard'),
+      '@lad/frontend-features/followups': path.resolve(__dirname, '../sdk/features/followups'),
+      '@lad/frontend-features/community-roi': path.resolve(__dirname, '../sdk/features/community-roi'),
     };
 
     return config;
@@ -53,6 +55,8 @@ const nextConfig = {
       '@lad/frontend-features/deals-pipeline': '../sdk/features/deals-pipeline',
       '@lad/frontend-features/apollo-leads': '../sdk/features/apollo-leads',
       '@lad/frontend-features/dashboard': '../sdk/features/dashboard',
+      '@lad/frontend-features/followups': '../sdk/features/followups',
+      '@lad/frontend-features/community-roi': '../sdk/features/community-roi',
     },
   },
 

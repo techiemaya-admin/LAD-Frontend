@@ -1,18 +1,32 @@
-export type Channel = 'whatsapp' | 'linkedin' | 'gmail';
+/**
+ * Conversation Types - Re-exports from SDK + web-specific types
+ *
+ * The SDK types are the authoritative source.
+ * Web-specific types (ContactTag, InternalComment) are defined here.
+ */
+export type {
+  Channel,
+  ConversationStatus,
+  MessageStatus,
+  ConversationOwner,
+  ConversationState,
+  Message,
+  Attachment,
+  ConversationListFilters,
+  SendMessageRequest,
+  ConversationStats,
+} from '@lad/frontend-features/conversations';
 
-export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
+// Re-export Contact and Conversation with web-specific extensions
+import type {
+  Contact as SDKContact,
+  Conversation as SDKConversation,
+} from '@lad/frontend-features/conversations';
 
-export type ConversationStatus = 'open' | 'resolved' | 'muted';
-
+// Web-specific types not in SDK
 export type ContactTag = 'hot' | 'warm' | 'cold';
 
-export interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-  company?: string;
+export interface Contact extends SDKContact {
   position?: string;
   tags: ContactTag[];
   notes: string[];
@@ -20,40 +34,9 @@ export interface Contact {
   isOnline?: boolean;
 }
 
-export interface Message {
-  id: string;
-  conversationId: string;
-  content: string;
-  timestamp: Date;
-  isOutgoing: boolean;
-  status: MessageStatus;
-  attachments?: Attachment[];
-  sender: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-}
-
-export interface Attachment {
-  id: string;
-  name: string;
-  type: 'image' | 'file' | 'link';
-  url: string;
-  size?: number;
-}
-
-export interface Conversation {
-  id: string;
-  channel: Channel;
+export interface Conversation extends SDKConversation {
   contact: Contact;
-  messages: Message[];
-  lastMessage?: Message;
-  unreadCount: number;
-  status: ConversationStatus;
   assignedTo?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface InternalComment {

@@ -112,8 +112,8 @@ export default function WorkflowPreviewPanel({
               Workflow Preview
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {hasStoreWorkflow ?
-                `${workflowPreview.length} automated steps configured` :
+              {hasStoreWorkflow ? 
+                `${workflowPreview.length} automated steps configured` : 
                 'Answer questions to build your workflow'
               }
             </p>
@@ -121,7 +121,7 @@ export default function WorkflowPreviewPanel({
           {hasStoreWorkflow && (
             <button
               onClick={handleEditClick}
-              className="flex items-center gap-2 px-4 py-2 bg-[#172560] hover:bg-[#0f1840] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-sm"
               title="Edit workflow manually"
             >
               <Edit3 className="w-4 h-4" />
@@ -166,7 +166,7 @@ export default function WorkflowPreviewPanel({
           proOptions={{ hideAttribution: true }}
           className="bg-transparent"
         >
-          <WorkflowCanvas
+          <WorkflowCanvas 
             flowNodes={flowNodes}
             flowEdges={flowEdges}
             onNodesChange={onNodesChange}

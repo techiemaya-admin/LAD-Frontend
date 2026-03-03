@@ -20,6 +20,8 @@ import {
   Send,
   GraduationCap,
   MessageSquare,
+  CalendarClock,
+  Network,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
@@ -97,28 +99,28 @@ export function Sidebar() {
   };
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
-    {
-      href: "/dashboard",
-      label: "Overview",
-      icon: Home,
-      details: "See your overall dashboard and metrics.",
-      requiredCapability: "view_overview",
-    },
-    {
-      href: "/onboarding",
-      label: "AI Assistant",
-      icon: Search,
-      details: "AI-powered ICP assistant and workflow setup",
-      requiredCapability: "view_ai_assistant",
-    },
-    {
-      href: "/campaigns",
-      label: "Campaigns",
-      icon: Send,
-      details:
-        "Multi-channel outreach campaigns with LinkedIn and Email automation.",
-      requiredCapability: "view_campaigns",
-    },
+    // {
+    //   href: "/dashboard",
+    //   label: "Overview",
+    //   icon: Home,
+    //   details: "See your overall dashboard and metrics.",
+    //   requiredCapability: "view_overview",
+    // },
+    // {
+    //   href: "/onboarding",
+    //   label: "AI Assistant",
+    //   icon: Search,
+    //   details: "AI-powered ICP assistant and workflow setup",
+    //   requiredCapability: "view_ai_assistant",
+    // },
+    // {
+    //   href: "/campaigns",
+    //   label: "Campaigns",
+    //   icon: Send,
+    //   details:
+    //     "Multi-channel outreach campaigns with LinkedIn and Email automation.",
+    //   requiredCapability: "view_campaigns",
+    // },
     {
       href: "/conversations",
       label: "Conversations",
@@ -127,37 +129,49 @@ export function Sidebar() {
       requiredCapability: "view_conversations",
     },
     {
-      href: "/make-call",
-      label: "Make a Call",
-      icon: Phone,
-      details: "Place outgoing calls using your assigned numbers.",
-      requiredCapability: "view_make_call",
+      href: "/followups",
+      label: "Follow-ups",
+      icon: CalendarClock,
+      details: "Manage automated follow-up messages for inactive leads.",
+      requiredCapability: "view_followups",
     },
+    // {
+    //   href: "/make-call",
+    //   label: "Make a Call",
+    //   icon: Phone,
+    //   details: "Place outgoing calls using your assigned numbers.",
+    //   requiredCapability: "view_make_call",
+    // },
+    // {
+    //   href: "/call-logs",
+    //   label: "Call Logs",
+    //   icon: ChartNoAxesCombined,
+    //   details: "Review past call history and recordings.",
+    //   requiredCapability: "view_call_logs",
+    // },
+    // {
+    //   href: "/pipeline",
+    //   label: isEducation ? "Students" : "Pipeline",
+    //   icon: isEducation ? GraduationCap : CircleDollarSign,
+    //   details: isEducation
+    //     ? "Manage student admissions and counseling."
+    //     : "Manage your sales pipeline and deals.",
+    //   requiredCapability: "view_pipeline",
+    // },
     {
-      href: "/call-logs",
-      label: "Call Logs",
-      icon: ChartNoAxesCombined,
-      details: "Review past call history and recordings.",
-      requiredCapability: "view_call_logs",
+      href: "/community-roi",
+      label: "Community ROI",
+      icon: Network,
+      details: "Track community engagement, relationships, and ROI metrics.",
+      requiredCapability: "view_community_roi",
     },
-    {
-      href: "/pipeline",
-      label: isEducation ? "Students" : "Pipeline",
-      icon: isEducation ? GraduationCap : CircleDollarSign,
-      details: isEducation
-        ? "Manage student admissions and counseling."
-        : "Manage your sales pipeline and deals.",
-      requiredCapability: "view_pipeline",
-    },
-
   ];
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated
     ? allNavItems.filter((item) => {
         // If user is admin or owner, show all items
         const isAdminOrOwner = user?.role === "admin" || user?.role === "owner";
-        // Admin/owner sees all items
-        if (isAdminOrOwner && !item.requiredCapability) return true;
+        if (isAdminOrOwner) return true;
         // If the item doesn't require any specific capability, show it
         if (!item.requiredCapability) return true;
         // TEMPORARY: If no capabilities are defined or empty array, show all items

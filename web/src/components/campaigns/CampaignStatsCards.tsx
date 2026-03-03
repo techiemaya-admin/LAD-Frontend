@@ -51,7 +51,7 @@ const AnimatedValue = ({ value, suffix = '' }: { value: string | number, suffix?
   // Extract numeric value from string (for percentages)
   const numericValue = typeof value === 'string' ? parseFloat(value) : value;
   const animatedValue = useCountUp(numericValue || 0, 2000);
-
+  
   // Format the animated value based on the original format
   if (typeof value === 'string' && value.includes('%')) {
     return <>{animatedValue.toFixed(1)}%</>;
@@ -69,7 +69,7 @@ interface StatCardProps {
 
 const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div
+    <div 
       className={`bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
       onClick={onClick}
     >
@@ -102,10 +102,11 @@ interface CampaignStatsCardsProps {
 }
 export default function CampaignStatsCards({ stats, loading = false }: CampaignStatsCardsProps) {
   const router = useRouter();
-
+  
   if (loading) {
     return (
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
+        {/* Show 8 skeleton cards to match the actual number of cards */}
         {Array.from({ length: 8 }, (_, index) => (
           <SkeletonCard key={index} />
         ))}
@@ -115,12 +116,8 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
 
   return (
     <div className="flex gap-4 mb-6 flex-wrap items-stretch">
-      {/* Total Campaigns — click to go to campaigns list */}
-      <div
-        className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
-        onClick={() => router.push('/campaigns')}
-      >
-        <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
+      <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+        <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
           <div className="flex-1 flex flex-col p-4">
             <div className="flex flex-col h-full">
               <div className="flex justify-end mb-2">
@@ -142,69 +139,20 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
           </div>
         </div>
       </div>
-
-      {/* Active Campaigns → filter to active status */}
-      <StatCard
-        title="Active Campaigns"
-        value={stats.active_campaigns}
-        icon={<Play className="w-6 h-6 text-green-600" />}
-        bgColor="bg-green-100"
-        onClick={() => router.push('/campaigns?status=active')}
+      {/* Remaining stat cards with Tailwind */}
+      <StatCard title="Active Campaigns" value={stats.active_campaigns} icon={<Play className="w-6 h-6 text-green-600" />} bgColor="bg-green-100" />
+      <StatCard 
+        title="Total Leads Generated" 
+        value={stats.total_leads || 0} 
+        icon={<Users className="w-6 h-6 text-indigo-600" />} 
+        bgColor="bg-indigo-100" 
+        onClick={() => router.push('/campaigns/leads')}
       />
-
-      {/* Total Leads → campaigns list (global leads page has hardcoded ID, not working yet) */}
-      <StatCard
-        title="Total Leads Generated"
-        value={stats.total_leads || 0}
-        icon={<Users className="w-6 h-6 text-indigo-600" />}
-        bgColor="bg-indigo-100"
-        onClick={() => router.push('/campaigns')}
-      />
-
-      {/* Connection Requests Sent → running campaigns */}
-      <StatCard
-        title="Connection Requests Sent"
-        value={stats.total_sent || 0}
-        icon={<Linkedin className="w-6 h-6 text-[#0077B5]" />}
-        bgColor="bg-blue-50"
-        onClick={() => router.push('/campaigns?status=running')}
-      />
-
-      {/* Lead Contact Back → count of replied leads */}
-      <StatCard
-        title="Lead Contact Back"
-        value={stats.total_replied || 0}
-        icon={<Mail className="w-6 h-6 text-amber-600" />}
-        bgColor="bg-amber-100"
-        onClick={() => router.push('/campaigns')}
-      />
-
-      {/* Instagram → filter campaigns by instagram platform */}
-      <StatCard
-        title="Instagram Connection Rate"
-        value={`${(stats.instagram_connection_rate ?? 0).toFixed(1)}%`}
-        icon={<svg className="w-6 h-6 fill-[#E4405F]" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" /></svg>}
-        bgColor="bg-pink-50"
-        onClick={() => router.push('/campaigns?platform=instagram')}
-      />
-
-      {/* WhatsApp → filter campaigns by whatsapp */}
-      <StatCard
-        title="WhatsApp Connection Rate"
-        value={`${(stats.whatsapp_connection_rate ?? 0).toFixed(1)}%`}
-        icon={<MessageCircle className="w-6 h-6 text-[#25D366]" />}
-        bgColor="bg-green-50"
-        onClick={() => router.push('/campaigns?platform=whatsapp')}
-      />
-
-      {/* Voice → filter campaigns by voice */}
-      <StatCard
-        title="Voice Agent Connection Rate"
-        value={`${(stats.voice_agent_connection_rate ?? 0).toFixed(1)}%`}
-        icon={<Video className="w-6 h-6 text-purple-600" />}
-        bgColor="bg-purple-100"
-        onClick={() => router.push('/campaigns?platform=voice')}
-      />
+      <StatCard title="Connection Requests Sent" value={stats.total_sent || 0} icon={<Linkedin className="w-6 h-6 text-[#0077B5]" />} bgColor="bg-blue-50" />
+      <StatCard title="Reply Rate" value={`${(stats.avg_reply_rate ?? 0).toFixed(1)}%`} icon={<Mail className="w-6 h-6 text-amber-600" />} bgColor="bg-amber-100" />
+      <StatCard title="Instagram Connection Rate" value={`${(stats.instagram_connection_rate ?? 0).toFixed(1)}%`} icon={<svg className="w-6 h-6 fill-[#E4405F]" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>} bgColor="bg-pink-50" />
+      <StatCard title="WhatsApp Connection Rate" value={`${(stats.whatsapp_connection_rate ?? 0).toFixed(1)}%`} icon={<MessageCircle className="w-6 h-6 text-[#25D366]" />} bgColor="bg-green-50" />
+      <StatCard title="Voice Agent Connection Rate" value={`${(stats.voice_agent_connection_rate ?? 0).toFixed(1)}%`} icon={<Video className="w-6 h-6 text-purple-600" />} bgColor="bg-purple-100" />
     </div>
   );
 }

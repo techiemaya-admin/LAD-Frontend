@@ -52,9 +52,10 @@ export async function fetchICPQuestions(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestionsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -85,9 +86,10 @@ export async function fetchICPQuestionByStep(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestion | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -120,9 +122,10 @@ export async function processICPAnswer(
   request: ICPAnswerRequest,
   apiClient?: any
 ): Promise<ICPAnswerResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  // Use ICP backend URL (port 3001) for ICP questions
+  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL || 
+                  process.env.NEXT_PUBLIC_API_URL || 
+                  (process.env.NODE_ENV === 'development' ? 'https://lad-backend-develop-741719885039.us-central1.run.app' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -156,4 +159,4 @@ export async function processICPAnswer(
       error: error.message || 'Failed to process answer',
     };
   }
-}
+}

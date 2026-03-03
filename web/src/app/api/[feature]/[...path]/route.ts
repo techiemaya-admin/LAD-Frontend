@@ -45,9 +45,9 @@ async function handler(
     const url = `${backend}/api/${feature}/${fullPath}${searchParams ? `?${searchParams}` : ''}`;
     // Get auth token from cookie or Authorization header
     // Check both 'token' (frontend storage) and 'access_token' (legacy) cookies
-    const token = req.cookies.get('token')?.value ||
-      req.cookies.get('access_token')?.value ||
-      req.headers.get('authorization')?.replace('Bearer ', '');
+    const token = req.cookies.get('token')?.value || 
+                  req.cookies.get('access_token')?.value || 
+                  req.headers.get('authorization')?.replace('Bearer ', '');
     const incomingContentType = req.headers.get('content-type');
     // Build headers
     const headers: Record<string, string> = {};
