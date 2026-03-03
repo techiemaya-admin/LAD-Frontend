@@ -83,7 +83,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
             {/* Tags */}
             <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
-              {contact.tags.map((tag) => (
+              {(contact.tags || []).map((tag) => (
                 <Badge
                   key={tag}
                   variant="outline"
@@ -148,7 +148,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
               {/* Existing notes */}
               <div className="space-y-2">
-                {contact.notes.map((note, i) => (
+                {(contact.notes || []).map((note, i) => (
                   <div
                     key={i}
                     className="p-2.5 bg-muted/50 rounded-lg text-xs text-muted-foreground"

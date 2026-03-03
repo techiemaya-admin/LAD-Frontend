@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { Conversation } from '@/types/conversation';
+import { useConversationMessages } from '@lad/frontend-features/conversations';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
 import { MessageComposer } from './MessageComposer';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Loader2 } from 'lucide-react';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -22,6 +23,11 @@ export const ChatWindow = memo(function ChatWindow({
   onTogglePanel,
   isPanelOpen,
 }: ChatWindowProps) {
+  // Fetch messages from backend (replaces conversation.messages)
+  const { messages, isLoading: messagesLoading } = useConversationMessages(
+    conversation?.id || null
+  );
+
   if (!conversation) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background/50 text-muted-foreground">
@@ -35,7 +41,7 @@ export const ChatWindow = memo(function ChatWindow({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background/50">
+    <div className="flex-1 flex flex-col min-w-0 whatsapp-chat-bg">
       <ChatHeader
         conversation={conversation}
         onMarkResolved={() => onMarkResolved(conversation.id)}
@@ -43,7 +49,13 @@ export const ChatWindow = memo(function ChatWindow({
         onTogglePanel={onTogglePanel}
         isPanelOpen={isPanelOpen}
       />
-      <MessageList messages={conversation.messages} />
+      {messagesLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <MessageList messages={messages.length > 0 ? messages : conversation.messages} />
+      )}
       <MessageComposer
         channel={conversation.channel}
         onSendMessage={onSendMessage}
