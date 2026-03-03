@@ -98,7 +98,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       }
 
       const lead = leadMap.get(leadId);
-      
+
       // Update platform if available
       if (activity.platform && !lead.platform) {
         lead.platform = activity.platform;
@@ -110,7 +110,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         lead.latestStatus = activity.status;
         lead.latestMessage = activity.message_content || activity.error_message;
       }
-      
+
       const actionType = activity.action_type?.toUpperCase() || '';
       const status = activity.status?.toLowerCase() || '';
       const errorMsg = activity.error_message || '';
@@ -125,8 +125,8 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       if (actionType.includes('CONNECTION')) {
         // Check for rate limit in error message
-        const isRateLimit = errorMsg.toLowerCase().includes('limit') || 
-                            errorMsg.toLowerCase().includes('rate');
+        const isRateLimit = errorMsg.toLowerCase().includes('limit') ||
+          errorMsg.toLowerCase().includes('rate');
         const isDailyLimit = errorMsg.toLowerCase().includes('daily');
         const isWeeklyLimit = errorMsg.toLowerCase().includes('weekly');
 
@@ -146,7 +146,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         } else if (status === 'success' || status === 'sent' || status === 'delivered') {
           lead.profileVisited = true;
           lead.connectionStatus = 'SENT';
-          
+
           // Check if connection was sent with a message
           if (messageContent && messageContent.trim().length > 0) {
             lead.connectionSentWithMessage = true;
@@ -203,22 +203,22 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     // Determine which step the lead is currently at (1-5)
     // Returns the active step (steps before are completed, steps after are upcoming)
     // Steps: 1=Visit, 2=Connect, 3=Accept, 4=Contact, 5=Lead Contact Back
-    
+
     // If lead replied, all steps completed - show on final step
-    if (lead.leadReplied) return 5;
-    
+    if (lead.leadReplied) return 6;
+
     // If contacted but no reply yet, on step 5 waiting for reply  
     if (lead.contacted) return 5;
-    
+
     // If connection accepted but not contacted yet, on step 4
     if (lead.connectionAccepted) return 4;
-    
+
     // If connection sent but not accepted yet, on step 3
     if (lead.connectionStatus === 'SENT') return 3;
-    
+
     // If profile visited but connection not sent yet, on step 2
     if (lead.profileVisited) return 2;
-    
+
     // Default: On step 1 (visiting profile)
     return 1;
   };
@@ -339,7 +339,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               </TableRow>
             ) : (
               paginatedLeads?.map((lead, index) => (
-                <TableRow 
+                <TableRow
                   key={lead.leadId || index}
                   className="hover:bg-gray-50"
                 >
@@ -378,13 +378,13 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                     )}
                   </TableCell>
                   <TableCell className="w-[80px]">
-                    <LiveActivityStatusBadge status={lead.latestStatus} />
+                    <LiveActivityStatusBadge status={lead.latestStatus} currentStep={calculateCurrentStep(lead)} />
                   </TableCell>
                   <TableCell className="w-[150px]">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <p 
+                          <p
                             className="text-sm text-[#64748B] max-w-[170px] overflow-hidden text-ellipsis whitespace-nowrap"
                           >
                             {lead.latestMessage || '-'}
@@ -405,7 +405,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </TableBody>
         </Table>
       </div>
-      
+
       {/* Pagination Controls */}
       {totalLeads > 0 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
@@ -429,12 +429,12 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               of {totalLeads} leads
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <div className="text-sm text-[#64748B]">
               Page {currentPage} of {totalPages}
             </div>
-            
+
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
