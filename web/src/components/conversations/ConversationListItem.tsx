@@ -45,7 +45,7 @@ export const ConversationListItem = memo(function ConversationListItem({
   const timeAgo = formatDistanceToNow(updatedAt, { addSuffix: false });
 
   // Get the primary tag (first one)
-  const primaryTag = contact.tags[0];
+  const primaryTag = contact.tags?.[0];
 
   return (
     <div

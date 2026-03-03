@@ -71,7 +71,7 @@ export const MessageList = memo(function MessageList({ messages }: MessageListPr
   };
 
   return (
-    <div className="flex-1 overflow-hidden bg-background/50">
+    <div className="flex-1 overflow-hidden whatsapp-chat-bg">
       <Virtuoso
         ref={virtuosoRef}
         style={{ height: '100%' }}

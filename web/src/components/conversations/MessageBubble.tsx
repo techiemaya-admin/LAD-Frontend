@@ -49,7 +49,7 @@ export const MessageBubble = memo(function MessageBubble({
       <div
         className={cn(
           'max-w-[70%] px-4 py-2.5 shadow-sm',
-          isOutgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming'
+          isOutgoing ? 'chat-bubble-outgoing' : 'chat-bubble-incoming'
         )}
       >
         <p className="text-sm whitespace-pre-wrap break-words">{content}</p>
@@ -63,20 +63,20 @@ export const MessageBubble = memo(function MessageBubble({
           <span
             className={cn(
               'text-[10px]',
-              isOutgoing ? 'text-primary-foreground/70' : 'text-muted-foreground'
+              isOutgoing ? 'opacity-80' : 'text-muted-foreground'
             )}
           >
             {format(timestamp, 'h:mm a')}
           </span>
-          {isOutgoing && (
+          {isOutgoing && StatusIcon && (
             <StatusIcon
               className={cn(
                 'h-3 w-3',
                 status === 'read'
-                  ? 'text-info'
+                  ? 'text-blue-400'
                   : status === 'failed'
-                  ? 'text-destructive'
-                  : 'text-primary-foreground/70'
+                  ? 'text-red-400'
+                  : 'opacity-80'
               )}
             />
           )}
