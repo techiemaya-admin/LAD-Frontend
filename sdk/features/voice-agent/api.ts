@@ -1,12 +1,10 @@
-import { apiGet, apiPatch, apiPost, apiPut } from "../../shared/apiClient";
+import { apiGet, apiPost, apiPut } from "../../shared/apiClient";
 import type {
   MakeCallRequest,
   MakeCallResponse,
   ResolvePhonesResponse,
   TriggerBatchCallRequest,
   TriggerBatchCallResponse,
-  UpdateCallLeadTagsRequest,
-  UpdateCallLeadTagsResponse,
   UpdateSummaryRequest,
   UpdateSummaryResponse,
   UserAvailableAgent,
@@ -71,16 +69,6 @@ export async function updateSummary(
   const response = await apiPut<UpdateSummaryResponse>(
     "/api/voice-agent/update-summary",
     payload,
-  );
-  return response.data;
-}
-
-export async function updateCallLeadTags(
-  payload: UpdateCallLeadTagsRequest,
-): Promise<UpdateCallLeadTagsResponse> {
-  const response = await apiPatch<UpdateCallLeadTagsResponse>(
-    `/api/voice-agent/calls/${payload.callId}/lead-tags`,
-    { tags: payload.tags },
   );
   return response.data;
 }

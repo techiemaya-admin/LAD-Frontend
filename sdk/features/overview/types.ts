@@ -48,57 +48,6 @@ export interface User {
   updated_at: string;
 }
 
-// Call Log Types
-export interface CallLog {
-  id: string;
-  from?: string;
-  to?: string;
-  startedAt?: string;
-  endedAt?: string;
-  status: string;
-  recordingUrl?: string;
-  timeline?: Array<{ t: string; title: string; desc?: string }>;
-  agentName?: string;
-  leadName?: string;
-  duration_seconds?: number;
-  call_date?: string; // New from API
-}
-
-export interface CallSummary {
-  call_date: string;
-  total_calls: number;
-}
-
-// Wallet/Credits Types
-export interface WalletStats {
-  balance: number;
-  totalMinutes: number;
-  remainingMinutes: number;
-  usageThisMonth: number;
-}
-
-// Phone Number Types
-export interface PhoneNumber {
-  id: string;
-  e164: string;
-  label?: string;
-  provider?: string;
-  sid?: string;
-  account?: string;
-}
-
-// Voice Agent Types
-export interface VoiceAgent {
-  id: string;
-  name: string;
-  language?: string;
-  accent?: string;
-  gender?: string;
-  provider?: string;
-  description?: string;
-  voice_sample_url?: string | null;
-}
-
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;
@@ -108,22 +57,9 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface LeadBookingListResponse extends ApiResponse<LeadBooking[]> { }
-export interface LeadBookingResponse extends ApiResponse<LeadBooking> { }
-export interface UsersListResponse extends ApiResponse<User[]> { }
-export interface CallLogListResponse extends ApiResponse<{
-  summary: CallSummary[];
-  logs: CallLog[];
-  countToday?: number;
-  countYesterday?: number;
-  countThisMonth?: number;
-  countLastMonth?: number;
-  answerRate?: number;
-  answerRateLastWeek?: number;
-}> { }
-export interface WalletStatsResponse extends ApiResponse<WalletStats> { }
-export interface PhoneNumberListResponse extends ApiResponse<PhoneNumber[]> { }
-export interface VoiceAgentListResponse extends ApiResponse<VoiceAgent[]> { }
+export interface LeadBookingListResponse extends ApiResponse<LeadBooking[]> {}
+export interface LeadBookingResponse extends ApiResponse<LeadBooking> {}
+export interface UsersListResponse extends ApiResponse<User[]> {}
 
 // Query Parameters
 export interface GetLeadBookingsParams {
@@ -136,12 +72,6 @@ export interface GetLeadBookingsParams {
   endDate?: string;
   callResult?: string;
   limit?: number;
-}
-
-export interface GetDashboardCallsParams {
-  startDate?: string;
-  endDate?: string;
-  user_id?: string;
 }
 
 export interface CreateLeadBookingParams {

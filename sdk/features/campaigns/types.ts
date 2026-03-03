@@ -37,6 +37,15 @@ export interface CampaignStats {
   instagram_connection_rate?: number;
   whatsapp_connection_rate?: number;
   voice_agent_connection_rate?: number;
+  linkedin_rate_limits?: {
+    daily: { max: number; total: number; account_count: number };
+    weekly: { max: number; total: number };
+    usage: {
+      sent_last_7_days: number;
+      daily_breakdown: Array<{ date: string; sent: number }>;
+      weekly_percentage: number | string;
+    };
+  };
 }
 export interface CampaignFilters {
   search?: string;
@@ -112,6 +121,52 @@ export interface CampaignAnalytics {
     replied: number;
     errors: number;
   }>;
+  linkedin_rate_limits?: {
+    daily: {
+      max: number;
+      total: number;
+      account_count: number;
+    };
+    weekly: {
+      max: number;
+      total: number;
+    };
+    usage: {
+      sent_last_7_days: number;
+      daily_breakdown: Array<{
+        date: string;
+        sent: number;
+      }>;
+      weekly_percentage: number | string;
+    };
+  };
+  platform_metrics?: {
+    linkedin?: {
+      sent: number;
+      connected: number;
+      replied: number;
+      actions: number;
+    };
+    email?: {
+      sent: number;
+      delivered: number;
+      opened: number;
+      clicked: number;
+      replied: number;
+      actions: number;
+    };
+    whatsapp?: {
+      sent: number;
+      delivered: number;
+      replied: number;
+      actions: number;
+    };
+    voice?: {
+      sent: number;
+      connected: number;
+      actions: number;
+    };
+  };
 }
 export interface CampaignLead {
   id: string;

@@ -1,20 +1,8 @@
-// Voice Agent Feature SDK
-export { default as voiceAgentService } from './services/voiceAgentService';
-export type {
-  VoiceAgent,
-  CallLog,
-  PhoneNumber,
-  BatchCallLogEntry,
-} from './types';
-
-// React Query Hooks
-export {
-  useVoiceAgents,
-  useCallLogs,
-  useCallLog,
-  useBatchCallLogs,
-  useTenantPhoneNumbers,
-  useUserAvailableNumbers,
-  useMakeCall,
-  voiceAgentKeys,
-} from './hooks';
+export * from "./hooks/useUserAvailableNumbers";
+export * from "./hooks/useAvailableAgents";
+export * from "./hooks/useResolvePhones";
+export * from "./hooks/useMakeCall";
+export * from "./hooks/useTriggerBatchCall";
+export * from "./hooks/useUpdateSummary";
+export * from "./api";
+export * from "./types";
