@@ -2,11 +2,11 @@
  * Community ROI Feature - HTTP API Client
  *
  * All HTTP API calls for the community ROI feature.
- * Uses the shared apiClient for consistent request handling.
+ * Uses the dedicated communityROIApiClient pointing to NEXT_PUBLIC_COMMUNITY_API_URL.
  */
 
 import { queryOptions } from '@tanstack/react-query';
-import { apiClient } from '../../shared/apiClient';
+import { communityROIApiClient } from './communityROIApiClient';
 import {
   UUID,
   Member,
@@ -89,7 +89,7 @@ export const memberApi = {
     if (params?.sortBy) queryParams.sortBy = params.sortBy;
     if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
     if (params?.tenantId) queryParams.tenantId = params.tenantId;
-    const response = await apiClient.get<{ data: PaginatedResponse<Member> }>(`${API_PREFIX}/members`, { params: queryParams });
+    const response = await communityROIApiClient.get<{ data: PaginatedResponse<Member> }>(`${API_PREFIX}/members`, { params: queryParams });
     return response.data.data;
   },
 
@@ -97,7 +97,7 @@ export const memberApi = {
    * Get member by ID
    */
   async getMember(memberId: UUID): Promise<Member> {
-    const response = await apiClient.get<{ data: Member }>(`${API_PREFIX}/members/${memberId}`);
+    const response = await communityROIApiClient.get<{ data: Member }>(`${API_PREFIX}/members/${memberId}`);
     return response.data.data;
   },
 
@@ -105,7 +105,7 @@ export const memberApi = {
    * Create new member
    */
   async createMember(data: CreateMemberRequest): Promise<Member> {
-    const response = await apiClient.post<{ data: Member }>(`${API_PREFIX}/members`, data);
+    const response = await communityROIApiClient.post<{ data: Member }>(`${API_PREFIX}/members`, data);
     return response.data.data;
   },
 
@@ -113,7 +113,7 @@ export const memberApi = {
    * Update member
    */
   async updateMember(memberId: UUID, data: UpdateMemberRequest): Promise<Member> {
-    const response = await apiClient.put<{ data: Member }>(`${API_PREFIX}/members/${memberId}`, data);
+    const response = await communityROIApiClient.put<{ data: Member }>(`${API_PREFIX}/members/${memberId}`, data);
     return response.data.data;
   },
 
@@ -121,7 +121,7 @@ export const memberApi = {
    * Delete member (soft delete)
    */
   async deleteMember(memberId: UUID): Promise<void> {
-    await apiClient.delete(`${API_PREFIX}/members/${memberId}`);
+    await communityROIApiClient.delete(`${API_PREFIX}/members/${memberId}`);
   },
 };
 
@@ -167,7 +167,7 @@ export const interactionApi = {
     if (params?.page) queryParams.page = params.page.toString();
     if (params?.limit) queryParams.limit = params.limit.toString();
 
-    const response = await apiClient.get<{ data: PaginatedResponse<Interaction> }>(`${API_PREFIX}/interactions`, { params: queryParams });
+    const response = await communityROIApiClient.get<{ data: PaginatedResponse<Interaction> }>(`${API_PREFIX}/interactions`, { params: queryParams });
     return response.data.data;
   },
 
@@ -175,7 +175,7 @@ export const interactionApi = {
    * Log new interaction/meeting
    */
   async logInteraction(data: LogInteractionRequest): Promise<Interaction> {
-    const response = await apiClient.post<{ data: Interaction }>(`${API_PREFIX}/interactions`, data);
+    const response = await communityROIApiClient.post<{ data: Interaction }>(`${API_PREFIX}/interactions`, data);
     return response.data.data;
   },
 };
@@ -211,7 +211,7 @@ export const referralApi = {
     if (params?.start_month) queryParams.start_month = params.start_month;
     if (params?.end_month) queryParams.end_month = params.end_month;
 
-    const response = await apiClient.get<{ data: PaginatedResponse<Referral> }>(`${API_PREFIX}/referrals`, { params: queryParams });
+    const response = await communityROIApiClient.get<{ data: PaginatedResponse<Referral> }>(`${API_PREFIX}/referrals`, { params: queryParams });
     return response.data.data;
   },
 
@@ -219,7 +219,7 @@ export const referralApi = {
    * Get referrals by member
    */
   async getMemberReferrals(memberId: UUID): Promise<Referral[]> {
-    const response = await apiClient.get<{ data: Referral[] }>(`${API_PREFIX}/referrals/member/${memberId}`);
+     const response = await communityROIApiClient.get<{ data: Referral[] }>(`${API_PREFIX}/referrals/member/${memberId}`);
     return response.data.data;
   },
 
@@ -227,7 +227,7 @@ export const referralApi = {
    * Get member activity history
    */
   async getMemberActivityHistory(memberId: UUID): Promise<any[]> {
-    const response = await apiClient.get<{ data: any[] }>(`${API_PREFIX}/members/${memberId}/activity-history`);
+    const response = await communityROIApiClient.get<{ data: any[] }>(`${API_PREFIX}/members/${memberId}/activity-history`);
     return response.data.data;
   },
 
@@ -235,7 +235,7 @@ export const referralApi = {
    * Get recent activity feed
    */
   async getRecentActivity(memberId: UUID, limit: number = 10): Promise<any[]> {
-    const response = await apiClient.get<{ data: any[] }>(`${API_PREFIX}/members/${memberId}/recent-activity`, {
+    const response = await communityROIApiClient.get<{ data: any[] }>(`${API_PREFIX}/members/${memberId}/recent-activity`, {
       params: { limit }
     });
     return response.data.data;
@@ -245,7 +245,7 @@ export const referralApi = {
    * Log new referral
    */
   async logReferral(data: LogReferralRequest): Promise<Referral> {
-    const response = await apiClient.post<{ data: Referral }>(`${API_PREFIX}/referrals`, data);
+    const response = await communityROIApiClient.post<{ data: Referral }>(`${API_PREFIX}/referrals`, data);
     return response.data.data;
   },
 
@@ -253,7 +253,7 @@ export const referralApi = {
    * Update referral (e.g., mark as closed)
    */
   async updateReferral(referralId: UUID, data: Partial<LogReferralRequest>): Promise<Referral> {
-    const response = await apiClient.put<{ data: Referral }>(`${API_PREFIX}/referrals/${referralId}`, data);
+    const response = await communityROIApiClient.put<{ data: Referral }>(`${API_PREFIX}/referrals/${referralId}`, data);
     return response.data.data;
   },
 };
@@ -315,7 +315,7 @@ export const relationshipApi = {
     memberId1: UUID,
     memberId2: UUID
   ): Promise<RelationshipScoreWithScores> {
-    const response = await apiClient.get<{ data: RelationshipScoreWithScores }>(
+    const response = await communityROIApiClient.get<{ data: RelationshipScoreWithScores }>(
       `${API_PREFIX}/relationships/${memberId1}/${memberId2}`
     );
     return response.data.data;
@@ -325,7 +325,7 @@ export const relationshipApi = {
    * Get all relationships for a member
    */
   async getMemberRelationships(memberId: UUID): Promise<RelationshipScoreWithScores[]> {
-    const response = await apiClient.get<{ data: RelationshipScoreWithScores[] }>(`${API_PREFIX}/relationships/member/${memberId}`);
+    const response = await communityROIApiClient.get<{ data: RelationshipScoreWithScores[] }>(`${API_PREFIX}/relationships/member/${memberId}`);
     return response.data.data;
   },
 
@@ -333,7 +333,7 @@ export const relationshipApi = {
    * Get top relationships in network
    */
   async getTopRelationships(limit: number = 10): Promise<RelationshipScoreWithScores[]> {
-    const response = await apiClient.get<{ data: RelationshipScoreWithScores[] }>(`${API_PREFIX}/relationships/top`, { params: { limit: String(limit) } });
+    const response = await communityROIApiClient.get<{ data: RelationshipScoreWithScores[] }>(`${API_PREFIX}/relationships/top`, { params: { limit: String(limit) } });
     return response.data.data;
   },
 };
@@ -380,7 +380,7 @@ export const contributionApi = {
    * Get member contribution score
    */
   async getMemberContribution(memberId: UUID): Promise<ContributionScoreWithScores> {
-    const response = await apiClient.get<{ data: ContributionScoreWithScores }>(`${API_PREFIX}/contributions/${memberId}`);
+    const response = await communityROIApiClient.get<{ data: ContributionScoreWithScores }>(`${API_PREFIX}/contributions/${memberId}`);
     return response.data.data;
   },
 
@@ -392,7 +392,7 @@ export const contributionApi = {
     percentile: number;
     ranking: number;
   }> {
-    const response = await apiClient.get<{ data: { score: number; percentile: number; ranking: number } }>(`${API_PREFIX}/contributions/${memberId}/impact`);
+    const response = await communityROIApiClient.get<{ data: { score: number; percentile: number; ranking: number } }>(`${API_PREFIX}/contributions/${memberId}/impact`);
     return response.data.data;
   },
 
@@ -400,7 +400,7 @@ export const contributionApi = {
    * Get top contributors in network
    */
   async getTopContributors(limit: number = 10): Promise<ContributionScoreWithScores[]> {
-    const response = await apiClient.get<{ data: ContributionScoreWithScores[] }>(`${API_PREFIX}/contributions/top`, { params: { limit: String(limit) } });
+    const response = await communityROIApiClient.get<{ data: ContributionScoreWithScores[] }>(`${API_PREFIX}/contributions/top`, { params: { limit: String(limit) } });
     return response.data.data;
   },
 
@@ -408,7 +408,7 @@ export const contributionApi = {
    * Get network statistics and KPIs from analytics endpoint
    */
   async getNetworkStats(): Promise<DashboardKPIs['data']> {
-    const response = await apiClient.get<{ data: DashboardKPIs['data'] }>(`${API_PREFIX}/analytics/dashboard`);
+    const response = await communityROIApiClient.get<{ data: DashboardKPIs['data'] }>(`${API_PREFIX}/analytics/dashboard`);
     
     console.log('%c[contributionApi] getNetworkStats - Raw Response:', 'color: #FF6B6B; font-weight: bold;', {
       fullResponse: response,
@@ -432,7 +432,7 @@ export const contributionApi = {
    * Get dashboard leaderboards
    */
   async getDashboardLeaderboards(): Promise<LeaderboardStats> {
-    const response = await apiClient.get<{ data: LeaderboardStats }>(`${API_PREFIX}/contributions/leaderboards`);
+    const response = await communityROIApiClient.get<{ data: LeaderboardStats }>(`${API_PREFIX}/contributions/leaderboards`);
     return response.data.data;
   },
 
@@ -460,7 +460,7 @@ export const contributionApi = {
     // DO NOT set Content-Type header manually - let the HTTP client set it with the boundary
     // Setting it without boundary causes "Multipart: Boundary not found" error
     try {
-      const response = await apiClient.post<{ success: boolean; message: string }>(
+      const response = await communityROIApiClient.post<{ success: boolean; message: string }>(
         `${API_PREFIX}/import/excel`, 
         formData
       );
@@ -529,7 +529,7 @@ export const relationshipScoresApi = {
    * Update relationship scores based on meeting and referral data
    */
   async updateRelationshipScores(): Promise<UpdateRelationshipScoresResponse> {
-    const response = await apiClient.post<UpdateRelationshipScoresResponse>(
+    const response = await communityROIApiClient.post<UpdateRelationshipScoresResponse>(
       `${API_PREFIX}/relationship-scores/update`
     );
     return response.data;
@@ -539,7 +539,7 @@ export const relationshipScoresApi = {
    * Get relationship heatmap data with color codes
    */
   async getRelationshipHeatmap(): Promise<RelationshipHeatmapResponse> {
-    const response = await apiClient.get<RelationshipHeatmapResponse>(
+    const response = await communityROIApiClient.get<RelationshipHeatmapResponse>(
       `${API_PREFIX}/relationship-scores/heatmap`
     );
     return response.data;
@@ -566,7 +566,7 @@ export const webhookApi = {
    * This is not typically called from client
    */
   async handleWhatsAppWebhook(payload: any): Promise<ApiResponse<any>> {
-    const response = await apiClient.post<ApiResponse<any>>(`${API_PREFIX}/webhooks/whatsapp`, payload);
+    const response = await communityROIApiClient.post<ApiResponse<any>>(`${API_PREFIX}/webhooks/whatsapp`, payload);
     return response.data;
   },
 };
