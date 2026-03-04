@@ -30,9 +30,8 @@ async function handleRequest(
   method: string
 ) {
   try {
-    // Handle async params in Next.js 15+
-    const resolvedParams = await params;
-    const slug = resolvedParams.slug || [];
+    // params is already resolved by the time it reaches here
+    const slug = params.slug || [];
     const pathSegments = slug.join('/');
     const backendUrl = getCommunityROIBackend();
     const fullUrl = `${backendUrl}/api/community-roi/${pathSegments}`;
@@ -73,30 +72,32 @@ async function handleRequest(
     const requestOptions: RequestInit = {
       method,
       headers,
-      credentials: 'include',
     };
 
-    // Add body for methods that support it
+    // Handle body for POST, PUT, PATCH (must be done before any other body operations)
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       const contentType = req.headers.get('content-type');
 
-      if (contentType?.includes('multipart/form-data')) {
-        // Handle FormData for file uploads
-        const formData = await req.formData();
-        requestOptions.body = formData;
-        // Remove Content-Type header to let fetch set the boundary
-        delete (requestOptions.headers as any)['Content-Type'];
-      } else {
-        // For JSON and other content types, read the body once
-        try {
-          const body = await req.text();
-          requestOptions.body = body;
-          if (!contentType?.includes('application/json') && body) {
-            headers['Content-Type'] = contentType || 'application/json';
+      try {
+        if (contentType?.includes('multipart/form-data')) {
+          // Handle FormData for file uploads
+          const formData = await req.formData();
+          requestOptions.body = formData;
+          // Remove Content-Type header to let fetch set the boundary
+          delete (headers as any)['Content-Type'];
+        } else {
+          // Read body once and forward as-is
+          const body = await req.arrayBuffer();
+          if (body.byteLength > 0) {
+            requestOptions.body = body;
           }
-        } catch (error) {
-          logger.warn('[community-roi-proxy] Failed to read request body', { error });
         }
+      } catch (error) {
+        logger.warn('[community-roi-proxy] Failed to read request body', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          method,
+        });
+        // Continue without body if read fails
       }
     }
 
@@ -145,22 +146,27 @@ async function handleRequest(
   }
 }
 
-export async function GET(req: NextRequest, params: RouteParams) {
-  return handleRequest(req, params, 'GET');
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  const resolvedParams = await params;
+  return handleRequest(req, { params: resolvedParams }, 'GET');
 }
 
-export async function POST(req: NextRequest, params: RouteParams) {
-  return handleRequest(req, params, 'POST');
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  const resolvedParams = await params;
+  return handleRequest(req, { params: resolvedParams }, 'POST');
 }
 
-export async function PUT(req: NextRequest, params: RouteParams) {
-  return handleRequest(req, params, 'PUT');
+export async function PUT(req: NextRequest, { params }: RouteParams) {
+  const resolvedParams = await params;
+  return handleRequest(req, { params: resolvedParams }, 'PUT');
 }
 
-export async function PATCH(req: NextRequest, params: RouteParams) {
-  return handleRequest(req, params, 'PATCH');
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
+  const resolvedParams = await params;
+  return handleRequest(req, { params: resolvedParams }, 'PATCH');
 }
 
-export async function DELETE(req: NextRequest, params: RouteParams) {
-  return handleRequest(req, params, 'DELETE');
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  const resolvedParams = await params;
+  return handleRequest(req, { params: resolvedParams }, 'DELETE');
 }
