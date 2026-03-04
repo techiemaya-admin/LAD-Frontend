@@ -20,20 +20,27 @@ class CommunityROIApiClient {
   private baseURL: string;
 
   constructor() {
-    // Use NEXT_PUBLIC_COMMUNITY_API_URL (preferred) or fall back to NEXT_PUBLIC_BACKEND_URL
-    const communityUrl = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-    
-    if (!communityUrl && process.env.NODE_ENV === 'production') {
-      throw new Error('NEXT_PUBLIC_COMMUNITY_API_URL or NEXT_PUBLIC_BACKEND_URL environment variable is required');
-    }
-    
-    // If URL is provided, append /api; otherwise use production backend as default
-    if (communityUrl) {
-      // Check if URL already contains /api suffix
-      this.baseURL = communityUrl.endsWith('/api') ? communityUrl : `${communityUrl}/api`;
+    // In development, use localhost proxy
+    // In production, use NEXT_PUBLIC_COMMUNITY_API_URL environment variable
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      // Development: use current origin with proxy route path
+      this.baseURL = `${window.location.origin}/api/community-roi`;
     } else {
-      // Default to production backend
-      this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api`;
+      // Production: use deployed backend or environment variable
+      const communityUrl = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      
+      if (!communityUrl && process.env.NODE_ENV === 'production') {
+        throw new Error('NEXT_PUBLIC_COMMUNITY_API_URL or NEXT_PUBLIC_BACKEND_URL environment variable is required');
+      }
+      
+      // If URL is provided, append /api; otherwise use production backend as default
+      if (communityUrl) {
+        // Check if URL already contains /api suffix
+        this.baseURL = communityUrl.endsWith('/api') ? communityUrl : `${communityUrl}/api`;
+      } else {
+        // Default to production backend
+        this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api`;
+      }
     }
   }
 
