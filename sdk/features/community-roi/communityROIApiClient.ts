@@ -59,10 +59,12 @@ class CommunityROIApiClient {
       ...(options?.headers || {}),
     };
 
-    // Add auth token if available
-    const token = safeStorage.getItem('auth_token');
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+    // Add auth token from SafeStorage - match shared apiClient key name
+    if (typeof window !== 'undefined') {
+      const token = safeStorage.getItem('token');
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     try {
@@ -112,9 +114,9 @@ class CommunityROIApiClient {
 
   setAuthToken(token: string) {
     if (token) {
-      safeStorage.setItem('auth_token', token);
+      safeStorage.setItem('token', token);
     } else {
-      safeStorage.removeItem('auth_token');
+      safeStorage.removeItem('token');
     }
   }
 
