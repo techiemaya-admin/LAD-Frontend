@@ -109,25 +109,26 @@ async function handleRequest(
     // Make the request to backend
     const response = await fetch(targetUrl, requestInit);
 
+    // Read response body once to avoid reuse issues
+    const data = await response.text();
+
     // Log response status
     logger.debug('[community-roi-proxy] Backend response', {
       status: response.status,
       statusText: response.statusText,
+      hasData: !!data,
     });
 
     // Handle error responses
     if (!response.ok) {
-      const errorData = await response.text().catch(() => '');
       logger.warn('[community-roi-proxy] Backend error response', {
         status: response.status,
         statusText: response.statusText,
-        errorData: errorData.slice(0, 200), // Log first 200 chars
+        errorData: data.slice(0, 200), // Log first 200 chars
       });
     }
 
     // Return the response
-    const data = await response.text();
-
     return new NextResponse(data, {
       status: response.status,
       statusText: response.statusText,
