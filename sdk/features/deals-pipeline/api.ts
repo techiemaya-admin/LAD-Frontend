@@ -268,3 +268,71 @@ export const dealsPipelineAPI = new DealsPipelineAPI();
 
 // Export for custom instances
 export default DealsPipelineAPI;
+
+// Backwards-compatible functional API expected by frontend hooks
+export const getLeads = (filters?: { stage?: string; status?: string; search?: string }) =>
+  dealsPipelineAPI.listLeads(filters);
+
+export const getLeadById = (id: string | number) => dealsPipelineAPI.getLead(String(id));
+export const getLeadsWithConversations = (filters?: any) => dealsPipelineAPI.listLeads(filters);
+export const getLeadsByStage = (stageId: string | number) => dealsPipelineAPI.listLeads({ stage: String(stageId) });
+
+export const getPipelineData = (page?: number, limit?: number) => dealsPipelineAPI.getPipelineBoard();
+export const getPipelineStats = (filters?: any) => dealsPipelineAPI.getLeadStats();
+
+export const createLead = (params: any) => dealsPipelineAPI.createLead(params);
+export const updateLead = (idOrParams: any, maybePayload?: any) => {
+  if (typeof idOrParams === 'string' || typeof idOrParams === 'number') return dealsPipelineAPI.updateLead(String(idOrParams), maybePayload);
+  return dealsPipelineAPI.updateLead(idOrParams.id, idOrParams);
+};
+export const deleteLead = (id: string | number) => dealsPipelineAPI.deleteLead(String(id));
+
+export const moveLeadToStage = (leadId: string | number, stageKey: string) => dealsPipelineAPI.moveLeadToStage(String(leadId), stageKey);
+export const updateLeadStatus = (leadId: string | number, status: string) => dealsPipelineAPI.updateLeadStatus(String(leadId), status);
+export const assignLeadsToUser = async (params: any) => {
+  // Not implemented server-side in SDK client; keep a stub for compile-time compatibility
+  return Promise.resolve(undefined as any);
+};
+
+// Notes / Comments / Activities
+export const getLeadActivities = (leadId: string | number) => dealsPipelineAPI.getLeadNotes(String(leadId)) as any;
+export const getLeadComments = (leadId: string | number) => dealsPipelineAPI.getLeadNotes(String(leadId));
+export const getLeadNotes = (leadId: string | number) => dealsPipelineAPI.getLeadNotes(String(leadId));
+export const addLeadComment = (leadId: string | number, content: string, createdBy?: string) =>
+  dealsPipelineAPI.createLeadNote(String(leadId), content, createdBy || '');
+export const addLeadNote = (leadId: string | number, content: string, createdBy?: string) =>
+  dealsPipelineAPI.createLeadNote(String(leadId), content, createdBy || '');
+export const updateLeadComment = async (leadId: string | number, commentId: string, content: string) => {
+  // Stub - not available in current API client
+  return Promise.resolve(undefined as any);
+};
+export const updateLeadNote = async (leadId: string | number, noteId: string, content: string) => {
+  // Stub - not available in current API client
+  return Promise.resolve(undefined as any);
+};
+export const deleteLeadComment = (leadId: string | number, noteId: string) => dealsPipelineAPI.deleteLeadNote(String(leadId), noteId);
+export const deleteLeadNote = (leadId: string | number, noteId: string) => dealsPipelineAPI.deleteLeadNote(String(leadId), noteId);
+
+// Attachments (stubs)
+export const getLeadAttachments = async (leadId: string | number) => Promise.resolve([] as any);
+export const uploadLeadAttachment = async (_leadId: string | number, _file: any) => Promise.resolve(undefined as any);
+export const deleteLeadAttachment = async (_leadId: string | number, _attachmentId: string) => Promise.resolve(undefined as any);
+
+// Reference data wrappers
+export const getStatuses = () => dealsPipelineAPI.getStatuses();
+export const getSources = () => dealsPipelineAPI.getSources();
+export const getPriorities = () => dealsPipelineAPI.getPriorities();
+
+// Stages wrappers
+export const getStages = () => dealsPipelineAPI.listStages();
+export const createStage = (name: string, positionStageId?: string | null, positionType?: 'before' | 'after') => 
+  dealsPipelineAPI.createStage({ key: name, label: name, order: 0 });
+export const updateStage = (key: string, payload: any) => dealsPipelineAPI.updateStage(key, payload);
+export const deleteStage = (key: string) => dealsPipelineAPI.deleteStage(key);
+export const reorderStages = (params: any) => dealsPipelineAPI.reorderStages(params.stageOrders || params);
+
+// Tags (stubs)
+export const createTag = async (_payload: any) => Promise.resolve(undefined as any);
+export const getLeadTags = async (leadId: string | number) => Promise.resolve([] as any);
+export const addTagToLead = async (leadId: string | number, tagData: any) => Promise.resolve(undefined as any);
+export const deleteTagFromLead = async (leadId: string | number, tagId: string) => Promise.resolve(undefined as any);
