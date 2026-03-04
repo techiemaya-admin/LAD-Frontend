@@ -30,7 +30,9 @@ async function handleRequest(
   method: string
 ) {
   try {
-    const slug = params.slug || [];
+    // Handle async params in Next.js 15+
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug || [];
     const pathSegments = slug.join('/');
     const backendUrl = getCommunityROIBackend();
     const fullUrl = `${backendUrl}/api/community-roi/${pathSegments}`;
@@ -78,23 +80,23 @@ async function handleRequest(
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       const contentType = req.headers.get('content-type');
 
-      if (contentType?.includes('application/json')) {
-        try {
-          const body = await req.json();
-          requestOptions.body = JSON.stringify(body);
-        } catch (error) {
-          logger.warn('[community-roi-proxy] Failed to parse JSON body', { error });
-          requestOptions.body = await req.text();
-        }
-      } else if (contentType?.includes('multipart/form-data')) {
+      if (contentType?.includes('multipart/form-data')) {
         // Handle FormData for file uploads
         const formData = await req.formData();
         requestOptions.body = formData;
         // Remove Content-Type header to let fetch set the boundary
-        delete requestOptions.headers['Content-Type'];
+        delete (requestOptions.headers as any)['Content-Type'];
       } else {
-        // Forward raw body as-is
-        requestOptions.body = await req.text();
+        // For JSON and other content types, read the body once
+        try {
+          const body = await req.text();
+          requestOptions.body = body;
+          if (!contentType?.includes('application/json') && body) {
+            headers['Content-Type'] = contentType || 'application/json';
+          }
+        } catch (error) {
+          logger.warn('[community-roi-proxy] Failed to read request body', { error });
+        }
       }
     }
 
