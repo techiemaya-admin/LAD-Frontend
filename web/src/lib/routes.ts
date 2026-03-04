@@ -37,6 +37,8 @@ export const AUTH_ROUTES = [
   '/make-call',
   '/pipeline',
   '/onboarding',
+  '/community-roi',
+  '/follow-ups',
   '/api/protected', // Mark all protected API routes with /api/protected prefix
 ];
 

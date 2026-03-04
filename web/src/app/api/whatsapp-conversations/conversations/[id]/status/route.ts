@@ -1,9 +1,9 @@
 /**
  * Conversation Status Proxy
- * PATCH /api/whatsapp-conversations/conversations/:id/status → Python :8000 /api/conversations/:id/status
+ * PATCH /api/whatsapp-conversations/conversations/:id/status → Backend /api/conversations/:id/status
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../../utils/python-proxy';
+import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/python-proxy';
 
 export async function PATCH(
   req: NextRequest,

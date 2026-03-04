@@ -49,7 +49,7 @@ export const MessageBubble = memo(function MessageBubble({
       <div
         className={cn(
           'max-w-[70%] px-4 py-2.5 shadow-sm',
-          isOutgoing ? 'chat-bubble-outgoing' : 'chat-bubble-incoming'
+          isOutgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming'
         )}
       >
         <p className="text-sm whitespace-pre-wrap break-words">{content}</p>
