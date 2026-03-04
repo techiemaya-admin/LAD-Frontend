@@ -59,7 +59,7 @@ async function handleRequest(
     }
 
     // Forward other headers (exclude host-specific ones)
-    const forwardHeaders = ['accept', 'accept-encoding', 'user-agent'];
+    const forwardHeaders = ['accept', 'accept-encoding', 'user-agent', 'x-tenant-id', 'x-workspace-id'];
     forwardHeaders.forEach((header) => {
       const value = req.headers.get(header);
       if (value) {
