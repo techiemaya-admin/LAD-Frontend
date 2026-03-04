@@ -53,7 +53,8 @@ function mapChannelFromApi(channel?: string): Channel {
 
 function mapMessageFromApi(raw: any): Message {
   const role = raw.role || 'user';
-  const isOutgoing = role === 'assistant' || role === 'human_agent';
+  // Backend returns "AI" for agent messages, "user" for lead, "human_agent" for human takeover
+  const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
 
   return {
     id: raw.id,
