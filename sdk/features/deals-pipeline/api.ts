@@ -23,8 +23,28 @@ export class DealsPipelineAPI {
   private baseUrl: string;
   private headers: HeadersInit;
 
-  constructor(baseUrl: string = 'http://localhost:3004/api/deals-pipeline', headers: HeadersInit = {}) {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string, headers: HeadersInit = {}) {
+    // Use provided baseUrl, or get from environment variables, or use production default
+    if (baseUrl) {
+      this.baseUrl = baseUrl;
+    } else {
+      // Try to get from environment variables (NEXT_PUBLIC_BACKEND_URL takes priority)
+      const envUrl = typeof window === 'undefined' 
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL
+        : (typeof window !== 'undefined' && (window as any).__ENV?.NEXT_PUBLIC_BACKEND_URL) || 
+          (typeof window !== 'undefined' && (window as any).__ENV?.NEXT_PUBLIC_API_URL);
+      
+      if (envUrl) {
+        this.baseUrl = envUrl.endsWith('/api') ? `${envUrl}/deals-pipeline` : `${envUrl}/api/deals-pipeline`;
+      } else {
+        // Default to Cloud Run backend for production
+        const isProduction = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
+        const defaultBackend = isProduction 
+          ? 'https://lad-backend-741719885039.us-central1.run.app'
+          : 'https://lad-backend-develop-741719885039.us-central1.run.app';
+        this.baseUrl = `${defaultBackend}/api/deals-pipeline`;
+      }
+    }
     this.headers = {
       'Content-Type': 'application/json',
       ...headers,
