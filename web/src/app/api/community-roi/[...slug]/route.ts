@@ -46,8 +46,20 @@ async function handleRequest(
       to: targetUrl,
     });
 
-    // Get auth token from cookies
-    const token = req.cookies.get('token')?.value || '';
+    // Get auth token from request Authorization header or cookies
+    let token = '';
+    const authHeader = req.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else {
+      token = req.cookies.get('token')?.value || '';
+    }
+
+    logger.debug('[community-roi-proxy] Auth token', {
+      hasAuthHeader: !!authHeader,
+      hasToken: !!token,
+      tokenLength: token.length,
+    });
 
     // Prepare headers
     const headers: Record<string, string> = {
@@ -57,6 +69,9 @@ async function handleRequest(
     // Add auth token if available
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      logger.debug('[community-roi-proxy] Forwarding token to backend');
+    } else {
+      logger.warn('[community-roi-proxy] No auth token found');
     }
 
     // Forward other headers (exclude host-specific ones)
@@ -68,41 +83,31 @@ async function handleRequest(
       }
     });
 
-    // Prepare request options
-    const requestOptions: RequestInit = {
+    // Build the request - use the original request to avoid body-reading issues
+    const requestInit: RequestInit = {
       method,
       headers,
     };
 
-    // Handle body for POST, PUT, PATCH (must be done before any other body operations)
+    // For methods with body, clone and forward the original request body
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
-      const contentType = req.headers.get('content-type');
-
       try {
-        if (contentType?.includes('multipart/form-data')) {
-          // Handle FormData for file uploads
-          const formData = await req.formData();
-          requestOptions.body = formData;
-          // Remove Content-Type header to let fetch set the boundary
-          delete (headers as any)['Content-Type'];
-        } else {
-          // Read body once and forward as-is
-          const body = await req.arrayBuffer();
-          if (body.byteLength > 0) {
-            requestOptions.body = body;
-          }
+        // Clone the request to avoid consuming the body
+        const clonedReq = req.clone();
+        const body = await clonedReq.text();
+        if (body) {
+          requestInit.body = body;
         }
       } catch (error) {
         logger.warn('[community-roi-proxy] Failed to read request body', {
           error: error instanceof Error ? error.message : 'Unknown error',
           method,
         });
-        // Continue without body if read fails
       }
     }
 
     // Make the request to backend
-    const response = await fetch(targetUrl, requestOptions);
+    const response = await fetch(targetUrl, requestInit);
 
     // Log response status
     logger.debug('[community-roi-proxy] Backend response', {
