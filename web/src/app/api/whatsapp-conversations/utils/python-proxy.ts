@@ -50,8 +50,19 @@ export async function proxyToPythonService(
 
   try {
     const response = await fetch(url.toString(), fetchOptions);
+    
+    // Check if response is JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      const text = await response.text();
+      console.error(`[python-proxy] Non-JSON response from ${url}:`, text.substring(0, 200));
+      return NextResponse.json(
+        { success: false, error: 'BNI service returned non-JSON response', details: text.substring(0, 200) },
+        { status: 502 },
+      );
+    }
+    
     const data = await response.json();
-
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error(`[python-proxy] Error proxying to ${url}:`, error);

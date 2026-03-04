@@ -2,11 +2,3 @@
 > @lad/frontend-features@1.0.0 build
 > tsc
 
-features/overview/api.ts(21,8): error TS2307: Cannot find module '../types' or its corresponding type declarations.
-npm error Lifecycle script `build` failed with error:
-npm error code 2
-npm error path D:\lad-develop-26-02\LAD-Frontend\sdk
-npm error workspace @lad/frontend-features@1.0.0
-npm error location D:\lad-develop-26-02\LAD-Frontend\sdk
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc

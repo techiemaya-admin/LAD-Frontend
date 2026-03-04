@@ -3,7 +3,7 @@
  * PATCH /api/whatsapp-conversations/conversations/:id/ownership → Python :8000 /ownership
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../../utils/python-proxy';
+import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/python-proxy';
 
 export async function PATCH(
   req: NextRequest,

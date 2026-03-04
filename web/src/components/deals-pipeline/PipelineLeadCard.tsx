@@ -1143,9 +1143,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       <Mail className="h-4 w-4 text-gray-500 shrink-0" />
                       <span
                         className="text-gray-900 truncate flex-1 min-w-0"
-                        title={lead.email || ''}
+                        title={typeof lead.email === 'string' ? lead.email : ''}
                       >
-                        {lead.email || '-'}
+                        {typeof lead.email === 'string' ? lead.email : '-'}
                       </span>
                       {!!lead.email && (
                         <button

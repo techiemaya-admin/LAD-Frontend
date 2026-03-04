@@ -4,21 +4,21 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { dealsPipelineAPI, DealsPipelineAPI } from './api';
+import * as dealsPipelineAPI from './api';
 import type {
   Lead,
   Stage,
-  Status,
-  Source,
-  Priority,
-  PipelineBoard,
-  LeadStats,
-  CreateLeadPayload,
-  UpdateLeadPayload,
+  StatusOption as Status,
+  SourceOption as Source,
+  PriorityOption as Priority,
+  PipelineData as PipelineBoard,
+  PipelineStats as LeadStats,
+  CreateLeadParams as CreateLeadPayload,
+  UpdateLeadParams as UpdateLeadPayload,
 } from './types';
 
 interface UseAPIOptions {
-  api?: DealsPipelineAPI;
+  api?: typeof dealsPipelineAPI;
 }
 
 interface AsyncState<T> {
@@ -41,7 +41,7 @@ export function usePipelineBoard(options: UseAPIOptions = {}) {
   const fetchBoard = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const data = await api.getPipelineBoard();
+      const data = await api.getPipelineData();
       setState({ data, loading: false, error: null });
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
@@ -69,7 +69,7 @@ export function useLeads(filters?: { stage?: string; status?: string; search?: s
   const fetchLeads = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const data = await api.listLeads(filters);
+      const data = await api.getLeads(filters);
       setState({ data, loading: false, error: null });
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
@@ -98,7 +98,7 @@ export function useLead(id: string, options: UseAPIOptions = {}) {
     if (!id) return;
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const data = await api.getLead(id);
+      const data = await api.getLeadById(id);
       setState({ data, loading: false, error: null });
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
@@ -126,7 +126,7 @@ export function useStages(options: UseAPIOptions = {}) {
   const fetchStages = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const data = await api.listStages();
+      const data = await api.getStages();
       setState({ data, loading: false, error: null });
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
@@ -262,7 +262,7 @@ export function useLeadStats(options: UseAPIOptions = {}) {
   const fetchStats = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const data = await api.getLeadStats();
+      const data = await api.getPipelineStats();
       setState({ data, loading: false, error: null });
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
