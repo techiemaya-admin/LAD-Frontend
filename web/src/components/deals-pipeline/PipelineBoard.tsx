@@ -121,7 +121,7 @@ import {
   setSources, 
   setPriorities
 } from '@/store/slices/masterDataSlice';
-import { fetchStatuses, fetchSources, fetchPriorities, updateLeadStage, addStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
+import { getStatuses, getSources, getPriorities, moveLeadToStage, createStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
 const HEADER_HEIGHT = 64; 
 // Feature flags for gradual migration
 const USE_REDUX_PIPELINE = true; // Enable Redux data fetching
@@ -691,15 +691,15 @@ const PipelineBoard: React.FC = () => {
       try {
         initialMasterDataLoadRequestedRef.current = true;
         const [statuses, sources, priorities] = await Promise.all([
-          fetchStatuses().catch((err: unknown) => { 
+          getStatuses().catch((err: unknown) => { 
             console.warn('Failed to load statuses:', err); 
             return []; 
           }),
-          fetchSources().catch((err: unknown) => { 
+          getSources().catch((err: unknown) => { 
             console.warn('Failed to load sources:', err); 
             return []; 
           }),
-          fetchPriorities().catch((err: unknown) => { 
+          getPriorities().catch((err: unknown) => { 
             console.warn('Failed to load priorities:', err); 
             return []; 
           })
@@ -790,7 +790,7 @@ const PipelineBoard: React.FC = () => {
         });
     } else {
       // Fallback: also non-blocking
-      updateLeadStage(String(activeLeadId), String(destinationStageId))
+      moveLeadToStage(String(activeLeadId), String(destinationStageId))
         .then(() => dispatch(loadPipelineDataAction()))
         .catch(() => {
           dispatch(showSnackbar({ message: 'Failed to move lead', severity: 'error' }));

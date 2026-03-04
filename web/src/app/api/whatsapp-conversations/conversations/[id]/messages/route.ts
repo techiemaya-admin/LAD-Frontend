@@ -1,7 +1,7 @@
 /**
  * Conversation Messages Proxy
- * GET  /api/whatsapp-conversations/conversations/:id/messages → Python :8000 /api/conversations/:id/messages
- * POST /api/whatsapp-conversations/conversations/:id/messages → Python :8000 /api/conversations/:id/messages
+ * GET  /api/whatsapp-conversations/conversations/:id/messages → Backend /api/conversations/:id/messages
+ * POST /api/whatsapp-conversations/conversations/:id/messages → Backend /api/conversations/:id/messages
  */
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/python-proxy';

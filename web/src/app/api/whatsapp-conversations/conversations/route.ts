@@ -1,6 +1,6 @@
 /**
  * Conversations List Proxy
- * GET /api/whatsapp-conversations/conversations → Python :8000 /api/conversations
+ * GET /api/whatsapp-conversations/conversations → Backend /api/conversations
  */
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../utils/python-proxy';

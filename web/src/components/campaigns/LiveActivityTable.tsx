@@ -11,9 +11,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { RefreshCw, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
+import { apiGet } from '@/lib/api';
 import { MiniStepper } from './MiniStepper';
 import { StatusStepper } from './StatusStepper';
 import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
@@ -47,6 +49,115 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentPageSize, setCurrentPageSize] = useState<number>(pageSize);
+
+  const handleExportLeads = async (filter: string) => {
+    try {
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('token') || document.cookie.split('token=')[1]?.split(';')[0] || '')
+        : '';
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app').replace(/\/+$/, '');
+
+      const res = await fetch(`${backendUrl}/api/campaigns/${campaignId}/analytics/export?filter=${filter}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Export API error:', res.status, errorText);
+        alert(`Export failed: ${res.status} ${errorText}`);
+        return;
+      }
+
+      const response = await res.json();
+
+      if (response.success && response.data) {
+        const leads = response.data;
+        if (leads.length === 0) {
+          alert('No leads found for the selected category.');
+          return;
+        }
+
+        try {
+          const ExcelJS = await import('exceljs');
+          const workbook = new ExcelJS.Workbook();
+          const worksheet = workbook.addWorksheet('Leads');
+
+          worksheet.columns = [
+            { header: 'First Name', key: 'first_name', width: 18 },
+            { header: 'Last Name', key: 'last_name', width: 18 },
+            { header: 'Company', key: 'company_name', width: 25 },
+            { header: 'Title / Headline', key: 'title', width: 25 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Phone', key: 'phone', width: 18 },
+            { header: 'LinkedIn URL', key: 'linkedin_url', width: 45 },
+            { header: 'Location', key: 'location', width: 20 },
+            { header: 'Industry', key: 'industry', width: 22 },
+            { header: 'Added At', key: 'added_at', width: 25 },
+          ];
+
+          const headerRow = worksheet.getRow(1);
+          headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1957' } };
+          headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+          headerRow.height = 24;
+
+          for (const lead of leads) {
+            const raw = lead.raw_info || {};
+            worksheet.addRow({
+              first_name: lead.first_name || '',
+              last_name: lead.last_name || '',
+              company_name: lead.company_name || '',
+              title: lead.title || '',
+              email: lead.email || '',
+              phone: lead.phone || '',
+              linkedin_url: lead.linkedin_url || '',
+              location: lead.location || raw.city || '',
+              industry: lead.industry || raw.industry || '',
+              added_at: lead.added_at || '',
+            });
+          }
+
+          worksheet.autoFilter = { from: 'A1', to: `J${leads.length + 1}` };
+
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const { saveAs } = await import('file-saver');
+          saveAs(blob, `leads_${filter}_${new Date().getTime()}.xlsx`);
+        } catch (excelError) {
+          console.warn('ExcelJS failed, falling back to CSV:', excelError);
+          const headers = ['First Name', 'Last Name', 'Company', 'Title/Headline', 'Email', 'Phone', 'LinkedIn URL', 'Location', 'Industry', 'Added At'];
+          const escape = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
+          const csvRows = [headers.join(',')];
+          for (const lead of leads) {
+            const raw = lead.raw_info || {};
+            csvRows.push([
+              escape(lead.first_name), escape(lead.last_name), escape(lead.company_name),
+              escape(lead.title), escape(lead.email), escape(lead.phone),
+              escape(lead.linkedin_url), escape(lead.location || raw.city || ''),
+              escape(lead.industry || raw.industry || ''), escape(lead.added_at),
+            ].join(','));
+          }
+          const csvContent = '\uFEFF' + csvRows.join('\r\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `leads_${filter}_${new Date().getTime()}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } else {
+        alert('Failed to export leads.');
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Error occurred while exporting: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
 
   // Reset to page 1 when filters or page size change
   useEffect(() => {
@@ -286,16 +397,32 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={refresh}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" disabled={isLoading}>
+                      <Download className={`h-4 w-4 ${isLoading ? 'opacity-50' : ''}`} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExportLeads('all')}>
+                      All Leads
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportLeads('connection_sent')}>
+                      Connection Sent
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportLeads('connection_accept')}>
+                      Connection Accepted
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportLeads('contacted')}>
+                      Contacted
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportLeads('reply_received')}>
+                      Lead Reply Back
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TooltipTrigger>
-              <TooltipContent>Refresh</TooltipContent>
+              <TooltipContent>Export Leads</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

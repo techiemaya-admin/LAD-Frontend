@@ -1,6 +1,6 @@
 /**
  * Conversation Analytics Proxy
- * GET /api/whatsapp-conversations/analytics → Python :8000 /health/detailed
+ * GET /api/whatsapp-conversations/analytics → Backend /health/detailed
  */
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../utils/python-proxy';

@@ -1,6 +1,6 @@
 /**
- * React Hooks for Deals Pipeline Feature
- * Ready-to-use hooks for React applications
+ * Barrel re-export for Deals Pipeline Hooks
+ * Delegates to ./hooks/ directory for all hook implementations
  */
 
 import { useState, useEffect, useCallback } from 'react';

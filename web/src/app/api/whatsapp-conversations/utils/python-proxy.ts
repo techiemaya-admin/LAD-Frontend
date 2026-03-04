@@ -1,11 +1,12 @@
 /**
- * Proxy utility for forwarding Next.js API requests to the BNI Python service.
+ * Proxy utility for forwarding Next.js API requests to the BNI Conversation Service (Python FastAPI).
+ * See: /comms-service-guidelines.md for full API documentation
  */
 import { NextRequest, NextResponse } from 'next/server';
 
 const DEFAULT_SERVICE_URL = process.env.NEXT_PUBLIC_BNI_SERVICE_URL
   || process.env.BNI_SERVICE_URL
-  || 'https://bni-conversation-service-741719885039.us-central1.run.app';
+  || 'https://bni-conversation-service-160078175457.us-central1.run.app';
 
 export function getWhatsAppServiceUrl(): string {
   return DEFAULT_SERVICE_URL;
@@ -50,18 +51,28 @@ export async function proxyToPythonService(
 
   try {
     const response = await fetch(url.toString(), fetchOptions);
-    
-    // Check if response is JSON before parsing
+
+    // Check if response is JSON
     const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
+    const isJson = contentType && contentType.includes('application/json');
+
+    if (!isJson) {
       const text = await response.text();
-      console.error(`[python-proxy] Non-JSON response from ${url}:`, text.substring(0, 200));
+      console.error(`[python-proxy] Non-JSON response from ${url}:`, {
+        status: response.status,
+        contentType,
+        preview: text.substring(0, 200)
+      });
       return NextResponse.json(
-        { success: false, error: 'BNI service returned non-JSON response', details: text.substring(0, 200) },
-        { status: 502 },
+        {
+          success: false,
+          error: 'BNI service returned non-JSON response',
+          details: response.status >= 500 ? 'Service temporarily unavailable' : text.substring(0, 500)
+        },
+        { status: response.status >= 500 ? 502 : response.status },
       );
     }
-    
+
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
