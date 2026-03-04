@@ -32,6 +32,11 @@ const nextConfig = {
       '@lad/frontend-features/dashboard': path.resolve(__dirname, '../sdk/features/dashboard'),
     };
 
+    // Use browser-compatible exceljs build on client side
+    if (!isServer) {
+      config.resolve.alias['exceljs'] = path.resolve(__dirname, '../node_modules/exceljs/dist/exceljs.min.js');
+    }
+
     return config;
   },
 

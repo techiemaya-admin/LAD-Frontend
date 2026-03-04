@@ -14,6 +14,7 @@ interface WidgetWrapperProps {
   className?: string;
   headerActions?: React.ReactNode;
   onSettings?: () => void;
+  icon?: React.ReactNode;
 }
 export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
   id,
@@ -22,6 +23,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
   className,
   headerActions,
   onSettings,
+  icon,
 }) => {
   const { isEditMode, removeWidget } = useDashboardStore();
   const {
@@ -65,6 +67,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
           )}
+          {icon && <div className="text-muted-foreground">{icon}</div>}
           <h3 className="font-semibold text-sm font-display">{title}</h3>
         </div>
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

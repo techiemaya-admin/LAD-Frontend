@@ -11,19 +11,26 @@ import {
   UsersListResponse,
   GetLeadBookingsParams,
   CreateLeadBookingParams,
-  UpdateLeadBookingParams
+  UpdateLeadBookingParams,
+  CallLog,
+  CallSummary,
+  CallLogListResponse,
+  WalletStatsResponse,
+  PhoneNumberListResponse,
+  VoiceAgentListResponse,
+  GetDashboardCallsParams
 } from '../types';
 
 // Support both React (REACT_APP_) and Next.js (NEXT_PUBLIC_) environment variable conventions
 const getApiBaseUrl = (): string => {
   // Next.js client-side env variables
   if (typeof window !== 'undefined') {
-    return (window as any).NEXT_PUBLIC_API_BASE_URL || 
-           (window as any).NEXT_PUBLIC_BACKEND_URL ||
-           process.env.NEXT_PUBLIC_API_BASE_URL ||
-           process.env.NEXT_PUBLIC_BACKEND_URL ||
-           process.env.REACT_APP_API_BASE_URL ||
-           '/api/dashboard';
+    return (window as any).NEXT_PUBLIC_API_BASE_URL ||
+      (window as any).NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.REACT_APP_API_BASE_URL ||
+      '/api/dashboard';
   }
   // Server-side fallback
   return process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '/api/dashboard';
@@ -44,7 +51,7 @@ class DashboardApiService {
   private getHeaders() {
     // Try to get token from this.token first, then fall back to browser storage
     let token = this.token;
-    
+
     if (!token && typeof window !== 'undefined') {
       // Try cookies first (primary storage for tokens)
       const cookies = document.cookie ? document.cookie.split(";") : [];
@@ -56,7 +63,7 @@ class DashboardApiService {
           break;
         }
       }
-      
+
       // Fallback to localStorage if cookie not found
       if (!token) {
         try {
@@ -66,7 +73,7 @@ class DashboardApiService {
         }
       }
     }
-    
+
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` })
@@ -78,7 +85,7 @@ class DashboardApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.apiBaseUrl}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -109,7 +116,7 @@ class DashboardApiService {
   // Lead Bookings APIs
   async getLeadBookings(params?: GetLeadBookingsParams): Promise<LeadBookingListResponse> {
     const queryParams = new URLSearchParams();
-    
+
     if (params) {
       if (params.user_id) queryParams.append('user_id', params.user_id);
       if (params.status) queryParams.append('status', params.status);
@@ -123,17 +130,19 @@ class DashboardApiService {
     }
 
     const query = queryParams.toString();
-    const endpoint = `/bookings${query ? `?${query}` : ''}`;
-    
-    return this.request<LeadBookingListResponse>(endpoint);
+    const endpoint = `/api/dashboard/bookings${query ? `?${query}` : ''}`;
+
+    const response = await this.request<any>(endpoint);
+    const bookings = response.data || response.bookings || [];
+    return { success: true, data: bookings };
   }
 
   async getLeadBookingById(bookingId: string): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>(`/bookings/${bookingId}`);
+    return this.request<LeadBookingResponse>(`/api/dashboard/bookings/${bookingId}`);
   }
 
   async createLeadBooking(data: CreateLeadBookingParams): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>('/bookings', {
+    return this.request<LeadBookingResponse>('/api/dashboard/bookings', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -143,7 +152,7 @@ class DashboardApiService {
     bookingId: string,
     data: UpdateLeadBookingParams
   ): Promise<LeadBookingResponse> {
-    return this.request<LeadBookingResponse>(`/bookings/${bookingId}`, {
+    return this.request<LeadBookingResponse>(`/api/dashboard/bookings/${bookingId}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
@@ -151,7 +160,97 @@ class DashboardApiService {
 
   // Users APIs
   async getTenantUsers(): Promise<UsersListResponse> {
-    return this.request<UsersListResponse>('/users');
+    const response = await this.request<any>('/api/dashboard/users');
+    const users = response.data || response.users || [];
+    return { success: true, data: users };
+  }
+
+  // Dashboard Calls API
+  async getDashboardCalls(params?: GetDashboardCallsParams): Promise<CallLogListResponse> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+      if (params.user_id) queryParams.append('user_id', params.user_id);
+    }
+    const query = queryParams.toString();
+    const endpoint = `/api/dashboard/calls${query ? `?${query}` : ''}`;
+
+    const res = await this.request<any>(endpoint);
+
+    // Handle new structure { success, data: { summary, logs } }
+    const summary: CallSummary[] = res.data?.summary || [];
+    const logsRaw: any[] = res.data?.logs || [];
+
+    const mappedLogs: CallLog[] = logsRaw.map((r: any) => {
+      const leadFullName = [r.lead_first_name, r.lead_last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      return {
+        id: String(r.id ?? r.call_id ?? r.call_log_id ?? r.uuid ?? (typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(7))),
+        from: r.agent || r.initiated_by || r.from || r.from_number || r.fromnum || r.source || r.from_number_id || '-',
+        to: r.to || r.to_number || r.tonum || '-',
+        startedAt: r.startedAt || r.started_at || r.created_at || r.createdAt || r.start_time || r.timestamp || r.call_date || '',
+        endedAt: r.endedAt ?? r.ended_at ?? r.end_time ?? undefined,
+        status: r.status || r.call_status || r.result || 'unknown',
+        recordingUrl: r.recordingUrl ?? r.call_recording_url ?? r.recording_url ?? undefined,
+        timeline: r.timeline,
+        agentName: r.agent_name ?? r.agent ?? r.voice ?? undefined,
+        leadName: leadFullName || (r.lead_name ?? r.target ?? r.client_name ?? r.customer_name ?? undefined),
+        duration_seconds: r.duration_seconds ?? r.call_duration ?? r.duration ?? undefined,
+        call_date: r.call_date
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        summary,
+        logs: mappedLogs
+      }
+    };
+  }
+
+  // Wallet/Credits API
+  async getWalletStats(): Promise<WalletStatsResponse> {
+    const walletData = await this.request<any>('/api/billing/wallet');
+
+    // Replicating DashboardGrid.tsx logic
+    const balance = walletData?.wallet?.availableBalance ||
+      walletData?.wallet?.currentBalance ||
+      walletData?.credits ||
+      walletData?.balance ||
+      0;
+
+    const usageThisMonth = walletData?.monthly_usage || 0;
+    const totalMinutes = balance * 3.7;
+    const remainingMinutes = totalMinutes * (1 - usageThisMonth / 100);
+
+    return {
+      success: true,
+      data: {
+        balance,
+        totalMinutes,
+        remainingMinutes,
+        usageThisMonth,
+      }
+    };
+  }
+
+  // Available Numbers API
+  async getAvailableNumbers(): Promise<PhoneNumberListResponse> {
+    const data = await this.request<any>('/api/dashboard/available-numbers');
+    const numbers = data?.numbers || data?.items || [];
+    return { success: true, data: numbers };
+  }
+
+  // Available Agents API
+  async getAvailableAgents(): Promise<VoiceAgentListResponse> {
+    const data = await this.request<any>('/api/dashboard/user/available-agents');
+    const agents = data?.data || data?.agents || data?.items || [];
+    return { success: true, data: agents };
   }
 }
 

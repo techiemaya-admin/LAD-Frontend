@@ -28,9 +28,14 @@ export * from "./api";
 // ============================================================================
 export { useCallLogs } from "./hooks/useCallLogs";
 export { useBatchStatus } from "./hooks/useBatchStatus";
+export { useBatchView } from "./hooks/useBatchView";
+export { useBatchCallLogsByBatchId } from "./hooks/useBatchCallLogsByBatchId";
 export { useEndCall, useRetryFailedCalls } from "./hooks/useCallLogMutations";
 export { useRecordingSignedUrl } from "./hooks/useRecordingSignedUrl";
 export { useCallLogsStats } from "./hooks/useCallLogsStats";
+export { useBatchStats } from "./hooks/useBatchStats";
+export { useCallLogsStream } from "./hooks/useCallLogsStream";
+export { useCallLead } from "./hooks/useCallLead";
 
 // ============================================================================
 // TYPES

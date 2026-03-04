@@ -17,6 +17,7 @@ import {
   Calendar
 } from 'lucide-react';
 import type { Lead } from '../types';
+import { formatDate } from '@/utils/dateTime';
 interface LeadDetailsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -49,14 +50,6 @@ const formatCurrency = (amount?: number | string | null): string => {
     minimumFractionDigits: 0
   }).format(Number(amount));
 };
-const formatDate = (dateString?: string | Date | number | null): string => {
-  if (!dateString) return '-';
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch {
-    return '-';
-  }
-};
 const getDaysRemaining = (closeDate?: string | null): number | null => {
   if (!closeDate) return null;
   const now = new Date();
@@ -70,7 +63,18 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
   if (!lead) return null;
   const leadTags = Array.isArray(lead.tags) ? lead.tags : [];
   const leadPhone = lead.phone || lead.phoneNumber;
-  const leadCompany = lead.company || (lead as { organization?: string }).organization;
+  const leadTitle =
+    (lead as { title?: string }).title ||
+    (lead as any)?.raw_data?._full_data?.title ||
+    (lead as any)?.raw_data?.title;
+  const leadCompany =
+    lead.company ||
+    (lead as { company_name?: string }).company_name ||
+    // Nested raw data from enrichment providers
+    (lead as any)?.raw_data?.company_name ||
+    (lead as any)?.raw_data?._full_data?.company_name ||
+    (lead as any)?.raw_data?._full_data?.organization?.name ||
+    (lead as { organization?: string }).organization;
   const leadDescription = lead.description || lead.bio;
   const leadStatus = lead.status || 'New';
   const leadPriority = (lead as { priority?: string }).priority || 'Medium';
@@ -92,6 +96,11 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                 {leadCompany && (
                   <p className="text-sm text-muted-foreground">
                     {leadCompany}
+                  </p>
+                )}
+                {leadTitle && (
+                  <p className="text-sm text-muted-foreground">
+                    {leadTitle}
                   </p>
                 )}
               </div>
@@ -136,6 +145,12 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                       <span>{leadCompany}</span>
                     </div>
                   )}
+                  {leadTitle && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Title:</span>
+                      <span>{leadTitle}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-4 bg-muted rounded-lg">
@@ -143,10 +158,6 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
                   Pipeline & Deal Information
                 </h3>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                    <span>{formatCurrency(leadAmount || 0)}</span>
-                  </div>
                   {leadCloseDate && (
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />

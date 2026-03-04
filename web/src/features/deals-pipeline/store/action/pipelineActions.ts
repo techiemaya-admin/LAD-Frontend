@@ -44,7 +44,7 @@ export const fetchStagesAction = (): AppThunk => async (dispatch, getState) => {
     dispatch(setStagesLoading(true));
     dispatch(clearStagesError());
     logger.debug('[Redux] Fetching stages from API...');
-    const stages = await pipelineService.fetchStages();
+    const stages = await pipelineService.getStages();
     dispatch(setStages(stages));
     logger.debug('[Redux] Stages loaded successfully:', { count: stages.length });
   } catch (error) {
@@ -59,7 +59,7 @@ export const fetchStagesAction = (): AppThunk => async (dispatch, getState) => {
 export const createStageAction = (stageData: { name?: string; label?: string; positionStageId?: string; positionType?: 'before' | 'after' }): AppThunk => async (dispatch) => {
   try {
     logger.debug('[Redux] Creating stage:', stageData);
-    const newStage = await pipelineService.addStage(
+    const newStage = await pipelineService.createStage(
       stageData.name || stageData.label || '',
       stageData.positionStageId,
       stageData.positionType
@@ -68,8 +68,8 @@ export const createStageAction = (stageData: { name?: string; label?: string; po
     // Force refresh stages by directly fetching and setting them (bypass cache)
     logger.debug('[Redux] Force refreshing all stages to get updated orders after backend shifting...');
     dispatch(setStagesLoading(true));
-    // The addStage function already invalidated the cache, so this should fetch fresh data
-    const allStages = await pipelineService.fetchStages();
+    // The createStage function already invalidated the cache, so this should fetch fresh data
+    const allStages = await pipelineService.getStages();
     logger.debug('[Redux] Fetched stages after creation:', { count: allStages.length });
     dispatch(setStages(allStages));
     dispatch(setStagesLoading(false));

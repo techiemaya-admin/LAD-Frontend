@@ -9,13 +9,15 @@ import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
-  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb, 
-  Megaphone, Gauge, Trophy, Moon, Sun, Wifi, WifiOff, Loader2
+  Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
+  Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
+  SquarePen
 } from 'lucide-react';
 import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
+import { LiveBadge } from '@/components/LiveBadge';
 
 const platformConfig = {
   linkedin: {
@@ -174,48 +176,48 @@ export default function CampaignAnalyticsPage() {
 
   // Calculate the primary sent count based on campaign type
   const analyticsAny = analytics as any;
-  const primarySentCount = hasLinkedIn 
+  const primarySentCount = hasLinkedIn
     ? (analyticsAny?.platform_metrics?.linkedin?.sent ?? 0)
-    : hasEmail 
-    ? (analyticsAny?.platform_metrics?.email?.sent ?? 0)
-    : hasWhatsApp
-    ? (analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
-    : hasVoice
-    ? (analyticsAny?.platform_metrics?.voice?.sent ?? 0)
-    : (analytics.overview.sent);
+    : hasEmail
+      ? (analyticsAny?.platform_metrics?.email?.sent ?? 0)
+      : hasWhatsApp
+        ? (analyticsAny?.platform_metrics?.whatsapp?.sent ?? 0)
+        : hasVoice
+          ? (analyticsAny?.platform_metrics?.voice?.sent ?? 0)
+          : (analytics.overview.sent);
 
   const platformAnalytics = [
-    hasLinkedIn && { 
-      platform: 'linkedin', 
-      actions: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0, 
-      replied: analyticsAny?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.linkedin?.sent ? ((analyticsAny.platform_metrics.linkedin.connected / analyticsAny.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0) 
+    hasLinkedIn && {
+      platform: 'linkedin',
+      actions: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.connection_requests_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.linkedin?.sent ?? analytics?.metrics?.linkedin_messages_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.linkedin?.connected ?? analytics?.metrics?.connection_requests_accepted ?? 0,
+      replied: analyticsAny?.platform_metrics?.linkedin?.replied ?? analytics?.metrics?.linkedin_messages_replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.linkedin?.sent ? ((analyticsAny.platform_metrics.linkedin.connected / analyticsAny.platform_metrics.linkedin.sent) * 100) : (analytics?.metrics?.connection_rate ?? 0)
     },
-    hasEmail && { 
-      platform: 'email', 
-      actions: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0, 
-      replied: analyticsAny?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.email?.sent ? ((analyticsAny.platform_metrics.email.replied / analyticsAny.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0) 
+    hasEmail && {
+      platform: 'email',
+      actions: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.email?.sent ?? analytics?.metrics?.emails_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.email?.connected ?? analytics?.overview?.connected ?? 0,
+      replied: analyticsAny?.platform_metrics?.email?.replied ?? analytics?.overview?.replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.email?.sent ? ((analyticsAny.platform_metrics.email.replied / analyticsAny.platform_metrics.email.sent) * 100) : (analytics?.metrics?.open_rate ?? 0)
     },
-    hasWhatsApp && { 
-      platform: 'whatsapp', 
-      actions: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      sent: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0, 
-      connected: analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0, 
-      replied: analyticsAny?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.whatsapp?.sent ? ((analyticsAny.platform_metrics.whatsapp.replied / analyticsAny.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0) 
+    hasWhatsApp && {
+      platform: 'whatsapp',
+      actions: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0,
+      sent: analyticsAny?.platform_metrics?.whatsapp?.sent ?? analytics?.metrics?.whatsapp_messages_sent ?? 0,
+      connected: analyticsAny?.platform_metrics?.whatsapp?.connected ?? 0,
+      replied: analyticsAny?.platform_metrics?.whatsapp?.replied ?? analytics?.metrics?.whatsapp_messages_replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.whatsapp?.sent ? ((analyticsAny.platform_metrics.whatsapp.replied / analyticsAny.platform_metrics.whatsapp.sent) * 100) : (analytics?.metrics?.reply_rate ?? 0)
     },
-    hasVoice && { 
-      platform: 'voice', 
-      actions: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      sent: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0, 
-      connected: analyticsAny?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0, 
-      replied: analyticsAny?.platform_metrics?.voice?.replied ?? 0, 
-      rate: analyticsAny?.platform_metrics?.voice?.sent ? ((analyticsAny.platform_metrics.voice.connected / analyticsAny.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100) 
+    hasVoice && {
+      platform: 'voice',
+      actions: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0,
+      sent: analyticsAny?.platform_metrics?.voice?.sent ?? analytics?.metrics?.voice_calls_made ?? 0,
+      connected: analyticsAny?.platform_metrics?.voice?.connected ?? analytics?.metrics?.voice_calls_answered ?? 0,
+      replied: analyticsAny?.platform_metrics?.voice?.replied ?? 0,
+      rate: analyticsAny?.platform_metrics?.voice?.sent ? ((analyticsAny.platform_metrics.voice.connected / analyticsAny.platform_metrics.voice.sent) * 100) : (((analytics?.metrics?.voice_calls_answered ?? 0) / (analytics?.metrics?.voice_calls_made || 1)) * 100)
     },
   ].filter(Boolean);
 
@@ -224,17 +226,17 @@ export default function CampaignAnalyticsPage() {
   const leadsOverTime = extendedAnalytics?.charts?.leads_over_time?.length
     ? extendedAnalytics.charts.leads_over_time
     : [
-        { date: 'Today', leads: analytics?.overview?.total_leads ?? 0 },
-        { date: 'Yesterday', leads: Math.max((analytics?.overview?.total_leads ?? 0) - 2, 0) },
-      ];
+      { date: 'Today', leads: analytics?.overview?.total_leads ?? 0 },
+      { date: 'Yesterday', leads: Math.max((analytics?.overview?.total_leads ?? 0) - 2, 0) },
+    ];
 
   const channelBreakdownRaw = extendedAnalytics?.charts?.channel_breakdown?.length
     ? extendedAnalytics.charts.channel_breakdown
     : [
-        { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
-        { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
-        { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
-      ];
+      { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
+      { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
+      { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
+    ];
 
   const channelBreakdownFiltered = channelBreakdownRaw.filter((c: any) => c.value > 0);
   // Ensure at least one item for the pie chart
@@ -242,23 +244,23 @@ export default function CampaignAnalyticsPage() {
 
   // Dynamic funnel stage label based on campaign type
   const funnelStageLabel = hasLinkedIn ? 'Connected' : hasEmail ? 'Delivered' : hasWhatsApp ? 'Delivered' : hasVoice ? 'Answered' : 'Messaged';
-  const funnelStageCount = hasLinkedIn 
+  const funnelStageCount = hasLinkedIn
     ? (analytics?.overview?.connected ?? 0)
     : hasEmail
-    ? (analytics?.overview?.delivered ?? 0)
-    : hasWhatsApp
-    ? (analytics?.overview?.delivered ?? 0)
-    : hasVoice
-    ? (analytics?.overview?.connected ?? 0)
-    : (analytics?.metrics?.linkedin_messages_sent ?? 0);
+      ? (analytics?.overview?.delivered ?? 0)
+      : hasWhatsApp
+        ? (analytics?.overview?.delivered ?? 0)
+        : hasVoice
+          ? (analytics?.overview?.connected ?? 0)
+          : (analytics?.metrics?.linkedin_messages_sent ?? 0);
 
   const funnel = extendedAnalytics?.charts?.funnel?.length
     ? extendedAnalytics.charts.funnel
     : [
-        { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
-        { stage: funnelStageLabel, count: funnelStageCount },
-        { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
-      ];
+      { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
+      { stage: funnelStageLabel, count: funnelStageCount },
+      { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
+    ];
 
   // Theme colors
   const theme = {
@@ -278,25 +280,22 @@ export default function CampaignAnalyticsPage() {
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
         <div className="flex-1">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
           <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+
+            <RadioTower className="w-8 h-8 text-[#1E293B]" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] capitalize">
               {analytics.campaign.name}
             </h1>
           </div>
           <div className="flex items-center gap-3 ml-11 flex-wrap">
-            <Badge className="capitalize">
+            <Badge className="capitalize" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#dbfce7' : '#FEF3C7', color: analytics.campaign.status === 'running' ? 'green' : '#D97706' }}>
               <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
               {analytics.campaign.status}
             </Badge>
-            <Badge 
-              className={`font-semibold ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-            >
-              {isConnected ? <Wifi className="w-3 h-3 mr-1" /> : <WifiOff className="w-3 h-3 mr-1" />}
-              {isConnected ? 'Live' : 'Offline'}
-            </Badge>
+            <LiveBadge isConnected={isConnected} showOffline className="font-semibold" />
             <p className="text-sm text-[#64748B]">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
           </div>
         </div>
@@ -313,6 +312,7 @@ export default function CampaignAnalyticsPage() {
             onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
             className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl"
           >
+            <SquarePen />
             Edit Campaign
           </Button>
         </div>
@@ -320,14 +320,18 @@ export default function CampaignAnalyticsPage() {
 
       {/* Quick Stats Row */}
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+        {/* Total Leads */}
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=all`)}
+        >
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-indigo-500 w-8 h-8">
-                    <AvatarFallback className="bg-indigo-500">
-                      <Users className="w-6 h-6 text-white" />
+                  <Avatar className="bg-blue-100 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-blue-100">
+                      <Users className="w-6 h-6 text-blue-600" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -344,14 +348,18 @@ export default function CampaignAnalyticsPage() {
           </div>
         </div>
 
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+        {/* Sent (Dynamic) */}
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=sent`)}
+        >
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-green-500 w-8 h-8">
-                    <AvatarFallback className="bg-green-500">
-                      <Send className="w-6 h-6 text-white" />
+                  <Avatar className="bg-green-100 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-green-100">
+                      <Send className="w-6 h-6 text-green-600" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -368,14 +376,18 @@ export default function CampaignAnalyticsPage() {
           </div>
         </div>
 
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+        {/* Connected */}
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=connected`)}
+        >
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-[#0077B5] w-8 h-8">
-                    <AvatarFallback className="bg-[#0077B5]">
-                      <Linkedin className="w-6 h-6 text-white" />
+                  <Avatar className="bg-indigo-100 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-indigo-100">
+                      <Linkedin className="w-6 h-6 text-indigo-600" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -392,20 +404,24 @@ export default function CampaignAnalyticsPage() {
           </div>
         </div>
 
-        <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+        {/* Replied */}
+        <div
+          className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
+          onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=replied`)}
+        >
+          <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-amber-500 w-8 h-8">
-                    <AvatarFallback className="bg-amber-500">
-                      <Reply className="w-6 h-6 text-white" />
+                  <Avatar className="bg-amber-100 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-amber-100">
+                      <Reply className="w-6 h-6 text-amber-600" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
                   <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    Replied
+                    Lead Contact Back
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800">
                     {analytics.overview.replied}
@@ -432,9 +448,7 @@ export default function CampaignAnalyticsPage() {
             <h5 className="text-xl font-bold text-[#1E293B]">Visual Analytics</h5>
             <p className="text-sm text-[#64748B]">Charts and graphs for deeper insights</p>
           </div>
-          <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
-            Live
-          </Badge>
+          <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
         </div>
         <div style={{
           '--card-bg': isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
@@ -454,26 +468,26 @@ export default function CampaignAnalyticsPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
-                  <AvatarFallback><Lightbulb className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
+                  <AvatarFallback><Lightbulb className="w-4 h-4 " /></AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <h6 className="text-lg font-bold text-[#1E293B]">Channel Performance</h6>
                   <p className="text-xs text-[#64748B]">Active channels</p>
                 </div>
-                <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
-                  Live
-                </Badge>
+                <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
               </div>
               <div className="flex flex-col gap-4">
                 {platformAnalytics.map((item: any) => {
                   const config = platformConfig[item.platform as keyof typeof platformConfig];
                   const PlatformIcon = config.icon;
+
                   const computedRate = item.sent
                     ? ((item.connected + item.replied) / item.sent) * 100
                     : item.actions
-                    ? ((item.connected + item.replied) / item.actions) * 100
-                    : 0;
+                      ? ((item.connected + item.replied) / item.actions) * 100
+                      : 0;
                   const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
+
                   return (
                     <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] bg-white">
                       <div className="flex items-center justify-between mb-3">
@@ -489,6 +503,7 @@ export default function CampaignAnalyticsPage() {
                           </div>
                         </div>
                       </div>
+
                       <div className="grid grid-cols-4 gap-2 mb-3">
                         <div className="text-center">
                           <p className="text-lg font-bold" style={{ color: config.color }}>{item.actions}</p>
@@ -507,13 +522,17 @@ export default function CampaignAnalyticsPage() {
                           <p className="text-xs text-[#64748B]">Replied</p>
                         </div>
                       </div>
+
                       <div>
                         <div className="flex justify-between mb-1">
                           <p className="text-xs text-[#64748B]">Success Rate</p>
                           <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
                         <div className="relative h-1.5 rounded-full bg-slate-200">
-                          <div className="absolute h-1.5 rounded-full" style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}></div>
+                          <div
+                            className="absolute h-1.5 rounded-full"
+                            style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}
+                          ></div>
                         </div>
                       </div>
                     </div>
@@ -523,7 +542,7 @@ export default function CampaignAnalyticsPage() {
             </CardContent>
           </Card>
         )}
-        
+
 
         <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
@@ -535,9 +554,7 @@ export default function CampaignAnalyticsPage() {
                 <h6 className="text-lg font-bold text-[#1E293B]">Outreach Metrics</h6>
                 <p className="text-xs text-[#64748B]">Message tracking</p>
               </div>
-              <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
-                Live
-              </Badge>
+              <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
             <div className="flex flex-col gap-4">
               {[
@@ -561,7 +578,7 @@ export default function CampaignAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -572,9 +589,7 @@ export default function CampaignAnalyticsPage() {
                 <h6 className="text-lg font-bold text-[#1E293B]">Performance Rates</h6>
                 <p className="text-xs text-[#64748B]">Success percentages</p>
               </div>
-              <Badge className="font-semibold animate-pulse bg-primary text-primary-foreground text-xs">
-                Live
-              </Badge>
+              <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
             <div className="flex flex-col gap-4">
               {[

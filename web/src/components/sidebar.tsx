@@ -127,6 +127,13 @@ export function Sidebar() {
       requiredCapability: "view_conversations",
     },
     {
+      href: "/community-roi",
+      label: "Community ROI",
+      icon: ChartNoAxesCombined,
+      details: "Track and analyze community engagement and ROI metrics.",
+      requiredCapability: "view_community_roi",
+    },
+    {
       href: "/make-call",
       label: "Make a Call",
       icon: Phone,
@@ -149,6 +156,14 @@ export function Sidebar() {
         : "Manage your sales pipeline and deals.",
       requiredCapability: "view_pipeline",
     },
+    {
+      href: "/follow-ups",
+      label: "Follow-ups",
+      icon: GitFork,
+      details: "Track and manage your follow-up tasks and reminders.",
+      requiredCapability: "view_followups",
+    },
+
   ];
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated

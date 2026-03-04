@@ -10,6 +10,8 @@ import ConditionSelector from './ConditionSelector';
 import TemplateInput from './TemplateInput';
 import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import { logger } from '@/lib/logger';
+import { apiGet } from '@/lib/api';
+
 interface ChatMessageBubbleProps {
   role: 'ai' | 'user';
   content: string;
@@ -82,6 +84,10 @@ export default function ChatMessageBubble({
       new CustomEvent('aiTyping', { detail: { isTyping } })
     );
   }, [isAI, isLastMessage, isTyping]);
+
+  const [dynamicOptions, setDynamicOptions] = useState<string[] | null>(null);
+  const [hasExhaustedLimit, setHasExhaustedLimit] = useState(false);
+
   // Don't show requirements collection during ICP onboarding - it's handled by the chat flow
   const showRequirements = false; // Disabled: isAI && status === 'need_input' && missing;
   const showSearchResults = isAI && searchResults && searchResults.length > 0;
@@ -108,7 +114,55 @@ export default function ChatMessageBubble({
   // Parse options from message content (only for last AI message and NOT a template request)
   // If it's a template request, don't parse options even if they exist in the message
   const parsedOptions = isAI && isLastMessage && !isTemplateRequest ? parseMessageOptions(content) : null;
-  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping;
+  const isLeadsPerDay = parsedOptions?.leadsPerDayOptions;
+
+  useEffect(() => {
+    if (isLeadsPerDay && isLastMessage) {
+      apiGet<{ success: boolean; totalDailyLimit?: number | string; remainingDailyLimit?: number | string }>('/api/campaigns/linkedin/limits')
+        .then((res) => {
+          let limit = 25; // default
+          if (res && res.success) {
+            // Use the remaining limit since they have consumed connections already today
+            const valToUse = res.remainingDailyLimit !== undefined ? res.remainingDailyLimit : res.totalDailyLimit;
+            if (valToUse !== undefined && valToUse !== null) {
+              limit = parseInt(String(valToUse), 10);
+              if (isNaN(limit)) limit = 25;
+            }
+          }
+
+          const dynamicOpts: string[] = [];
+          if (limit <= 0) {
+            setHasExhaustedLimit(true);
+            dynamicOpts.push('0 (Limit exhausted today)');
+          } else {
+            setHasExhaustedLimit(false);
+            // Generate increments of 5 up to the limit
+            for (let i = 5; i < limit; i += 5) {
+              dynamicOpts.push(String(i));
+            }
+            // Always add the exact limit at the end
+            dynamicOpts.push(String(limit));
+          }
+          // Ensure options are unique and sorted numerically (except for text labels)
+          const uniqueSortedOpts = Array.from(new Set(dynamicOpts)).sort((a, b) => {
+            if (a.includes('Max')) return 1;
+            if (b.includes('Max')) return -1;
+            if (a.includes('0')) return -1;
+            if (b.includes('0')) return 1;
+            return parseInt(a, 10) - parseInt(b, 10);
+          });
+          setDynamicOptions(uniqueSortedOpts);
+        })
+        .catch(err => {
+          logger.error('[ChatMessageBubble] Error fetching limits:', err);
+          setDynamicOptions(['10 (Recommended)', '25', 'Max (50)']);
+        });
+    }
+  }, [isLeadsPerDay, isLastMessage]);
+
+  const showOptions = parsedOptions !== null && onOptionSubmit !== undefined && !isTyping && (!isLeadsPerDay || dynamicOptions !== null);
+  const finalOptions = (isLeadsPerDay && dynamicOptions) ? dynamicOptions : parsedOptions?.options;
+
   return (
     <div
       className={cn(
@@ -118,8 +172,8 @@ export default function ChatMessageBubble({
     >
       {isAI && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-sm">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-[#172560]/10 border border-[#172560]/20 flex items-center justify-center shadow-sm">
+            <Bot className="w-4 h-4 text-[#172560]" />
           </div>
         </div>
       )}
@@ -129,14 +183,14 @@ export default function ChatMessageBubble({
         isAI ? 'flex flex-col items-start' : 'flex flex-col items-end'
       )}>
         <div className={cn(
-          'rounded-2xl px-4 py-3 shadow-sm',
+          'px-5 py-3.5 shadow-sm',
           isAI
-            ? 'bg-white border border-gray-200'
-            : 'bg-blue-600 text-white'
+            ? 'bg-white border border-gray-100 rounded-2xl rounded-tl-[4px]'
+            : 'bg-[#172560] text-white rounded-2xl rounded-tr-[4px]'
         )}>
           <div className={cn(
-            'whitespace-pre-wrap leading-relaxed text-sm',
-            isAI ? 'text-gray-900' : 'text-white'
+            'whitespace-pre-wrap leading-relaxed text-[15px]',
+            isAI ? 'text-gray-800' : 'text-white'
           )}>
             {showOptions && parsedOptions ? parsedOptions.questionText : typedText}
           </div>
@@ -161,7 +215,7 @@ export default function ChatMessageBubble({
               />
             ) : (
               <SelectableOptions
-                options={parsedOptions.options}
+                options={finalOptions || []}
                 multiSelect={parsedOptions.multiSelect}
                 onSubmit={onOptionSubmit!}
                 variant={
@@ -175,6 +229,13 @@ export default function ChatMessageBubble({
                 platformName={parsedOptions.platformName}
                 leadsPerDayOptions={parsedOptions.leadsPerDayOptions}
               />
+            )}
+
+            {hasExhaustedLimit && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+                <p className="font-semibold mb-1 text-amber-900">⚠️ Daily Limit Reached</p>
+                <p>If you want to create a new campaign, first stop all current running campaigns and create a new one tomorrow, or add a new LinkedIn account to create a new campaign today.</p>
+              </div>
             )}
           </div>
         )}

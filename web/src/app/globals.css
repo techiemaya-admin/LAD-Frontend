@@ -147,6 +147,15 @@
     @apply bg-[hsl(var(--message-outgoing))] text-[hsl(var(--message-outgoing-foreground))] rounded-2xl rounded-br-md;
   }
 
+  /* Chat background */
+  .whatsapp-chat-bg {
+    @apply bg-white;
+  }
+
+  .dark .whatsapp-chat-bg {
+    @apply bg-gray-950;
+  }
+
   /* Event type colors for calendar */
   .event-call {
     @apply bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700;
@@ -214,6 +223,11 @@
       opacity: 0.5;
       box-shadow: 0 0 8px 2px currentColor;
     }
+  }
+
+  @keyframes status-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
 
   @keyframes fade-in-up {
