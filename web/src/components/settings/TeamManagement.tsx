@@ -1,13 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { 
-  UserPlus, 
-  Edit2, 
-  Trash2, 
+import {
+  UserPlus,
+  Edit2,
+  Trash2,
   CheckCircle,
   XCircle,
   ChevronDown,
-  Eye, EyeOff 
+  Eye, EyeOff
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../../utils/storage';
@@ -32,6 +32,7 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pipeline', label: 'View Pipeline' },
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
+  { key: 'view_lad_monitor', label: 'View LAD Monitor' },
 ];
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -172,7 +173,7 @@ export const TeamManagement: React.FC = () => {
       });
       if (response.ok) {
         // Update local state immediately for better UX
-        setUsers(users.map(u => 
+        setUsers(users.map(u =>
           u.id === userId ? { ...u, capabilities: newCapabilities } : u
         ));
       }
@@ -226,7 +227,7 @@ export const TeamManagement: React.FC = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm">{error}</p>
-          <button 
+          <button
             onClick={fetchUsers}
             className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
           >
@@ -276,9 +277,8 @@ export const TeamManagement: React.FC = () => {
                           value={user.role}
                           onChange={(e) => handleUpdateRole(user.id, e.target.value)}
                           disabled={user.role === 'admin'}
-                          className={`px-3 py-1.5 rounded-md text-sm font-medium appearance-none pr-8 ${getRoleBadgeColor(user.role)} ${
-                            user.role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
-                          }`}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium appearance-none pr-8 ${getRoleBadgeColor(user.role)} ${user.role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
+                            }`}
                         >
                           {ROLE_OPTIONS.map(role => (
                             <option key={role.value} value={role.value}>{role.label}</option>
@@ -290,9 +290,8 @@ export const TeamManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
                         {user.status === 'active' ? 'active' : 'inactive'}
                       </span>
                     </td>
@@ -305,9 +304,8 @@ export const TeamManagement: React.FC = () => {
                               <button
                                 onClick={() => user.role !== 'admin' && toggleCapability(user.id, cap.key)}
                                 disabled={user.role === 'admin'}
-                                className={`flex items-start gap-2 text-sm ${
-                                  user.role === 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:text-blue-600'
-                                }`}
+                                className={`flex items-start gap-2 text-sm ${user.role === 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:text-blue-600'
+                                  }`}
                               >
                                 <span className="mt-0.5 w-4 h-4 flex items-center justify-center">
                                   {hasCapability ? '•' : '○'}
@@ -368,31 +366,31 @@ export const TeamManagement: React.FC = () => {
                 />
               </div>
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Password
-  </label>
-  <div className="relative">
-    <input
-      type={showPassword ? 'text' : 'password'}
-      value={newUser.password}
-      onChange={(e) =>
-        setNewUser({ ...newUser, password: e.target.value })
-      }
-      placeholder="••••••••"
-      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newUser.password}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, password: e.target.value })
+                    }
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg
                  focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-    <button
-      type="button"
-      onClick={() => setShowPassword((prev) => !prev)}
-      className="absolute inset-y-0 right-3 flex items-center text-gray-500
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-500
                  hover:text-gray-700 focus:outline-none"
-      aria-label={showPassword ? 'Hide password' : 'Show password'}
-    >
-      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-    </button>
-  </div>
-</div>
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
                 <input
@@ -419,59 +417,58 @@ export const TeamManagement: React.FC = () => {
               </div>
               <div className="relative capabilities-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Page Access</label>
-               <div className="relative">
-  <button
-    type="button"
-    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
-    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
+                    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between
       bg-white transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500
       ${showCapabilitiesDropdown ? 'border-blue-500' : 'border-gray-300'}
     `}
-  >
-    <span className="text-sm text-gray-700">
-      {newUser.capabilities.length === 0
-        ? 'Select pages...'
-        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
-    </span>
-    <ChevronDown
-      className={`w-4 h-4 text-gray-500 transition-transform ${
-        showCapabilitiesDropdown ? 'rotate-180' : ''
-      }`}
-    />
-  </button>
-  {showCapabilitiesDropdown && (
-    <div
-      className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500
+                  >
+                    <span className="text-sm text-gray-700">
+                      {newUser.capabilities.length === 0
+                        ? 'Select pages...'
+                        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-500 transition-transform ${showCapabilitiesDropdown ? 'rotate-180' : ''
+                        }`}
+                    />
+                  </button>
+                  {showCapabilitiesDropdown && (
+                    <div
+                      className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500
                  rounded-lg shadow-lg max-h-56 overflow-y-auto"
-    >
-      <div className="py-2">
-        {PAGE_CAPABILITIES.map(cap => (
-          <label
-            key={cap.key}
-            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50
+                    >
+                      <div className="py-2">
+                        {PAGE_CAPABILITIES.map(cap => (
+                          <label
+                            key={cap.key}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50
                        cursor-pointer transition-colors"
-          >
-            <input
-              type="checkbox"
-              checked={newUser.capabilities.includes(cap.key)}
-              onChange={(e) => {
-                setNewUser({
-                  ...newUser,
-                  capabilities: e.target.checked
-                    ? [...newUser.capabilities, cap.key]
-                    : newUser.capabilities.filter(c => c !== cap.key),
-                });
-              }}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded
+                          >
+                            <input
+                              type="checkbox"
+                              checked={newUser.capabilities.includes(cap.key)}
+                              onChange={(e) => {
+                                setNewUser({
+                                  ...newUser,
+                                  capabilities: e.target.checked
+                                    ? [...newUser.capabilities, cap.key]
+                                    : newUser.capabilities.filter(c => c !== cap.key),
+                                });
+                              }}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded
                          focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">{cap.label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
+                            />
+                            <span className="text-sm text-gray-700">{cap.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
