@@ -52,6 +52,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
   const handleExportLeads = async (filter: string) => {
     try {
+      // Use direct fetch to avoid any wrapper issues
       const token = typeof window !== 'undefined'
         ? (localStorage.getItem('token') || document.cookie.split('token=')[1]?.split(';')[0] || '')
         : '';
@@ -81,7 +82,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           return;
         }
 
+        // Try exceljs first, fall back to CSV
         try {
+          // webpack alias resolves 'exceljs' to browser build (exceljs.min.js)
           const ExcelJS = await import('exceljs');
           const workbook = new ExcelJS.Workbook();
           const worksheet = workbook.addWorksheet('Leads');
@@ -129,6 +132,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           saveAs(blob, `leads_${filter}_${new Date().getTime()}.xlsx`);
         } catch (excelError) {
           console.warn('ExcelJS failed, falling back to CSV:', excelError);
+          // CSV fallback with BOM for Excel compatibility
           const headers = ['First Name', 'Last Name', 'Company', 'Title/Headline', 'Email', 'Phone', 'LinkedIn URL', 'Location', 'Industry', 'Added At'];
           const escape = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
           const csvRows = [headers.join(',')];

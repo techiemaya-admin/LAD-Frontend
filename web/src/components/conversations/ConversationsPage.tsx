@@ -1,9 +1,9 @@
 "use client";
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useConversations } from '@lad/frontend-features/conversations';
+import { useConversations } from '@/features/conversations/useConversations';
 import { ConversationSidebar } from './ConversationSidebar';
-import { ChatWindow } from './ChatWindow';
+import { RealChatWindow } from './RealChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { NotificationBell } from './NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ export function ConversationsPage() {
     markAsResolved,
     muteConversation,
     allConversations,
+    messages,
+    messagesLoading,
   } = useConversations();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -41,12 +43,68 @@ export function ConversationsPage() {
     selectConversation(conversationId);
   }, [selectConversation]);
 
+  // Adapt real conversations into the old Conversation shape so the sidebar/list-item works
+  const adaptedConversations = conversations.map(c => ({
+    id: c.id,
+    channel: 'linkedin' as const,
+    contact: {
+      id: c.leadId,
+      name: c.leadName || 'Unknown',
+      avatar: (c.leadAvatarUrl && c.leadAvatarUrl !== 'none') ? c.leadAvatarUrl : '',
+      email: c.leadEmail || '',
+      company: c.accountName || '',
+      position: c.leadHeadline || '',
+      tags: (c.hasReply ? ['warm'] : []) as any[],
+      notes: [],
+      isOnline: false,
+    },
+    messages: [],
+    lastMessage: c.lastMessage
+      ? {
+        id: `lm-${c.id}`,
+        conversationId: c.id,
+        content: c.lastMessage.text || '',
+        timestamp: new Date(c.lastMessage.createdAt),
+        isOutgoing: c.lastMessage.direction === 'OUTGOING',
+        status: 'delivered' as const,
+        sender: { id: c.leadId, name: c.leadName },
+      }
+      : undefined,
+    unreadCount: c.unread || 0,
+    status: (c.status === 'resolved' ? 'resolved' : 'open') as any,
+    createdAt: new Date(c.createdAt),
+    updatedAt: new Date(c.updatedAt),
+  }));
+
+  // Adapt for NotificationBell (it expects the old Conversation shape — pass dummy)
+  const notifConversations = allConversations.map(c => ({
+    id: c.id,
+    unreadCount: c.unread,
+    contact: { id: c.leadId, name: c.leadName, email: '', tags: [], notes: [] },
+    channel: 'linkedin' as const,
+    messages: c.lastMessage
+      ? [{
+        id: `notif-${c.id}`,
+        conversationId: c.id,
+        content: c.lastMessage.text || '',
+        timestamp: new Date(c.lastMessage.createdAt),
+        isOutgoing: c.lastMessage.direction === 'OUTGOING',
+        status: 'delivered' as const,
+        sender: { id: c.leadId, name: c.leadName },
+      }]
+      : [],
+    lastMessage: c.lastMessage ? { content: c.lastMessage.text } : null,
+    status: 'open' as const,
+    createdAt: new Date(c.createdAt),
+    updatedAt: new Date(c.updatedAt),
+  })) as any[];
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with notification bell */}
       <div className="flex items-center justify-end px-4 py-3 border-b border-border bg-white">
         <NotificationBell
-          conversations={allConversations}
+          conversations={notifConversations}
           onNotificationClick={handleNotificationClick}
         />
       </div>
@@ -64,14 +122,14 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
             >
               <ConversationSidebar
-                conversations={conversations}
+                conversations={adaptedConversations}
                 selectedId={selectedId}
-                onSelectConversation={selectConversation}
-                channelFilter={channelFilter}
-                onChannelFilterChange={setChannelFilter}
+                onSelectConversation={(id) => selectConversation(String(id))}
+                channelFilter={channelFilter as any}
+                onChannelFilterChange={(ch) => setChannelFilter(ch)}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                unreadCounts={unreadCounts}
+                unreadCounts={unreadCounts as any}
               />
             </motion.div>
           )}
@@ -96,14 +154,14 @@ export function ConversationsPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <ConversationSidebar
-                  conversations={conversations}
+                  conversations={adaptedConversations}
                   selectedId={selectedId}
                   onSelectConversation={(id) => {
-                    selectConversation(id);
+                    selectConversation(String(id));
                     setIsSidebarCollapsed(true);
                   }}
-                  channelFilter={channelFilter}
-                  onChannelFilterChange={setChannelFilter}
+                  channelFilter={channelFilter as any}
+                  onChannelFilterChange={(ch) => setChannelFilter(ch)}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                   unreadCounts={unreadCounts}
@@ -127,9 +185,11 @@ export function ConversationsPage() {
           </div>
         )}
 
-        {/* Main Chat Area */}
-        <ChatWindow
+        {/* Main Chat Area — REAL messages */}
+        <RealChatWindow
           conversation={selectedConversation}
+          messages={messages}
+          messagesLoading={messagesLoading}
           onMarkResolved={markAsResolved}
           onMute={muteConversation}
           onSendMessage={sendMessage}
@@ -148,7 +208,25 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden md:block"
             >
               <ConversationContextPanel
-                conversation={selectedConversation}
+                conversation={{
+                  id: selectedConversation.id,
+                  channel: 'linkedin',
+                  contact: {
+                    id: selectedConversation.leadId,
+                    name: selectedConversation.leadName || 'Unknown',
+                    email: selectedConversation.leadEmail || '',
+                    phone: selectedConversation.leadPhone || undefined,
+                    company: selectedConversation.accountName || undefined,
+                    position: '',
+                    tags: [],
+                    notes: [],
+                  },
+                  messages: [],
+                  unreadCount: selectedConversation.unread || 0,
+                  status: 'open',
+                  createdAt: new Date(selectedConversation.createdAt),
+                  updatedAt: new Date(selectedConversation.updatedAt),
+                } as any}
                 onClose={toggleContextPanel}
               />
             </motion.div>
