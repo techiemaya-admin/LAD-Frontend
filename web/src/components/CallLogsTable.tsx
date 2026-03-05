@@ -1,0 +1,1169 @@
+import React, { useMemo, useCallback } from "react";
+import { useSelector } from "react-redux";
+import { selectUser } from "@/store/slices/authSlice";
+import {
+  PhoneIncoming,
+  PhoneOutgoing,
+  StopCircle,
+  ChevronDown,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  Phone,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronsRight,
+  Plus,
+  ChevronRight as ChevronRightIcon,
+  CalendarRange,
+  Copy,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "./StatusBadge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getTagConfig, normalizeLeadCategory, type LeadTag } from "@/utils/leadCategorization";
+import { formatDateTimeUnified } from "@/utils/dateTime";
+import api from "@/services/api";
+import { useToast } from "@/components/ui/app-toaster";
+import { logger } from "@/lib/logger";
+import { useUpdateCallLeadTags } from "@lad/frontend-features/voice-agent";
+import { type BatchStats } from "@lad/frontend-features/call-logs";
+import PipelineLeadCard from "./deals-pipeline/PipelineLeadCard";
+import EditLeadDialog from "./deals-pipeline/EditLeadDialog";
+import BookingSlot from "./deals-pipeline/BookingSlot";
+import type { Lead } from "@/features/deals-pipeline/types";
+import { Stage } from "@/features/deals-pipeline/store/slices/pipelineSlice";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table';
+
+interface CallLog {
+  id: string;
+  assistant?: string;
+  lead_name?: string;
+  lead_id?: string;
+  type: string;
+  status: string;
+  startedAt?: string;
+  duration?: number;
+  cost?: number;
+  call_cost?: number;
+  batch_id?: string;
+  lead_category?: string;
+  lead_tags?: string[];
+  signed_recording_url?: string;
+  recording_url?: string;
+  call_recording_url?: string;
+  tag?: LeadTag;
+}
+
+interface CallLogsTableProps {
+  items: CallLog[];
+  selectedCalls: Set<string>;
+  onSelectCall: (id: string) => void;
+  onSelectAll: (checked: boolean, visibleIds?: string[]) => void;
+  selectAllMode?: 'none' | 'page' | 'all';
+  onRowClick: (id: string) => void;
+  onEndCall: (id: string) => void;
+  batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
+  expandedBatches?: Set<string>;
+  onToggleBatch?: (batchId: string) => void;
+  dateFilter?: string;
+  onDateFilterChange?: (value: string) => void;
+  fromDate?: string | null;
+  toDate?: string | null;
+  onFromDateChange?: (value: string) => void;
+  onToDateChange?: (value: string) => void;
+  callFilter?: string;
+  onCallFilterChange?: (value: string) => void;
+  isLoading?: boolean;
+  // Backend pagination props
+  currentPage?: number;
+  perPage?: number;
+  totalPages?: number;
+  totalRecords?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  // Lead tag filter
+  leadTagFilter?: "hot" | "warm" | "cold" | null;
+  // Sorting
+  onSortChange?: (sort: any) => void;
+  totalFilteredCount?: number;
+  batchStats?: BatchStats;
+}
+
+export function CallLogsTable({
+  items,
+  selectedCalls,
+  onSelectCall,
+  onSelectAll,
+  selectAllMode = 'none',
+  onRowClick,
+  onEndCall,
+  batchGroups,
+  expandedBatches = new Set(),
+  onToggleBatch,
+  dateFilter = 'all',
+  onDateFilterChange,
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  callFilter = 'all',
+  onCallFilterChange,
+  isLoading = false,
+  // Backend pagination props
+  currentPage = 1,
+  perPage = 20,
+  totalPages = 1,
+  totalRecords = 0,
+  onPageChange,
+  onPageSizeChange,
+  hasNextPage = false,
+  hasPreviousPage = false,
+  // Lead tag filter
+  leadTagFilter,
+  // Sorting
+  onSortChange,
+  totalFilteredCount,
+  batchStats,
+}: CallLogsTableProps) {
+  const router = useRouter();
+  const { push: toast } = useToast();
+  const updateCallLeadTagsMutation = useUpdateCallLeadTags();
+  const currentUser = useSelector(selectUser) as any;
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Schedule dialog states
+  const [pipelineLeadCardOpen, setPipelineLeadCardOpen] = useState(false);
+  const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [bookingUsers, setBookingUsers] = useState<Array<{ id: string | number; name: string; email: string }>>([]);
+
+  // Handle schedule button click
+  const handleScheduleClick = async (callLog: CallLog) => {
+    const leadId = callLog.lead_id;
+    if (!leadId) {
+      logger.warn("[CallLogsTable] No lead_id available for call", { callId: callLog.id });
+      return;
+    }
+
+    try {
+      // Fetch users for booking
+      const usersRes = await api.get('/api/users');
+      setBookingUsers(usersRes.data?.users || usersRes.data || []);
+
+      // Create a lead object from call log data
+      const lead: Lead = {
+        id: leadId,
+        name: callLog.lead_name || '',
+        company_name: '',
+        email: '',
+        phone: '',
+        status: callLog.status,
+        stage: '',
+        organization_id: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      setSelectedLead(lead);
+      // Open booking dialog with BookingSlot
+      setBookingDialogOpen(true);
+    } catch (error) {
+      logger.error("[CallLogsTable] Error loading booking data", error);
+      // Still open the dialog with empty users
+      const lead: Lead = {
+        id: leadId,
+        name: callLog.lead_name || '',
+        company_name: '',
+        email: '',
+        phone: '',
+        status: callLog.status,
+        stage: '',
+        organization_id: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setSelectedLead(lead);
+      setBookingDialogOpen(true);
+    }
+  };
+
+  // Get lead tag for categorization
+  const getLeadTag = useCallback((item: CallLog): LeadTag => {
+    const tags = item.lead_tags;
+    const primary = Array.isArray(tags) && tags.length > 0 ? String(tags[0]) : "";
+    const normalizedPrimary = primary.toLowerCase();
+    if (normalizedPrimary.includes("hot")) return "hot";
+    if (normalizedPrimary.includes("warm")) return "warm";
+    if (normalizedPrimary.includes("cold")) return "cold";
+
+    if (item.lead_category) {
+      const normalized = normalizeLeadCategory(item.lead_category);
+      if (normalized) return normalized;
+    }
+    return "unknown";
+  }, []);
+
+  // Helper function to clean lead names from placeholder text
+  const cleanLeadName = (leadName?: string): string => {
+    if (!leadName || !leadName.trim()) return "—";
+
+    const cleaned = leadName.trim();
+    const placeholders = [
+      'optional name',
+      'optional',
+      '(optional)',
+      'lead name (optional)',
+      'enter name',
+      'name here',
+    ];
+
+    const lowerName = cleaned.toLowerCase();
+    // Check if the entire name is a placeholder
+    if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
+      return "—";
+    }
+
+    return cleaned;
+  };
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return "—";
+    return formatDateTimeUnified(dateStr);
+  };
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "—";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  // Add computed tag to items
+  const itemsWithTags = useMemo(() => items.map(item => ({
+    ...item,
+    tag: getLeadTag(item),
+  })), [items, getLeadTag]);
+
+  // Apply status filter manually to items
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'all') return itemsWithTags;
+    return itemsWithTags.filter(item =>
+      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
+    );
+  }, [itemsWithTags, statusFilter]);
+
+  // Apply global search filter
+  const searchFilteredItems = useMemo(() => {
+    if (!globalFilter) return filteredItems;
+    const lowerSearch = globalFilter.toLowerCase();
+    return filteredItems.filter(item =>
+      item.lead_name?.toLowerCase().includes(lowerSearch) ||
+      item.assistant?.toLowerCase().includes(lowerSearch) ||
+      item.id?.toLowerCase().includes(lowerSearch) ||
+      item.status?.toLowerCase().includes(lowerSearch)
+    );
+  }, [filteredItems, globalFilter]);
+
+  // Apply lead tag filter client-side (since backend doesn't support it yet)
+  const leadTagFilteredItems = useMemo(() => {
+    if (!leadTagFilter) return searchFilteredItems;
+    return searchFilteredItems.filter(item => {
+      const tag = getLeadTag(item);
+      return tag === leadTagFilter;
+    });
+  }, [searchFilteredItems, leadTagFilter, getLeadTag]);
+
+  // Filter batch groups by status filter
+  const filteredBatchGroups = useMemo(() => {
+    if (!batchGroups) return null;
+    if (statusFilter === 'all') return batchGroups;
+
+    const filteredGroups: Record<string, CallLog[]> = {};
+    Object.entries(batchGroups.groups).forEach(([batchId, calls]) => {
+      const filteredCalls = calls.filter(call =>
+        call.status?.toLowerCase().includes(statusFilter.toLowerCase())
+      );
+      if (filteredCalls.length > 0) {
+        filteredGroups[batchId] = filteredCalls;
+      }
+    });
+
+    const filteredNoBatchCalls = batchGroups.noBatchCalls.filter(call =>
+      call.status?.toLowerCase().includes(statusFilter.toLowerCase())
+    );
+
+    return { groups: filteredGroups, noBatchCalls: filteredNoBatchCalls };
+  }, [batchGroups, statusFilter]);
+
+  // Define table columns
+  const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
+    {
+      id: 'select',
+      header: ({ table }) => {
+        // Check if all rows on current page are selected
+        const visibleIds = table.getRowModel().rows.map(row => row.original.id);
+        const allPageSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCalls.has(id));
+
+        // Determine checkbox state
+        const isChecked = selectAllMode === 'all' || allPageSelected;
+        const isIndeterminate = selectAllMode === 'page' && !allPageSelected;
+
+        return (
+          <input
+            type="checkbox"
+            ref={(el) => {
+              if (el) {
+                el.checked = isChecked;
+                el.indeterminate = isIndeterminate;
+              }
+            }}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelectAll(!isChecked, visibleIds);
+            }}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+          />
+        );
+      },
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelectCall(row.original.id);
+          }}
+          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+        />
+      ),
+    },
+    {
+      id: 'id',
+      accessorKey: 'id',
+      header: 'Serial No',
+      size: 60,
+      maxSize: 80,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {((currentPage - 1) * perPage) + row.index + 1}
+        </span>
+      ),
+    },
+    {
+      id: 'assistant',
+      accessorKey: 'assistant',
+      header: 'Agent',
+      size: 120,
+      maxSize: 150,
+      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "—"}</span>,
+    },
+    {
+      id: 'lead_name',
+      accessorKey: 'lead_name',
+      header: 'Lead',
+      cell: ({ row }) => {
+        const leadName = cleanLeadName(row.original.lead_name);
+        const hasLead = leadName !== "—";
+        return (
+          <div className="group flex items-center gap-2">
+            <span className="text-muted-foreground">{leadName}</span>
+            {hasLead && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(leadName);
+                  toast({
+                    title: "Copied!",
+                    description: `Lead name "${leadName}" copied to clipboard`,
+                  });
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
+                title="Copy lead name"
+              >
+                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'type',
+      accessorKey: 'type',
+      header: 'Type',
+      cell: ({ getValue }) => {
+        const type = getValue() as string;
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${type === "Outbound"
+              ? "bg-warning/15 text-warning border border-warning/30"
+              : "bg-primary/15 text-primary border border-primary/30"
+              }`}
+          >
+            {type === "Outbound" ? (
+              <PhoneOutgoing className="w-3.5 h-3.5" />
+            ) : (
+              <PhoneIncoming className="w-3.5 h-3.5" />
+            )}
+            {type}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ getValue }) => <StatusBadge status={getValue() as string} />,
+      filterFn: (row, columnId, filterValue) => {
+        const status = row.getValue(columnId) as string;
+        return status.toLowerCase().includes(filterValue.toLowerCase());
+      },
+    },
+    {
+      id: 'startedAt',
+      accessorKey: 'startedAt',
+      header: 'Started',
+      cell: ({ getValue }) => (
+        <span className="text-sm text-muted-foreground">{formatDateTime(getValue() as string)}</span>
+      ),
+    },
+    {
+      id: 'duration',
+      accessorKey: 'duration',
+      header: 'Duration',
+      cell: ({ getValue }) => <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>,
+    },
+    {
+      id: 'tag',
+      accessorKey: 'tag',
+      header: 'Tags',
+      cell: ({ row }) => {
+        const tag = getLeadTag(row.original);
+        const tagConfig = getTagConfig(tag);
+
+        const toBackendTagLabel = (t: LeadTag): string | null => {
+          if (t === "hot") return "Hot Lead";
+          if (t === "warm") return "Warm Lead";
+          if (t === "cold") return "Cold Lead";
+          return null;
+        };
+
+        return (
+          <Select
+            value={tag}
+            onValueChange={(newTag) => {
+              const backendLabel = toBackendTagLabel(newTag as LeadTag);
+              if (!backendLabel) return;
+
+              updateCallLeadTagsMutation.mutate(
+                { callId: row.original.id, tags: [backendLabel] },
+                {
+                  onSuccess: () => {
+                    toast({
+                      title: "Updated",
+                      description: "Lead tag updated",
+                    });
+                  },
+                  onError: (err) => {
+                    toast({
+                      title: "Update failed",
+                      description: err?.message || "Failed to update lead tag",
+                      variant: "error",
+                    });
+                  },
+                },
+              );
+            }}
+          >
+            <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot" className="text-red-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  Hot
+                </span>
+              </SelectItem>
+              <SelectItem value="warm" className="text-amber-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  Warm
+                </span>
+              </SelectItem>
+              <SelectItem value="cold" className="text-blue-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  Cold
+                </span>
+              </SelectItem>
+              <SelectItem value="unknown" className="text-gray-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                  Unknown
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      },
+    },
+    {
+      id: 'cost',
+      header: 'Cost',
+      cell: ({ row }) => {
+        const cost = row.original.cost || row.original.call_cost;
+        return (
+          <span className="font-mono text-sm">
+            {cost ? `$${Number(cost).toFixed(2)}` : "—"}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'schedule',
+      header: 'Schedule',
+      size: 80,
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => handleScheduleClick(item)}
+              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+              title="Schedule"
+            >
+              <CalendarRange className="w-5 h-5" />
+            </button>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()} className="flex gap-2 items-center">
+            {item.status?.toLowerCase().includes("ongoing") && (
+              <button
+                onClick={() => onEndCall(item.id)}
+                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                title="End Call"
+              >
+                <StopCircle className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag, selectAllMode]);
+
+  // Setup table instance with filtered data
+  const table = useReactTable({
+    data: leadTagFilteredItems,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: {
+      globalFilter,
+      sorting,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: (newSorting) => {
+      const sortingState = typeof newSorting === 'function' ? newSorting(sorting) : newSorting;
+      setSorting(sortingState);
+    },
+  });
+
+  // Render batch header row                                                                                                                     
+  const renderBatchHeader = (batchId: string, calls: CallLog[]) => {
+    const isExpanded = expandedBatches.has(batchId);
+    const headerRow = calls.find((c) => (c as any)?.is_batch_header);
+    const detailCalls = calls.filter((c) => !(c as any)?.is_batch_header);
+
+    const totalCalls =
+      (headerRow as any)?.batch_total_calls ??
+      detailCalls.length;
+    const completedCalls =
+      (headerRow as any)?.batch_completed_calls ??
+      detailCalls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
+    const totalCost = detailCalls.reduce((sum, call) => {
+      const cost = Number(call.cost || call.call_cost || 0);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    return (
+      <TableRow
+        key={`batch-${batchId}`}
+        onClick={() => onToggleBatch?.(batchId)}
+        className="bg-[#F8FAFC] hover:bg-[#F1F5F9] cursor-pointer border-b-2 border-[#E2E8F0] transition-colors"
+      >
+        <TableCell colSpan={columns.length} className="py-4">
+          <div className="flex items-center gap-3">
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-primary" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-primary" />
+            )}
+            <div className="flex-1 flex items-center gap-6">
+              <div>
+                <span className="font-semibold text-foreground">Batch:</span>
+                <span className="ml-2 font-mono text-sm text-muted-foreground">
+                  {batchId.slice(0, 8)}...
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{totalCalls}</span> calls
+                </span>
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{completedCalls}</span> completed
+                </span>
+                <span className="text-muted-foreground">
+                  Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  // Render individual call row with optional indent for batch calls
+  const renderCallRow = (callLog: CallLog, indent = false) => {
+    const callId = String((callLog as any)?.id ?? "");
+    const tableRow = table
+      .getRowModel()
+      .rows.find((r) => String((r.original as any)?.id ?? "") === callId);
+
+    // DEBUG: Log what's happening with batch calls
+    if (indent) {
+      logger.debug("[renderCallRow] Batch call:", {
+        callId,
+        hasTableRow: !!tableRow,
+        callLogData: callLog,
+        batchId: (callLog as any)?.batch_id,
+      });
+    }
+
+    // If row not in table model (e.g., batch calls just loaded), create cells manually
+    if (!tableRow) {
+      return (
+        <TableRow
+          key={callId}
+          onClick={() => onRowClick(callId)}
+          className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+            } ${indent ? "bg-[#F8FAFC]" : ""}`}
+        >
+          {columns.map((column, cellIndex) => {
+            // Build proper cell context that matches tanstack table's expected format
+            const rowContext = {
+              original: callLog,
+              getValue: (key?: string) => {
+                // If key provided, use it; otherwise use column's accessorKey
+                const accessor = key || (column as any).accessorKey || column.id;
+                return (callLog as any)[accessor];
+              },
+            };
+            const cellContext = {
+              row: rowContext,
+              getValue: rowContext.getValue,
+            };
+            return (
+              <TableCell
+                key={`${callId}-${column.id}`}
+                onClick={(e) => {
+                  if (column.id === 'select' || column.id === 'actions') {
+                    e.stopPropagation();
+                  }
+                }}
+                className={cellIndex === 0 && indent ? "pl-8" : ""}
+              >
+                {flexRender(column.cell, cellContext as any)}
+              </TableCell>
+            );
+          })}
+        </TableRow>
+      );
+    }
+
+    return (
+      <TableRow
+        key={callId}
+        onClick={() => onRowClick(callId)}
+        className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+          } ${indent ? "bg-[#F8FAFC]" : ""}`}
+      >
+        {tableRow.getVisibleCells().map((cell, cellIndex) => (
+          <TableCell
+            key={cell.id}
+            onClick={(e) => {
+              // Prevent row click for checkbox and actions columns
+              if (cell.column.id === 'select' || cell.column.id === 'actions') {
+                e.stopPropagation();
+              }
+            }}
+            className={cellIndex === 0 && indent ? "pl-8" : ""}
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Search Bar */}
+      <div className="p-4 border-b border-[#E2E8F0] bg-red">
+        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
+            <input
+              type="text"
+              placeholder="Search Call Logs..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="ended">Completed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="calling">Calling</SelectItem>
+              <SelectItem value="ongoing">Ongoing</SelectItem>
+              <SelectItem value="queue">Queue</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={onDateFilterChange}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Date Filter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={callFilter} onValueChange={onCallFilterChange}>
+            <SelectTrigger className="min-w-[150px] h-10">
+              <SelectValue placeholder="Call Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Calls</SelectItem>
+              <SelectItem value="current">Current Batch</SelectItem>
+              <SelectItem value="batch">Batch View</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Custom Date Inputs (only show when custom is selected) */}
+        {dateFilter === 'custom' && (
+          <div className="flex gap-3 px-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">From:</label>
+              <input
+                type="date"
+                value={fromDate || ""}
+                onChange={(e) => onFromDateChange?.(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">To:</label>
+              <input
+                type="date"
+                value={toDate || ""}
+                onChange={(e) => onToDateChange?.(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                    }`}
+                  onClick={header.column.getToggleSortingHandler()}
+                >
+                  {header.isPlaceholder ? null : (
+                    <div className="flex items-center gap-2">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getCanSort() && (
+                        <span>
+                          {{
+                            asc: <ArrowUp className="w-4 h-4 text-primary" />,
+                            desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                          }[header.column.getIsSorted() as string] ?? (
+                              <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                            )}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            // Skeleton rows
+            Array.from({ length: 8 }).map((_, i) => (
+              <TableRow key={`skeleton-${i}`} className="animate-pulse">
+                {columns.map((col, j) => (
+                  <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
+                    <div className="h-4 bg-gray-200 rounded w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : batchGroups ? (
+            (() => {
+              // Create timeline items combining batches and individual calls
+              const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
+
+              const visibleRowIds = new Set(
+                table.getRowModel().rows.map((r) => (r.original as any)?.id),
+              );
+
+              // Use filteredBatchGroups instead of batchGroups
+              const groupsToRender = filteredBatchGroups || batchGroups;
+
+              // Add batch groups with their earliest timestamp
+              Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
+                // For expanded batches, show all calls; for collapsed batches, only show headers
+                const callsToRender = expandedBatches.has(batchId)
+                  ? calls  // Show all calls when expanded
+                  : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
+
+                if (callsToRender.length === 0) return;
+                const earliestTimestamp = Math.min(
+                  ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                );
+                timelineItems.push({
+                  type: 'batch',
+                  data: { batchId, calls: callsToRender },
+                  timestamp: earliestTimestamp
+                });
+              });
+
+              // Add individual calls
+              groupsToRender.noBatchCalls.forEach(call => {
+                if (!visibleRowIds.has((call as any)?.id)) return;
+                timelineItems.push({
+                  type: 'call',
+                  data: call,
+                  timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
+                });
+              });
+
+              // Check if there's any data
+              if (timelineItems.length === 0) {
+                return (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="text-center py-16"
+                    >
+                      {callFilter === 'current' ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Phone className="w-8 h-8 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                              No calls in current batch
+                            </h3>
+                            <p className="text-sm text-[#64748B] mb-4">
+                              Start making calls to see them appear here
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => router.push('/make-call')}
+                            className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Go to Make Call
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Phone className="w-8 h-8 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                              Trigger a call
+                            </h3>
+                            <p className="text-sm text-[#64748B] mb-4">
+                              Start making calls to see them appear here
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => router.push('/make-call')}
+                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                          >
+                            <Phone className="w-4 h-4" />
+                            Make Call
+                          </button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+
+              // DEBUG: Log batch rendering state
+              logger.debug("[Batch Render] Timeline items:", {
+                count: timelineItems.length,
+                batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
+                  batchId: i.data.batchId,
+                  callCount: i.data.calls.length,
+                  isExpanded: expandedBatches.has(i.data.batchId),
+                })),
+                expandedBatches: Array.from(expandedBatches),
+              });
+
+              return timelineItems.map((item, index) => {
+                if (item.type === 'batch') {
+                  const { batchId, calls } = item.data;
+                  return (
+                    <React.Fragment key={`batch-group-${batchId}`}>
+                      {renderBatchHeader(batchId, calls)}
+                      {expandedBatches.has(batchId) &&
+                        calls
+                          .filter((c: CallLog) => !(c as any)?.is_batch_header)
+                          .map((call: CallLog) => renderCallRow(call, true))}
+                    </React.Fragment>
+                  );
+                } else {
+                  return renderCallRow(item.data, false);
+                }
+              });
+            })()
+          ) : table.getRowModel().rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="text-center py-16"
+              >
+                {callFilter === 'current' ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Phone className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                        No calls in current batch
+                      </h3>
+                      <p className="text-sm text-[#64748B] mb-4">
+                        Start making calls to see them appear here
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/make-call')}
+                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Go to Make Call
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Phone className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                        Trigger a call
+                      </h3>
+                      <p className="text-sm text-[#64748B] mb-4">
+                        Start making calls to see them appear here
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/make-call')}
+                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Make Call
+                    </button>
+                  </div>
+                )}
+              </TableCell>
+            </TableRow>
+          ) : (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                onClick={() => onRowClick(row.original.id)}
+                className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                  }`}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    onClick={(e) => {
+                      // Prevent row click for checkbox and actions columns
+                      if (cell.column.id === 'select' || cell.column.id === 'actions') {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      {/* Pagination Controls – Server-Side Pagination */}
+      {table.getRowModel().rows.length > 0 && onPageChange && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+          {/* Left: Show [N] of X calls + batch stats */}
+          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+            <span>Show</span>
+            <select
+              value={perPage}
+              onChange={(e) => {
+                const newSize = parseInt(e.target.value, 10);
+                onPageSizeChange?.(newSize);
+                onPageChange?.(1);
+              }}
+              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+            >
+              {[10, 20, 50, 100].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span>of {totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            {callFilter === 'batch' && batchStats && (
+              <div className="ml-4 flex items-center gap-3 border-l pl-4">
+                <span className="text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> completed
+                </span>
+                <span className="text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> running
+                </span>
+                <span className="text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.failed_batches}</span> failed
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Page N of N + nav buttons */}
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-[#64748B]">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(1)}
+                disabled={!hasPreviousPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={!hasPreviousPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={!hasNextPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(totalPages)}
+                disabled={!hasNextPage}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Booking Dialog */}
+      <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+          <DialogTitle className="text-lg font-semibold mb-4">
+            Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
+          </DialogTitle>
+          {selectedLead && (
+            <BookingSlot
+              leadId={selectedLead.id}
+              tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
+              studentId={String(selectedLead.id)}
+              assignedUserId={currentUser?.id || undefined}
+              createdBy={currentUser?.id || undefined}
+              users={bookingUsers}
+              isEditMode={true}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
