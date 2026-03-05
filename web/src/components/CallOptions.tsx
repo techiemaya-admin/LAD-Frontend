@@ -1,6 +1,6 @@
 
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent
@@ -15,6 +15,7 @@ import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
 import { useMakeCall, useTriggerBatchCall, useUpdateSummary } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
+import { cookieStorage } from "@/utils/cookieStorage";
 
 // Country codes data with flag emojis and dial codes
 const COUNTRIES = [
@@ -302,6 +303,11 @@ export function CallOptions(props: CallOptionsProps) {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const hasBulk = (bulkEntries?.length || 0) > 0;
   const visibleCount = expanded ? bulkEntries.length : Math.min(5, bulkEntries.length);
+
+  const ORIGINAL_BATCH_FILE_COOKIE_KEY = "make_call_batch_original_file_v1";
+  const [uploadedSourceFileName, setUploadedSourceFileName] = useState<string | null>(null);
+  const [uploadedJsonTimestamp, setUploadedJsonTimestamp] = useState<string | null>(null);
+  const [processedJsonFile, setProcessedJsonFile] = useState<File | null>(null);
   // --- new state for radio selection and modal ---
   const [selectedSummaryIndex, setSelectedSummaryIndex] = useState<number | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -347,6 +353,47 @@ export function CallOptions(props: CallOptionsProps) {
           : (agentId && !Number.isNaN(Number(agentId)) ? Number(agentId) : undefined);
       if (useCsv) {
         if (!hasBulk) throw new Error("No numbers in the bulk list");
+
+        const hasOriginalCookie = Boolean(cookieStorage.getItemChunked(ORIGINAL_BATCH_FILE_COOKIE_KEY));
+        if (hasOriginalCookie && processedJsonFile) {
+          const encoded = cookieStorage.getItemChunked(ORIGINAL_BATCH_FILE_COOKIE_KEY);
+          if (!encoded) throw new Error("Original file missing. Please re-upload.");
+          const originalFile = await restoreFileFromCookiePayload(encoded);
+          if (!originalFile) throw new Error("Original file missing. Please re-upload.");
+
+          const fd = new FormData();
+          fd.append("original_file", originalFile, originalFile.name);
+          fd.append("processed_data", processedJsonFile, processedJsonFile.name);
+
+          const resp = await fetch("/api/voice-agent/upload-batch-calls", {
+            method: "POST",
+            body: fd,
+            credentials: "include",
+          });
+          if (!resp.ok) {
+            const t = await resp.text().catch(() => "");
+            throw new Error(t || `Upload failed (${resp.status})`);
+          }
+          const data: any = await resp.json().catch(() => ({}));
+          const jobId: string | undefined =
+            data?.result?.job_id ||
+            data?.batch?.job_id ||
+            data?.job_id;
+
+          push({
+            title: "Bulk Calls Started",
+            description: `${bulkEntries.length} numbers queued.`,
+          });
+          if (jobId) {
+            router.push(
+              `/call-logs?jobId=${encodeURIComponent(jobId)}&mode=current-batch`
+            );
+          } else {
+            router.push("/call-logs");
+          }
+          return;
+        }
+
         // updated bulk payload - include per-row summary and top-level added_context
         const payload = {
           voice_id: "default", // Required by V2 API
@@ -585,6 +632,97 @@ export function CallOptions(props: CallOptionsProps) {
     URL.revokeObjectURL(url);
   };
   const [isRephrasing, setIsRephrasing] = useState(false);
+
+  const isoTimestampForFilename = (d: Date) => {
+    const iso = d.toISOString();
+    return iso.replace(/:/g, "-").replace(/\.\d{3}Z$/, "");
+  };
+
+  const baseNameWithoutExt = (name: string) => {
+    const idx = name.lastIndexOf(".");
+    return idx >= 0 ? name.slice(0, idx) : name;
+  };
+
+  const uint8ToBase64 = (bytes: Uint8Array) => {
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  };
+
+  const base64ToUint8 = (b64: string) => {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  };
+
+  const gzipCompress = async (bytes: Uint8Array): Promise<Uint8Array> => {
+    if (typeof CompressionStream === "undefined") return bytes;
+    const cs = new CompressionStream("gzip");
+    const writer = (cs.writable as WritableStream).getWriter();
+    await writer.write(bytes);
+    await writer.close();
+    const compressedBuffer = await new Response(cs.readable).arrayBuffer();
+    return new Uint8Array(compressedBuffer);
+  };
+
+  const gzipDecompress = async (bytes: Uint8Array): Promise<Uint8Array> => {
+    if (typeof DecompressionStream === "undefined") return bytes;
+    const ds = new DecompressionStream("gzip");
+    const writer = (ds.writable as WritableStream).getWriter();
+    await writer.write(bytes);
+    await writer.close();
+    const decompressedBuffer = await new Response(ds.readable).arrayBuffer();
+    return new Uint8Array(decompressedBuffer);
+  };
+
+  const fileToCookiePayload = async (file: File) => {
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const gz = await gzipCompress(bytes);
+    const b64 = uint8ToBase64(gz);
+    return JSON.stringify({
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      lastModified: file.lastModified,
+      encoding: typeof CompressionStream === "undefined" ? "base64" : "gzip+base64",
+      data: b64,
+    });
+  };
+
+  const restoreFileFromCookiePayload = async (payload: string): Promise<File | null> => {
+    try {
+      const parsed = JSON.parse(payload);
+      const name = String(parsed?.name || "original_file");
+      const type = String(parsed?.type || "application/octet-stream");
+      const lastModified = Number(parsed?.lastModified || Date.now());
+      const encoding = String(parsed?.encoding || "base64");
+      const dataB64 = String(parsed?.data || "");
+      if (!dataB64) return null;
+      const bytes = base64ToUint8(dataB64);
+      const restored = encoding === "gzip+base64" ? await gzipDecompress(bytes) : bytes;
+      const ab = restored.buffer.slice(
+        restored.byteOffset,
+        restored.byteOffset + restored.byteLength,
+      ) as ArrayBuffer;
+      const blob = new Blob([ab], { type });
+      return new File([blob], name, { type, lastModified });
+    } catch {
+      return null;
+    }
+  };
+
+  const buildProcessedJsonFile = (rows: BulkEntry[], sourceFilename: string, timestamp: string) => {
+    const name = `${baseNameWithoutExt(sourceFilename)}_${timestamp}.json`;
+    const json = JSON.stringify(rows, null, 2);
+    return new File([json], name, { type: "application/json" });
+  };
+
+  useEffect(() => {
+    if (!uploadedSourceFileName || !uploadedJsonTimestamp) return;
+    setProcessedJsonFile(buildProcessedJsonFile(bulkEntries || [], uploadedSourceFileName, uploadedJsonTimestamp));
+  }, [bulkEntries, uploadedJsonTimestamp, uploadedSourceFileName]);
+
   // ----------------------------
   // Parse uploaded file and update bulkEntries
   // ----------------------------
@@ -592,6 +730,21 @@ export function CallOptions(props: CallOptionsProps) {
     if (!file) return;
     const filename = file.name.toLowerCase();
     try {
+      if (!filename.endsWith(".csv") && !filename.endsWith(".xlsx")) {
+        push({
+          variant: "error",
+          title: "Unsupported file type",
+          description: "Only .csv and .xlsx files are supported. Please upload a .csv or .xlsx file.",
+        });
+        return;
+      }
+
+      const cookiePayload = await fileToCookiePayload(file);
+      cookieStorage.setItemChunked(ORIGINAL_BATCH_FILE_COOKIE_KEY, cookiePayload);
+      setUploadedSourceFileName(file.name);
+      const ts = isoTimestampForFilename(new Date());
+      setUploadedJsonTimestamp(ts);
+
       // CSV parsing
       if (filename.endsWith(".csv")) {
         const text = await file.text();
