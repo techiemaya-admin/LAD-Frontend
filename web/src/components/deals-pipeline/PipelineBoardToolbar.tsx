@@ -14,6 +14,9 @@ import {
   LayoutGrid,
   List
 } from 'lucide-react';
+
+const isLocal = process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true';
+
 interface PipelineBoardToolbarProps {
   // Data
   totalLeads: number;
@@ -115,7 +118,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
             </div>
 
             {/* Action buttons (hidden in list view) */}
-            {viewMode !== 'list' && process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true' && (
+            {viewMode !== 'list' && isLocal && (
               <>
               
                 <Button
