@@ -12,14 +12,8 @@ export type Channel = 'whatsapp' | 'linkedin' | 'gmail';
 export type ConversationStatus = 'open' | 'resolved' | 'muted';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 export type ConversationOwner = 'AI' | 'human_agent';
-export type ConversationState =
-  | 'GREETING'
-  | 'INFO_GATHERING'
-  | 'SLOT_FINALIZING'
-  | 'BOOKING_CONFIRMED'
-  | 'REMINDER'
-  | 'FOLLOWUP'
-  | 'HUMAN_INTERVENTION';
+/** Context status from bni_conversation_manager — dynamic per tenant */
+export type ConversationState = string;
 
 // ============================
 // Core Interfaces
@@ -83,6 +77,7 @@ export interface ConversationListFilters {
   channel?: Channel | 'all';
   search?: string;
   owner?: ConversationOwner | 'all';
+  context_status?: string;
   limit?: number;
   offset?: number;
 }

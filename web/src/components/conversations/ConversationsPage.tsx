@@ -9,6 +9,8 @@ import { NotificationBell } from './NotificationBell';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
+const CONV_API = '/api/whatsapp-conversations/conversations';
+
 export function ConversationsPage() {
   const {
     conversations,
@@ -41,6 +43,79 @@ export function ConversationsPage() {
     selectConversation(conversationId);
   }, [selectConversation]);
 
+  // CRM action handlers
+  const handlePin = useCallback(async (id: string) => {
+    try {
+      await fetch(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
+    } catch {}
+  }, []);
+
+  const handleLock = useCallback(async (id: string) => {
+    try {
+      await fetch(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
+    } catch {}
+  }, []);
+
+  const handleFavorite = useCallback(async (id: string) => {
+    try {
+      await fetch(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
+    } catch {}
+  }, []);
+
+  const handleExport = useCallback(async (id: string) => {
+    // Client-side export: build text file from messages
+    try {
+      const res = await fetch(`/api/whatsapp-conversations/conversations/${id}/messages`);
+      const data = await res.json();
+      if (!data.success) return;
+      const lines = (data.data || []).map(
+        (m: { role: string; content: string; created_at: string }) =>
+          `[${m.created_at || ''}] ${m.role}: ${m.content}`
+      );
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation-${id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, []);
+
+  const handleBlock = useCallback(async (id: string) => {
+    try {
+      await fetch(`${CONV_API}/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'resolved' }),
+      });
+    } catch {}
+  }, []);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await fetch(`${CONV_API}/${id}`, { method: 'DELETE' });
+    } catch {}
+  }, []);
+
+  const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
+    try {
+      if (action === 'resolve') {
+        await fetch(`${CONV_API}/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
+        });
+      } else if (action === 'delete') {
+        await fetch(`${CONV_API}/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', ids }),
+        });
+      }
+    } catch {}
+  }, []);
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with notification bell */}
@@ -72,6 +147,7 @@ export function ConversationsPage() {
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 unreadCounts={unreadCounts}
+                onBulkAction={handleBulkAction}
               />
             </motion.div>
           )}
@@ -107,6 +183,7 @@ export function ConversationsPage() {
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                   unreadCounts={unreadCounts}
+                  onBulkAction={handleBulkAction}
                 />
               </motion.div>
             </motion.div>
@@ -135,6 +212,12 @@ export function ConversationsPage() {
           onSendMessage={sendMessage}
           onTogglePanel={toggleContextPanel}
           isPanelOpen={isContextPanelOpen}
+          onPin={handlePin}
+          onLock={handleLock}
+          onFavorite={handleFavorite}
+          onExport={handleExport}
+          onBlock={handleBlock}
+          onDelete={handleDelete}
         />
 
         {/* Context Panel */}
