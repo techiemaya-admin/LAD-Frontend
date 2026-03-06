@@ -6,7 +6,7 @@ import { apolloLeadsService, getDecisionMakerPhone } from '@/features/apollo-lea
 import { Phone as PhoneIcon } from 'lucide-react';
 import { safeStorage } from '../utils/storage';
 // Get API base URL from environment variable
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || ''}/api`;
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
 // Helper function to get userId from auth token
 const getUserId = () => {
   try {
@@ -73,10 +73,10 @@ import {
   Loader2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
-export default function CompanyDataTable({
-  data = [],
-  columns = [],
-  onUpdateCompany,
+export default function CompanyDataTable({ 
+  data = [], 
+  columns = [], 
+  onUpdateCompany, 
   companySummaries = {},
   searchQuery = null, // { industry: 'oil and gas', location: 'dubai', date: '15/11/2025, 19:12:22' }
   employeeSearchQuery = null, // { person_titles: ['Office Manager'], location: 'dubai', date: '15/11/2025, 19:12:22' }
@@ -148,7 +148,7 @@ export default function CompanyDataTable({
   // Helper function to normalize company IDs for comparison
   const normalizeCompanyId = (id) => {
     // Do not treat 0 as null; only undefined or null are invalid
-    if (!id) return null;
+if (!id) return null;
     return String(id).trim();
   };
   // Track employeeData changes (removed console.log for performance)
@@ -232,7 +232,7 @@ export default function CompanyDataTable({
     // 2. OR there's a significant change (more than 50% difference) indicating new search, not filter
     // 3. AND we're not already on the correct tab (prevent unnecessary switches)
     if ((employeeDataChanged && (prevEmployeeDataLengthRef.current === 0 || significantEmployeeChange)) ||
-      (companyDataChanged && (prevDataLengthRef.current === 0 || significantCompanyChange))) {
+        (companyDataChanged && (prevDataLengthRef.current === 0 || significantCompanyChange))) {
       // Don't switch if user is actively viewing a tab - only switch on new searches
       // If both tabs have data, respect the current tab choice unless it's a new search
       if (employeeData.length > 0 && data.length === 0) {
@@ -252,7 +252,7 @@ export default function CompanyDataTable({
         // Both exist - only switch if it's a new search (one went from 0 to >0)
         // Don't switch if both already had data (user might be filtering)
         if ((prevEmployeeDataLengthRef.current === 0 && employeeData.length > 0) ||
-          (prevDataLengthRef.current === 0 && data.length > 0)) {
+            (prevDataLengthRef.current === 0 && data.length > 0)) {
           updateActiveTab(showCompanyFirst ? 0 : 1);
         }
         // If employee data increased significantly (likely a restore or new search), switch to Employees
@@ -380,10 +380,10 @@ export default function CompanyDataTable({
     const filterLower = roleFilter.toLowerCase();
     return employees.filter(emp => {
       const title = (emp.title || '').toLowerCase();
-      switch (roleFilter) {
+      switch(roleFilter) {
         case 'executive':
-          return title.includes('ceo') || title.includes('cto') || title.includes('cfo') ||
-            title.includes('coo') || title.includes('chief') || title.includes('president');
+          return title.includes('ceo') || title.includes('cto') || title.includes('cfo') || 
+                 title.includes('coo') || title.includes('chief') || title.includes('president');
         case 'director':
           return title.includes('director');
         case 'manager':
@@ -438,7 +438,7 @@ export default function CompanyDataTable({
     return commonPatterns.some(pattern => profileName.includes(pattern));
   };
   if (data.length > 0) {
-  }
+    }
   const handleViewDetails = async (company) => {
     // Fetch richer company details for Apollo results when available
     try {
@@ -459,7 +459,7 @@ export default function CompanyDataTable({
           });
           if (foundEntry) {
             summary = foundEntry[1];
-          }
+            }
         }
       }
       // Log summary lookup result
@@ -469,16 +469,16 @@ export default function CompanyDataTable({
         console.log('⚠ No summary available for company');
       }
       // Always set company with summary (preserve if it exists, add if found)
-      const companyWithSummary = {
-        ...company,
-        ...(summary ? { summary } : {}) // Always include summary if we have it
-      };
-      setSelectedCompany(companyWithSummary);
-      setDialogOpen(true);
-      // Only attempt to fetch details for Apollo-sourced companies with an id
-      if (company.source === 'apollo_io' && company.id) {
-        // show a temporary loading marker
-        setSelectedCompany(prev => ({ ...prev, __loadingDetails: true }));
+        const companyWithSummary = {
+          ...company,
+          ...(summary ? { summary } : {}) // Always include summary if we have it
+        };
+        setSelectedCompany(companyWithSummary);
+        setDialogOpen(true);
+        // Only attempt to fetch details for Apollo-sourced companies with an id
+        if (company.source === 'apollo_io' && company.id) {
+          // show a temporary loading marker
+          setSelectedCompany(prev => ({ ...prev, __loadingDetails: true }));
         try {
           const details = await apolloLeadsService.getCompanyDetails(company.id);
           if (details) {
@@ -490,7 +490,7 @@ export default function CompanyDataTable({
               const companyIdForSummary = prev.id || prev.company_id || company.id || company.company_id;
               const currentSummary = prev.summary || summary || companySummaries[companyIdForSummary] || companySummaries[String(companyIdForSummary)];
               return {
-                ...prev,
+                ...prev, 
                 ...detailed,
                 ...(currentSummary ? { summary: currentSummary } : {}) // Always preserve summary if we have it
               };
@@ -572,39 +572,39 @@ export default function CompanyDataTable({
     setShowAITrigger(!selectAllEmployees);
   };
   // inside CompanyDataTable.jsx
-  // const handleAITrigger = async () => {
-  //   const selectedData = data.filter((company, index) =>
-  //     selectedCompanies.has(company.id || index)
-  //   );
-  //   try {
-  //     const ids = selectedData
-  //       .map(c => c.apollo_organization_id || c.id)
-  //       .filter(Boolean);
-  //     if (!ids.length) {
-  //       alert("No valid company IDs found. Please select companies with valid IDs.");
-  //       return;
-  //     }
-  //     //     // resolve now so we can decide single vs bulk
-  //     const res = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ ids }),
-  //     });
-  //     const contentType = res.headers.get('content-type') || '';
-  //     let payload;
-  //     if (contentType.includes('application/json')) {
-  //       payload = await res.json();
-  //     } else {
-  //       const text = await res.text();
-  //       throw new Error(`Non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
-  //     }
-  //     if (!res.ok) {
-  //       const errorMsg = payload?.error || `HTTP ${res.status}`;
-  //       console.error("❌ API Error:", errorMsg);
-  //       alert(`Failed to resolve phone numbers: ${errorMsg}`)
-  //       return;
-  //     }
-  const handleStartIntelligentCallingCompanies = async () => {
+// const handleAITrigger = async () => {
+//   const selectedData = data.filter((company, index) =>
+//     selectedCompanies.has(company.id || index)
+//   );
+//   try {
+//     const ids = selectedData
+//       .map(c => c.apollo_organization_id || c.id)
+//       .filter(Boolean);
+//     if (!ids.length) {
+//       alert("No valid company IDs found. Please select companies with valid IDs.");
+//       return;
+//     }
+//     //     // resolve now so we can decide single vs bulk
+//     const res = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({ ids }),
+//     });
+//     const contentType = res.headers.get('content-type') || '';
+//     let payload;
+//     if (contentType.includes('application/json')) {
+//       payload = await res.json();
+//     } else {
+//       const text = await res.text();
+//       throw new Error(`Non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
+//     }
+//     if (!res.ok) {
+//       const errorMsg = payload?.error || `HTTP ${res.status}`;
+//       console.error("❌ API Error:", errorMsg);
+//       alert(`Failed to resolve phone numbers: ${errorMsg}`)
+//       return;
+//     }
+ const handleStartIntelligentCallingCompanies = async () => {
     if (selectedCompanies.size === 0) {
       push({ variant: 'error', title: 'No Selection', description: 'Please select at least one company.' });
       return;
@@ -621,9 +621,9 @@ export default function CompanyDataTable({
         })
         .filter(Boolean);
       const response = await fetch(`${API_BASE_URL}/voiceagent/resolve-phones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: companyIds, type: 'company' }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ ids: companyIds, type: 'company' }),
       });
       const json = await response.json();
       if (!response.ok || !json.success) {
@@ -717,42 +717,42 @@ export default function CompanyDataTable({
       setIntelligentCallingLoading(false);
     }
   };
-  //     const rows = Array.isArray(payload?.data) ? payload.data : [];
-  //     //     if (rows.length === 0) {
-  //       alert("No phone numbers found for the selected companies.");
-  //       return;
-  //     }
-  //     const ERP_URL = process.env.NEXT_PUBLIC_ERP_URL || "https://erp.techiemaya.com";
-  //     if (rows.length === 1) {
-  //       // ✅ single call via query params
-  //       const first = rows[0];
-  //       if (!first.phone) {
-  //         alert("No phone number available for this contact.");
-  //         return;
-  //       }
-  //       const href = new URL(`${ERP_URL}/make-call`);
-  //       href.searchParams.set("dial", String(first.phone || "").trim());
-  //       href.searchParams.set("clientName", String(first.name || "").trim());
-  //       href.searchParams.set("prefilled", "1");
-  //       );
-  //       const newWindow = window.open(href.toString(), "_blank");
-  //       if (!newWindow) {
-  //         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
-  //       }
-  //     } else if (rows.length > 1) {
-  //       // ✅ bulk flow — just pass ids, and page.tsx will fetch + show list
-  //       const encodedIds = encodeURIComponent(btoa(JSON.stringify(ids)));
-  //       const href = `${ERP_URL}/make-call?bulk=1&ids=${encodedIds}`;
-  //       //       const newWindow = window.open(href, "_blank");
-  //       if (!newWindow) {
-  //         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
-  //       }
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ resolve-phones trigger error:", err);
-  //     alert(`Error: ${err.message || "Failed to initiate calling. Please try again."}`);
-  //   }
-  // };
+//     const rows = Array.isArray(payload?.data) ? payload.data : [];
+//     //     if (rows.length === 0) {
+//       alert("No phone numbers found for the selected companies.");
+//       return;
+//     }
+//     const ERP_URL = process.env.NEXT_PUBLIC_ERP_URL || "https://erp.techiemaya.com";
+//     if (rows.length === 1) {
+//       // ✅ single call via query params
+//       const first = rows[0];
+//       if (!first.phone) {
+//         alert("No phone number available for this contact.");
+//         return;
+//       }
+//       const href = new URL(`${ERP_URL}/make-call`);
+//       href.searchParams.set("dial", String(first.phone || "").trim());
+//       href.searchParams.set("clientName", String(first.name || "").trim());
+//       href.searchParams.set("prefilled", "1");
+//       );
+//       const newWindow = window.open(href.toString(), "_blank");
+//       if (!newWindow) {
+//         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
+//       }
+//     } else if (rows.length > 1) {
+//       // ✅ bulk flow — just pass ids, and page.tsx will fetch + show list
+//       const encodedIds = encodeURIComponent(btoa(JSON.stringify(ids)));
+//       const href = `${ERP_URL}/make-call?bulk=1&ids=${encodedIds}`;
+//       //       const newWindow = window.open(href, "_blank");
+//       if (!newWindow) {
+//         alert("Popup blocked! Please allow popups for this site to open the calling interface.");
+//       }
+//     }
+//   } catch (err) {
+//     console.error("❌ resolve-phones trigger error:", err);
+//     alert(`Error: ${err.message || "Failed to initiate calling. Please try again."}`);
+//   }
+// };
   // Filter handlers
   const handleFilterClick = (event) => {
     event.stopPropagation();
@@ -921,8 +921,8 @@ export default function CompanyDataTable({
             try {
               let fullEmployeeData = null;
               if (employee.employee_data) {
-                fullEmployeeData = typeof employee.employee_data === 'string'
-                  ? JSON.parse(employee.employee_data)
+                fullEmployeeData = typeof employee.employee_data === 'string' 
+                  ? JSON.parse(employee.employee_data) 
                   : employee.employee_data;
               }
               const org = fullEmployeeData?.organization || employee.organization || {};
@@ -930,12 +930,12 @@ export default function CompanyDataTable({
               let companyPhone = org.phone || org.phone_number || employee.company_phone || '';
               if (!companyPhone) {
                 // Check nested phone structures
-                companyPhone = org.primary_phone?.number ||
-                  org.primary_phone?.sanitized_number ||
-                  org.sanitized_phone ||
-                  org.phone_numbers?.[0]?.number ||
-                  org.phone_numbers?.[0]?.sanitized_number ||
-                  '';
+                companyPhone = org.primary_phone?.number || 
+                              org.primary_phone?.sanitized_number ||
+                              org.sanitized_phone ||
+                              org.phone_numbers?.[0]?.number ||
+                              org.phone_numbers?.[0]?.sanitized_number ||
+                              '';
               }
               hasCompanyPhone = !!(companyPhone && companyPhone.trim());
               // Also check if company exists in data array and has phone
@@ -979,8 +979,8 @@ export default function CompanyDataTable({
             let fullEmployeeData = null;
             if (employee.employee_data) {
               try {
-                fullEmployeeData = typeof employee.employee_data === 'string'
-                  ? JSON.parse(employee.employee_data)
+                fullEmployeeData = typeof employee.employee_data === 'string' 
+                  ? JSON.parse(employee.employee_data) 
                   : employee.employee_data;
               } catch (e) {
                 // Ignore parse errors
@@ -1020,13 +1020,13 @@ export default function CompanyDataTable({
                 const summaryLower = summaryTrimmed.toLowerCase();
                 // CRITICAL: Early exit - If summary contains ANY indication of "no posts found" or "no activity"
                 // This must be checked FIRST before any other validation
-                const hasNoPostsIndicators =
-                  summaryLower.includes('no linkedin posts found') ||
+                const hasNoPostsIndicators = 
+                  summaryLower.includes('no linkedin posts found') || 
                   summaryLower.includes('no posts found') ||
                   summaryLower.includes('linkedin page may not have') ||
                   summaryLower.includes('may not have recent activity') ||
                   summaryLower.includes('no recent activity') ||
-                  summaryLower.startsWith('no ') ||
+                  summaryLower.startsWith('no ') || 
                   summaryLower.startsWith('not ') ||
                   summaryLower.includes('company\'s linkedin page may not have') ||
                   summaryLower.includes('companys linkedin page may not have');
@@ -1202,14 +1202,14 @@ export default function CompanyDataTable({
     const companyName = company.companyName || company.username || company.name;
     const companyId = company.id || companyDomain;
     // Validate required fields
-    if (!companyDomain || !companyName) {
-      console.error(`❌ Cannot get phone number: Missing ${!companyName ? 'company name' : 'company domain/website'}`);
-      setPhoneError(prev => ({
-        ...prev,
-        [companyId]: `Missing ${!companyName ? 'company name' : 'company domain/website'}`
-      }));
-      return;
-    }
+      if (!companyDomain || !companyName) {
+        console.error(`❌ Cannot get phone number: Missing ${!companyName ? 'company name' : 'company domain/website'}`);
+        setPhoneError(prev => ({ 
+          ...prev, 
+          [companyId]: `Missing ${!companyName ? 'company name' : 'company domain/website'}` 
+        }));
+        return;
+      }
     // Check if we already have phone data
     if (phoneData[companyId]) {
       return;
@@ -1225,7 +1225,7 @@ export default function CompanyDataTable({
         (update) => {
           if (update.status === 'processing') {
             // Could show a toast or update UI with progress
-          }
+            }
         }
       );
       // Handle multiple possible data formats from Cloud Run service
@@ -1276,15 +1276,15 @@ export default function CompanyDataTable({
       if (phoneInfo && phoneInfo.phone) {
         setPhoneData(prev => ({ ...prev, [companyId]: phoneInfo }));
         // Success - phone is now displayed on the card (no alert needed)
-      } else {
+        } else {
         console.error('❌ Phone data structure:', phoneResult);
         throw new Error('No phone number found for decision maker');
       }
     } catch (error) {
       console.error('❌ Error getting phone:', error);
-      setPhoneError(prev => ({
-        ...prev,
-        [companyId]: error.message || 'Failed to get phone number'
+      setPhoneError(prev => ({ 
+        ...prev, 
+        [companyId]: error.message || 'Failed to get phone number' 
       }));
       // Error is logged to console - no popup needed
     } finally {
@@ -1301,13 +1301,13 @@ export default function CompanyDataTable({
     // Fallback to domain only if ID looks invalid (generated random string)
     if (!companyIdentifier || companyIdentifier.includes('apollo_unknown') || companyIdentifier.includes('_0.')) {
       companyIdentifier = company.domain;
-    }
+      }
     // Validate identifier
     if (!companyIdentifier || companyIdentifier.includes('apollo_unknown')) {
       console.error('❌ Invalid company identifier:', companyIdentifier);
-      setEmployeeError(prev => ({
-        ...prev,
-        [companyId]: 'Cannot fetch employees: Invalid company ID'
+      setEmployeeError(prev => ({ 
+        ...prev, 
+        [companyId]: 'Cannot fetch employees: Invalid company ID' 
       }));
       return;
     }
@@ -1340,9 +1340,9 @@ export default function CompanyDataTable({
       } catch (fetchError) {
         // Network error - connection failed completely
         console.error('❌ Network error fetching employees:', fetchError);
-        setEmployeeError(prev => ({
-          ...prev,
-          [companyId]: 'Network error: Unable to connect to server. Please check your connection and try again.'
+        setEmployeeError(prev => ({ 
+          ...prev, 
+          [companyId]: 'Network error: Unable to connect to server. Please check your connection and try again.' 
         }));
         setFetchedEmployeeData(prev => ({ ...prev, [companyId]: [] }));
         setSelectedEmployeeCompany(company);
@@ -1367,9 +1367,9 @@ export default function CompanyDataTable({
       } catch (jsonError) {
         // Empty or invalid response
         console.error('❌ Invalid response from server:', jsonError);
-        setEmployeeError(prev => ({
-          ...prev,
-          [companyId]: 'Server returned an invalid response. Please try again.'
+        setEmployeeError(prev => ({ 
+          ...prev, 
+          [companyId]: 'Server returned an invalid response. Please try again.' 
         }));
         setFetchedEmployeeData(prev => ({ ...prev, [companyId]: [] }));
         setSelectedEmployeeCompany(company);
@@ -1378,18 +1378,18 @@ export default function CompanyDataTable({
         return;
       }
       if (data.success && data.employees && data.employees.length > 0) {
-        const cacheMsg = data.from_cache
-          ? `✅ Found ${data.employees.length} employees (from cache, ${data.cache_age_days} days old)`
+        const cacheMsg = data.from_cache 
+          ? `✅ Found ${data.employees.length} employees (from cache, ${data.cache_age_days} days old)` 
           : `✅ Found ${data.employees.length} employees (from Apollo API)`;
         setFetchedEmployeeData(prev => ({ ...prev, [companyId]: data.employees }));
         // Store cache info
         if (data.from_cache !== undefined) {
-          setEmployeeCacheInfo(prev => ({
-            ...prev,
-            [companyId]: {
-              from_cache: data.from_cache,
-              cache_age_days: data.cache_age_days || 0
-            }
+          setEmployeeCacheInfo(prev => ({ 
+            ...prev, 
+            [companyId]: { 
+              from_cache: data.from_cache, 
+              cache_age_days: data.cache_age_days || 0 
+            } 
           }));
         }
         // Also update the company's cLevelExecutives in the selected company if dialog is open
@@ -1415,9 +1415,9 @@ export default function CompanyDataTable({
       }
     } catch (error) {
       console.error('❌ Error getting employees:', error);
-      setEmployeeError(prev => ({
-        ...prev,
-        [companyId]: error.message || 'Failed to get employees. Please try again.'
+      setEmployeeError(prev => ({ 
+        ...prev, 
+        [companyId]: error.message || 'Failed to get employees. Please try again.' 
       }));
       // Open dialog even on error so user can see the error message
       setSelectedEmployeeCompany(company);
@@ -1538,7 +1538,7 @@ export default function CompanyDataTable({
               }));
             } else if (statusData.status === 'processing') {
               // Still processing, continue polling
-            } else {
+              } else {
               // Failed or not found
               clearInterval(pollInterval);
               // Phone number not available - set not_found flag
@@ -1704,10 +1704,10 @@ export default function CompanyDataTable({
   // Handler to send LinkedIn connection requests for selected employees in dialog
   const handleSendLinkedInConnectionsFromDialog = async () => {
     if (selectedDialogEmployees.size === 0) {
-      push({
-        variant: 'error',
-        title: 'No Selection',
-        description: 'Please select at least one employee to send LinkedIn connection requests.'
+      push({ 
+        variant: 'error', 
+        title: 'No Selection', 
+        description: 'Please select at least one employee to send LinkedIn connection requests.' 
       });
       return;
     }
@@ -1718,9 +1718,9 @@ export default function CompanyDataTable({
       .map(index => {
         const employee = filteredEmployees[index];
         if (!employee) return null;
-        const linkedinUrl = employee.linkedin_url ||
-          employee.organization?.linkedin_url ||
-          employee.company_linkedin_url;
+        const linkedinUrl = employee.linkedin_url || 
+                           employee.organization?.linkedin_url || 
+                           employee.company_linkedin_url;
         if (!linkedinUrl) return null;
         return {
           name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
@@ -1731,10 +1731,10 @@ export default function CompanyDataTable({
       })
       .filter(Boolean);
     if (employeesToConnect.length === 0) {
-      push({
-        variant: 'error',
-        title: 'No LinkedIn URLs',
-        description: 'Selected employees do not have LinkedIn profile URLs.'
+      push({ 
+        variant: 'error', 
+        title: 'No LinkedIn URLs', 
+        description: 'Selected employees do not have LinkedIn profile URLs.' 
       });
       return;
     }
@@ -1753,10 +1753,10 @@ export default function CompanyDataTable({
       // Check HTTP status code first
       if (!response.ok) {
         const errorMessage = data.detail || data.error || data.message || `HTTP ${response.status} error`;
-        push({
-          variant: 'error',
-          title: 'Failed',
-          description: `Failed to send connection requests: ${errorMessage}`
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${errorMessage}` 
         });
         return;
       }
@@ -1773,45 +1773,45 @@ export default function CompanyDataTable({
       // If all failed or no successful requests
       if (failed > 0 && successful === 0) {
         const errorMessage = errorMessages[0] || data.error || data.detail || 'All connection requests failed';
-        push({
-          variant: 'error',
-          title: 'Failed',
-          description: `Failed to send connection requests: ${errorMessage}`
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${errorMessage}` 
         });
-      }
+      } 
       // If some failed (partial success)
       else if (failed > 0 && successful > 0) {
         const errorMessage = errorMessages[0] || 'Some connection requests failed';
-        push({
-          variant: 'error',
-          title: 'Partially Failed',
-          description: `Sent ${successful} request(s), but ${failed} failed: ${errorMessage}`
+        push({ 
+          variant: 'error', 
+          title: 'Partially Failed', 
+          description: `Sent ${successful} request(s), but ${failed} failed: ${errorMessage}` 
         });
       }
       // If all successful
       else if (successful > 0 && failed === 0) {
-        push({
-          variant: 'success',
-          title: 'Successfully Sent',
-          description: `Successfully sent ${successful} LinkedIn connection request(s)!`
+        push({ 
+          variant: 'success', 
+          title: 'Successfully Sent', 
+          description: `Successfully sent ${successful} LinkedIn connection request(s)!` 
         });
         // Clear selection after successful send
         setSelectedDialogEmployees(new Set());
       }
       // Fallback
       else {
-        push({
-          variant: 'error',
-          title: 'Failed',
-          description: `Failed to send connection requests: ${data.error || data.detail || 'Unknown error'}`
+        push({ 
+          variant: 'error', 
+          title: 'Failed', 
+          description: `Failed to send connection requests: ${data.error || data.detail || 'Unknown error'}` 
         });
       }
     } catch (error) {
       console.error('Error sending LinkedIn connections:', error);
-      push({
-        variant: 'error',
-        title: 'Failed',
-        description: `Failed to send connection requests: ${error.message}`
+      push({ 
+        variant: 'error', 
+        title: 'Failed', 
+        description: `Failed to send connection requests: ${error.message}` 
       });
     }
   };
@@ -1925,10 +1925,10 @@ export default function CompanyDataTable({
             </h2>
           </div>
           <p className="text-sm text-white/70 mb-1">
-            Found {data.length} leads • {searchQuery.date || new Date().toLocaleString()}
+            Found {data.length} leads • {searchQuery.date || new Date().toLocaleString()} 
             {searchQuery.location && ` • Location: ${searchQuery.location}`}
           </p>
-          <Chip
+          <Chip 
             className="bg-blue-400/20 text-blue-400 font-semibold border border-blue-400/30 text-sm"
           >
             {data.length} results
@@ -1955,112 +1955,112 @@ export default function CompanyDataTable({
       )}
       {/* Tabs for Companies and Employees - Always show */}
       <div className="border-b border-border mb-3 flex items-center justify-between">
-        <Tabs
-          value={String(activeTab)}
-          onValueChange={(newValue) => {
-            userManuallyChangedTabRef.current = true; // Mark as manual change
-            updateActiveTab(parseInt(newValue));
-            // Reset the flag after a short delay to allow auto-switch for new searches
-            setTimeout(() => {
-              userManuallyChangedTabRef.current = false;
-            }, 2000); // 2 seconds delay
-          }}
-          className="w-auto"
-        >
-          <TabsList className="h-14">
-            <TabsTrigger
-              value="0"
-              className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
-            >
-              <Business className="mr-2 h-4 w-4" />
-              Companies ({(() => {
-                const filtered = getFilteredData().filter(item => {
-                  const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
-                  if (!isCompany) return false;
-                  const hasPhone = Boolean(item.phone);
-                  const hasEmployees = Boolean(item.employeeCount && item.employeeCount > 0);
-                  return hasPhone || hasEmployees;
-                });
-                return filtered.length;
-              })()})
-            </TabsTrigger>
-            <TabsTrigger
-              value="1"
-              className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
-            >
-              <Person className="mr-2 h-4 w-4" />
-              Employees ({(() => {
-                const filtered = getFilteredEmployeeData().filter(item => {
-                  return item.first_name || item.last_name || item.title || (item.name && !item.companyName && !item.username);
-                });
-                return filtered.length;
-              })()})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        {/* Buttons on the right side of tabs line */}
-        <div className="flex gap-1.5 items-center flex-nowrap">
-          {/* Employees Tab Buttons */}
-          {activeTab === 1 && selectedEmployees.size > 0 && (
-            <div className="flex gap-1.5 items-center flex-nowrap">
-              {onUnlockAllEmployeeEmails && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={onUnlockAllEmployeeEmails}
-                  disabled={Object.values(unlockingEmployeeContacts).some(v => v?.email)}
-                  className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
-                >
-                  <Email className="mr-2 h-4 w-4" />
-                  {selectAllEmployees || selectedEmployees.size === employeeData.length
-                    ? 'Unlock All Emails'
-                    : `Unlock Emails (${selectedEmployees.size})`}
-                </Button>
-              )}
-              {onUnlockAllEmployeePhones && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={onUnlockAllEmployeePhones}
-                  disabled={Object.values(unlockingEmployeeContacts).some(v => v?.phone)}
-                  className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
-                >
-                  <Phone className="mr-2 h-4 w-4" />
-                  {selectAllEmployees || selectedEmployees.size === employeeData.length
-                    ? 'Unlock All Numbers'
-                    : `Unlock Numbers (${selectedEmployees.size})`}
-                </Button>
-              )}
-              {showAITrigger && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleStartIntelligentCallingEmployees}
-                  disabled={intelligentCallingLoading || selectedEmployees.size === 0}
-                  className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 transition-all duration-300 ease-in-out hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5"
-                >
-                  <PhoneIcon className="h-4 w-4 mr-1" />
-                  {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : null}
-                  Start Intelligent Calling
-                </Button>
-              )}
-            </div>
-          )}
-          {/* Companies Tab Button */}
-          {activeTab === 0 && showAITrigger && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleStartIntelligentCallingCompanies}
-              disabled={intelligentCallingLoading || selectedCompanies.size === 0}
-              className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
-            >
-              {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : <PhoneIcon className="mr-2 h-4 w-4" />}
-              Start Intelligent Calling
-            </Button>
-          )}
+          <Tabs 
+            value={String(activeTab)} 
+            onValueChange={(newValue) => {
+              userManuallyChangedTabRef.current = true; // Mark as manual change
+              updateActiveTab(parseInt(newValue));
+              // Reset the flag after a short delay to allow auto-switch for new searches
+              setTimeout(() => {
+                userManuallyChangedTabRef.current = false;
+              }, 2000); // 2 seconds delay
+            }}
+            className="w-auto"
+          >
+            <TabsList className="h-14">
+              <TabsTrigger 
+                value="0"
+                className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
+              >
+                <Business className="mr-2 h-4 w-4" />
+                Companies ({(() => {
+                  const filtered = getFilteredData().filter(item => {
+                    const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
+                    if (!isCompany) return false;
+                    const hasPhone = Boolean(item.phone);
+                    const hasEmployees = Boolean(item.employeeCount && item.employeeCount > 0);
+                    return hasPhone || hasEmployees;
+                  });
+                  return filtered.length;
+                })()})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="1"
+                className="text-base font-semibold min-h-[56px] data-[state=active]:text-[#0b1957]"
+              >
+                <Person className="mr-2 h-4 w-4" />
+                Employees ({(() => {
+                  const filtered = getFilteredEmployeeData().filter(item => {
+                    return item.first_name || item.last_name || item.title || (item.name && !item.companyName && !item.username);
+                  });
+                  return filtered.length;
+                })()})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {/* Buttons on the right side of tabs line */}
+          <div className="flex gap-1.5 items-center flex-nowrap">
+            {/* Employees Tab Buttons */}
+            {activeTab === 1 && selectedEmployees.size > 0 && (
+              <div className="flex gap-1.5 items-center flex-nowrap">
+                {onUnlockAllEmployeeEmails && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={onUnlockAllEmployeeEmails}
+                    disabled={Object.values(unlockingEmployeeContacts).some(v => v?.email)}
+                    className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
+                  >
+                    <Email className="mr-2 h-4 w-4" />
+                    {selectAllEmployees || selectedEmployees.size === employeeData.length
+                      ? 'Unlock All Emails'
+                      : `Unlock Emails (${selectedEmployees.size})`}
+                  </Button>
+                )}
+                {onUnlockAllEmployeePhones && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={onUnlockAllEmployeePhones}
+                    disabled={Object.values(unlockingEmployeeContacts).some(v => v?.phone)}
+                    className="bg-[#0b1957] text-white font-semibold rounded-[20px] whitespace-nowrap px-2 shadow-sm hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
+                  >
+                    <Phone className="mr-2 h-4 w-4" />
+                    {selectAllEmployees || selectedEmployees.size === employeeData.length
+                      ? 'Unlock All Numbers'
+                      : `Unlock Numbers (${selectedEmployees.size})`}
+                  </Button>
+                )}
+                {showAITrigger && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleStartIntelligentCallingEmployees}
+                    disabled={intelligentCallingLoading || selectedEmployees.size === 0}
+                    className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 transition-all duration-300 ease-in-out hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <PhoneIcon className="h-4 w-4 mr-1" />
+                    {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : null}
+                    Start Intelligent Calling
+                  </Button>
+                )}
+              </div>
+            )}
+            {/* Companies Tab Button */}
+            {activeTab === 0 && showAITrigger && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleStartIntelligentCallingCompanies}
+                disabled={intelligentCallingLoading || selectedCompanies.size === 0}
+                className="bg-[#0b1957] rounded-[20px] shadow-sm text-white font-semibold whitespace-nowrap px-2 hover:bg-[#0d1f6f] hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                {intelligentCallingLoading ? <Loader2 className="h-5 w-5 text-white mr-1 animate-spin" /> : <PhoneIcon className="mr-2 h-4 w-4" />}
+                Start Intelligent Calling
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
       {/* Selection Controls - Show for both tabs */}
       <div className="p-2 mb-3 relative">
         <div className="flex items-center gap-2 flex-wrap relative justify-between">
@@ -2087,7 +2087,7 @@ export default function CompanyDataTable({
                     Filter & Select
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
+                <DropdownMenuContent 
                   align="start"
                   className="min-w-[280px] max-h-[400px] bg-white shadow-lg border border-gray-200 rounded-[20px] mt-1 z-[1300]"
                 >
@@ -2111,10 +2111,11 @@ export default function CompanyDataTable({
                   }
                 }}
                 disabled={!onSendLinkedInConnections || selectedEmployees.size === 0}
-                className={`rounded-[20px] shadow-sm font-semibold whitespace-nowrap px-2 transition-all ${onSendLinkedInConnections && selectedEmployees.size > 0
-                  ? 'bg-[#0077b5] text-white hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5'
-                  : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
-                  }`}
+                className={`rounded-[20px] shadow-sm font-semibold whitespace-nowrap px-2 transition-all ${
+                  onSendLinkedInConnections && selectedEmployees.size > 0
+                    ? 'bg-[#0077b5] text-white hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5'
+                    : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                }`}
               >
                 <LinkedInIcon className="mr-2 h-4 w-4" />
                 Send Connection {selectedEmployees.size > 0 ? `(${selectedEmployees.size})` : ''}
@@ -2132,575 +2133,573 @@ export default function CompanyDataTable({
           </div>
         </div>
       </div>
-      {/* Company Filters */}
-      {activeTab === 0 && (
-        <>
-          <DropdownMenuLabel key="company-size-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
-            Select by Company Size
-          </DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('enterprise')}
-            key="enterprise"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('enterprise')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Enterprise (200+ employees)
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('large')}
-            key="large"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('large')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Large (50-199 employees)
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('medium')}
-            key="medium"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('medium')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Medium (10-49 employees)
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('small')}
-            key="small"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('small')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Small (1-10 employees)
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel key="data-availability-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5 mt-1">
-            Select by Data Availability
-          </DropdownMenuLabel>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-phone')}
-            key="company-with-phone"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-phone')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Companies with Phone Number
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-linkedin')}
-            key="company-with-linkedin"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-linkedin')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Companies with LinkedIn
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-website')}
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-website')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                Companies with Website
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-summary')}
-            key="company-with-summary"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-summary')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
-                With Sales Summary
-              </span>
-            </div>
-          </DropdownMenuItem>
-        </>
-      )}
-      {/* Employee Filters */}
-      {activeTab === 1 && (
-        <>
-          {[<DropdownMenuLabel key="employee-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
-            Filter Employees
-          </DropdownMenuLabel>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-linkedin')}
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-linkedin')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
+        {/* Company Filters */}
+        {activeTab === 0 && (
+          <>
+            <DropdownMenuLabel key="company-size-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
+              Select by Company Size
+            </DropdownMenuLabel>
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('enterprise')}
+          key="enterprise"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('enterprise')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Enterprise (200+ employees)
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('large')}
+          key="large"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('large')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Large (50-199 employees)
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('medium')}
+          key="medium"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('medium')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Medium (10-49 employees)
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('small')}
+          key="small"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('small')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Small (1-10 employees)
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel key="data-availability-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5 mt-1">
+          Select by Data Availability
+        </DropdownMenuLabel>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('with-phone')}
+          key="company-with-phone"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('with-phone')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Companies with Phone Number
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('with-linkedin')}
+          key="company-with-linkedin"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('with-linkedin')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Companies with LinkedIn
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('with-website')}
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('with-website')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            Companies with Website
+            </span>
+          </div>
+        </DropdownMenuItem>,
+        <DropdownMenuItem 
+          onClick={() => handleFilterToggle('with-summary')}
+          key="company-with-summary"
+          className="hover:bg-gray-50 py-1.5"
+        >
+          <div className="flex items-center w-full">
+            <Checkbox 
+              checked={selectedFilters.has('with-summary')} 
+              className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+            />
+            <span className="text-[#0b1957] font-medium ml-2">
+            With Sales Summary
+            </span>
+          </div>
+        </DropdownMenuItem>
+          </>
+        )}
+        {/* Employee Filters */}
+        {activeTab === 1 && (
+          <>
+            {[<DropdownMenuLabel key="employee-header" className="font-bold text-[#0b1957] text-sm bg-gray-50 px-2 py-1.5">
+              Filter Employees
+            </DropdownMenuLabel>,
+            <DropdownMenuItem 
+              onClick={() => handleFilterToggle('with-linkedin')}
+              className="hover:bg-gray-50 py-1.5"
+            >
+              <div className="flex items-center w-full">
+                <Checkbox 
+                  checked={selectedFilters.has('with-linkedin')} 
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+                />
+                <span className="text-[#0b1957] font-medium ml-2">
                 With LinkedIn Profile
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-phone')}
-            key="employee-with-phone"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-phone')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
+              onClick={() => handleFilterToggle('with-phone')}
+              key="employee-with-phone"
+              className="hover:bg-gray-50 py-1.5"
+            >
+              <div className="flex items-center w-full">
+                <Checkbox 
+                  checked={selectedFilters.has('with-phone')} 
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+                />
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Phone Number
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-email')}
-            key="employee-with-email"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-email')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
+              onClick={() => handleFilterToggle('with-email')}
+              key="employee-with-email"
+              className="hover:bg-gray-50 py-1.5"
+            >
+              <div className="flex items-center w-full">
+                <Checkbox 
+                  checked={selectedFilters.has('with-email')} 
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+                />
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Email Address
-              </span>
-            </div>
-          </DropdownMenuItem>,
-          <DropdownMenuItem
-            onClick={() => handleFilterToggle('with-summary')}
-            key="employee-with-summary"
-            className="hover:bg-gray-50 py-1.5"
-          >
-            <div className="flex items-center w-full">
-              <Checkbox
-                checked={selectedFilters.has('with-summary')}
-                className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
-              />
-              <span className="text-[#0b1957] font-medium ml-2">
+                </span>
+              </div>
+            </DropdownMenuItem>,
+            <DropdownMenuItem 
+              onClick={() => handleFilterToggle('with-summary')}
+              key="employee-with-summary"
+              className="hover:bg-gray-50 py-1.5"
+            >
+              <div className="flex items-center w-full">
+                <Checkbox 
+                  checked={selectedFilters.has('with-summary')} 
+                  className="text-[#0b1957] data-[state=checked]:text-[#0b1957]"
+                />
+                <span className="text-[#0b1957] font-medium ml-2">
                 With Sales Summary
-              </span>
-            </div>
-          </DropdownMenuItem>]}
-        </>
-      )}
+                </span>
+              </div>
+            </DropdownMenuItem>]}
       {/* Companies Tab Content */}
       {(() => {
         return activeTab === 0;
       })() && (
-          <>
-            {/* Companies Tab Content - Always show when tab is active */}
-            {/* Grid Layout - Only render company cards from data prop (never employee data) */}
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-2 relative z-[2] items-stretch">
-                {[...Array(6)].map((_, index) => (
-                  <Card key={index} className="bg-[oklch(0.985_0_0)] border border-[oklch(0.89_0_0)] rounded-lg overflow-hidden">
-                    <CardContent className="p-2.5">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <Skeleton className="rounded-full w-12 h-12" />
-                          <div className="flex-1">
-                            <Skeleton className="w-[70%] h-6 mb-0.5" />
-                            <Skeleton className="w-[50%] h-5" />
-                          </div>
-                        </div>
-                        <Skeleton className="rounded-full w-6 h-6" />
-                      </div>
-                      <div className="mb-2">
-                        <Skeleton className="w-[40%] h-5 mb-1" />
-                        <Skeleton className="w-[60%] h-5 mb-1" />
-                        <Skeleton className="w-[50%] h-5" />
-                      </div>
-                      <div className="flex gap-1 mb-2">
-                        <Skeleton className="rounded w-20 h-6" />
-                        <Skeleton className="rounded w-24 h-6" />
-                      </div>
-                      <div className="flex gap-1">
-                        <Skeleton className="rounded w-[48%] h-9" />
-                        <Skeleton className="rounded w-[48%] h-9" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              (() => {
-                const filteredCompanies = [...getFilteredData()]
-                  // Additional safety check: ensure we're only rendering company objects, not employee objects
-                  .filter(item => {
-                    // Company objects should have companyName, username, or name (not first_name/last_name like employees)
-                    const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
-                    return isCompany;
-                  })
-                  // Filter out companies with no phone AND no employees
-                  .filter(company => {
-                    const hasPhone = Boolean(company.phone);
-                    const hasEmployees = Boolean(company.employeeCount && company.employeeCount > 0);
-                    // Keep company if it has phone OR has employees (or both)
-                    return hasPhone || hasEmployees;
-                  })
-                  // Sort companies with phone numbers first
-                  .sort((a, b) => {
-                    const aHasPhone = Boolean(a.phone);
-                    const bHasPhone = Boolean(b.phone);
-                    if (aHasPhone && !bHasPhone) return -1;
-                    if (!aHasPhone && bHasPhone) return 1;
-                    return 0;
-                  });
-                return filteredCompanies.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
-                    {filteredCompanies.map((company, index) => (
-                      <div key={company.id || index} className="flex flex-col items-stretch">
-                        <Card
-                          onClick={() => handleSelectCompany(company.id || index)}
-                          className={`w-full h-full flex flex-col min-h-0 transition-all duration-200 ease-in-out rounded-xl overflow-hidden relative bg-white shadow-sm cursor-pointer
+      <>
+      {/* Companies Tab Content - Always show when tab is active */}
+      {/* Grid Layout - Only render company cards from data prop (never employee data) */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-2 relative z-[2] items-stretch">
+          {[...Array(6)].map((_, index) => (
+            <Card key={index} className="bg-[oklch(0.985_0_0)] border border-[oklch(0.89_0_0)] rounded-lg overflow-hidden">
+              <CardContent className="p-2.5">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Skeleton className="rounded-full w-12 h-12" />
+                    <div className="flex-1">
+                      <Skeleton className="w-[70%] h-6 mb-0.5" />
+                      <Skeleton className="w-[50%] h-5" />
+                    </div>
+                  </div>
+                  <Skeleton className="rounded-full w-6 h-6" />
+                </div>
+                <div className="mb-2">
+                  <Skeleton className="w-[40%] h-5 mb-1" />
+                  <Skeleton className="w-[60%] h-5 mb-1" />
+                  <Skeleton className="w-[50%] h-5" />
+                </div>
+                <div className="flex gap-1 mb-2">
+                  <Skeleton className="rounded w-20 h-6" />
+                  <Skeleton className="rounded w-24 h-6" />
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="rounded w-[48%] h-9" />
+                  <Skeleton className="rounded w-[48%] h-9" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+      (() => {
+        const filteredCompanies = [...getFilteredData()]
+          // Additional safety check: ensure we're only rendering company objects, not employee objects
+          .filter(item => {
+            // Company objects should have companyName, username, or name (not first_name/last_name like employees)
+            const isCompany = item.companyName || item.username || (item.name && !item.first_name && !item.last_name);
+            return isCompany;
+          })
+          // Filter out companies with no phone AND no employees
+          .filter(company => {
+            const hasPhone = Boolean(company.phone);
+            const hasEmployees = Boolean(company.employeeCount && company.employeeCount > 0);
+            // Keep company if it has phone OR has employees (or both)
+            return hasPhone || hasEmployees;
+          })
+          // Sort companies with phone numbers first
+          .sort((a, b) => {
+            const aHasPhone = Boolean(a.phone);
+            const bHasPhone = Boolean(b.phone);
+            if (aHasPhone && !bHasPhone) return -1;
+            if (!aHasPhone && bHasPhone) return 1;
+            return 0;
+          });
+        return filteredCompanies.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
+            {filteredCompanies.map((company, index) => (
+          <div key={company.id || index} className="flex flex-col items-stretch">
+            <Card 
+              onClick={() => handleSelectCompany(company.id || index)}
+              className={`w-full h-full flex flex-col min-h-0 transition-all duration-200 ease-in-out rounded-xl overflow-hidden relative bg-white shadow-sm cursor-pointer
                 ${selectedCompanies.has(company.id || index) ? 'border-2 border-[#0b1957]' : 'border border-[#e9ecef]'}
                 hover:shadow-md ${selectedCompanies.has(company.id || index) ? 'hover:border-[#0b1957]' : 'hover:border-[#dee2e6]'}
                 ${selectedCompanies.has(company.id || index) ? 'before:content-[""] before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-[#0b1957] before:z-[1]' : ''}`}
-                        >
-                          <CardContent className="flex-grow p-0 relative z-[2]">
-                            {/* Company Header - Clean White Background */}
-                            <div className="bg-white p-5 relative">
-                              <div className="flex items-start gap-4">
-                                <div className="relative">
-                                  <Avatar
-                                    className={`w-14 h-14 flex-shrink-0 transition-all duration-200 ease-in-out ${selectedCompanies.has(company.id || index) ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'}`}
-                                    src={company.logoUrl || company.logo || company.profileImage || company.companyLogo}
-                                    alt={`${company.companyName || company.username || 'Company'} logo`}
-                                  >
-                                    {!(company.logoUrl || company.logo || company.profileImage || company.companyLogo) && (
-                                      <Business fontSize="large" />
-                                    )}
-                                  </Avatar>
-                                  {selectedCompanies.has(company.id || index) && (
-                                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md">
-                                      <CheckCircle className="w-4 h-4 text-white" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
-                                  <h3
-                                    className="font-bold text-lg text-black cursor-pointer transition-colors line-clamp-2 hover:text-[#0b1957] hover:underline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleViewDetails(company);
-                                    }}
-                                  >
-                                    {company.companyName || company.username || 'Unknown Company'}
-                                  </h3>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Card Body */}
-                            <div className="p-2.5 pt-0">
-                              {/* All Variable Content - Each section has fixed height */}
-                              <div className="mb-0">
-                                {/* Industry - Fixed 24px */}
-                                <div className="min-h-[24px] mb-0.5">
-                                  {company.industry && (
-                                    <Chip
-                                      label={company.industry}
-                                      size="small"
-                                      variant="outlined"
-                                      className="font-bold h-6"
-                                    />
-                                  )}
-                                </div>
-                                {/* Decision Maker Contact - Fixed 60px */}
-                                <div className="min-h-[60px] mb-0">
-                                  {phoneData[company.id] && (
-                                    <div className="mb-1 p-1.5 bg-green-50 rounded border border-green-600">
-                                      <p className="text-xs text-green-600 uppercase font-bold tracking-wider mb-1 block">
-                                        ✓ DECISION MAKER CONTACT
-                                      </p>
-                                      {/* Phone Number */}
-                                      <div className="flex items-center gap-1 mb-0.5">
-                                        <Phone className="h-4 w-4 text-green-600" />
-                                        <p className="text-sm text-gray-900 font-bold">
-                                          {phoneData[company.id].phone}
-                                        </p>
-                                        <Badge className="bg-green-600 text-white text-[0.65rem] h-[18px] font-semibold uppercase">
-                                          {phoneData[company.id].confidence || 'high'}
-                                        </Badge>
-                                      </div>
-                                      {/* Contact Name (if available) */}
-                                      {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
-                                        <div className="flex items-center gap-1">
-                                          <Person className="h-4 w-4 text-green-600" />
-                                          <p className="text-sm text-gray-900 font-semibold">
-                                            {phoneData[company.id].name}
-                                          </p>
-                                        </div>
-                                      )}
-                                      {/* Phone Type (if available) */}
-                                      {phoneData[company.id].type && (
-                                        <div className="flex items-center gap-1">
-                                          <p className="text-xs text-gray-600 capitalize">
-                                            Type: {phoneData[company.id].type}
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                {/* Phone Number - Fixed 28px */}
-                                <div className="min-h-[40px] mb-1">
-                                  {company.phone && !phoneData[company.id] && (
-                                    <div className="flex items-center gap-1">
-                                      <Phone className="h-4 w-4 text-gray-600" />
-                                      <p className="text-sm text-gray-900 font-medium">
-                                        {company.phone}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                                {/* Location - Fixed 48px (allows 2 lines) */}
-                                <div className="min-h-[40px] mb-1.5">
-                                  {company.location && (
-                                    <div className="flex items-center gap-1">
-                                      <LocationOn className="h-4 w-4 text-gray-600" />
-                                      <p className="text-sm text-gray-900 font-medium">
-                                        {company.location}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Company Scale Section - Always at same position with fixed height */}
-                              <div className="mb-1.5">
-                                {/* Headline */}
-                                <p className="text-xs text-gray-600 uppercase font-bold tracking-wider mb-1 block">
-                                  Company Scale
-                                </p>
-                                {/* Circle and Button Row */}
-                                <div className="flex items-center justify-between gap-1 h-[65px] flex-nowrap w-full min-w-0">
-                                  {/* Circular Employee Count - Blue if has employees, Grey if no employees */}
-                                  {company.employeeCount && parseInt(company.employeeCount) > 0 ? (
-                                    <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg flex-shrink-0 p-[3px]">
-                                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
-                                        <People className="text-blue-500 h-[22px] w-[22px]" />
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div
-                                      className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0"
-                                      style={{
-                                        background: 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
-                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
-                                      }}
-                                    >
-                                      <div
-                                        className="w-[55px] h-[55px] rounded-full bg-[#e0e0e0] flex items-center justify-center flex-col gap-0.5"
-                                      >
-                                        <People
-                                          className="text-[#757575] text-lg"
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* View All Employees Button - Blue if has employees, Grey if no employees */}
-                                  <Button
-                                    variant="default"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGetEmployees(company);
-                                    }}
-                                    disabled={!company.employeeCount || parseInt(company.employeeCount) === 0}
-                                    className={`font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis
-                        ${(company.employeeCount && parseInt(company.employeeCount) > 0)
-                                        ? 'bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white shadow-[0_4px_12px_rgba(0,210,255,0.4)] hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]'
-                                        : 'bg-gradient-to-br from-[#bdbdbd] to-[#9e9e9e] text-[#757575] shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:from-[#9e9e9e] hover:to-[#757575] hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] active:shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
-                                      }
-                        disabled:from-[#bdbdbd] disabled:to-[#9e9e9e] disabled:text-[#757575]`}
-                                  >
-                                    View All Employees
-                                  </Button>
-                                </div>
-                              </div>
-                              {/* Links Section */}
-                              <div className="mt-8">
-                                <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-xs mb-2 block">
-                                  LINKS
-                                </p>
-                                <div className="flex gap-2 flex-wrap">
-                                  {company.website && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-blue-500 hover:bg-blue-50">
-                                            <Language className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>Website</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company.linkedinProfile && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#0077b5] hover:bg-blue-50">
-                                            <LinkedInIcon className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>LinkedIn</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company.facebookUrl && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.facebookUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#1877f2] hover:bg-blue-50">
-                                            <Facebook className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>Facebook</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company.twitterUrl && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.twitterUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50 hover:shadow-lg hover:scale-110 transition-all">
-                                            <span className="text-2xl font-black font-sans leading-6 h-6 w-6 flex items-center justify-center m-0 p-0">𝕏</span>
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>X (Twitter)</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company.instagramUrl && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#E4405F] hover:bg-pink-50">
-                                            <Instagram className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>Instagram</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company.blogUrl && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.blogUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50">
-                                            <Article className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>Blog</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
-                              {company.employeeCount !== undefined && company.employeeCount !== null ? (
-                                <div className="mt-3 flex flex-wrap gap-1">
-                                  {parseInt(company.employeeCount) >= 200 && (
-                                    <Chip
-                                      label="#enterprise"
-                                      size="small"
-                                      variant="outlined"
-                                      className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
-                                    />
-                                  )}
-                                  {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
-                                    <Chip
-                                      label="#large"
-                                      size="small"
-                                      variant="outlined"
-                                      className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
-                                    />
-                                  )}
-                                  {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
-                                    <Chip
-                                      label="#medium"
-                                      size="small"
-                                      variant="outlined"
-                                      className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
-                                    />
-                                  )}
-                                  {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
-                                    <Chip
-                                      label="#small"
-                                      size="small"
-                                      variant="outlined"
-                                      className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
-                                    />
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ))}
+            >
+              <CardContent className="flex-grow p-0 relative z-[2]">
+                {/* Company Header - Clean White Background */}
+                <div className="bg-white p-5 relative">
+                  <div className="flex items-start gap-4">
+                    <div className="relative">
+                    <Avatar 
+                      className={`w-14 h-14 flex-shrink-0 transition-all duration-200 ease-in-out ${selectedCompanies.has(company.id || index) ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'}`}
+                      src={company.logoUrl || company.logo || company.profileImage || company.companyLogo}
+                      alt={`${company.companyName || company.username || 'Company'} logo`}
+                    >
+                      {!(company.logoUrl || company.logo || company.profileImage || company.companyLogo) && (
+                        <Business fontSize="large" />
+                      )}
+                    </Avatar>
+                      {selectedCompanies.has(company.id || index) && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
+                      <h3 
+                        className="font-bold text-lg text-black cursor-pointer transition-colors line-clamp-2 hover:text-[#0b1957] hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(company);
+                        }}
+                      >
+                        {company.companyName || company.username || 'Unknown Company'}
+                      </h3>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Business className="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
-                    <h3 className="text-lg text-muted-foreground">
-                      0 company data found
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Try searching for companies using keywords like "cleaning services" or "technology companies"
+                </div>
+                {/* Card Body */}
+                <div className="p-2.5 pt-0">
+                {/* All Variable Content - Each section has fixed height */}
+                <div className="mb-0">
+                {/* Industry - Fixed 24px */}
+                <div className="min-h-[24px] mb-0.5">
+                  {company.industry && (
+                    <Chip
+                      label={company.industry}
+                      size="small" 
+                      variant="outlined"
+                      className="font-bold h-6"
+                    />
+                  )}
+                </div>
+                {/* Decision Maker Contact - Fixed 60px */}
+                <div className="min-h-[60px] mb-0">
+                {phoneData[company.id] && (
+                  <div className="mb-1 p-1.5 bg-green-50 rounded border border-green-600">
+                    <p className="text-xs text-green-600 uppercase font-bold tracking-wider mb-1 block">
+                      ✓ DECISION MAKER CONTACT
                     </p>
+                    {/* Phone Number */}
+                    <div className="flex items-center gap-1 mb-0.5">
+                        <Phone className="h-4 w-4 text-green-600" />
+                        <p className="text-sm text-gray-900 font-bold">
+                        {phoneData[company.id].phone}
+                      </p>
+                  <Badge className="bg-green-600 text-white text-[0.65rem] h-[18px] font-semibold uppercase">
+                        {phoneData[company.id].confidence || 'high'}
+                      </Badge>
+                </div>
+                    {/* Contact Name (if available) */}
+                    {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
+                      <div className="flex items-center gap-1">
+                          <Person className="h-4 w-4 text-green-600" />
+                          <p className="text-sm text-gray-900 font-semibold">
+                          {phoneData[company.id].name}
+                        </p>
+                      </div>
+                    )}
+                    {/* Phone Type (if available) */}
+                    {phoneData[company.id].type && (
+                      <div className="flex items-center gap-1">
+                          <p className="text-xs text-gray-600 capitalize">
+                          Type: {phoneData[company.id].type}
+                      </p>
+                    </div>
+                  )}
+                    </div>
+                  )}
+                </div>
+                {/* Phone Number - Fixed 28px */}
+                <div className="min-h-[40px] mb-1">
+                  {company.phone && !phoneData[company.id] && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-900 font-medium">
+                        {company.phone}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {/* Location - Fixed 48px (allows 2 lines) */}
+                <div className="min-h-[40px] mb-1.5">
+                  {company.location && (
+                    <div className="flex items-center gap-1">
+                      <LocationOn className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-900 font-medium">
+                        {company.location}
+                      </p>
+                    </div>
+                  )}
+                </div>
                   </div>
-                );
-              })()
-            )}
-          </>
-        )}
+                {/* Company Scale Section - Always at same position with fixed height */}
+                <div className="mb-1.5">
+                  {/* Headline */}
+                  <p className="text-xs text-gray-600 uppercase font-bold tracking-wider mb-1 block">
+                    Company Scale
+                  </p>
+                  {/* Circle and Button Row */}
+                  <div className="flex items-center justify-between gap-1 h-[65px] flex-nowrap w-full min-w-0">
+                    {/* Circular Employee Count - Blue if has employees, Grey if no employees */}
+                    {company.employeeCount && parseInt(company.employeeCount) > 0 ? (
+                      <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg flex-shrink-0 p-[3px]">
+                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
+                          <People className="text-blue-500 h-[22px] w-[22px]" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
+                        }}
+                      >
+                        <div
+                          className="w-[55px] h-[55px] rounded-full bg-[#e0e0e0] flex items-center justify-center flex-col gap-0.5"
+                        >
+                          <People 
+                            className="text-[#757575] text-lg"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {/* View All Employees Button - Blue if has employees, Grey if no employees */}
+                    <Button
+                      variant="default"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGetEmployees(company);
+                      }}
+                      disabled={!company.employeeCount || parseInt(company.employeeCount) === 0}
+                      className={`font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis
+                        ${(company.employeeCount && parseInt(company.employeeCount) > 0)
+                          ? 'bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white shadow-[0_4px_12px_rgba(0,210,255,0.4)] hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]'
+                          : 'bg-gradient-to-br from-[#bdbdbd] to-[#9e9e9e] text-[#757575] shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:from-[#9e9e9e] hover:to-[#757575] hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] active:shadow-[0_4px_12px_rgba(0,0,0,0.25)]'
+                        }
+                        disabled:from-[#bdbdbd] disabled:to-[#9e9e9e] disabled:text-[#757575]`}
+                    >
+                      View All Employees
+                    </Button>
+                  </div>
+                </div>
+                {/* Links Section */}
+                <div className="mt-8">
+                  <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-xs mb-2 block">
+                    LINKS
+                  </p>
+                <div className="flex gap-2 flex-wrap">
+                  {company.website && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-blue-500 hover:bg-blue-50">
+                            <Language className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Website</p></TooltipContent>
+                    </Tooltip>
+                  )}
+                  {company.linkedinProfile && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#0077b5] hover:bg-blue-50">
+                            <LinkedInIcon className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>LinkedIn</p></TooltipContent>
+                    </Tooltip>
+                  )}
+                    {company.facebookUrl && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={company.facebookUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#1877f2] hover:bg-blue-50">
+                              <Facebook className="h-6 w-6" />
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Facebook</p></TooltipContent>
+                      </Tooltip>
+                  )}
+                    {company.twitterUrl && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={company.twitterUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50 hover:shadow-lg hover:scale-110 transition-all">
+                              <span className="text-2xl font-black font-sans leading-6 h-6 w-6 flex items-center justify-center m-0 p-0">𝕏</span>
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>X (Twitter)</p></TooltipContent>
+                      </Tooltip>
+                  )}
+                  {company.instagramUrl && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-[#E4405F] hover:bg-pink-50">
+                            <Instagram className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Instagram</p></TooltipContent>
+                    </Tooltip>
+                  )}
+                  {company.blogUrl && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={company.blogUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-gray-600 hover:text-purple-400 hover:bg-purple-50">
+                            <Article className="h-6 w-6" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Blog</p></TooltipContent>
+                    </Tooltip>
+                  )}
+                  </div>
+                </div>
+                {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
+                {company.employeeCount !== undefined && company.employeeCount !== null ? (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {parseInt(company.employeeCount) >= 200 && (
+                      <Chip
+                        label="#enterprise"
+                        size="small" 
+                        variant="outlined"
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
+                      />
+                    )}
+                    {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
+                      <Chip
+                        label="#large"
+                        size="small" 
+                        variant="outlined"
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
+                      />
+                    )}
+                    {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
+                      <Chip
+                        label="#medium"
+                        size="small"
+                        variant="outlined"
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
+                      />
+                    )}
+                    {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
+                      <Chip
+                        label="#small"
+                        size="small"
+                        variant="outlined"
+                        className="bg-transparent text-[#6c757d] border-[rgba(0,0,0,0.12)] font-medium text-[0.7rem] h-6"
+                      />
+                    )}
+                  </div>
+                    ) : null}
+                </div>
+                </CardContent>
+            </Card>
+        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Business className="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
+            <h3 className="text-lg text-muted-foreground">
+              0 company data found
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Try searching for companies using keywords like "cleaning services" or "technology companies"
+            </p>
+          </div>  
+        );
+      })()
+      )}
+      </>
+    )}
       {/* Employees Tab Content */}
       {activeTab === 1 && (
         <div className="p-2">
@@ -2746,412 +2745,414 @@ export default function CompanyDataTable({
                 return isEmployee;
               });
             return filteredEmployees.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
-                {/* {} */}
-                {filteredEmployees
-                  // Sort employees by company phone number - show companies with phone numbers first
-                  .sort((a, b) => {
-                    // Extract company phone for employee a
-                    let aPhone = '';
-                    try {
-                      const aFullData = a.employee_data ? (typeof a.employee_data === 'string' ? JSON.parse(a.employee_data) : a.employee_data) : null;
-                      const aOrg = aFullData?.organization || a.organization || {};
-                      aPhone = aOrg.phone || aOrg.phone_number || a.company_phone ||
-                        aOrg.primary_phone?.number || aOrg.sanitized_phone || '';
-                      // Also check if company exists in data array
-                      const aCompanyId = normalizeCompanyId(aOrg.id || a.organization_id || a.company_id);
-                      const aCompany = data.find(c => {
-                        const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
-                        return cId && aCompanyId && cId === aCompanyId;
-                      });
-                      if (aCompany?.phone) aPhone = aCompany.phone;
-                    } catch (e) { }
-                    // Extract company phone for employee b
-                    let bPhone = '';
-                    try {
-                      const bFullData = b.employee_data ? (typeof b.employee_data === 'string' ? JSON.parse(b.employee_data) : b.employee_data) : null;
-                      const bOrg = bFullData?.organization || b.organization || {};
-                      bPhone = bOrg.phone || bOrg.phone_number || b.company_phone ||
-                        bOrg.primary_phone?.number || bOrg.sanitized_phone || '';
-                      // Also check if company exists in data array
-                      const bCompanyId = normalizeCompanyId(bOrg.id || b.organization_id || b.company_id);
-                      const bCompany = data.find(c => {
-                        const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
-                        return cId && bCompanyId && cId === bCompanyId;
-                      });
-                      if (bCompany?.phone) bPhone = bCompany.phone;
-                    } catch (e) { }
-                    const aHasPhone = Boolean(aPhone && aPhone.trim());
-                    const bHasPhone = Boolean(bPhone && bPhone.trim());
-                    if (aHasPhone && !bHasPhone) return -1;
-                    if (!aHasPhone && bHasPhone) return 1;
-                    return 0;
-                  })
-                  .map((employee, index) => {
-                    const isSelected = selectedEmployees.has(index);
-                    const employeeId = employee.id || employee.linkedin_url || index;
-                    const revealed = revealedEmployeeContacts[employeeId] || {};
-                    const revealing = unlockingEmployeeContacts[employeeId] || {};
-                    // Extract company info from employee data - check multiple possible fields
-                    let fullEmployeeData = null;
-                    if (employee.employee_data) {
-                      try {
-                        fullEmployeeData = typeof employee.employee_data === 'string'
-                          ? JSON.parse(employee.employee_data)
-                          : employee.employee_data;
-                      } catch (e) {
-                        // Ignore parse errors
-                      }
-                    }
-                    // Extract from employee_data.organization first, then fallback to employee.organization
-                    const org = fullEmployeeData?.organization || employee.organization || {};
-                    const companyName = org.name || employee.company_name || employee.organization_name || org.company_name || 'Unknown Company';
-                    // Debug logging
-                    if (companyName === 'Unknown Company') {
-                    }
-                    const companyLogo = org.logo_url || org.logo || employee.organization_logo_url || '';
-                    const companyWebsite = org.website_url || org.website || employee.organization_website_url || '';
-                    const companyLinkedIn = org.linkedin_url || org.linkedin || employee.organization_linkedin_url || '';
-                    const companyDomain = org.domain || employee.company_domain || '';
-                    const companyIndustry = org.industry || employee.company_industry || '';
-                    // Extract company location - check multiple possible fields
-                    let companyLocation = org.location ||
-                      org.primary_location ||
-                      org.formatted_address ||
-                      employee.company_location ||
-                      employee.organization?.location ||
-                      employee.organization?.primary_location ||
-                      '';
-                    // If no direct location, try to build from address components
-                    if (!companyLocation || companyLocation.trim() === '') {
-                      const orgAddress = org.raw_address || org.address || employee.organization?.raw_address || employee.organization?.address || {};
-                      const orgCity = org.city || orgAddress?.city || employee.organization?.city || employee.city || '';
-                      const orgState = org.state || orgAddress?.state || employee.organization?.state || employee.state || '';
-                      const orgCountry = org.country || orgAddress?.country || employee.organization?.country || employee.country || '';
-                      if (orgCity || orgState || orgCountry) {
-                        companyLocation = [orgCity, orgState, orgCountry].filter(Boolean).join(', ');
-                      }
-                    }
-                    // Final fallback - try employee's own location fields
-                    if (!companyLocation || companyLocation.trim() === '') {
-                      const locationParts = [
-                        employee.city,
-                        employee.state,
-                        employee.country
-                      ].filter(Boolean);
-                      if (locationParts.length > 0) {
-                        companyLocation = locationParts.join(', ');
-                      }
-                    }
-                    // Extract company phone - check multiple possible fields
-                    let companyPhone = org.phone || org.phone_number || employee.company_phone || '';
-                    if (!companyPhone) {
-                      // Check nested phone structures
-                      companyPhone = org.primary_phone?.number ||
-                        org.primary_phone?.sanitized_number ||
-                        org.sanitized_phone ||
-                        org.phone_numbers?.[0]?.number ||
-                        org.phone_numbers?.[0]?.sanitized_number ||
-                        '';
-                    }
-                    const companyEmployeeCount = org.employee_count || org.employees || employee.company_employee_count || '';
-                    // Find company data for this employee from data array (company search results)
-                    const empCompanyId = normalizeCompanyId(org.id || employee.organization_id || employee.company_id);
-                    let company = data.find(c => {
-                      const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
-                      return cId && empCompanyId && cId === empCompanyId;
-                    });
-                    // If company not found in data array, build company object from employee data
-                    if (!company && companyName !== 'Unknown Company') {
-                      // Look up summary from companySummaries prop
-                      const companySummary = empCompanyId ? (companySummaries[empCompanyId] || companySummaries[String(empCompanyId)]) : null;
-                      company = {
-                        id: empCompanyId,
-                        company_id: empCompanyId,
-                        apollo_organization_id: empCompanyId,
-                        companyName: companyName,
-                        username: companyName,
-                        name: companyName,
-                        logoUrl: companyLogo,
-                        logo: companyLogo,
-                        website: companyWebsite,
-                        linkedinProfile: companyLinkedIn,
-                        domain: companyDomain,
-                        industry: companyIndustry,
-                        location: companyLocation || org.address || org.raw_address || org.city || org.primary_location || '',
-                        phone: companyPhone || org.phone_number || org.primary_phone?.number || org.sanitized_phone || '',
-                        employeeCount: companyEmployeeCount,
-                        employees: companyEmployeeCount,
-                        ...(companySummary ? { summary: companySummary } : {}) // Attach summary if available
-                      };
-                    } else if (company) {
-                      // If company found but missing phone/location, add from employee data
-                      if ((!company.phone || company.phone.trim() === '') && companyPhone && companyPhone.trim()) {
-                        company.phone = companyPhone;
-                      }
-                      if ((!company.location || company.location.trim() === '') && companyLocation && companyLocation.trim()) {
-                        company.location = companyLocation;
-                      }
-                      if (!company.industry && companyIndustry) {
-                        company.industry = companyIndustry;
-                      }
-                      // Attach summary if not already present
-                      if (!company.summary && empCompanyId) {
-                        const companySummary = companySummaries[empCompanyId] || companySummaries[String(empCompanyId)];
-                        if (companySummary) {
-                          company.summary = companySummary;
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 relative z-[2] items-stretch">
+              {/* {} */}
+            {filteredEmployees
+              // Sort employees by company phone number - show companies with phone numbers first
+              .sort((a, b) => {
+                // Extract company phone for employee a
+                let aPhone = '';
+                try {
+                  const aFullData = a.employee_data ? (typeof a.employee_data === 'string' ? JSON.parse(a.employee_data) : a.employee_data) : null;
+                  const aOrg = aFullData?.organization || a.organization || {};
+                  aPhone = aOrg.phone || aOrg.phone_number || a.company_phone || 
+                          aOrg.primary_phone?.number || aOrg.sanitized_phone || '';
+                  // Also check if company exists in data array
+                  const aCompanyId = normalizeCompanyId(aOrg.id || a.organization_id || a.company_id);
+                  const aCompany = data.find(c => {
+                    const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                    return cId && aCompanyId && cId === aCompanyId;
+                  });
+                  if (aCompany?.phone) aPhone = aCompany.phone;
+                } catch (e) {}
+                // Extract company phone for employee b
+                let bPhone = '';
+                try {
+                  const bFullData = b.employee_data ? (typeof b.employee_data === 'string' ? JSON.parse(b.employee_data) : b.employee_data) : null;
+                  const bOrg = bFullData?.organization || b.organization || {};
+                  bPhone = bOrg.phone || bOrg.phone_number || b.company_phone || 
+                          bOrg.primary_phone?.number || bOrg.sanitized_phone || '';
+                  // Also check if company exists in data array
+                  const bCompanyId = normalizeCompanyId(bOrg.id || b.organization_id || b.company_id);
+                  const bCompany = data.find(c => {
+                    const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                    return cId && bCompanyId && cId === bCompanyId;
+                  });
+                  if (bCompany?.phone) bPhone = bCompany.phone;
+                } catch (e) {}
+                const aHasPhone = Boolean(aPhone && aPhone.trim());
+                const bHasPhone = Boolean(bPhone && bPhone.trim());
+                if (aHasPhone && !bHasPhone) return -1;
+                if (!aHasPhone && bHasPhone) return 1;
+                return 0;
+              })
+              .map((employee, index) => {
+              const isSelected = selectedEmployees.has(index);
+              const employeeId = employee.id || employee.linkedin_url || index;
+              const revealed = revealedEmployeeContacts[employeeId] || {};
+              const revealing = unlockingEmployeeContacts[employeeId] || {};
+              // Extract company info from employee data - check multiple possible fields
+              let fullEmployeeData = null;
+              if (employee.employee_data) {
+                try {
+                  fullEmployeeData = typeof employee.employee_data === 'string' 
+                    ? JSON.parse(employee.employee_data) 
+                    : employee.employee_data;
+                } catch (e) {
+                  // Ignore parse errors
+                }
+              }
+              // Extract from employee_data.organization first, then fallback to employee.organization
+              const org = fullEmployeeData?.organization || employee.organization || {};
+              const companyName = org.name || employee.company_name || employee.organization_name || org.company_name || 'Unknown Company';
+              // Debug logging
+              if (companyName === 'Unknown Company') {
+                }
+              const companyLogo = org.logo_url || org.logo || employee.organization_logo_url || '';
+              const companyWebsite = org.website_url || org.website || employee.organization_website_url || '';
+              const companyLinkedIn = org.linkedin_url || org.linkedin || employee.organization_linkedin_url || '';
+              const companyDomain = org.domain || employee.company_domain || '';
+              const companyIndustry = org.industry || employee.company_industry || '';
+              // Extract company location - check multiple possible fields
+              let companyLocation = org.location || 
+                                   org.primary_location ||
+                                   org.formatted_address ||
+                                   employee.company_location || 
+                                   employee.organization?.location ||
+                                   employee.organization?.primary_location ||
+                                   '';
+              // If no direct location, try to build from address components
+              if (!companyLocation || companyLocation.trim() === '') {
+                const orgAddress = org.raw_address || org.address || employee.organization?.raw_address || employee.organization?.address || {};
+                const orgCity = org.city || orgAddress?.city || employee.organization?.city || employee.city || '';
+                const orgState = org.state || orgAddress?.state || employee.organization?.state || employee.state || '';
+                const orgCountry = org.country || orgAddress?.country || employee.organization?.country || employee.country || '';
+                if (orgCity || orgState || orgCountry) {
+                  companyLocation = [orgCity, orgState, orgCountry].filter(Boolean).join(', ');
+                }
+              }
+              // Final fallback - try employee's own location fields
+              if (!companyLocation || companyLocation.trim() === '') {
+                const locationParts = [
+                  employee.city,
+                  employee.state,
+                  employee.country
+                ].filter(Boolean);
+                if (locationParts.length > 0) {
+                  companyLocation = locationParts.join(', ');
+                }
+              }
+              // Extract company phone - check multiple possible fields
+              let companyPhone = org.phone || org.phone_number || employee.company_phone || '';
+              if (!companyPhone) {
+                // Check nested phone structures
+                companyPhone = org.primary_phone?.number || 
+                              org.primary_phone?.sanitized_number ||
+                              org.sanitized_phone ||
+                              org.phone_numbers?.[0]?.number ||
+                              org.phone_numbers?.[0]?.sanitized_number ||
+                              '';
+              }
+              const companyEmployeeCount = org.employee_count || org.employees || employee.company_employee_count || '';
+              // Find company data for this employee from data array (company search results)
+              const empCompanyId = normalizeCompanyId(org.id || employee.organization_id || employee.company_id);
+              let company = data.find(c => {
+                const cId = normalizeCompanyId(c.id || c.company_id || c.apollo_organization_id);
+                return cId && empCompanyId && cId === empCompanyId;
+              });
+              // If company not found in data array, build company object from employee data
+              if (!company && companyName !== 'Unknown Company') {
+                // Look up summary from companySummaries prop
+                const companySummary = empCompanyId ? (companySummaries[empCompanyId] || companySummaries[String(empCompanyId)]) : null;
+                company = {
+                  id: empCompanyId,
+                  company_id: empCompanyId,
+                  apollo_organization_id: empCompanyId,
+                  companyName: companyName,
+                  username: companyName,
+                  name: companyName,
+                  logoUrl: companyLogo,
+                  logo: companyLogo,
+                  website: companyWebsite,
+                  linkedinProfile: companyLinkedIn,
+                  domain: companyDomain,
+                  industry: companyIndustry,
+                  location: companyLocation || org.address || org.raw_address || org.city || org.primary_location || '',
+                  phone: companyPhone || org.phone_number || org.primary_phone?.number || org.sanitized_phone || '',
+                  employeeCount: companyEmployeeCount,
+                  employees: companyEmployeeCount,
+                  ...(companySummary ? { summary: companySummary } : {}) // Attach summary if available
+                };
+              } else if (company) {
+                // If company found but missing phone/location, add from employee data
+                if ((!company.phone || company.phone.trim() === '') && companyPhone && companyPhone.trim()) {
+                  company.phone = companyPhone;
+                }
+                if ((!company.location || company.location.trim() === '') && companyLocation && companyLocation.trim()) {
+                  company.location = companyLocation;
+                }
+                if (!company.industry && companyIndustry) {
+                  company.industry = companyIndustry;
+                }
+                // Attach summary if not already present
+                if (!company.summary && empCompanyId) {
+                  const companySummary = companySummaries[empCompanyId] || companySummaries[String(empCompanyId)];
+                  if (companySummary) {
+                    company.summary = companySummary;
+                  }
+                }
+              }
+              return (
+                <div key={employeeId} className="flex flex-col items-stretch h-full">
+                  <Card 
+                    onClick={() => {
+                      if (onEmployeeSelectionChange) {
+                        const newSelected = new Set(selectedEmployees);
+                        if (isSelected) {
+                          newSelected.delete(index);
+                        } else {
+                          newSelected.add(index);
                         }
+                        onEmployeeSelectionChange(newSelected);
                       }
-                    }
-                    return (
-                      <div key={employeeId} className="flex flex-col items-stretch h-full">
-                        <Card
-                          onClick={() => {
-                            if (onEmployeeSelectionChange) {
-                              const newSelected = new Set(selectedEmployees);
-                              if (isSelected) {
-                                newSelected.delete(index);
-                              } else {
-                                newSelected.add(index);
-                              }
-                              onEmployeeSelectionChange(newSelected);
-                            }
-                          }}
-                          className={`w-full h-full flex flex-col min-h-0 transition-all cursor-pointer rounded-xl overflow-hidden relative bg-white shadow-sm ${isSelected
-                            ? 'border-2 border-[#0b1957] shadow-md'
-                            : 'border border-[#e9ecef]'
-                            } hover:shadow-lg hover:border-[${isSelected ? '#0b1957' : '#dee2e6'}]`}
-                          style={{
-                            boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
-                          }}
-                        >
-                          {isSelected && (
-                            <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#0b1957] z-[1]" />
-                          )}
-                          <CardContent className="flex-grow p-0 relative z-[2]">
-                            {/* Company Header - Clean White Background */}
-                            <div className="bg-white px-5 pt-5 pb-0 relative">
-                              <div className="flex items-start gap-4 relative">
-                                <div className="relative flex-shrink-0">
-                                  <Avatar
-                                    className={`w-12 h-12 flex-shrink-0 ${isSelected ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'
-                                      }`}
-                                    style={{
-                                      backgroundColor: 'var(--primary)',
-                                    }}
-                                    src={companyLogo || company?.logoUrl || company?.logo}
-                                    alt={`${companyName} logo`}
-                                  >
-                                    {!(companyLogo || company?.logoUrl || company?.logo) && (
-                                      <Business />
-                                    )}
-                                  </Avatar>
-                                  {isSelected && (
-                                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md z-[3]">
-                                      <CheckCircle className="text-white" style={{ fontSize: 16 }} />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
-                                  <h3
-                                    className="font-bold break-words leading-tight text-lg text-black cursor-pointer transition-colors line-clamp-2 overflow-hidden mb-0 hover:text-[#0b1957] hover:underline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (company) {
-                                        handleViewDetails(company);
-                                      }
-                                    }}
-                                  >
-                                    {companyName}
-                                  </h3>
-                                </div>
+                    }}
+                    className={`w-full h-full flex flex-col min-h-0 transition-all cursor-pointer rounded-xl overflow-hidden relative bg-white shadow-sm ${
+                      isSelected 
+                        ? 'border-2 border-[#0b1957] shadow-md' 
+                        : 'border border-[#e9ecef]'
+                    } hover:shadow-lg hover:border-[${isSelected ? '#0b1957' : '#dee2e6'}]`}
+                    style={{
+                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#0b1957] z-[1]" />
+                    )}
+                    <CardContent className="flex-grow p-0 relative z-[2]">
+                      {/* Company Header - Clean White Background */}
+                      <div className="bg-white px-5 pt-5 pb-0 relative">
+                        <div className="flex items-start gap-4 relative">
+                          <div className="relative flex-shrink-0">
+                          <Avatar 
+                            className={`w-12 h-12 flex-shrink-0 ${
+                              isSelected ? 'border-[3px] border-[#0b1957]' : 'border-2 border-[#e9ecef]'
+                            }`}
+                            style={{
+                              backgroundColor: 'var(--primary)',
+                            }}
+                              src={companyLogo || company?.logoUrl || company?.logo}
+                              alt={`${companyName} logo`}
+                          >
+                              {!(companyLogo || company?.logoUrl || company?.logo) && (
+                                <Business />
+                              )}
+                          </Avatar>
+                            {isSelected && (
+                              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#0b1957] flex items-center justify-center border-2 border-white shadow-md z-[3]">
+                                <CheckCircle className="text-white" style={{ fontSize: 16 }} />
                               </div>
-                            </div>
-                            {/* Card Body */}
-                            <div className="p-5 pt-0 -mt-1">
-                              {/* All Variable Content - Each section has fixed height */}
-                              <div className="mb-0">
-                                {/* Decision Maker Contact - Fixed 60px */}
-                                <div className="min-h-[60px] mb-0">
-                                  {company && phoneData[company.id] && (
-                                    <div className="mb-2 p-3 bg-[#f0fff4] rounded border border-[#28a745]">
-                                      <p className="text-[#28a745] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
-                                        ✓ DECISION MAKER CONTACT
-                                      </p>
-                                      {/* Phone Number */}
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <Phone className="text-[#28a745]" style={{ fontSize: 16 }} />
-                                        <p className="text-[#212529] font-bold text-[0.95rem]">
-                                          {phoneData[company.id].phone}
-                                        </p>
-                                        <Badge className="bg-[#28a745] text-white text-[0.65rem] h-[18px] font-semibold uppercase">
-                                          {phoneData[company.id].confidence || 'high'}
-                                        </Badge>
-                                      </div>
-                                      {/* Contact Name (if available) */}
-                                      {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <Person className="text-[#28a745]" style={{ fontSize: 16 }} />
-                                          <p className="text-[#212529] font-semibold text-sm">
-                                            {phoneData[company.id].name}
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                {/* Phone Number - Fixed 28px */}
-                                <div className="min-h-[40px] mb-2">
-                                  {(() => {
-                                    const displayPhone = (company?.phone && company.phone.trim()) || (companyPhone && companyPhone.trim());
-                                    return displayPhone && !phoneData[company?.id] ? (
-                                      <div className="flex items-center gap-2">
-                                        <Phone className="text-[#6c757d]" style={{ fontSize: 16 }} />
-                                        <p className="text-[#212529] font-medium text-sm">
-                                          {displayPhone}
-                                        </p>
-                                      </div>
-                                    ) : null;
-                                  })()}
-                                </div>
-                                {/* Location - Fixed 48px (allows 2 lines) */}
-                                <div className="min-h-[40px] mb-3">
-                                  {(() => {
-                                    const displayLocation = (company?.location && company.location.trim()) || (companyLocation && companyLocation.trim());
-                                    return displayLocation ? (
-                                      <div className="flex items-center gap-2">
-                                        <LocationOn className="text-[#6c757d]" style={{ fontSize: 16 }} />
-                                        <p className="text-[#212529] font-medium text-sm">
-                                          {displayLocation}
-                                        </p>
-                                      </div>
-                                    ) : null;
-                                  })()}
-                                </div>
-                              </div>
-                              {/* Company Scale Section - Always at same position with fixed height */}
-                              <div className="min-h-[85px] mb-2 mt-1">
-                                {/* Headline */}
-                                <p className="text-[#6c757d] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
-                                  Company Scale
-                                </p>
-                                {/* Circle and Button Row */}
-                                <div className="flex items-center justify-between gap-2 h-[65px] flex-nowrap w-full min-w-0">
-                                  {/* Circular Employee Count - Always blue for employee cards */}
-                                  {(() => {
-                                    // Get employee count - try multiple sources
-                                    const empCount = company?.employeeCount ||
-                                      company?.employees ||
-                                      companyEmployeeCount ||
-                                      (company && company.employeeCount) ||
-                                      '';
-                                    const hasCount = empCount && parseInt(empCount) > 0;
-                                    return (
-                                      <div className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0 p-[3px]"
-                                        style={{
-                                          background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                                          boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
-                                        }}
-                                      >
-                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
-                                          <People
-                                            className="text-[#3a7bd5]"
-                                            style={{ fontSize: 22 }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-                                  {/* View Employee Button - Blue gradient */}
-                                  <Button
-                                    variant="default"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedEmployee(employee);
-                                      setEmployeeDetailDialogOpen(true);
-                                    }}
-                                    className="bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] shadow-[0_4px_12px_rgba(0,210,255,0.4)] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]"
-                                  >
-                                    View Employee
-                                  </Button>
-                                </div>
-                              </div>
-                              {/* Links Section */}
-                              <div className="mt-8">
-                                <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-[0.7rem] mb-2 block">
-                                  LINKS
-                                </p>
-                                <div className="flex gap-2 flex-wrap">
-                                  {company?.website && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#1976d2] hover:bg-[#e3f2fd]">
-                                            <Language className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>Website</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {company?.linkedinProfile && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="sm" asChild>
-                                          <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#0077b5] hover:bg-[#e7f3ff]">
-                                            <LinkedInIcon className="h-6 w-6" />
-                                          </a>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>LinkedIn</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
-                              {company?.employeeCount !== undefined && company?.employeeCount !== null ? (
-                                <div className="mt-3 flex flex-wrap gap-1">
-                                  {parseInt(company.employeeCount) >= 200 && (
-                                    <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
-                                      #enterprise
-                                    </Badge>
-                                  )}
-                                  {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
-                                    <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
-                                      #large
-                                    </Badge>
-                                  )}
-                                  {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
-                                    <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
-                                      #medium
-                                    </Badge>
-                                  )}
-                                  {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
-                                    <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
-                                      #small
-                                    </Badge>
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          </CardContent>
-                        </Card>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 min-h-[56px] flex items-center">
+                            <h3 
+                              className="font-bold break-words leading-tight text-lg text-black cursor-pointer transition-colors line-clamp-2 overflow-hidden mb-0 hover:text-[#0b1957] hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (company) {
+                                  handleViewDetails(company);
+                                }
+                              }}
+                            >
+                              {companyName}
+                            </h3>
+                          </div>
+                        </div>
                       </div>
-                    );
-                  })}
-              </div>
+                      {/* Card Body */}
+                      <div className="p-5 pt-0 -mt-1">
+                        {/* All Variable Content - Each section has fixed height */}
+                        <div className="mb-0">
+                        {/* Decision Maker Contact - Fixed 60px */}
+                        <div className="min-h-[60px] mb-0">
+                          {company && phoneData[company.id] && (
+                            <div className="mb-2 p-3 bg-[#f0fff4] rounded border border-[#28a745]">
+                              <p className="text-[#28a745] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
+                                ✓ DECISION MAKER CONTACT
+                              </p>
+                              {/* Phone Number */}
+                              <div className="flex items-center gap-2 mb-1">
+                                <Phone className="text-[#28a745]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-bold text-[0.95rem]">
+                                  {phoneData[company.id].phone}
+                                </p>
+                                <Badge className="bg-[#28a745] text-white text-[0.65rem] h-[18px] font-semibold uppercase">
+                                  {phoneData[company.id].confidence || 'high'}
+                                </Badge>
+                              </div>
+                              {/* Contact Name (if available) */}
+                              {phoneData[company.id].name && phoneData[company.id].name !== 'Decision Maker' && phoneData[company.id].name.trim() !== '' && (
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Person className="text-[#28a745]" style={{ fontSize: 16 }} />
+                                  <p className="text-[#212529] font-semibold text-sm">
+                                    {phoneData[company.id].name}
+                                  </p>
+                                </div>
+                            )}
+                          </div>
+                          )}
+                        </div>
+                        {/* Phone Number - Fixed 28px */}
+                        <div className="min-h-[40px] mb-2">
+                          {(() => {
+                            const displayPhone = (company?.phone && company.phone.trim()) || (companyPhone && companyPhone.trim());
+                            return displayPhone && !phoneData[company?.id] ? (
+                              <div className="flex items-center gap-2">
+                                <Phone className="text-[#6c757d]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-medium text-sm">
+                                  {displayPhone}
+                                </p>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                        {/* Location - Fixed 48px (allows 2 lines) */}
+                        <div className="min-h-[40px] mb-3">
+                          {(() => {
+                            const displayLocation = (company?.location && company.location.trim()) || (companyLocation && companyLocation.trim());
+                            return displayLocation ? (
+                              <div className="flex items-center gap-2">
+                                <LocationOn className="text-[#6c757d]" style={{ fontSize: 16 }} />
+                                <p className="text-[#212529] font-medium text-sm">
+                                  {displayLocation}
+                                </p>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                          </div>
+                        {/* Company Scale Section - Always at same position with fixed height */}
+                        <div className="min-h-[85px] mb-2 mt-1">
+                          {/* Headline */}
+                          <p className="text-[#6c757d] uppercase font-bold tracking-wider text-[0.7rem] mb-2 block">
+                            Company Scale
+                          </p>
+                          {/* Circle and Button Row */}
+                          <div className="flex items-center justify-between gap-2 h-[65px] flex-nowrap w-full min-w-0">
+                            {/* Circular Employee Count - Always blue for employee cards */}
+                            {(() => {
+                              // Get employee count - try multiple sources
+                              const empCount = company?.employeeCount || 
+                                             company?.employees || 
+                                             companyEmployeeCount || 
+                                             (company && company.employeeCount) ||
+                                             '';
+                              const hasCount = empCount && parseInt(empCount) > 0;
+                              return (
+                                <div className="w-[65px] h-[65px] rounded-full flex items-center justify-center flex-shrink-0 p-[3px]"
+                                  style={{
+                                    background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
+                                    boxShadow: '0 4px 12px rgba(0, 210, 255, 0.4)',
+                                  }}
+                                >
+                                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center flex-col gap-0.5">
+                                    <People 
+                                      className="text-[#3a7bd5]"
+                                      style={{ fontSize: 22 }}
+                                    />
+                          </div>
+                                </div>
+                              );
+                            })()}
+                            {/* View Employee Button - Blue gradient */}
+                            <Button
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEmployee(employee);
+                                setEmployeeDetailDialogOpen(true);
+                              }}
+                              className="bg-gradient-to-br from-[#00d2ff] to-[#3a7bd5] text-white font-bold text-base px-3 py-1.5 h-12 min-w-0 max-w-[220px] flex-[0_1_auto] whitespace-nowrap rounded-[50px] shadow-[0_4px_12px_rgba(0,210,255,0.4)] transition-all duration-300 ease-in-out flex-shrink overflow-hidden text-ellipsis hover:from-[#3a7bd5] hover:to-[#2a5db0] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,210,255,0.5)] active:translate-y-0 active:shadow-[0_3px_10px_rgba(0,210,255,0.4)]"
+                            >
+                              View Employee
+                            </Button>
+                          </div>
+                        </div>
+                        {/* Links Section */}
+                        <div className="mt-8">
+                          <p className="text-[#6c757d] uppercase font-semibold tracking-wider text-[0.7rem] mb-2 block">
+                            LINKS
+                          </p>
+                            <div className="flex gap-2 flex-wrap">
+                            {company?.website && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={company.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#1976d2] hover:bg-[#e3f2fd]">
+                                      <Language className="h-6 w-6" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Website</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                            {company?.linkedinProfile && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={company.linkedinProfile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="w-9 h-9 p-1.5 flex items-center justify-center flex-shrink-0 text-[#6c757d] hover:text-[#0077b5] hover:bg-[#e7f3ff]">
+                                      <LinkedInIcon className="h-6 w-6" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>LinkedIn</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </div>
+                        {/* Company Size Hashtags - After Links - Always show if employeeCount exists */}
+                        {company?.employeeCount !== undefined && company?.employeeCount !== null ? (
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {parseInt(company.employeeCount) >= 200 && (
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #enterprise
+                              </Badge>
+                            )}
+                            {parseInt(company.employeeCount) >= 50 && parseInt(company.employeeCount) < 200 && (
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #large
+                              </Badge>
+                            )}
+                            {parseInt(company.employeeCount) >= 11 && parseInt(company.employeeCount) < 50 && (
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #medium
+                              </Badge>
+                            )}
+                            {parseInt(company.employeeCount) >= 1 && parseInt(company.employeeCount) < 11 && (
+                              <Badge className="bg-transparent text-[#6c757d] border border-gray-300 font-medium text-[0.7rem] h-6">
+                                #small
+                              </Badge>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
             ) : (
-              <div className="text-center py-8">
-                <Person className="text-gray-500 mb-4" style={{ fontSize: 64 }} />
-                <h3 className="text-lg text-gray-500">
-                  0 employees data found
-                </h3>
-                <p className="text-sm text-gray-500 mt-2">
-                  Try searching for employees using the search bar above
-                </p>
-              </div>
-            );
-          })()}
+            <div className="text-center py-8">
+              <Person className="text-gray-500 mb-4" style={{ fontSize: 64 }} />
+              <h3 className="text-lg text-gray-500">
+                0 employees data found
+              </h3>
+              <p className="text-sm text-gray-500 mt-2">
+                Try searching for employees using the search bar above
+              </p>
+            </div>
+          );
+        })()}
         </div>
       )}
       {/* Phone Reveal Confirmation Dialog */}
@@ -3210,13 +3211,13 @@ export default function CompanyDataTable({
           </div>
         </DialogContent>
         <DialogFooter className="px-3 pb-2">
-          <Button
+          <Button 
             onClick={() => setPhoneConfirmDialog({ open: false, employee: null })}
             variant="outline"
           >
             Cancel
           </Button>
-          <Button
+          <Button 
             onClick={() => {
               const employee = phoneConfirmDialog.employee;
               setPhoneConfirmDialog({ open: false, employee: null });
@@ -3230,14 +3231,14 @@ export default function CompanyDataTable({
         </DialogFooter>
       </Dialog>
       {/* Detail Dialog */}
-      <Dialog
-        open={dialogOpen}
+      <Dialog 
+        open={dialogOpen} 
         onOpenChange={(open) => !open && handleCloseDialog()}
       >
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center gap-4">
-              <Avatar
+              <Avatar 
                 className="w-10 h-10 bg-[#0b1957]"
                 src={selectedCompany?.logo || selectedCompany?.profileImage || selectedCompany?.companyLogo}
                 alt={`${selectedCompany?.companyName || selectedCompany?.username || 'Company'} logo`}
@@ -3256,7 +3257,7 @@ export default function CompanyDataTable({
           {selectedCompany && (
             <div>
               {/* Debug: Log selectedCompany summary status */}
-              {console.log('Company summary:', selectedCompany.summary || 'none',
+              {console.log('Company summary:', selectedCompany.summary || 'none', 
                 'companyId:', selectedCompany.id || selectedCompany.company_id,
                 'allKeys:', Object.keys(selectedCompany)
               )}
@@ -3319,9 +3320,9 @@ export default function CompanyDataTable({
                             <Business className="text-[#0b1957] mb-1" style={{ fontSize: 32 }} />
                             <p className="text-[#0b1957] font-bold text-[0.7rem] text-center px-2">
                               {selectedCompany.employeeCount >= 200 ? 'Enterprise' :
-                                selectedCompany.employeeCount >= 50 ? 'Medium' :
-                                  selectedCompany.employeeCount >= 11 ? 'Small' :
-                                    'Startup'}
+                               selectedCompany.employeeCount >= 50 ? 'Medium' :
+                               selectedCompany.employeeCount >= 11 ? 'Small' :
+                               'Startup'}
                             </p>
                           </div>
                         </div>
@@ -3335,22 +3336,23 @@ export default function CompanyDataTable({
                       <div className="relative inline-flex mb-2">
                         <div
                           onClick={() => handleGetEmployees(selectedCompany)}
-                          className={`w-[150px] h-[150px] rounded-full flex items-center justify-center transition-all ${employeeLoading[selectedCompany.id || selectedCompany.domain]
-                            ? 'cursor-not-allowed opacity-60'
-                            : 'cursor-pointer opacity-100 hover:scale-105'
-                            }`}
+                          className={`w-[150px] h-[150px] rounded-full flex items-center justify-center transition-all ${
+                            employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                              ? 'cursor-not-allowed opacity-60' 
+                              : 'cursor-pointer opacity-100 hover:scale-105'
+                          }`}
                           style={{
                             background: 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)',
-                            boxShadow: employeeLoading[selectedCompany.id || selectedCompany.domain]
-                              ? '0 4px 12px rgba(0, 210, 255, 0.4)'
+                            boxShadow: employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                              ? '0 4px 12px rgba(0, 210, 255, 0.4)' 
                               : '0 4px 12px rgba(0, 210, 255, 0.4)',
                           }}
                         >
                           <div className="w-[120px] h-[120px] rounded-full bg-white flex items-center justify-center flex-col gap-1">
                             <People className="text-[#3a7bd5] mb-1" style={{ fontSize: 40 }} />
                             <p className="text-[#3a7bd5] font-bold text-[0.85rem] text-center px-2">
-                              {employeeLoading[selectedCompany.id || selectedCompany.domain]
-                                ? 'Loading'
+                              {employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                                ? 'Loading' 
                                 : fetchedEmployeeData[selectedCompany.id || selectedCompany.domain]?.length > 0
                                   ? `${fetchedEmployeeData[selectedCompany.id || selectedCompany.domain].length}`
                                   : 'View'
@@ -3360,8 +3362,8 @@ export default function CompanyDataTable({
                         </div>
                       </div>
                       <p className="text-[oklch(0.556_0_0)] font-semibold text-xs">
-                        {employeeLoading[selectedCompany.id || selectedCompany.domain]
-                          ? 'Loading...'
+                        {employeeLoading[selectedCompany.id || selectedCompany.domain] 
+                          ? 'Loading...' 
                           : fetchedEmployeeData[selectedCompany.id || selectedCompany.domain]?.length > 0
                             ? 'Employees Found'
                             : 'View Employees'
@@ -3689,14 +3691,14 @@ export default function CompanyDataTable({
                   </h4>
                   <div className="flex flex-col gap-4">
                     {selectedCompany.cLevelExecutives.slice(0, 10).map((employee, index) => (
-                      <div
+                      <div 
                         key={index}
                         className="p-4 bg-[#f8f9fa] rounded-lg border border-[#e9ecef] hover:bg-[#e9ecef] hover:shadow-md transition-all"
                       >
                         <div className="flex items-start gap-4">
                           {/* Employee Avatar */}
-                          <Avatar
-                            src={employee.photo_url}
+                          <Avatar 
+                            src={employee.photo_url} 
                             alt={employee.name}
                             className="w-12 h-12 bg-[#1976d2] text-lg font-bold"
                           >
@@ -3782,8 +3784,8 @@ export default function CompanyDataTable({
           )}
         </DialogContent>
         <DialogFooter className="p-3 gap-2">
-          <Button
-            onClick={handleCloseDialog}
+          <Button 
+            onClick={handleCloseDialog} 
             className="bg-[#0b1957] text-white rounded-[20px] hover:bg-[#0d1f6f]"
           >
             Close
@@ -3791,8 +3793,8 @@ export default function CompanyDataTable({
         </DialogFooter>
       </Dialog>
       {/* Employee List Dialog */}
-      <Dialog
-        open={employeeDialogOpen}
+      <Dialog 
+        open={employeeDialogOpen} 
         onOpenChange={(open) => {
           if (!open) {
             setEmployeeDialogOpen(false);
@@ -3805,7 +3807,7 @@ export default function CompanyDataTable({
           <DialogTitle>
             <div className="flex items-center gap-4 justify-between flex-wrap">
               <div className="flex items-center gap-4">
-                <Avatar
+                <Avatar 
                   className="w-10 h-10 bg-[#0b1957]"
                   src={selectedEmployeeCompany?.logoUrl || selectedEmployeeCompany?.logo}
                   alt={`${selectedEmployeeCompany?.companyName || 'Company'} logo`}
@@ -3820,7 +3822,7 @@ export default function CompanyDataTable({
                   </h3>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-[oklch(0.556_0_0)]">
-                      {filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain], employeeRoleFilter)?.length || 0}
+                      {filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain], employeeRoleFilter)?.length || 0} 
                       {employeeRoleFilter !== 'all' && ` of ${fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.length || 0}`} Employees
                     </p>
                     {employeeCacheInfo[selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain]?.from_cache && (
@@ -3831,116 +3833,120 @@ export default function CompanyDataTable({
                   </div>
                 </div>
               </div>
-              {/* Select All on left, Filter/Button/View Toggle on right */}
-              <div className="flex gap-4 items-center justify-between flex-wrap w-full">
-                {/* Select All Checkbox - Left side */}
-                {(() => {
-                  const companyId = selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain;
-                  const employees = fetchedEmployeeData[companyId] || [];
-                  const filteredEmployees = filterEmployeesByRole(employees, employeeRoleFilter);
-                  const allSelected = filteredEmployees.length > 0 && selectedDialogEmployees.size === filteredEmployees.length;
-                  const someSelected = selectedDialogEmployees.size > 0 && selectedDialogEmployees.size < filteredEmployees.length;
-                  return (
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            // Select all filtered employees
-                            const allIndices = new Set(filteredEmployees.map((_, idx) => idx));
-                            setSelectedDialogEmployees(allIndices);
-                          } else {
-                            // Deselect all
-                            setSelectedDialogEmployees(new Set());
-                          }
-                        }}
-                        className="text-[#0b1957]"
-                      />
-                      <Label className="text-[#0b1957]">Select All</Label>
-                    </div>
-                  );
-                })()}
-                {/* Right side: Filter, Send Connection Button, and View Toggle */}
-                <div className="flex gap-4 items-center flex-wrap">
-                  {/* Role Filter Dropdown */}
-                  <Select value={employeeRoleFilter} onValueChange={setEmployeeRoleFilter}>
-                    <SelectTrigger className="min-w-[180px] bg-white border border-[oklch(0.922_0_0)] rounded-lg text-[#0b1957] hover:border-[#0b1957] focus:border-[#0b1957]">
-                      <SelectValue placeholder="Filter by Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Employees</SelectItem>
-                      <SelectItem value="executive">Executive (CEO, CTO, CFO)</SelectItem>
-                      <SelectItem value="director">Directors</SelectItem>
-                      <SelectItem value="manager">Managers</SelectItem>
-                      <SelectItem value="hr">HR & Recruitment</SelectItem>
-                      <SelectItem value="sales">Sales & Business Dev</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="engineering">Engineering & Tech</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
-                      <SelectItem value="finance">Finance & Accounting</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {/* Send Connection Button - Always visible */}
-                  <Button
-                    size="sm"
-                    onClick={handleSendLinkedInConnectionsFromDialog}
-                    disabled={selectedDialogEmployees.size === 0}
-                    className={`rounded-full whitespace-nowrap px-4 font-semibold transition-all ${selectedDialogEmployees.size > 0
-                      ? 'bg-[#0077b5] hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5 text-white'
-                      : 'bg-[#cccccc] text-[#666666] cursor-not-allowed opacity-60'
-                      }`}
-                  >
-                    <LinkedInIcon className="mr-2 h-4 w-4" />
-                    Send Connection {selectedDialogEmployees.size > 0 ? `(${selectedDialogEmployees.size})` : ''}
-                  </Button>
-                  {/* View Toggle Button */}
-                  <div className="flex gap-1 bg-[oklch(0.97_0_0)] rounded-lg p-1 border border-[oklch(0.922_0_0)]">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEmployeeViewMode('grid')}
-                          className={`${employeeViewMode === 'grid'
-                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]'
-                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
-                            }`}
-                        >
-                          <ViewModule className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Grid View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEmployeeViewMode('list')}
-                          className={`${employeeViewMode === 'list'
-                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]'
-                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
-                            }`}
-                        >
-                          <ViewList className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p>List View</p></TooltipContent>
-                    </Tooltip>
+            {/* Select All on left, Filter/Button/View Toggle on right */}
+            <div className="flex gap-4 items-center justify-between flex-wrap w-full">
+              {/* Select All Checkbox - Left side */}
+              {(() => {
+                const companyId = selectedEmployeeCompany?.id || selectedEmployeeCompany?.domain;
+                const employees = fetchedEmployeeData[companyId] || [];
+                const filteredEmployees = filterEmployeesByRole(employees, employeeRoleFilter);
+                const allSelected = filteredEmployees.length > 0 && selectedDialogEmployees.size === filteredEmployees.length;
+                const someSelected = selectedDialogEmployees.size > 0 && selectedDialogEmployees.size < filteredEmployees.length;
+                return (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          // Select all filtered employees
+                          const allIndices = new Set(filteredEmployees.map((_, idx) => idx));
+                          setSelectedDialogEmployees(allIndices);
+                        } else {
+                          // Deselect all
+                          setSelectedDialogEmployees(new Set());
+                        }
+                      }}
+                      className="text-[#0b1957]"
+                    />
+                    <Label className="text-[#0b1957]">Select All</Label>
                   </div>
+                );
+              })()}
+              {/* Right side: Filter, Send Connection Button, and View Toggle */}
+              <div className="flex gap-4 items-center flex-wrap">
+                {/* Role Filter Dropdown */}
+                <Select value={employeeRoleFilter} onValueChange={setEmployeeRoleFilter}>
+                  <SelectTrigger className="min-w-[180px] bg-white border border-[oklch(0.922_0_0)] rounded-lg text-[#0b1957] hover:border-[#0b1957] focus:border-[#0b1957]">
+                    <SelectValue placeholder="Filter by Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    <SelectItem value="executive">Executive (CEO, CTO, CFO)</SelectItem>
+                    <SelectItem value="director">Directors</SelectItem>
+                    <SelectItem value="manager">Managers</SelectItem>
+                    <SelectItem value="hr">HR & Recruitment</SelectItem>
+                    <SelectItem value="sales">Sales & Business Dev</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="engineering">Engineering & Tech</SelectItem>
+                    <SelectItem value="operations">Operations</SelectItem>
+                    <SelectItem value="finance">Finance & Accounting</SelectItem>
+                  </SelectContent>
+                </Select>
+                {/* Send Connection Button - Always visible */}
+                <Button
+                  size="sm"
+                  onClick={handleSendLinkedInConnectionsFromDialog}
+                  disabled={selectedDialogEmployees.size === 0}
+                  className={`rounded-full whitespace-nowrap px-4 font-semibold transition-all ${
+                    selectedDialogEmployees.size > 0 
+                      ? 'bg-[#0077b5] hover:bg-[#005885] hover:shadow-md hover:-translate-y-0.5 text-white' 
+                      : 'bg-[#cccccc] text-[#666666] cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <LinkedInIcon className="mr-2 h-4 w-4" />
+                  Send Connection {selectedDialogEmployees.size > 0 ? `(${selectedDialogEmployees.size})` : ''}
+                </Button>
+                {/* View Toggle Button */}
+                <div className="flex gap-1 bg-[oklch(0.97_0_0)] rounded-lg p-1 border border-[oklch(0.922_0_0)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEmployeeViewMode('grid')}
+                        className={`${
+                          employeeViewMode === 'grid' 
+                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]' 
+                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
+                        }`}
+                      >
+                        <ViewModule className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Grid View</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEmployeeViewMode('list')}
+                        className={`${
+                          employeeViewMode === 'list' 
+                            ? 'bg-[#0b1957] text-white hover:bg-[#0d1f6f]' 
+                            : 'bg-transparent text-[#0b1957] hover:bg-[oklch(0.97_0_0)]'
+                        }`}
+                      >
+                        <ViewList className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>List View</p></TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
+            </div>
             </div>
           </DialogTitle>
         </DialogHeader>
         <DialogContent className="min-h-[400px] p-3 w-full max-w-full overflow-y-auto overflow-x-hidden border-t border-b">
-          <div className={`grid gap-3 items-stretch w-full box-border ${employeeViewMode === 'grid'
-            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3'
-            : 'grid-cols-1'
-            }`}>
+          <div className={`grid gap-3 items-stretch w-full box-border ${
+            employeeViewMode === 'grid' 
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3' 
+              : 'grid-cols-1'
+          }`}>
             {selectedEmployeeCompany && filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany?.id || selectedEmployeeCompany.domain], employeeRoleFilter)?.map((employee, index) => (
               <div key={index} className="flex flex-col h-full w-full min-w-0 max-w-full">
-                <Card
+                <Card 
                   onClick={() => {
                     const newSelected = new Set(selectedDialogEmployees);
                     if (newSelected.has(index)) {
@@ -3950,24 +3956,28 @@ export default function CompanyDataTable({
                     }
                     setSelectedDialogEmployees(newSelected);
                   }}
-                  className={`w-full max-w-full flex-1 flex flex-col rounded-xl transition-all relative overflow-hidden min-w-0 cursor-pointer ${selectedDialogEmployees.has(index)
-                    ? 'bg-[oklch(0.98_0.01_250)] border-2 border-[#0077b5] shadow-lg'
-                    : 'bg-white border border-[oklch(0.922_0_0)] shadow-sm'
-                    } ${employeeViewMode === 'grid'
-                      ? 'hover:-translate-y-1'
+                  className={`w-full max-w-full flex-1 flex flex-col rounded-xl transition-all relative overflow-hidden min-w-0 cursor-pointer ${
+                    selectedDialogEmployees.has(index)
+                      ? 'bg-[oklch(0.98_0.01_250)] border-2 border-[#0077b5] shadow-lg'
+                      : 'bg-white border border-[oklch(0.922_0_0)] shadow-sm'
+                  } ${
+                    employeeViewMode === 'grid' 
+                      ? 'hover:-translate-y-1' 
                       : 'hover:-translate-y-0.5'
-                    } ${selectedDialogEmployees.has(index)
+                  } ${
+                    selectedDialogEmployees.has(index)
                       ? 'hover:shadow-xl hover:border-[#005885]'
                       : 'hover:shadow-md hover:border-[#0b1957]'
-                    }`}
+                  }`}
                   style={{
-                    boxShadow: selectedDialogEmployees.has(index)
-                      ? '0 4px 12px rgba(0, 119, 181, 0.3)'
+                    boxShadow: selectedDialogEmployees.has(index) 
+                      ? '0 4px 12px rgba(0, 119, 181, 0.3)' 
                       : '0 1px 3px rgba(0, 0, 0, 0.1)',
                   }}
                 >
-                  <CardContent className={`${employeeViewMode === 'grid' ? 'p-4' : 'p-5'
-                    } flex flex-col flex-1 w-full max-w-full min-h-0 box-border min-w-0 overflow-hidden relative`}>
+                  <CardContent className={`${
+                    employeeViewMode === 'grid' ? 'p-4' : 'p-5'
+                  } flex flex-col flex-1 w-full max-w-full min-h-0 box-border min-w-0 overflow-hidden relative`}>
                     {/* Selection Indicator - Top Right */}
                     {selectedDialogEmployees.has(index) && (
                       <div className="absolute top-2 right-2 z-10 bg-[#0077b5] rounded-full w-6 h-6 flex items-center justify-center shadow-md">
@@ -3978,7 +3988,7 @@ export default function CompanyDataTable({
                       <>
                         {/* Avatar - Top */}
                         <div className="flex justify-center mb-4 flex-shrink-0">
-                          <Avatar
+                          <Avatar 
                             src={employee.photo_url}
                             alt={employee.name}
                             className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md"
@@ -4001,7 +4011,7 @@ export default function CompanyDataTable({
                             {/* Company Name */}
                             {employee.company_name && (
                               <div className="bg-[oklch(0.97_0_0)] px-3 py-1 rounded border border-[oklch(0.922_0_0)] w-full max-w-full text-center min-w-0 overflow-hidden box-border">
-                                <p
+                                <p 
                                   className="font-semibold text-xs text-[#0b1957] overflow-hidden text-ellipsis whitespace-nowrap block w-full max-w-full box-border"
                                   title={`@ ${employee.company_name}`}
                                 >
@@ -4014,150 +4024,152 @@ export default function CompanyDataTable({
                           </div>
                           {/* Contact Details List - Bottom */}
                           <div className="w-full flex flex-col gap-3 items-stretch flex-shrink-0">
-                            {/* Location */}
-                            {(employee.city || employee.country) && (
-                              <div className="flex items-center gap-2 w-full min-w-0 max-w-full">
-                                <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 18 }} />
-                                <p
-                                  className="text-[oklch(0.145_0_0)] text-xs flex-1 min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap block"
-                                  title={[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
+                        {/* Location */}
+                        {(employee.city || employee.country) && (
+                          <div className="flex items-center gap-2 w-full min-w-0 max-w-full">
+                            <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 18 }} />
+                            <p 
+                              className="text-[oklch(0.145_0_0)] text-xs flex-1 min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap block"
+                              title={[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
+                            >
+                              {[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
+                            </p>
+                          </div>
+                        )}
+                        {/* LinkedIn */}
+                        {employee.linkedin_url && (
+                          <div className="flex items-center gap-2 w-full">
+                            <LinkedInIcon className="text-[#0077b5]" style={{ fontSize: 18 }} />
+                            <a
+                              href={employee.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#0077b5] text-xs no-underline hover:underline overflow-hidden text-ellipsis whitespace-nowrap flex-1"
+                            >
+                              View LinkedIn Profile
+                            </a>
+                          </div>
+                        )}
+                        {/* Phone Number (Blurred) */}
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Phone className="text-white" style={{ fontSize: 16 }} />
+                          </div>
+                          {(() => {
+                            const empId = getEmployeeId(employee);
+                            const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
+                            const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
+                            const phoneNotFound = empRevealed.phone === 'not_found';
+                            const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
+                            const displayPhone = hasPhone 
+                              ? empRevealed.phone 
+                              : phoneNotFound 
+                                ? 'Number not found' 
+                                : '+971 50 123 4567';
+                            return (
+                              <>
+                                <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                  hasPhone 
+                                    ? 'text-[#0b1957] font-semibold' 
+                                    : phoneNotFound 
+                                      ? 'text-[#d32f2f] font-semibold italic' 
+                                      : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                }`}
+                                  style={{
+                                    letterSpacing: hasPhone ? 'normal' : '1px',
+                                  }}
                                 >
-                                  {[employee.city, employee.state, employee.country].filter(Boolean).join(', ')}
+                                  {displayPhone}
                                 </p>
-                              </div>
-                            )}
-                            {/* LinkedIn */}
-                            {employee.linkedin_url && (
-                              <div className="flex items-center gap-2 w-full">
-                                <LinkedInIcon className="text-[#0077b5]" style={{ fontSize: 18 }} />
-                                <a
-                                  href={employee.linkedin_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#0077b5] text-xs no-underline hover:underline overflow-hidden text-ellipsis whitespace-nowrap flex-1"
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRevealPhone(employee);
+                                      }}
+                                      disabled={empRevealing?.phone || hasPhone}
+                                      className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
+                                    >
+                                      {empRevealing?.phone ? (
+                                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                      ) : hasPhone ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </>
+                            );
+                          })()}
+                        </div>
+                        {/* Email (Blurred) */}
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
+                            <Email className="text-white" style={{ fontSize: 16 }} />
+                          </div>
+                          {(() => {
+                            const empId = getEmployeeId(employee);
+                            const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
+                            const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
+                            const emailNotFound = empRevealed.email === 'not_found';
+                            const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
+                            const displayEmail = hasEmail 
+                              ? empRevealed.email 
+                              : emailNotFound 
+                                ? 'Email not found' 
+                                : 'name@company.com';
+                            return (
+                              <>
+                                <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                  hasEmail 
+                                    ? 'text-[#0b1957] font-semibold' 
+                                    : emailNotFound 
+                                      ? 'text-[#d32f2f] font-semibold italic' 
+                                      : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                }`}
+                                  style={{
+                                    letterSpacing: hasEmail ? 'normal' : '1px',
+                                  }}
                                 >
-                                  View LinkedIn Profile
-                                </a>
-                              </div>
-                            )}
-                            {/* Phone Number (Blurred) */}
-                            <div className="flex items-center gap-2 w-full">
-                              <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
-                                <Phone className="text-white" style={{ fontSize: 16 }} />
-                              </div>
-                              {(() => {
-                                const empId = getEmployeeId(employee);
-                                const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
-                                const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
-                                const phoneNotFound = empRevealed.phone === 'not_found';
-                                const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
-                                const displayPhone = hasPhone
-                                  ? empRevealed.phone
-                                  : phoneNotFound
-                                    ? 'Number not found'
-                                    : '+971 50 123 4567';
-                                return (
-                                  <>
-                                    <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasPhone
-                                      ? 'text-[#0b1957] font-semibold'
-                                      : phoneNotFound
-                                        ? 'text-[#d32f2f] font-semibold italic'
-                                        : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                                      }`}
-                                      style={{
-                                        letterSpacing: hasPhone ? 'normal' : '1px',
+                                  {displayEmail}
+                                </p>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRevealEmail(employee);
                                       }}
+                                      disabled={empRevealing?.email || hasEmail}
+                                      className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
                                     >
-                                      {displayPhone}
-                                    </p>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRevealPhone(employee);
-                                          }}
-                                          disabled={empRevealing?.phone || hasPhone}
-                                          className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
-                                        >
-                                          {empRevealing?.phone ? (
-                                            <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
-                                          ) : hasPhone ? (
-                                            <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
-                                          ) : (
-                                            <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            {/* Email (Blurred) */}
-                            <div className="flex items-center gap-2 w-full">
-                              <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
-                                <Email className="text-white" style={{ fontSize: 16 }} />
-                              </div>
-                              {(() => {
-                                const empId = getEmployeeId(employee);
-                                const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
-                                const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
-                                const emailNotFound = empRevealed.email === 'not_found';
-                                const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
-                                const displayEmail = hasEmail
-                                  ? empRevealed.email
-                                  : emailNotFound
-                                    ? 'Email not found'
-                                    : 'name@company.com';
-                                return (
-                                  <>
-                                    <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasEmail
-                                      ? 'text-[#0b1957] font-semibold'
-                                      : emailNotFound
-                                        ? 'text-[#d32f2f] font-semibold italic'
-                                        : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                                      }`}
-                                      style={{
-                                        letterSpacing: hasEmail ? 'normal' : '1px',
-                                      }}
-                                    >
-                                      {displayEmail}
-                                    </p>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRevealEmail(employee);
-                                          }}
-                                          disabled={empRevealing?.email || hasEmail}
-                                          className="bg-[oklch(0.97_0_0)] border border-[oklch(0.922_0_0)] hover:bg-[oklch(0.97_0_0)] hover:border-[#0b1957] p-1"
-                                        >
-                                          {empRevealing?.email ? (
-                                            <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
-                                          ) : hasEmail ? (
-                                            <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
-                                          ) : (
-                                            <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </>
-                                );
-                              })()}
-                            </div>
+                                      {empRevealing?.email ? (
+                                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
+                                      ) : hasEmail ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 20 }} />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </>
+                            );
+                          })()}
+                        </div>
                           </div>
                         </div>
                       </>
@@ -4167,7 +4179,7 @@ export default function CompanyDataTable({
                         <div className="flex flex-row items-center gap-4 justify-between flex-1 w-full">
                           {/* Left Section: Photo + Basic Info */}
                           <div className="flex flex-row items-center gap-3 flex-[0_0_auto]">
-                            <Avatar
+                            <Avatar 
                               src={employee.photo_url}
                               alt={employee.name}
                               className="w-20 h-20 border-[3px] border-[#0b1957] shadow-lg flex-shrink-0"
@@ -4190,144 +4202,148 @@ export default function CompanyDataTable({
                           </div>
                           {/* Middle Section: Contact Details (List View) */}
                           {employeeViewMode === 'list' && (
-                            <div className="flex items-center gap-5 flex-1 min-w-0 pl-4">
-                              {/* Location */}
-                              {(employee.city || employee.country) && (
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 22 }} />
-                                  <p className="text-[oklch(0.145_0_0)] text-sm whitespace-nowrap overflow-hidden text-ellipsis font-medium">
-                                    {employee.city || employee.country}
-                                  </p>
-                                </div>
-                              )}
-                              {/* LinkedIn */}
-                              {employee.linkedin_url && (
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <LinkedInIcon className="text-[#0077b5] flex-shrink-0" style={{ fontSize: 22 }} />
-                                  <a
-                                    href={employee.linkedin_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#0077b5] text-sm no-underline font-medium hover:underline hover:text-[#005582] whitespace-nowrap overflow-hidden text-ellipsis"
-                                  >
-                                    LinkedIn
-                                  </a>
-                                </div>
-                              )}
-                              {/* Phone with Lock */}
-                              <div className="flex items-center gap-3">
-                                <Phone className="text-[#0b1957]" style={{ fontSize: 22 }} />
-                                {(() => {
-                                  const empId = getEmployeeId(employee);
-                                  const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
-                                  const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
-                                  const phoneNotFound = empRevealed.phone === 'not_found';
-                                  const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
-                                  const displayPhone = hasPhone ? empRevealed.phone : (phoneNotFound ? 'Number not found' : '+971 50 123 4567');
-                                  return (
-                                    <>
-                                      <p className={`text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasPhone
-                                        ? 'text-[#0b1957] font-semibold'
-                                        : phoneNotFound
-                                          ? 'text-[#d32f2f] font-semibold italic'
-                                          : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                                        }`}
-                                        style={{
-                                          letterSpacing: hasPhone ? 'normal' : '1px',
-                                        }}
-                                      >
-                                        {displayPhone}
-                                      </p>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRevealPhone(employee);
-                                            }}
-                                            disabled={empRevealing?.phone || hasPhone}
-                                            className={`p-1 ${hasPhone
-                                              ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]'
-                                              : 'bg-[#e3f2fd] hover:bg-[#bbdefb]'
-                                              }`}
-                                          >
-                                            {empRevealing?.phone ? (
-                                              <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
-                                            ) : hasPhone ? (
-                                              <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
-                                            ) : (
-                                              <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
-                                            )}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                              {/* Email with Lock */}
-                              <div className="flex items-center gap-3">
-                                <Email className="text-[#0b1957]" style={{ fontSize: 22 }} />
-                                {(() => {
-                                  const empId = getEmployeeId(employee);
-                                  const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
-                                  const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
-                                  const emailNotFound = empRevealed.email === 'not_found';
-                                  const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
-                                  const displayEmail = hasEmail ? empRevealed.email : (emailNotFound ? 'Email not found' : 'name@company.com');
-                                  return (
-                                    <>
-                                      <p className={`text-sm max-w-[200px] flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasEmail
-                                        ? 'text-[#0b1957] font-semibold'
-                                        : emailNotFound
-                                          ? 'text-[#d32f2f] font-semibold italic'
-                                          : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                                        }`}
-                                        style={{
-                                          letterSpacing: hasEmail ? 'normal' : '1px',
-                                        }}
-                                      >
-                                        {displayEmail}
-                                      </p>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRevealEmail(employee);
-                                            }}
-                                            disabled={empRevealing?.email || hasEmail}
-                                            className={`p-1 ${hasEmail
-                                              ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]'
-                                              : 'bg-[#e8f5e9] hover:bg-[#c8e6c9]'
-                                              }`}
-                                          >
-                                            {empRevealing?.email ? (
-                                              <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
-                                            ) : hasEmail ? (
-                                              <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
-                                            ) : (
-                                              <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
-                                            )}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </>
-                                  );
-                                })()}
-                              </div>
+                        <div className="flex items-center gap-5 flex-1 min-w-0 pl-4">
+                          {/* Location */}
+                          {(employee.city || employee.country) && (
+                            <div className="flex items-center gap-3 min-w-0">
+                              <LocationOn className="text-[#0b1957] flex-shrink-0" style={{ fontSize: 22 }} />
+                              <p className="text-[oklch(0.145_0_0)] text-sm whitespace-nowrap overflow-hidden text-ellipsis font-medium">
+                                {employee.city || employee.country}
+                              </p>
                             </div>
                           )}
+                          {/* LinkedIn */}
+                          {employee.linkedin_url && (
+                            <div className="flex items-center gap-3 min-w-0">
+                              <LinkedInIcon className="text-[#0077b5] flex-shrink-0" style={{ fontSize: 22 }} />
+                              <a
+                                href={employee.linkedin_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#0077b5] text-sm no-underline font-medium hover:underline hover:text-[#005582] whitespace-nowrap overflow-hidden text-ellipsis"
+                              >
+                                LinkedIn
+                              </a>
+                            </div>
+                          )}
+                          {/* Phone with Lock */}
+                          <div className="flex items-center gap-3">
+                            <Phone className="text-[#0b1957]" style={{ fontSize: 22 }} />
+                            {(() => {
+                                const empId = getEmployeeId(employee);
+                                const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
+                                const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
+                                const phoneNotFound = empRevealed.phone === 'not_found';
+                                const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
+                                const displayPhone = hasPhone ? empRevealed.phone : (phoneNotFound ? 'Number not found' : '+971 50 123 4567');
+                                return (
+                                  <>
+                                    <p className={`text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                      hasPhone 
+                                        ? 'text-[#0b1957] font-semibold' 
+                                        : phoneNotFound 
+                                          ? 'text-[#d32f2f] font-semibold italic' 
+                                          : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                    }`}
+                                      style={{
+                                        letterSpacing: hasPhone ? 'normal' : '1px',
+                                      }}
+                                    >
+                                      {displayPhone}
+                                    </p>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRevealPhone(employee);
+                                          }}
+                                          disabled={empRevealing?.phone || hasPhone}
+                                          className={`p-1 ${
+                                            hasPhone 
+                                              ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]' 
+                                              : 'bg-[#e3f2fd] hover:bg-[#bbdefb]'
+                                          }`}
+                                        >
+                                          {empRevealing?.phone ? (
+                                            <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
+                                          ) : hasPhone ? (
+                                            <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                          ) : (
+                                            <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{hasPhone ? "Phone number revealed" : phoneNotFound ? "Phone number not available" : "Click to reveal phone number"}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </>
+                                );
+                              })()}
+                          </div>
+                          {/* Email with Lock */}
+                          <div className="flex items-center gap-3">
+                            <Email className="text-[#0b1957]" style={{ fontSize: 22 }} />
+                            {(() => {
+                              const empId = getEmployeeId(employee);
+                              const empRevealed = empId ? (revealedContacts[empId] || {}) : {};
+                              const empRevealing = empId ? (revealingContacts[empId] || {}) : {};
+                              const emailNotFound = empRevealed.email === 'not_found';
+                              const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
+                              const displayEmail = hasEmail ? empRevealed.email : (emailNotFound ? 'Email not found' : 'name@company.com');
+                              return (
+                                <>
+                                  <p className={`text-sm max-w-[200px] flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                                    hasEmail 
+                                      ? 'text-[#0b1957] font-semibold' 
+                                      : emailNotFound 
+                                        ? 'text-[#d32f2f] font-semibold italic' 
+                                        : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                                  }`}
+                                    style={{
+                                      letterSpacing: hasEmail ? 'normal' : '1px',
+                                    }}
+                                  >
+                                    {displayEmail}
+                                  </p>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRevealEmail(employee);
+                                        }}
+                                        disabled={empRevealing?.email || hasEmail}
+                                        className={`p-1 ${
+                                          hasEmail 
+                                            ? 'bg-[#c8e6c9] hover:bg-[#c8e6c9]' 
+                                            : 'bg-[#e8f5e9] hover:bg-[#c8e6c9]'
+                                        }`}
+                                      >
+                                        {empRevealing?.email ? (
+                                          <Loader2 className="h-4 w-4 text-[#0b1957] animate-spin" />
+                                        ) : hasEmail ? (
+                                          <CheckCircle className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                        ) : (
+                                          <Lock className="text-[#0b1957]" style={{ fontSize: 16 }} />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{hasEmail ? "Email address revealed" : emailNotFound ? "Email address not available" : "Click to reveal email address"}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
                         </div>
                       </>
                     )}
@@ -4337,60 +4353,60 @@ export default function CompanyDataTable({
             ))}
           </div>
           {/* Error Message (shows even when loading if it's an Apollo fetching message) */}
-          {selectedEmployeeCompany &&
-            employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
-              <div className="text-center py-12">
-                {(employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') ||
-                  employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')) && (
-                    <Loader2 className="h-15 w-15 text-[#0b1957] animate-spin mb-4" />
-                  )}
-                <h3 className="text-lg text-gray-500 font-semibold mb-2">
-                  {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') ||
-                    employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')
-                    ? 'Fetching from Apollo API...'
-                    : 'Error Loading Employees'}
-                </h3>
-                <p className="text-sm text-gray-500 mt-2 max-w-[500px] mx-auto">
-                  {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]}
-                </p>
-              </div>
-            )}
-          {/* Loading State (only show if no error message or error is not Apollo fetching) */}
-          {selectedEmployeeCompany &&
-            employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
-            !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
-              <div className="text-center py-12">
+          {selectedEmployeeCompany && 
+           employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
+            <div className="text-center py-12">
+              {(employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') || 
+                employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')) && (
                 <Loader2 className="h-15 w-15 text-[#0b1957] animate-spin mb-4" />
-                <h3 className="text-lg text-gray-500">
-                  Loading employees...
-                </h3>
-              </div>
-            )}
+              )}
+              <h3 className="text-lg text-gray-500 font-semibold mb-2">
+                {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('fetching') || 
+                 employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]?.includes('Apollo')
+                  ? 'Fetching from Apollo API...'
+                  : 'Error Loading Employees'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-[500px] mx-auto">
+                {employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain]}
+              </p>
+            </div>
+          )}
+          {/* Loading State (only show if no error message or error is not Apollo fetching) */}
+          {selectedEmployeeCompany && 
+           employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
+           !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] && (
+            <div className="text-center py-12">
+              <Loader2 className="h-15 w-15 text-[#0b1957] animate-spin mb-4" />
+              <h3 className="text-lg text-gray-500">
+                Loading employees...
+              </h3>
+            </div>
+          )}
           {/* No Employees Message */}
-          {selectedEmployeeCompany &&
-            !employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
-            !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
-            (!fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] ||
-              filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain], employeeRoleFilter)?.length === 0) && (
-              <div className="text-center py-12">
-                <People className="text-gray-400 mb-4 opacity-50" style={{ fontSize: 80 }} />
-                <h2 className="text-xl text-gray-500 font-semibold mb-2">
-                  {employeeRoleFilter !== 'all'
-                    ? `No ${employeeRoleFilter} employees found`
-                    : 'No employees found'}
-                </h2>
-                <p className="text-sm text-gray-500 mt-2">
-                  This company doesn't have any employees in the database.
-                </p>
-              </div>
-            )}
+          {selectedEmployeeCompany && 
+           !employeeLoading[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
+           !employeeError[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] &&
+           (!fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain] || 
+            filterEmployeesByRole(fetchedEmployeeData[selectedEmployeeCompany.id || selectedEmployeeCompany.domain], employeeRoleFilter)?.length === 0) && (
+            <div className="text-center py-12">
+              <People className="text-gray-400 mb-4 opacity-50" style={{ fontSize: 80 }} />
+              <h2 className="text-xl text-gray-500 font-semibold mb-2">
+                {employeeRoleFilter !== 'all' 
+                  ? `No ${employeeRoleFilter} employees found` 
+                  : 'No employees found'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-2">
+                This company doesn't have any employees in the database.
+              </p>
+            </div>
+          )}
         </DialogContent>
         <DialogFooter className="p-2">
-          <Button
+          <Button 
             onClick={() => {
               setEmployeeDialogOpen(false);
               setEmployeeRoleFilter('all'); // Reset filter when closing
-            }}
+            }} 
             className="bg-[#0b1957] text-white rounded-full hover:bg-[#0d1f6f]"
           >
             Close
@@ -4409,13 +4425,13 @@ export default function CompanyDataTable({
       >
         <DialogContent className="p-0">
           {selectedEmployee && (
-            <Card
+            <Card 
               className="bg-white rounded-[20px] border border-[oklch(0.922_0_0)] shadow-sm overflow-hidden"
             >
               <CardContent className="p-6">
                 <div className="flex flex-col items-center gap-3 w-full">
                   {/* Employee Photo */}
-                  <Avatar
+                  <Avatar 
                     src={selectedEmployee.photo_url}
                     alt={selectedEmployee.name}
                     className="w-[90px] h-[90px] border-4 border-[#0b1957] shadow-md flex-shrink-0"
@@ -4441,7 +4457,7 @@ export default function CompanyDataTable({
                       return cId && empCompanyId && cId === empCompanyId;
                     });
                     return empCompanyName && (
-                      <div
+                      <div 
                         onClick={(e) => {
                           e.stopPropagation();
                           if (empCompany) {
@@ -4449,11 +4465,12 @@ export default function CompanyDataTable({
                             setEmployeeDetailDialogOpen(false);
                           }
                         }}
-                        className={`bg-[oklch(0.97_0_0)] px-4 py-1 rounded border border-[oklch(0.922_0_0)] w-full text-center flex items-center justify-center gap-2 transition-all ${empCompany ? 'cursor-pointer hover:border-[#0b1957] hover:scale-[1.02]' : 'cursor-default'
-                          }`}
+                        className={`bg-[oklch(0.97_0_0)] px-4 py-1 rounded border border-[oklch(0.922_0_0)] w-full text-center flex items-center justify-center gap-2 transition-all ${
+                          empCompany ? 'cursor-pointer hover:border-[#0b1957] hover:scale-[1.02]' : 'cursor-default'
+                        }`}
                       >
                         {empCompanyLogo && (
-                          <Avatar
+                          <Avatar 
                             src={empCompanyLogo}
                             className="w-5 h-5 flex-shrink-0"
                           >
@@ -4502,22 +4519,23 @@ export default function CompanyDataTable({
                       // Check if phone was attempted but not found
                       const phoneNotFound = empRevealed.phone === 'not_found';
                       const hasPhone = empRevealed.phone && empRevealed.phone !== 'not_found';
-                      const displayPhone = hasPhone
-                        ? empRevealed.phone
-                        : phoneNotFound
-                          ? 'Number not found'
+                      const displayPhone = hasPhone 
+                        ? empRevealed.phone 
+                        : phoneNotFound 
+                          ? 'Number not found' 
                           : (selectedEmployee.phone_number || '+971 50 123 4567');
                       return (
                         <div className="flex items-center gap-2">
                           <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
                             <Phone className="text-white" style={{ fontSize: 16 }} />
                           </div>
-                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasPhone
-                            ? 'text-[#0b1957] font-semibold'
-                            : phoneNotFound
-                              ? 'text-[#d32f2f] font-semibold italic'
-                              : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                            }`}
+                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                            hasPhone 
+                              ? 'text-[#0b1957] font-semibold' 
+                              : phoneNotFound 
+                                ? 'text-[#d32f2f] font-semibold italic' 
+                                : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                          }`}
                             style={{
                               letterSpacing: hasPhone ? 'normal' : '1px',
                             }}
@@ -4560,22 +4578,23 @@ export default function CompanyDataTable({
                       // Check if email was attempted but not found
                       const emailNotFound = empRevealed.email === 'not_found';
                       const hasEmail = empRevealed.email && empRevealed.email !== 'not_found';
-                      const displayEmail = hasEmail
-                        ? empRevealed.email
-                        : emailNotFound
-                          ? 'Email not found'
+                      const displayEmail = hasEmail 
+                        ? empRevealed.email 
+                        : emailNotFound 
+                          ? 'Email not found' 
                           : (selectedEmployee.email || 'name@company.com');
                       return (
                         <div className="flex items-center gap-2">
                           <div className="bg-[#0b1957] rounded-full p-1 flex items-center justify-center">
                             <Email className="text-white" style={{ fontSize: 16 }} />
                           </div>
-                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${hasEmail
-                            ? 'text-[#0b1957] font-semibold'
-                            : emailNotFound
-                              ? 'text-[#d32f2f] font-semibold italic'
-                              : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
-                            }`}
+                          <p className={`text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
+                            hasEmail 
+                              ? 'text-[#0b1957] font-semibold' 
+                              : emailNotFound 
+                                ? 'text-[#d32f2f] font-semibold italic' 
+                                : 'text-[oklch(0.556_0_0)] font-normal blur-sm select-none'
+                          }`}
                             style={{
                               letterSpacing: hasEmail ? 'normal' : '1px',
                             }}
@@ -4617,11 +4636,11 @@ export default function CompanyDataTable({
           )}
         </DialogContent>
         <DialogFooter className="p-2">
-          <Button
+          <Button 
             onClick={() => {
               setEmployeeDetailDialogOpen(false);
               setSelectedEmployee(null);
-            }}
+            }} 
             className="bg-[#0b1957] text-white rounded-[20px] hover:bg-[#0d1f6f]"
           >
             Close
