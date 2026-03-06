@@ -24,4 +24,4 @@ export interface BusinessHoursResponse {
 }
 
 
-\n
+\n\n
