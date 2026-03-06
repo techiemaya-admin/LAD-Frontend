@@ -35,20 +35,20 @@ const CustomTimePicker = ({ value, onChange }: { value: string; onChange: (v: st
 
   return (
     <div className="relative" ref={ref}>
-      <div 
+      <div
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full bg-gray-50 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 cursor-pointer transition-all flex items-center justify-between ${isOpen ? 'border-[#0B1957] ring-2 ring-[#0B1957]/10' : 'border-gray-200 hover:border-[#0B1957]/50'}`}
       >
         <span>{display}</span>
         <span className="text-gray-400 text-sm">⏰</span>
       </div>
-      
+
       {isOpen && (
         <div className="absolute z-50 top-full left-0 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl py-1">
           {options.map(o => {
             const isSelected = value === o.val || (value === '23:59' && o.val === '23:30');
             return (
-              <div 
+              <div
                 key={o.val}
                 onClick={() => { onChange(o.val); setIsOpen(false); }}
                 className={`px-3.5 py-2 text-sm cursor-pointer transition-colors ${isSelected ? 'bg-[#0B1957] text-white font-medium' : 'text-gray-700 hover:bg-[#0B1957]/10'}`}

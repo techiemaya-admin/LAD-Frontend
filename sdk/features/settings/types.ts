@@ -22,3 +22,5 @@ export interface BusinessHoursResponse {
     success: boolean;
     data: BusinessHoursRecord;
 }
+
+
