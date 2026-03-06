@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, TouchSensor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSelector, useDispatch } from 'react-redux';
+import { useRouter } from 'next/navigation';
+import { Target, Phone, UserPlus, Goal } from 'lucide-react';
 import type { AppDispatch } from '@/store/store';
 import { store } from '@/store/store';
 import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
@@ -143,6 +145,7 @@ interface StageUpdateData {
   [key: string]: unknown;
 }
 const PipelineBoard: React.FC = () => {
+  const router = useRouter();
   const initialPipelineLoadRequestedRef = useRef(false);
   const initialMasterDataLoadRequestedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +272,7 @@ const PipelineBoard: React.FC = () => {
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
   // List view pagination state - for API-driven pagination
   const [listViewPage, setListViewPage] = useState<number>(1);
-  const [listViewPageSize, setListViewPageSize] = useState<number>(50);
+  const [listViewPageSize, setListViewPageSize] = useState<number>(20);
   // Detect if we're on a touch device
   const isTouchDevice = () => {
     return (
@@ -1431,6 +1434,15 @@ const PipelineBoard: React.FC = () => {
                 className="pipeline-board-scrollable flex-1 relative bg-[#f8f9fe] overflow-x-scroll overflow-y-auto"
                 style={{ height: 0 }} // Force flex item to respect container height
               >
+                {!isLoading && filteredLeadsCount === 0 && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 text-center bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-8 py-6 shadow-sm">
+                    <UserPlus className="w-8 h-8 text-primary" />
+                      <div className="text-lg font-semibold text-[#1E293B]">No leads found</div>
+                      
+                    </div>
+                  </div>
+                )}
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCorners}
@@ -1472,15 +1484,17 @@ const PipelineBoard: React.FC = () => {
               // Normalize leads to ensure compatibility with PipelineListView's Lead interface
               const normalizedLeads = sortedAndFilteredLeads.map(lead => ({
                 ...lead,
-                name: lead.name ?? undefined, // Convert null to undefined
+                name: lead.name ?? undefined,
                 email: lead.email ?? undefined,
                 company: lead.company ?? undefined,
                 phone: lead.phone ?? undefined,
                 status: lead.status ?? undefined,
                 priority: lead.priority ?? undefined,
                 source: lead.source ?? undefined,
-                amount: lead.amount ?? undefined, // Convert null to undefined for amount
+                amount: lead.amount ?? undefined,
                 assignee: typeof lead.assignee === 'number' ? String(lead.assignee) : (lead.assignee ?? undefined),
+                // Normalize tags to string[] for PipelineListView
+                tags: lead.tags ? (Array.isArray(lead.tags) ? lead.tags : [lead.tags]).filter(Boolean) : undefined,
               }));
               return (
                 <PipelineListView
@@ -1489,7 +1503,7 @@ const PipelineBoard: React.FC = () => {
                   teamMembers={[]}
                   visibleColumns={Object.fromEntries(
                     Object.entries((pipelineSettings.visibleColumns as unknown as Record<string, boolean>) || {})
-                      .filter(([key]) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key))
+                      .filter(([key]) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key))
                   ) as Record<string, boolean>}
                   totalLeadsCount={serverTotalLeadsCount}
                   isLoading={isLoading}
@@ -1543,7 +1557,12 @@ const PipelineBoard: React.FC = () => {
           onClose={() => dispatch(setCreateLeadDialogOpen(false))}
           onCreate={async (leadData: Partial<Lead>) => {
             if (USE_REDUX_ACTIONS) {
-              await dispatch(createLeadAction(leadData));
+              // Normalize tags for CreateLeadParams
+              const normalizedLeadData = {
+                ...leadData,
+                tags: leadData.tags ? (Array.isArray(leadData.tags) ? leadData.tags : [leadData.tags]).filter(Boolean) : undefined,
+              };
+              await dispatch(createLeadAction(normalizedLeadData));
             } else {
               await createLead(leadData as Lead);
               loadStagesAndLeads();

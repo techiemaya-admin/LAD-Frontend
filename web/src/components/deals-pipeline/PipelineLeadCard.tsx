@@ -90,6 +90,7 @@ interface Note {
   created_at?: string;
 }
 interface Comment {
+  text: string;
   id: string | number;
   content: string;
   user_id?: string | number;
@@ -434,7 +435,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           if (comments.length === 0) {
             setCommentsLoading(true);
             const fetchedComments = await leadsService.getLeadComments(lead.id);
-            setComments(fetchedComments as Comment[]);
+            const normalizedComments = Array.isArray(fetchedComments)
+              ? fetchedComments
+              : (fetchedComments as any)?.comments || (fetchedComments as any)?.data || [];
+            setComments((Array.isArray(normalizedComments) ? normalizedComments : []) as Comment[]);
           }
           break;
         case 3: // Attachments tab
@@ -607,31 +611,21 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     return { filename: String(filename), url };
   };
   const handleDownloadAttachment = async (rawAttachment: any) => {
-    const { filename, url } = resolveAttachmentNameAndUrl(rawAttachment as any);
-    if (!url) {
+    const { filename } = resolveAttachmentNameAndUrl(rawAttachment as any);
+    const fileUrl = rawAttachment?.file_url ?? rawAttachment?.db?.file_url ?? rawAttachment?.url ?? null;
+    
+    if (!fileUrl) {
       showSnackbar('Attachment URL missing', 'error');
       return;
     }
+    
     const attachmentId = rawAttachment?.id ?? rawAttachment?.db?.id ?? null;
     setDownloadingAttachmentId(attachmentId);
+    
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token') || '';
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-      const blob = await response.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = filename || 'download';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(objectUrl);
+      // Use the new SDK API to get signed URL and download
+      await leadsService.downloadAttachment(lead.id, fileUrl, filename || 'download');
+      showSnackbar('Download started', 'success');
     } catch (error) {
       const err = error as Error;
       console.error('Failed to download attachment:', err);
@@ -1149,9 +1143,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       <Mail className="h-4 w-4 text-gray-500 shrink-0" />
                       <span
                         className="text-gray-900 truncate flex-1 min-w-0"
-                        title={lead.email || ''}
+                        title={typeof lead.email === 'string' ? lead.email : ''}
                       >
-                        {lead.email || '-'}
+                        {typeof lead.email === 'string' ? lead.email : '-'}
                       </span>
                       {!!lead.email && (
                         <button
@@ -1664,7 +1658,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         </div>
                       ) : (
                         <p className="text-sm text-gray-800">
-                          {comment.content}
+                          {comment.text || comment.content}
                         </p>
                       )}
                     </div>
@@ -1725,7 +1719,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   return (
                     <div
                       key={attachmentKey}
-                      className="max-w-[420px] rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between gap-3"
+                      className="max-w-[458px] rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between gap-3"
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{filename}</p>
@@ -2063,7 +2057,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         <div className="mt-4 border-t border-gray-100 pt-2 text-xs text-gray-500 flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            {formatDateTimeUnified(getFieldValueLocal(lead, 'createdAt'))}
+            {formatDateTimeUnified(getFieldValueLocal(lead, 'updatedAt'))}
           </span>
           <div className="flex items-center gap-3">
             {notes.length > 0 && (
