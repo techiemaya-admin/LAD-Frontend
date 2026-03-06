@@ -172,3 +172,4 @@ export default settingsSlice.reducer;
 // Selector to get the settings object from state
 export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;
 
+\n
