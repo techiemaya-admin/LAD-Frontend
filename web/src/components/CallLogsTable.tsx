@@ -62,6 +62,10 @@ interface CallLog {
   lead_id?: string;
   type: string;
   status: string;
+  metadata?: {
+    status_reason?: string;
+    [key: string]: any;
+  };
   startedAt?: string;
   duration?: number;
   cost?: number;
@@ -265,6 +269,20 @@ export function CallLogsTable({
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
+  const getStatusReason = (item: CallLog): string | undefined => {
+    const raw: any = (item as any)?.metadata;
+    if (!raw) return undefined;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed?.status_reason || parsed?.sip_trail?.status_reason;
+      } catch {
+        return undefined;
+      }
+    }
+    return raw?.status_reason || raw?.sip_trail?.status_reason;
+  };
+
   // Add computed tag and serial number to items
   const itemsWithTags = useMemo(() => items.map((item, index) => ({
     ...item,
@@ -448,6 +466,15 @@ export function CallLogsTable({
         const status = row.getValue(columnId) as string;
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
+    },
+    {
+      id: 'response',
+      header: 'Response',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground capitalize">
+          {getStatusReason(row.original) || "—"}
+        </span>
+      ),
     },
     {
       id: 'startedAt',
