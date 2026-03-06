@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { QuickReplyPicker } from './QuickReplyPicker';
 
 type AgentType = 'human' | 'ai';
 
@@ -17,6 +18,7 @@ interface MessageComposerProps {
   channel: Channel;
   onSendMessage: (content: string, attachments?: Attachment[]) => void;
   disabled?: boolean;
+  contactName?: string;
 }
 
 const channelPlaceholders: Record<Channel, string> = {
@@ -29,6 +31,7 @@ export const MessageComposer = memo(function MessageComposer({
   channel,
   onSendMessage,
   disabled = false,
+  contactName,
 }: MessageComposerProps) {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -89,6 +92,11 @@ export const MessageComposer = memo(function MessageComposer({
     },
     [handleSend]
   );
+
+  const handleQuickReplySelect = useCallback((content: string) => {
+    setMessage(content);
+    textareaRef.current?.focus();
+  }, []);
 
   return (
     <div className="border-t border-border bg-card p-3">
@@ -177,6 +185,13 @@ export const MessageComposer = memo(function MessageComposer({
           <Paperclip className="h-5 w-5" />
         </Button>
 
+        {/* Quick Reply Picker */}
+        <QuickReplyPicker
+          onSelect={handleQuickReplySelect}
+          contactName={contactName}
+          disabled={disabled}
+        />
+
         {/* Text input */}
         <div className="flex-1 relative">
           <Textarea
@@ -217,7 +232,7 @@ export const MessageComposer = memo(function MessageComposer({
 
       {/* Channel hint */}
       <p className="text-[10px] text-muted-foreground mt-2 px-1">
-        Press Enter to send • Shift+Enter for new line
+        Press Enter to send · Shift+Enter for new line
       </p>
     </div>
   );

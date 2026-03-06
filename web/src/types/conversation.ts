@@ -26,6 +26,33 @@ import type {
 // Web-specific types not in SDK
 export type ContactTag = 'hot' | 'warm' | 'cold';
 
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  created_at?: string;
+}
+
+export interface QuickReply {
+  id: string;
+  title: string;
+  shortcut: string | null;
+  content: string;
+  category: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ConversationNote {
+  id: string;
+  conversation_id: string;
+  lead_id: string | null;
+  content: string;
+  author_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Contact extends SDKContact {
   position?: string;
   tags: ContactTag[];
@@ -37,6 +64,11 @@ export interface Contact extends SDKContact {
 export interface Conversation extends SDKConversation {
   contact: Contact;
   assignedTo?: string;
+  is_favorite?: boolean;
+  is_pinned?: boolean;
+  is_locked?: boolean;
+  labels?: Label[];
+  context_status?: string | null;
 }
 
 export interface InternalComment {

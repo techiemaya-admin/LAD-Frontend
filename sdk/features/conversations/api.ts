@@ -122,6 +122,7 @@ export async function getConversations(filters?: ConversationListFilters): Promi
     params.status = filters.status === 'open' ? 'active' : filters.status;
   }
   if (filters?.owner && filters.owner !== 'all') params.owner = filters.owner;
+  if (filters?.context_status) params.context_status = filters.context_status;
   if (filters?.limit) params.limit = String(filters.limit);
   if (filters?.offset) params.offset = String(filters.offset);
 
