@@ -596,4 +596,3 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     </div>
   );
 };
-\n\n\n
