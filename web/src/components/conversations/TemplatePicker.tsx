@@ -80,7 +80,13 @@ export function TemplatePicker({
 
   const handleSelectTemplate = useCallback((template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
-    setParamValues(new Array(template.parameter_count).fill(''));
+    // Auto-fill first parameter with {member_name} placeholder
+    // The backend will substitute it with each contact's actual name
+    const defaults = new Array(template.parameter_count).fill('');
+    if (template.parameter_count > 0) {
+      defaults[0] = '{member_name}';
+    }
+    setParamValues(defaults);
   }, []);
 
   const handleParamChange = useCallback((index: number, value: string) => {
@@ -229,7 +235,7 @@ export function TemplatePicker({
                   {Array.from({ length: selectedTemplate.parameter_count }, (_, i) => (
                     <Input
                       key={i}
-                      placeholder={`Parameter {{${i + 1}}} — use {member_name} for auto-fill`}
+                      placeholder={`Parameter {{${i + 1}}} — type {member_name} to auto-fill contact name`}
                       value={paramValues[i] || ''}
                       onChange={(e) => handleParamChange(i, e.target.value)}
                       className="h-8 text-sm"

@@ -26,7 +26,6 @@ import {
   UserPlus,
   CheckCircle2,
   VolumeX,
-  Archive,
   Phone,
   Video,
   PanelRightOpen,
@@ -36,7 +35,7 @@ import {
   ShieldBan,
   Trash2,
   Star,
-  Settings,
+  MailCheck,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSettings } from './MessageSettings';
@@ -172,43 +171,38 @@ export const ChatHeader = memo(function ChatHeader({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={onFavorite}>
-                <Star className={`h-4 w-4 mr-2 ${conversation.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
-                {conversation.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+            <DropdownMenuContent align="end" className="w-56 py-2">
+              <DropdownMenuItem onClick={onFavorite} className="py-2.5 px-4 text-sm">
+                <Star className={`h-4 w-4 mr-3 ${conversation.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                {conversation.is_favorite ? 'Remove from favorites' : 'Starred messages'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onPin}>
-                <Pin className="h-4 w-4 mr-2" />
-                {conversation.is_pinned ? 'Unpin' : 'Pin'} conversation
+              <DropdownMenuItem onClick={onPin} className="py-2.5 px-4 text-sm">
+                <Pin className="h-4 w-4 mr-3" />
+                {conversation.is_pinned ? 'Unpin conversation' : 'Pin conversation'}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Assign to team
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onMarkResolved}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={onMarkResolved} className="py-2.5 px-4 text-sm">
+                <CheckCircle2 className="h-4 w-4 mr-3" />
                 Mark as resolved
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onMute}>
-                <VolumeX className="h-4 w-4 mr-2" />
-                {status === 'muted' ? 'Unmute' : 'Mute'} conversation
+              <DropdownMenuItem onClick={onMute} className="py-2.5 px-4 text-sm">
+                <VolumeX className="h-4 w-4 mr-3" />
+                {status === 'muted' ? 'Unmute conversation' : 'Mute conversation'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onLock}>
-                <Lock className="h-4 w-4 mr-2" />
-                {conversation.is_locked ? 'Unlock' : 'Lock'} conversation
+              <DropdownMenuItem onClick={onLock} className="py-2.5 px-4 text-sm">
+                <Lock className="h-4 w-4 mr-3" />
+                {conversation.is_locked ? 'Unlock conversation' : 'Lock conversation'}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onExport}>
-                <Download className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={onExport} className="py-2.5 px-4 text-sm">
+                <Download className="h-4 w-4 mr-3" />
                 Export chat
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => setConfirmAction('block')}>
-                <ShieldBan className="h-4 w-4 mr-2" />
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive py-2.5 px-4 text-sm" onClick={() => setConfirmAction('block')}>
+                <ShieldBan className="h-4 w-4 mr-3" />
                 Block contact
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => setConfirmAction('delete')}>
-                <Trash2 className="h-4 w-4 mr-2" />
+              <DropdownMenuItem className="text-destructive py-2.5 px-4 text-sm" onClick={() => setConfirmAction('delete')}>
+                <Trash2 className="h-4 w-4 mr-3" />
                 Delete conversation
               </DropdownMenuItem>
             </DropdownMenuContent>

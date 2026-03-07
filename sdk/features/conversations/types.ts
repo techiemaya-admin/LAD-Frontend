@@ -8,7 +8,7 @@
 // Enums / Union Types
 // ============================
 
-export type Channel = 'whatsapp' | 'linkedin' | 'gmail';
+export type Channel = 'whatsapp' | 'linkedin' | 'gmail' | 'outlook' | 'instagram';
 export type ConversationStatus = 'open' | 'resolved' | 'muted';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 export type ConversationOwner = 'AI' | 'human_agent';
