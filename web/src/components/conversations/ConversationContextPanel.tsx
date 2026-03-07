@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Building2,
   Mail,
@@ -240,16 +239,16 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   );
 
   return (
-    <div className="h-full flex flex-col bg-card border-l border-border">
+    <div className="h-full flex flex-col bg-card border-l border-border overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
         <h3 className="font-heading font-semibold text-sm">Contact Details</h3>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-4">
           {/* Profile */}
           <div className="flex flex-col items-center text-center mb-6">
@@ -712,7 +711,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             </TabsContent>
           </Tabs>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 });

@@ -5,7 +5,6 @@ import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
-import { NotificationBell } from './NotificationBell';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
@@ -38,10 +37,6 @@ export function ConversationsPage() {
   const toggleContextPanel = useCallback(() => {
     setIsContextPanelOpen((prev) => !prev);
   }, []);
-
-  const handleNotificationClick = useCallback((conversationId: string) => {
-    selectConversation(conversationId);
-  }, [selectConversation]);
 
   // CRM action handlers
   const handlePin = useCallback(async (id: string) => {
@@ -118,14 +113,6 @@ export function ConversationsPage() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header with notification bell */}
-      <div className="flex items-center justify-end px-4 py-3 border-b border-border bg-white">
-        <NotificationBell
-          conversations={allConversations}
-          onNotificationClick={handleNotificationClick}
-        />
-      </div>
-
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}

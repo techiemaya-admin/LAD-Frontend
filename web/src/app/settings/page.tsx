@@ -6,14 +6,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
 import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
+import { ChatSettings } from '../../components/settings/ChatSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';
 import { TeamManagement } from '../../components/settings/TeamManagement';
-import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload } from 'lucide-react';
+import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload, MessageSquare } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'api' | 'billing' | 'credits';
+type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits';
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,7 +41,7 @@ const SettingsPage: React.FC = () => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
-    const allowed: ActiveTab[] = ['company','team','accounts','website','integrations','api','billing','credits'];
+    const allowed: ActiveTab[] = ['company','team','accounts','website','integrations','chat','api','billing','credits'];
     if (allowed.includes(tabParam as ActiveTab)) {
       setActiveTab(tabParam as ActiveTab);
     }
@@ -77,6 +78,7 @@ const SettingsPage: React.FC = () => {
     // { id: 'accounts' as ActiveTab, label: 'Accounts', icon: UserCircle },
     // { id: 'website' as ActiveTab, label: 'Website', icon: Globe },
     { id: 'integrations' as ActiveTab, label: 'Integrations', icon: Plug },
+    { id: 'chat' as ActiveTab, label: 'Chat Settings', icon: MessageSquare },
     { id: 'api' as ActiveTab, label: 'Voice Settings', icon: Terminal },
     { id: 'billing' as ActiveTab, label: 'Billing', icon: CreditCard },
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
@@ -146,6 +148,7 @@ const SettingsPage: React.FC = () => {
           />
         )}
         {activeTab === 'integrations' && <IntegrationsSettings />}
+        {activeTab === 'chat' && <ChatSettings />}
         {activeTab === 'api' && <VoiceAgentSettings />}
         {/* Placeholder for other tabs */}
         {activeTab === 'team' && <TeamManagement />}

@@ -22,6 +22,12 @@ import { ChannelIcon } from './ChannelIcon';
 import { TemplatePicker } from './TemplatePicker';
 import { ChatGroupManager, AddToGroupDropdown, type ChatGroup } from './ChatGroupManager';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface ContextStatusOption {
   value: string;
@@ -46,13 +52,17 @@ const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[
   { id: 'whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
   { id: 'linkedin', label: 'LinkedIn', channel: 'linkedin' },
   { id: 'gmail', label: 'Gmail', channel: 'gmail' },
+  { id: 'outlook', label: 'Outlook', channel: 'outlook' },
+  { id: 'instagram', label: 'Instagram', channel: 'instagram' },
 ];
 
 const channelColorMap: Record<string, string> = {
-  whatsapp: 'hover:bg-green-50 border-green-200',
-  linkedin: 'hover:bg-blue-50 border-blue-200',
-  gmail: 'hover:bg-orange-50 border-orange-200',
-  all: 'bg-slate-900 text-white hover:bg-slate-800',
+  whatsapp: 'hover:bg-green-50/50 border-green-200 text-green-600',
+  linkedin: 'hover:bg-blue-50/50 border-blue-200 text-blue-600',
+  gmail: 'hover:bg-orange-50/50 border-orange-200 text-orange-400',
+  outlook: 'hover:bg-blue-50/50 border-blue-200 text-blue-700',
+  instagram: 'hover:bg-pink-50/50 border-pink-200 text-pink-600',
+  all: 'border-slate-200 text-slate-600 hover:bg-slate-50',
 };
 
 /** Convert snake_case context_status to a readable label */
@@ -333,40 +343,50 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
       {/* Channel Filters */}
       <div className="p-2 flex gap-1 border-b border-border overflow-x-auto">
-        {channelButtons.map(({ id, label, channel }) => {
-          const isActive = channelFilter === id;
-          const count = unreadCounts[id];
+        <TooltipProvider>
+          {channelButtons.map(({ id, label, channel }) => {
+            const isActive = channelFilter === id;
+            const count = unreadCounts[id];
 
-          return (
-            <Button
-              key={id}
-              variant={isActive ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onChannelFilterChange(id)}
-              className={cn(
-                'flex-shrink-0 h-8 px-2.5 gap-1.5 text-xs font-medium transition-all',
-                isActive ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800' : channelColorMap[id]
-              )}
-            >
-              {channel ? (
-                <ChannelIcon channel={channel} size={14} />
-              ) : (
-                <MessageSquare className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline">{label}</span>
-              {count > 0 && (
-                <span
-                  className={cn(
-                    'ml-1 h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center',
-                    isActive ? 'bg-white/20' : 'bg-muted text-muted-foreground'
-                  )}
-                >
-                  {count > 99 ? '99+' : count}
-                </span>
-              )}
-            </Button>
-          );
-        })}
+            return (
+              <Tooltip key={id}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => onChannelFilterChange(id)}
+                    className={cn(
+                      'flex-shrink-0 h-8 px-2.5 gap-1.5 text-xs font-medium transition-all relative',
+                      isActive 
+                        ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10' 
+                        : channelColorMap[id]
+                    )}
+                  >
+                    {channel ? (
+                      <ChannelIcon channel={channel} size={14} />
+                    ) : (
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    )}
+                    {id === 'all' && <span className="hidden sm:inline">{label}</span>}
+                    {count > 0 && (
+                      <span
+                        className={cn(
+                          'absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-card shadow-sm',
+                          isActive ? 'bg-white text-slate-900' : 'bg-primary text-primary-foreground'
+                        )}
+                      >
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+                  {label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </TooltipProvider>
       </div>
 
       {/* Context Status Filters (tenant-specific) */}
