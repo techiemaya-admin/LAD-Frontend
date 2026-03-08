@@ -89,6 +89,7 @@ export default function AdvancedSearchAIPage() {
     const [showPanel, setShowPanel] = useState<false | 'leads' | 'checkpoints'>(false);
     const [convId, setConvId] = useState<string | null>(null);
     const [msgCount, setMsgCount] = useState(0);
+    const [pendingIntent, setPendingIntent] = useState<string | null>(null); // 'location' | 'title' | 'industry' | null
     const endRef = useRef<HTMLDivElement>(null);
     const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -112,32 +113,80 @@ export default function AdvancedSearchAIPage() {
         setMsgCount(c => c + 1);
 
         try {
-            /* — Step 1: Advanced Search (Gemini intent + Unipile LinkedIn search via Sales Navigator) — */
-            let ext: LeadTargeting | null = null;
+            // Build history array for context (last 6 messages)
+            const historySnapshot = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
+
+            // ── CASE 1: First message OR an explicit new-search detected via lead-chat ──
+            const isFirstMessage = messages.filter(m => m.role === 'user').length === 0;
+            let shouldRunSearch = isFirstMessage;
+            let aiResponseText = '';
+            let aiOpts: { label: string; value: string }[] | undefined;
+            let updatedTargetState = targeting;
+
+            if (!isFirstMessage && targeting) {
+                // ── CASE 2: Follow-up — call /lead-chat first to detect intent ──
+                try {
+                    const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
+                        method: 'POST',
+                        headers: headers(),
+                        body: JSON.stringify({
+                            message: text,
+                            history: historySnapshot,
+                            currentTargeting: targeting,
+                            pendingIntent: (pendingIntent as string | null),
+                        }),
+                    });
+                    const chatD = await chatR.json();
+                    if (chatD.success) {
+                        aiResponseText = chatD.response || '';
+                        shouldRunSearch = !!chatD.newSearch;
+                        if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
+                        setPendingIntent(chatD.pendingIntent || null);
+                        if (Array.isArray(chatD.options) && chatD.options.length > 0) {
+                            aiOpts = chatD.options;
+                        }
+                    }
+                } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
+
+                if (!shouldRunSearch) {
+                    // Just show the AI answer — no search needed
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
+                    }));
+                    setBusy(false);
+                    return;
+                }
+            }
+
+            // ── CASE 3: Run LinkedIn search (either first message or lead-chat said newSearch:true) ──
+            let ext: LeadTargeting | null = updatedTargetState;
             let realLeads: LeadProfile[] = [];
             let searchTotal = 0;
 
+            // If we have updated targeting from lead-chat, use that for search query
+            const searchQuery = shouldRunSearch && ext && !isFirstMessage
+                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || [])].join(' ')
+                : text;
+
             try {
                 const r = await fetch(`${API_BASE}/api/campaigns/linkedin/search/advanced`, {
-                    method: 'POST', headers: headers(), body: JSON.stringify({ query: text, count: 10 }),
+                    method: 'POST', headers: headers(), body: JSON.stringify({ query: searchQuery, count: 10, targeting: ext || undefined }),
                 });
                 const d = await r.json();
                 if (d.success) {
-                    // Extract targeting from intent
                     if (d.intent) {
-                        ext = {
+                        const newExt: LeadTargeting = {
                             job_titles: toArr(d.intent.job_titles), industries: toArr(d.intent.industries),
                             locations: toArr(d.intent.locations), keywords: toArr(d.intent.keywords),
                             profile_language: toArr(d.intent.profile_language),
                         };
-                        const hasData = ext.job_titles.length > 0 || ext.industries.length > 0 || ext.locations.length > 0;
+                        const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0;
                         if (hasData) {
+                            ext = newExt;
                             setTargeting(ext);
-                        } else {
-                            ext = null;
+                            updatedTargetState = ext;
                         }
                     }
-                    // Map real Unipile leads
                     if (Array.isArray(d.results) && d.results.length > 0) {
                         realLeads = d.results.map((item: any, idx: number) => ({
                             id: item.id || item.provider_id || `lead-${idx}`,
@@ -159,8 +208,8 @@ export default function AdvancedSearchAIPage() {
                 }
             } catch (e) { console.warn('[Search] advanced search err', e); }
 
-            // Fallback: If advanced search didn't return leads, try extract-intent only
-            if (!ext) {
+            // Fallback: If advanced search didn't extract targeting, try extract-intent
+            if (!ext && isFirstMessage) {
                 try {
                     const r = await fetch(`${API_BASE}/api/campaigns/linkedin/search/extract-intent`, {
                         method: 'POST', headers: headers(), body: JSON.stringify({ query: text }),
@@ -179,33 +228,24 @@ export default function AdvancedSearchAIPage() {
                 } catch (e) { console.warn('[Search] extract-intent err', e); }
             }
 
-            /* — Step 2: AI Chat — */
-            let aiText = '';
-            let aiOpts: { label: string; value: string }[] | undefined;
-            try {
-                const r = await fetch(`${API_BASE}/api/ai-icp-assistant/chat`, {
-                    method: 'POST', headers: headers(),
-                    body: JSON.stringify({ message: text, conversationId: convId }),
-                });
-                const d = await r.json();
-                if (d.success) {
-                    aiText = d.response || d.text || '';
-                    if (d.conversationId) setConvId(d.conversationId);
-                    if (Array.isArray(d.options) && d.options.length > 0) aiOpts = d.options;
-                }
-            } catch (e) { console.warn('[Search] chat err', e); }
+            // ── Build final AI response text ──
+            let finalText = aiResponseText; // May be set by lead-chat above
 
-            /* — Build response — */
-            let finalText = '';
-            if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length)) {
-                finalText = buildSummary(ext);
-                if (realLeads.length > 0) {
-                    finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
+            if (!finalText) {
+                // First message: build summary
+                if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length)) {
+                    finalText = buildSummary(ext);
+                    if (realLeads.length > 0) {
+                        finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
+                    }
+                    setTimeout(() => setShowPanel('leads'), 500);
+                } else {
+                    finalText = "I'm here to help you find the perfect leads! Try describing your ideal customer — for example:\n\n• \"Marketing directors at fintech startups in London\"\n• \"CTO at healthcare companies with 50-200 employees\"\n• \"Sales managers in the automotive industry in Germany\"";
                 }
-                if (aiText && !aiText.includes('Inbound') && !aiText.includes('Outbound')) finalText += '\n\n' + aiText;
+            } else if (realLeads.length > 0) {
+                // lead-chat triggered a search and got results
+                finalText += `\n\n🔍 **Found ${searchTotal} leads** matching your criteria.`;
                 setTimeout(() => setShowPanel('leads'), 500);
-            } else {
-                finalText = aiText || "I'm here to help you find the perfect leads! Try describing your ideal customer — for example:\n\n• \"Marketing directors at fintech startups in London\"\n• \"CTO at healthcare companies with 50-200 employees\"\n• \"Sales managers in the automotive industry in Germany\"";
             }
 
             setMessages(p => p.filter(m => m.id !== lid).concat({
@@ -218,7 +258,7 @@ export default function AdvancedSearchAIPage() {
                 id: `a-${Date.now()}`, role: 'ai', text: '⚠️ Something went wrong. Please try again.', ts: new Date(),
             }));
         } finally { setBusy(false); }
-    }, [busy, messages, convId]);
+    }, [busy, messages, convId, targeting, pendingIntent]);
 
     const onChatSend = useCallback(() => {
         if (!input.trim() || busy) return;
@@ -232,7 +272,7 @@ export default function AdvancedSearchAIPage() {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
     };
 
-    const reset = () => { setScreen('landing'); setMessages([]); setTargeting(null); setLeads([]); setShowPanel(false); setConvId(null); setMsgCount(0); };
+    const reset = () => { setScreen('landing'); setMessages([]); setTargeting(null); setLeads([]); setShowPanel(false); setConvId(null); setMsgCount(0); setPendingIntent(null); };
 
     /* ═══════════════════════════════════════════════
        SCREEN 1: LANDING
@@ -374,7 +414,7 @@ export default function AdvancedSearchAIPage() {
                 )}
 
                 {showPanel === 'checkpoints' && (
-                    <CheckpointsPanel onClose={() => setShowPanel(false)} />
+                    <CheckpointsPanel onClose={() => setShowPanel(false)} targeting={targeting} />
                 )}
             </div>
             <style>{css}</style>
@@ -402,18 +442,24 @@ function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMs
             <div className="adv-ai-avatar"><span>✦</span></div>
             <div className="adv-ai-body">
                 <div className="adv-ai-name">AI Lead Finder</div>
-                <div className="adv-ai-text" style={{ marginBottom: "16px" }}>
-                    <p>You're all set with everything ready to launch!</p>
-                    <ul style={{ paddingLeft: "18px", margin: "8px 0" }}>
-                        <li>🏆 <strong>Product:</strong> fully generated, easy to tweak</li>
-                        <li>🚀 <strong>Magic Leads:</strong> a sneak peek of your first potential leads</li>
-                    </ul>
-                    <p style={{ marginTop: "12px", fontSize: "13px", color: "#6b7280" }}>
-                        This campaign setup is a golden opportunity to start sparking transformation.
-                    </p>
+
+                {/* ── Dynamic AI text (markdown-aware rendering) ── */}
+                <div className="adv-ai-text" style={{ marginBottom: msg.targeting ? "16px" : "0" }}>
+                    {msg.text.split('\n').map((line, i) => {
+                        // Bold: **text**
+                        const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                        const rendered = parts.map((p, j) =>
+                            p.startsWith('**') && p.endsWith('**')
+                                ? <strong key={j}>{p.slice(2, -2)}</strong>
+                                : p
+                        );
+                        if (!line.trim()) return <br key={i} />;
+                        if (line.startsWith('• ')) return <p key={i} style={{ margin: '2px 0', paddingLeft: '4px' }}>• {rendered.map((r, j) => <span key={j}>{typeof r === 'string' ? r.replace(/^• /, '') : r}</span>)}</p>;
+                        return <p key={i} style={{ margin: '3px 0' }}>{rendered}</p>;
+                    })}
                 </div>
 
-                {/* ── NAS.io-style MAIN PRODUCT CARD ── */}
+                {/* ── NAS.io-style MAIN PRODUCT CARD (only for first search results) ── */}
                 {msg.targeting && (
                     <div
                         className="adv-main-product-card"
@@ -426,6 +472,7 @@ function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMs
                             cursor: "pointer",
                             transition: "all 0.15s",
                             marginBottom: "12px",
+                            marginTop: "12px",
                             display: "flex",
                             alignItems: "center",
                             gap: "14px"
@@ -506,11 +553,13 @@ function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMs
 /* ═══════════════════════════════════════════════
    CHECKPOINTS PANEL
    ═══════════════════════════════════════════════ */
-function CheckpointsPanel({ onClose }: { onClose: () => void }) {
+function CheckpointsPanel({ onClose, targeting }: { onClose: () => void; targeting: LeadTargeting | null }) {
     const [openIdx, setOpenIdx] = useState(0);
     const [actions, setActions] = useState<string[]>(['connect']);
     const [connMsg, setConnMsg] = useState('');
     const [followMsg, setFollowMsg] = useState('');
+    const [connLoading, setConnLoading] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
     const [days, setDays] = useState('30');
     const [name, setName] = useState('');
 
@@ -519,7 +568,61 @@ function CheckpointsPanel({ onClose }: { onClose: () => void }) {
     };
 
     const suggestName = async () => {
-        setName("AI Gen: Target Growth " + new Date().getFullYear());
+        const titlePart = targeting?.job_titles?.length ? targeting.job_titles[0] + 's' : 'Leads';
+        const locPart = targeting?.locations?.length ? ` in ${targeting.locations[0].split(',')[0]}` : '';
+        const indPart = targeting?.industries?.length && !locPart ? ` (${targeting.industries[0]})` : '';
+        const datePart = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+        setName(`${titlePart}${locPart}${indPart} - ${datePart}`);
+    };
+
+    const generateConnMsg = async () => {
+        setConnLoading(true);
+        try {
+            const jobDesc = targeting?.job_titles?.length ? targeting.job_titles.join(' / ') : 'professionals';
+            const indDesc = targeting?.industries?.length ? ` in the ${targeting.industries[0]} industry` : '';
+            const locDesc = targeting?.locations?.length ? ` in ${targeting.locations[0]}` : '';
+
+            const msg = `System Settings:
+- You are an automated script that outputs raw string data.
+- NEVER talk to the user.
+- NEVER ask questions.
+- NEVER say "Here is the message".
+- OUTPUT THE ACTUAL MESSAGE AND NOTHING ELSE.
+
+Task: Write a short, casual LinkedIn connection request (max 300 chars) for a ${jobDesc}${indDesc}${locDesc}. 
+Start exactly with: "Hi {first_name},"
+Focus on networking. No sales pitches.`;
+
+            const r = await fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: msg }) });
+            const d = await r.json();
+            if (d.success) setConnMsg(d.response || d.text);
+        } catch (e) { console.error('Gen conn error', e); }
+        setConnLoading(false);
+    };
+
+    const generateFollowMsg = async () => {
+        setFollowLoading(true);
+        try {
+            const jobDesc = targeting?.job_titles?.length ? targeting.job_titles.join(' / ') : 'professionals';
+            const indDesc = targeting?.industries?.length ? ` in the ${targeting.industries[0]} industry` : '';
+
+            const msg = `System Settings:
+- You are an automated script that outputs raw string data.
+- NEVER talk to the user.
+- NEVER ask questions.
+- NEVER say "Here is your follow-up".
+- OUTPUT THE ACTUAL MESSAGE AND NOTHING ELSE.
+
+Task: Write a concise, professional LinkedIn follow-up message (under 300 chars) to send AFTER someone accepts a connection request. Target audience is: ${jobDesc}${indDesc}.
+Start exactly with: "Thanks for connecting! "
+Ask a relevant, polite question to spark conversation. Do not pitch.`;
+
+            const r = await fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: msg }) });
+            const d = await r.json();
+            if (d.success) setFollowMsg(d.response || d.text);
+        } catch (e) { console.error('Gen follow error', e); }
+        setFollowLoading(false);
     };
 
     return (
@@ -580,26 +683,22 @@ function CheckpointsPanel({ onClose }: { onClose: () => void }) {
                                     <div style={{ marginBottom: "16px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                                             <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Connection Request Message</label>
-                                            <button style={{ background: "transparent", border: "none", fontSize: "12px", fontWeight: 700, color: "#10b981", cursor: "pointer", padding: 0 }} onClick={async () => {
-                                                const r = await fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: "Generate a short LinkedIn connection request message (under 300 characters). Leave placeholders like {first_name}." }) });
-                                                const d = await r.json();
-                                                if (d.success) setConnMsg(d.response || d.text);
-                                            }}>✨ Generate</button>
+                                            <button disabled={connLoading} style={{ background: "transparent", border: "none", fontSize: "12px", fontWeight: 700, color: connLoading ? "#9ca3af" : "#f59e0b", cursor: connLoading ? "not-allowed" : "pointer", padding: 0, opacity: connLoading ? 0.7 : 1 }} onClick={generateConnMsg}>
+                                                {connLoading ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="16 16"><circle cx="12" cy="12" r="10" /></svg> Loading...</span> : "✨ Generate"}
+                                            </button>
                                         </div>
-                                        <textarea className="adv-ta" style={{ width: "100%", border: "1px solid #c2d6eb", borderRadius: "10px", padding: "12px", fontSize: "13px", height: "80px", background: "#fff" }} value={connMsg} onChange={e => setConnMsg(e.target.value)} placeholder="Hi {first_name}, I'd love to connect!" />
+                                        <textarea className="adv-ta" style={{ width: "100%", border: "1px solid #c2d6eb", borderRadius: "10px", padding: "12px", fontSize: "13px", height: "80px", background: "#fff", opacity: connLoading ? 0.5 : 1, transition: "opacity 0.2s" }} disabled={connLoading} value={connMsg} onChange={e => setConnMsg(e.target.value)} placeholder="Hi {first_name}, I'd love to connect!" />
                                     </div>
                                 )}
                                 {actions.includes('message') && (
                                     <div style={{ marginBottom: "16px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                                             <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Follow-up Message</label>
-                                            <button style={{ background: "transparent", border: "none", fontSize: "12px", fontWeight: 700, color: "#10b981", cursor: "pointer", padding: 0 }} onClick={async () => {
-                                                const r = await fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: "Generate a concise, professional LinkedIn follow up message to send after someone accepts my connection request. Focus on starting a polite conversation. Leave placeholders like {first_name}." }) });
-                                                const d = await r.json();
-                                                if (d.success) setFollowMsg(d.response || d.text);
-                                            }}>✨ Generate</button>
+                                            <button disabled={followLoading} style={{ background: "transparent", border: "none", fontSize: "12px", fontWeight: 700, color: followLoading ? "#9ca3af" : "#f59e0b", cursor: followLoading ? "not-allowed" : "pointer", padding: 0, opacity: followLoading ? 0.7 : 1 }} onClick={generateFollowMsg}>
+                                                {followLoading ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="16 16"><circle cx="12" cy="12" r="10" /></svg> Loading...</span> : "✨ Generate"}
+                                            </button>
                                         </div>
-                                        <textarea className="adv-ta" style={{ width: "100%", border: "1px solid #c2d6eb", borderRadius: "10px", padding: "12px", fontSize: "13px", height: "80px", background: "#fff" }} value={followMsg} onChange={e => setFollowMsg(e.target.value)} placeholder="Thanks for connecting! ..." />
+                                        <textarea className="adv-ta" style={{ width: "100%", border: "1px solid #c2d6eb", borderRadius: "10px", padding: "12px", fontSize: "13px", height: "80px", background: "#fff", opacity: followLoading ? 0.5 : 1, transition: "opacity 0.2s" }} disabled={followLoading} value={followMsg} onChange={e => setFollowMsg(e.target.value)} placeholder="Thanks for connecting! ..." />
                                     </div>
                                 )}
                                 {!actions.includes('connect') && !actions.includes('message') && (
@@ -648,8 +747,112 @@ function CheckpointsPanel({ onClose }: { onClose: () => void }) {
                                     <input type="text" style={{ flex: 1, border: "1px solid #c2d6eb", borderRadius: "10px", padding: "10px 12px", fontSize: "13px", outline: "none", background: "#fff", minWidth: 0 }} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Q3 Outreach Strategy" />
                                     <button style={{ background: "#e0eaf5", border: "1.5px solid #172560", borderRadius: "10px", padding: "0 14px", fontSize: "12px", fontWeight: 700, color: "#172560", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }} onClick={suggestName} onMouseLeave={e => { e.currentTarget.style.background = "#e0eaf5"; e.currentTarget.style.color = "#172560" }} onMouseEnter={e => { e.currentTarget.style.background = "#172560"; e.currentTarget.style.color = "#fff" }}>✨ Auto Suggest</button>
                                 </div>
-                                <button className="adv-unlock-btn" style={{ marginTop: "24px", width: "100%", justifyContent: "center", background: "#10b981", padding: "12px", fontSize: "14px", fontWeight: 700 }} onClick={() => {
-                                    alert(`Campaign "${name}" configured successfully and scheduled for ${days} days.`);
+                                <button className="adv-unlock-btn" style={{ marginTop: "24px", width: "100%", justifyContent: "center", background: "#10b981", padding: "12px", fontSize: "14px", fontWeight: 700 }} onClick={async (e) => {
+                                    const btn = e.currentTarget;
+                                    const oldHtml = btn.innerHTML;
+                                    btn.innerHTML = '🚀 Launching...';
+                                    btn.style.opacity = '0.7';
+                                    btn.style.pointerEvents = 'none';
+
+                                    try {
+                                        const campaignDays = parseInt(days) || 30;
+                                        const startDate = new Date();
+                                        const endDate = new Date();
+                                        endDate.setDate(endDate.getDate() + campaignDays);
+
+                                        const actionSteps: any[] = [];
+                                        let orderIdx = 1;
+
+                                        if (actions.includes('connect')) {
+                                            actionSteps.push({
+                                                type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++,
+                                                config: { message: connMsg || '' }
+                                            });
+                                        }
+                                        if (actions.includes('message')) {
+                                            actionSteps.push({
+                                                type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++,
+                                                config: { message: followMsg || '' }
+                                            });
+                                        }
+
+                                        const processedTargeting = targeting || {
+                                            keywords: [], industries: [], locations: [], job_titles: [], profile_language: []
+                                        };
+
+                                        const campaignPayload = {
+                                            name: name || 'AI Growth Campaign',
+                                            status: 'active',
+                                            campaign_type: 'linkedin_outreach',
+                                            leads_per_day: 40,
+                                            campaign_start_date: startDate.toISOString(),
+                                            campaign_end_date: endDate.toISOString(),
+                                            config: {
+                                                data_source: 'linkedin_search',
+                                                search_intent: processedTargeting,
+                                                search_query: processedTargeting.keywords?.join(' ') || '',
+                                                leads_per_day: 40,
+                                                daily_lead_limit: 40,
+                                                working_days: 'monday-friday',
+                                                campaign_days: campaignDays,
+                                                linkedin_actions: actions,
+                                                connection_message: connMsg || '',
+                                                followup_message: followMsg || '',
+                                                location: processedTargeting.locations?.[0] || '',
+                                                industries: processedTargeting.industries || [],
+                                                job_titles: processedTargeting.job_titles || [],
+                                                profile_language: processedTargeting.profile_language || [],
+                                                search_filters: {
+                                                    keywords: processedTargeting.keywords?.join(' ') || '',
+                                                    industries: processedTargeting.industries || [],
+                                                    locations: processedTargeting.locations || [],
+                                                    job_titles: processedTargeting.job_titles || [],
+                                                    profile_language: processedTargeting.profile_language || [],
+                                                }
+                                            },
+                                            steps: [
+                                                {
+                                                    type: 'lead_generation',
+                                                    title: 'LinkedIn Lead Search',
+                                                    channel: 'linkedin',
+                                                    order_index: 0,
+                                                    config: {
+                                                        source: 'linkedin_search',
+                                                        leadGenerationFilters: {
+                                                            keywords: processedTargeting.keywords?.join(' ') || '',
+                                                            industries: processedTargeting.industries || [],
+                                                            locations: processedTargeting.locations || [],
+                                                            job_titles: processedTargeting.job_titles || [],
+                                                        },
+                                                        leadGenerationLimit: 40,
+                                                    }
+                                                },
+                                                ...actionSteps,
+                                            ],
+                                        };
+
+                                        const res = await fetch(`${API_BASE}/api/campaigns`, {
+                                            method: 'POST',
+                                            headers: headers(),
+                                            body: JSON.stringify(campaignPayload)
+                                        });
+
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            window.location.href = '/campaigns';
+                                        } else {
+                                            alert('Failed to launch campaign: ' + (data.error || 'Unknown error'));
+                                            btn.innerHTML = oldHtml;
+                                            btn.style.opacity = '1';
+                                            btn.style.pointerEvents = 'auto';
+                                        }
+                                    } catch (err: any) {
+                                        console.error('Campaign creation error', err);
+                                        alert('Error launching campaign: ' + err.message);
+                                        btn.innerHTML = oldHtml;
+                                        btn.style.opacity = '1';
+                                        btn.style.pointerEvents = 'auto';
+                                    }
                                 }}>🚀 Finalize & Launch Campaign</button>
                             </div>
                         )}

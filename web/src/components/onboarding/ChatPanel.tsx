@@ -758,7 +758,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       case 'adv_search_working_days': {
         // Step 9: Working days → CREATE CAMPAIGN
         const workingDays = msg.trim().toLowerCase();
-        const finalAnswers = { ...advSearchAnswers, working_days: workingDays };
+        const finalAnswers: Record<string, any> = { ...advSearchAnswers, working_days: workingDays };
         setAdvSearchAnswers(finalAnswers);
 
         const campaignName = finalAnswers.campaign_name || 'LinkedIn Search Campaign';
