@@ -116,49 +116,51 @@ export default function AdvancedSearchAIPage() {
             // Build history array for context (last 6 messages)
             const historySnapshot = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
 
-            // ── CASE 1: First message OR an explicit new-search detected via lead-chat ──
+            // ── CASE 1: Detect Intent (Always call /lead-chat first) ──
             const isFirstMessage = messages.filter(m => m.role === 'user').length === 0;
-            let shouldRunSearch = isFirstMessage;
+            let shouldRunSearch = false;
             let aiResponseText = '';
             let aiOpts: { label: string; value: string }[] | undefined;
             let updatedTargetState = targeting;
 
-            if (!isFirstMessage && targeting) {
-                // ── CASE 2: Follow-up — call /lead-chat first to detect intent ──
-                try {
-                    const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
-                        method: 'POST',
-                        headers: headers(),
-                        body: JSON.stringify({
-                            message: text,
-                            history: historySnapshot,
-                            currentTargeting: targeting,
-                            pendingIntent: (pendingIntent as string | null),
-                        }),
-                    });
-                    const chatD = await chatR.json();
-                    if (chatD.success) {
-                        aiResponseText = chatD.response || '';
-                        shouldRunSearch = !!chatD.newSearch;
-                        if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
-                        setPendingIntent(chatD.pendingIntent || null);
-                        if (Array.isArray(chatD.options) && chatD.options.length > 0) {
-                            aiOpts = chatD.options;
-                        }
+            try {
+                const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
+                    method: 'POST',
+                    headers: headers(),
+                    body: JSON.stringify({
+                        message: text,
+                        history: historySnapshot,
+                        currentTargeting: targeting,
+                        pendingIntent: (pendingIntent as string | null),
+                    }),
+                });
+                const chatD = await chatR.json();
+                if (chatD.success) {
+                    aiResponseText = chatD.response || '';
+                    shouldRunSearch = !!chatD.newSearch;
+                    if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
+                    setPendingIntent(chatD.pendingIntent || null);
+                    if (Array.isArray(chatD.options) && chatD.options.length > 0) {
+                        aiOpts = chatD.options;
                     }
-                } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
-
-                if (!shouldRunSearch) {
-                    // Just show the AI answer — no search needed
-                    setMessages(p => p.filter(m => m.id !== lid).concat({
-                        id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
-                    }));
-                    setBusy(false);
-                    return;
                 }
+            } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
+
+            // If it's the first message and lead-chat didn't respond or failed, fallback to searching
+            if (isFirstMessage && !aiResponseText && !shouldRunSearch) {
+                shouldRunSearch = true;
             }
 
-            // ── CASE 3: Run LinkedIn search (either first message or lead-chat said newSearch:true) ──
+            if (!shouldRunSearch && aiResponseText) {
+                // Just show the AI answer — no search needed
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
+                }));
+                setBusy(false);
+                return;
+            }
+
+            // ── CASE 2: Run LinkedIn search ──
             let ext: LeadTargeting | null = updatedTargetState;
             let realLeads: LeadProfile[] = [];
             let searchTotal = 0;
