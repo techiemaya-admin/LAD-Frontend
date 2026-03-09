@@ -239,6 +239,9 @@ export default function AdvancedSearchAIPage() {
                         finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
                     }
                     setTimeout(() => setShowPanel('leads'), 500);
+                } else if (realLeads.length > 0) {
+                    finalText = `Searching LinkedIn for leads...\n\n🔍 **Found ${searchTotal} leads** matching your search.`;
+                    setTimeout(() => setShowPanel('leads'), 500);
                 } else {
                     finalText = "I'm here to help you find the perfect leads! Try describing your ideal customer — for example:\n\n• \"Marketing directors at fintech startups in London\"\n• \"CTO at healthcare companies with 50-200 employees\"\n• \"Sales managers in the automotive industry in Germany\"";
                 }
