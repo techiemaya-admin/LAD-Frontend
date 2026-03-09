@@ -18,6 +18,8 @@ export function ConversationsPage() {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,
@@ -131,6 +133,8 @@ export function ConversationsPage() {
                 onSelectConversation={selectConversation}
                 channelFilter={channelFilter}
                 onChannelFilterChange={setChannelFilter}
+                contextStatusFilter={contextStatusFilter}
+                onContextStatusFilterChange={setContextStatusFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 unreadCounts={unreadCounts}
@@ -167,6 +171,8 @@ export function ConversationsPage() {
                   }}
                   channelFilter={channelFilter}
                   onChannelFilterChange={setChannelFilter}
+                  contextStatusFilter={contextStatusFilter}
+                  onContextStatusFilterChange={setContextStatusFilter}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                   unreadCounts={unreadCounts}

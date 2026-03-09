@@ -41,6 +41,8 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string) => void;
   channelFilter: Channel | 'all';
   onChannelFilterChange: (channel: Channel | 'all') => void;
+  contextStatusFilter: string;
+  onContextStatusFilterChange: (status: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   unreadCounts: Record<Channel | 'all', number>;
@@ -101,12 +103,13 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onSelectConversation,
   channelFilter,
   onChannelFilterChange,
+  contextStatusFilter,
+  onContextStatusFilterChange,
   searchQuery,
   onSearchChange,
   unreadCounts,
   onBulkAction,
 }: ConversationSidebarProps) {
-  const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -156,23 +159,16 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {});
   }, [activeGroup]);
 
-  // Filter conversations: context status + group
+  // Filter conversations: group only (context status is now server-side)
   const filteredConversations = useMemo(() => {
     let list = conversations;
-
-    if (contextStatusFilter !== 'all') {
-      list = list.filter((conv) => {
-        const status = conv.conversationState || conv.context_status;
-        return status === contextStatusFilter;
-      });
-    }
 
     if (activeGroup && groupConversationIds.size > 0) {
       list = list.filter((conv) => groupConversationIds.has(conv.id));
     }
 
     return list;
-  }, [conversations, contextStatusFilter, activeGroup, groupConversationIds]);
+  }, [conversations, activeGroup, groupConversationIds]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -207,12 +203,12 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   );
 
   const handleContextStatusClick = useCallback((status: string) => {
-    setContextStatusFilter(status);
-  }, []);
+    onContextStatusFilterChange(status);
+  }, [onContextStatusFilterChange]);
 
   const clearFilter = useCallback(() => {
-    setContextStatusFilter('all');
-  }, []);
+    onContextStatusFilterChange('all');
+  }, [onContextStatusFilterChange]);
 
   const clearGroupFilter = useCallback(() => {
     setActiveGroup(null);
@@ -395,7 +391,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           {contextStatuses.map(({ value, label, count }) => (
             <button
               key={value}
-              onClick={() => setContextStatusFilter(value)}
+              onClick={() => onContextStatusFilterChange(value)}
               className={cn(
                 'flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap',
                 getChipColor(value, contextStatusFilter === value),
