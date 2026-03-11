@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
@@ -7,6 +7,7 @@ import { ChatWindow } from './ChatWindow';
 import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import type { ChatGroup } from './ChatGroupManager';
+import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
@@ -148,6 +149,37 @@ export function ConversationsPage() {
     } catch {}
   }, []);
 
+  // Type conversions and data enrichment
+  const typedConversations = useMemo(
+    () => conversations as Conversation[],
+    [conversations]
+  );
+
+  const typedSelectedConversation = useMemo(
+    () => selectedConversation as Conversation | null,
+    [selectedConversation]
+  );
+
+  const allUnreadCounts = useMemo(() => {
+    const channels: (Channel | 'all')[] = ['all', 'whatsapp', 'linkedin', 'gmail', 'outlook', 'instagram'];
+    const result: Record<Channel | 'all', number> = {
+      all: 0,
+      whatsapp: 0,
+      linkedin: 0,
+      gmail: 0,
+      outlook: 0,
+      instagram: 0,
+    };
+    
+    channels.forEach((channel) => {
+      if (channel in unreadCounts) {
+        result[channel] = (unreadCounts as any)[channel];
+      }
+    });
+    
+    return result;
+  }, [unreadCounts]);
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Main Content Area */}
@@ -163,7 +195,7 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
             >
               <ConversationSidebar
-                conversations={conversations}
+                conversations={typedConversations}
                 selectedId={selectedId}
                 onSelectConversation={handleSelectConversation}
                 channelFilter={channelFilter}
@@ -172,7 +204,7 @@ export function ConversationsPage() {
                 onContextStatusFilterChange={setContextStatusFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                unreadCounts={unreadCounts}
+                unreadCounts={allUnreadCounts}
                 onBulkAction={handleBulkAction}
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
@@ -200,7 +232,7 @@ export function ConversationsPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <ConversationSidebar
-                  conversations={conversations}
+                  conversations={typedConversations}
                   selectedId={selectedId}
                   onSelectConversation={(id) => {
                     handleSelectConversation(id);
@@ -212,7 +244,7 @@ export function ConversationsPage() {
                   onContextStatusFilterChange={setContextStatusFilter}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
-                  unreadCounts={unreadCounts}
+                  unreadCounts={allUnreadCounts}
                   onBulkAction={handleBulkAction}
                   onGroupSelect={handleSelectGroup}
                   onOpenGroupInfo={handleOpenGroupInfo}
@@ -247,7 +279,7 @@ export function ConversationsPage() {
           />
         ) : (
           <ChatWindow
-            conversation={selectedConversation}
+            conversation={typedSelectedConversation}
             onMarkResolved={markAsResolved}
             onMute={muteConversation}
             onSendMessage={sendMessage}
@@ -264,7 +296,7 @@ export function ConversationsPage() {
 
         {/* Context Panel (hidden in group merged view, shown for individual chats) */}
         <AnimatePresence mode="wait">
-          {isContextPanelOpen && selectedConversation && (!activeGroup || groupMemberSelected) && (
+          {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 320, opacity: 1 }}
@@ -273,7 +305,7 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden md:block"
             >
               <ConversationContextPanel
-                conversation={selectedConversation}
+                conversation={typedSelectedConversation}
                 onClose={toggleContextPanel}
               />
             </motion.div>
