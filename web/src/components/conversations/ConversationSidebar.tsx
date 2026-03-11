@@ -103,6 +103,42 @@ function getChipColor(value: string, isActive: boolean) {
   return isActive ? colors.active : colors.inactive;
 }
 
+/**
+ * Helper function to get auth token from cookies
+ * (so proxy can extract tenant ID from JWT)
+ */
+function getAuthToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    const name = rawName?.trim();
+    const value = rawValueParts.join('=');
+    if (name === 'token') {
+      return decodeURIComponent(value || '');
+    }
+  }
+  return null;
+}
+
+/**
+ * Make an authenticated API call with tenant routing
+ */
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
+
 export const ConversationSidebar = memo(function ConversationSidebar({
   conversations,
   selectedId,
@@ -136,7 +172,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   // Fetch tenant-specific context statuses on mount
   useEffect(() => {
     setStatusesLoading(true);
-    fetch('/api/whatsapp-conversations/conversations/context-statuses')
+    fetchWithAuth('/api/whatsapp-conversations/conversations/context-statuses')
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -159,7 +195,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       setGroupConversationIds(new Set());
       return;
     }
-    fetch(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations`)
+    fetchWithAuth(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -219,7 +255,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     setRemovingFromGroup(true);
     try {
       const promises = Array.from(selectedIds).map((convId) =>
-        fetch(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations/${convId}`, {
+        fetchWithAuth(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations/${convId}`, {
           method: 'DELETE',
         })
       );
@@ -257,7 +293,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       try {
         // If sending to a group (via group manager), use the group endpoint
         if (groupTemplateSendTarget) {
-          const res = await fetch(
+          const res = await fetchWithAuth(
             `/api/whatsapp-conversations/chat-groups/${groupTemplateSendTarget.groupId}/send-template`,
             {
               method: 'POST',
@@ -273,7 +309,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           if (!data.success) console.error('Group template send failed:', data.error);
         } else if (selectedIds.size > 0) {
           // Bulk send to selected conversations
-          const res = await fetch('/api/whatsapp-conversations/conversations/bulk', {
+          const res = await fetchWithAuth('/api/whatsapp-conversations/conversations/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
