@@ -43,8 +43,21 @@ interface ChatSettingsConfig {
 const PROMPTS_API = '/api/whatsapp-conversations/prompts';
 const SETTINGS_API = '/api/whatsapp-conversations/chat-settings';
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 async function fetchPrompts(): Promise<Prompt[]> {
-  const res = await fetch(PROMPTS_API);
+  const res = await fetch(PROMPTS_API, {
+    headers: getAuthHeaders(),
+  });
   const data = await res.json();
   return data.success ? data.data : [];
 }
@@ -52,7 +65,7 @@ async function fetchPrompts(): Promise<Prompt[]> {
 async function updatePrompt(name: string, updates: Partial<Prompt>): Promise<boolean> {
   const res = await fetch(`${PROMPTS_API}/${encodeURIComponent(name)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(updates),
   });
   const data = await res.json();
@@ -62,7 +75,7 @@ async function updatePrompt(name: string, updates: Partial<Prompt>): Promise<boo
 async function createPrompt(prompt: { name: string; prompt_text: string; channel: string }): Promise<boolean> {
   const res = await fetch(PROMPTS_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(prompt),
   });
   const data = await res.json();
@@ -72,13 +85,16 @@ async function createPrompt(prompt: { name: string; prompt_text: string; channel
 async function deletePrompt(name: string): Promise<boolean> {
   const res = await fetch(`${PROMPTS_API}/${encodeURIComponent(name)}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
   const data = await res.json();
   return data.success;
 }
 
 async function fetchChatSettings(): Promise<ChatSettingsConfig> {
-  const res = await fetch(SETTINGS_API);
+  const res = await fetch(SETTINGS_API, {
+    headers: getAuthHeaders(),
+  });
   const data = await res.json();
   return data.success
     ? data.data
@@ -88,7 +104,7 @@ async function fetchChatSettings(): Promise<ChatSettingsConfig> {
 async function updateChatSettings(updates: Partial<ChatSettingsConfig>): Promise<boolean> {
   const res = await fetch(SETTINGS_API, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(updates),
   });
   const data = await res.json();
