@@ -256,15 +256,13 @@ export async function reorderStages(
 ): Promise<void> {
   await apiPut("/api/deals-pipeline/stages/reorder", { stageOrders });
 }
-
-// ============================================================================
 // PIPELINE BOARD API FUNCTIONS
 // ============================================================================
 
 /**
  * Get complete pipeline board data (stages + leads)
  */
-export async function getPipelineData(page: number = 1, limit: number = 50): Promise<PipelineData> {
+export async function getPipelineData(page: number = 1, limit: number = 20): Promise<PipelineData> {
   const response = await apiGet<PipelineData>("/api/deals-pipeline/pipeline/board", {
     params: { page, limit }
   });
