@@ -84,20 +84,7 @@ async function logoutAccount(accountId: string, tenantId: string | null): Promis
 
 async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]> {
   try {
-    const token = typeof document !== 'undefined'
-      ? (() => {
-          const cookies = document.cookie ? document.cookie.split(';') : [];
-          for (const cookie of cookies) {
-            const [rawName, ...rawValueParts] = cookie.trim().split('=');
-            const name = rawName?.trim();
-            if (name === 'token') {
-              return decodeURIComponent(rawValueParts.join('=') || '');
-            }
-          }
-          return null;
-        })()
-      : null;
-
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers: Record<string, string> = {};
     if (tenantId) headers['X-Tenant-ID'] = tenantId;
     if (token) headers['Authorization'] = `Bearer ${token}`;

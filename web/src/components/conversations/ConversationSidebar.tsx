@@ -104,21 +104,16 @@ function getChipColor(value: string, isActive: boolean) {
 }
 
 /**
- * Helper function to get auth token from cookies
+ * Helper function to get auth token from localStorage
  * (so proxy can extract tenant ID from JWT)
  */
 function getAuthToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const cookies = document.cookie ? document.cookie.split(';') : [];
-  for (const cookie of cookies) {
-    const [rawName, ...rawValueParts] = cookie.trim().split('=');
-    const name = rawName?.trim();
-    const value = rawValueParts.join('=');
-    if (name === 'token') {
-      return decodeURIComponent(value || '');
-    }
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem('token') || null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 /**
