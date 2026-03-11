@@ -34,7 +34,6 @@ export { useEndCall, useRetryFailedCalls } from "./hooks/useCallLogMutations";
 export { useRecordingSignedUrl } from "./hooks/useRecordingSignedUrl";
 export { useCallLogsStats } from "./hooks/useCallLogsStats";
 export { useBatchStats } from "./hooks/useBatchStats";
-export { useCallLogsLeadStatus } from "./hooks/useCallLogsLeadStatus";
 export { useCallLogsStream } from "./hooks/useCallLogsStream";
 export { useCallLead } from "./hooks/useCallLead";
 
