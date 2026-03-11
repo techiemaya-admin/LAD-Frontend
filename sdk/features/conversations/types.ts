@@ -116,6 +116,8 @@ export interface UseConversationsReturn {
   selectConversation: (id: string) => void;
   channelFilter: Channel | 'all';
   setChannelFilter: (filter: Channel | 'all') => void;
+  contextStatusFilter: string;
+  setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   unreadCounts: {
