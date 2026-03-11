@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Sparkles, Gem } from 'lucide-react';
+import { ProfileSummaryDialog } from '@/components/campaigns';
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -15,6 +17,7 @@ interface LeadTargeting {
     functions?: string[];
     seniority?: string[];
     company_headcount?: string[];
+    company_names?: string[];
 }
 
 interface LeadProfile {
@@ -89,11 +92,67 @@ export default function AdvancedSearchAIPage() {
     const [showPanel, setShowPanel] = useState<false | 'leads' | 'checkpoints'>(false);
     const [convId, setConvId] = useState<string | null>(null);
     const [msgCount, setMsgCount] = useState(0);
-    const [pendingIntent, setPendingIntent] = useState<string | null>(null); // 'location' | 'title' | 'industry' | null
+    const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+
     const endRef = useRef<HTMLDivElement>(null);
     const taRef = useRef<HTMLTextAreaElement>(null);
 
+    const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+    const [profileSummary, setProfileSummary] = useState<string | null>(null);
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [summaryError, setSummaryError] = useState<string | null>(null);
+
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+    const handleViewSummary = async (lead: LeadProfile) => {
+        setSelectedEmployee({
+            id: 'temp',
+            name: lead.name,
+            title: lead.headline || lead.current_company || '',
+            photo_url: lead.profile_picture || '',
+        });
+        setSummaryDialogOpen(true);
+        setProfileSummary(null);
+        setSummaryError(null);
+        setSummaryLoading(true);
+
+        try {
+            const dummyCampaignId = '00000000-0000-0000-0000-000000000000';
+            const dummyLeadId = '00000000-0000-0000-0000-000000000000';
+
+            const response = await fetch(`${API_BASE}/api/campaigns/${dummyCampaignId}/leads/${dummyLeadId}/summary`, {
+                method: 'POST',
+                headers: headers(),
+                body: JSON.stringify({
+                    profileData: {
+                        name: lead.name,
+                        title: lead.headline || '',
+                        company: lead.current_company || '',
+                        linkedin_url: lead.profile_url || ''
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success && data.summary) {
+                setProfileSummary(data.summary);
+            } else {
+                throw new Error(data.error || 'Failed to generate summary');
+            }
+        } catch (err: any) {
+            setSummaryError(err.message || 'Failed to generate profile summary');
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
+
+    const handleCloseSummaryDialog = () => {
+        setSummaryDialogOpen(false);
+        setSelectedEmployee(null);
+        setProfileSummary(null);
+        setSummaryError(null);
+    };
 
     /* ── Landing submit ── */
     const onLandingSubmit = useCallback(() => {
@@ -123,6 +182,7 @@ export default function AdvancedSearchAIPage() {
             let aiOpts: { label: string; value: string }[] | undefined;
             let updatedTargetState = targeting;
 
+            // Always call lead-chat for AI conversation
             try {
                 const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
                     method: 'POST',
@@ -151,6 +211,24 @@ export default function AdvancedSearchAIPage() {
                 shouldRunSearch = true;
             }
 
+            // Smart search detection: if the user explicitly asks to find/search someone or something
+            // AND the query contains a specific entity (company, person name, location — not just vague intent)
+            if (!shouldRunSearch && !isFirstMessage) {
+                const lowerText = text.toLowerCase();
+                const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
+                // Check if there's a specific entity (not just generic words like 'a specific company')
+                const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
+                // Must have search intent AND NOT be vague to force search
+                if (hasSearchIntent && !hasVagueTarget) {
+                    shouldRunSearch = true;
+                    // Clear old targeting so Gemini parses this fresh query from scratch
+                    // e.g. previous search was "founders at X", now user says "find all people at X"
+                    updatedTargetState = null;
+                    // Clear the AI response so we show search results, not the chat response
+                    aiResponseText = '';
+                }
+            }
+
             if (!shouldRunSearch && aiResponseText) {
                 // Just show the AI answer — no search needed
                 setMessages(p => p.filter(m => m.id !== lid).concat({
@@ -165,9 +243,9 @@ export default function AdvancedSearchAIPage() {
             let realLeads: LeadProfile[] = [];
             let searchTotal = 0;
 
-            // If we have updated targeting from lead-chat, use that for search query
+            // If we have updated targeting from lead-chat or custom flows, use that for search query
             const searchQuery = shouldRunSearch && ext && !isFirstMessage
-                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || [])].join(' ')
+                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
                 : text;
 
             try {
@@ -181,8 +259,9 @@ export default function AdvancedSearchAIPage() {
                             job_titles: toArr(d.intent.job_titles), industries: toArr(d.intent.industries),
                             locations: toArr(d.intent.locations), keywords: toArr(d.intent.keywords),
                             profile_language: toArr(d.intent.profile_language),
+                            company_names: toArr(d.intent.company_names),
                         };
-                        const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0;
+                        const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0 || (newExt.keywords && newExt.keywords.length > 0) || (newExt.company_names && newExt.company_names.length > 0);
                         if (hasData) {
                             ext = newExt;
                             setTargeting(ext);
@@ -235,7 +314,7 @@ export default function AdvancedSearchAIPage() {
 
             if (!finalText) {
                 // First message: build summary
-                if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length)) {
+                if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length || (ext.keywords && ext.keywords.length > 0) || (ext.company_names && ext.company_names.length > 0))) {
                     finalText = buildSummary(ext);
                     if (realLeads.length > 0) {
                         finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
@@ -245,7 +324,7 @@ export default function AdvancedSearchAIPage() {
                     finalText = `Searching LinkedIn for leads...\n\n🔍 **Found ${searchTotal} leads** matching your search.`;
                     setTimeout(() => setShowPanel('leads'), 500);
                 } else {
-                    finalText = "I'm here to help you find the perfect leads! Try describing your ideal customer — for example:\n\n• \"Marketing directors at fintech startups in London\"\n• \"CTO at healthcare companies with 50-200 employees\"\n• \"Sales managers in the automotive industry in Germany\"";
+                    finalText = "I'm here to help you find the perfect leads! Try describing what you need — for example:\n\n• **Find a person:** \"John Smith, CTO at Stripe\"\n• **People at a company:** \"Find all people in Tesla\"\n• **Decision makers:** \"Find decision makers at Google\"\n• **Specific role:** \"Find founders at techiemaya\"\n• **Industry search:** \"Marketing directors at fintech startups in London\"";
                 }
             } else if (realLeads.length > 0) {
                 // lead-chat triggered a search and got results
@@ -295,9 +374,14 @@ export default function AdvancedSearchAIPage() {
                     <textarea ref={taRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKey}
                         placeholder="Describe your ideal customer... e.g. VP of Engineering at SaaS companies in USA" rows={4} className="adv-ta" />
                     <div className="adv-card-foot">
-                        <button className="adv-idea" onClick={() => { setInput('Marketing directors at fintech startups in London'); taRef.current?.focus(); }}>
-                            <span>✦</span> Give me an idea
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button className="adv-idea" onClick={() => { setInput('Marketing directors at fintech startups in London'); taRef.current?.focus(); }}>
+                                <span>✦</span> Give me an idea
+                            </button>
+                            <button className="adv-idea" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                                <span>🎯</span> Target Specific Leads
+                            </button>
+                        </div>
                         <button className="adv-send-circle" disabled={!input.trim()} onClick={onLandingSubmit}
                             style={{ background: input.trim() ? '#172560' : '#e5e7eb', boxShadow: input.trim() ? '0 4px 14px rgba(23,37,96,.3)' : 'none' }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
@@ -386,34 +470,61 @@ export default function AdvancedSearchAIPage() {
                                             </div>
                                         )}
                                         <div className="adv-lead-info">
-                                            <div className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</div>
+                                            <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
+                                            </a>
                                             <div className="adv-lead-title">{lead.headline || lead.current_company || 'LinkedIn User'}</div>
                                             {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
                                             <div className="adv-lead-platform">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                                             </div>
                                         </div>
-                                        <a
-                                            href={lead.profile_url || '#'}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                        <button
                                             className="adv-lead-action"
-                                            onClick={e => { if (lead.locked || !lead.profile_url) e.preventDefault(); }}
-                                            style={{ pointerEvents: lead.locked ? 'none' : 'auto' }}
+                                            title="Generate Summary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!lead.locked) handleViewSummary(lead);
+                                            }}
+                                            style={{ pointerEvents: lead.locked ? 'none' : 'auto', border: 'none', background: 'transparent', cursor: lead.locked ? 'default' : 'pointer' }}
                                         >
                                             {lead.locked ? (
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
                                             ) : (
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15,3 21,3 21,9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                                                <Sparkles size={18} color="#172560" />
                                             )}
-                                        </a>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="adv-panel-footer">
-                                <p>Discover more leads with <strong style={{ color: '#172560' }}>Magic Leads</strong></p>
-                            </div>
+                            {leads.some(l => l.locked) && (
+                                <div className="adv-panel-footer" style={{ display: 'flex', justifyContent: 'center', padding: '16px 0', borderTop: '0px solid #e5e7eb', marginTop: '8px' }}>
+                                    <button
+                                        onClick={() => setLeads(prev => prev.map(l => ({ ...l, locked: false })))}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: '#ffffff',
+                                            padding: '10px 20px',
+                                            borderRadius: '24px',
+                                            fontWeight: '600',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: '0 4px 12px rgba(30, 27, 75, 0.2)'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 27, 75, 0.3)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 27, 75, 0.2)'; }}
+                                    >
+                                        <Gem size={16} color="#fbbf24" fill="#fbbf24" />
+                                        Unlock Results
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -421,6 +532,15 @@ export default function AdvancedSearchAIPage() {
                 {showPanel === 'checkpoints' && (
                     <CheckpointsPanel onClose={() => setShowPanel(false)} targeting={targeting} />
                 )}
+
+                <ProfileSummaryDialog
+                    open={summaryDialogOpen}
+                    onClose={handleCloseSummaryDialog}
+                    employee={selectedEmployee}
+                    summary={profileSummary}
+                    loading={summaryLoading}
+                    error={summaryError}
+                />
             </div>
             <style>{css}</style>
         </div>
@@ -890,6 +1010,7 @@ function buildSummary(t: LeadTargeting): string {
     if (t.functions?.length) p.push(`⚙️ **Functions:** ${t.functions.join(', ')}`);
     if (t.seniority?.length) p.push(`⭐ **Seniority:** ${t.seniority.join(', ')}`);
     if (t.company_headcount?.length) p.push(`👥 **Company Size:** ${t.company_headcount.join(', ')}`);
+    if (t.company_names?.length) p.push(`🏢 **Company:** ${t.company_names.join(', ')}`);
     p.push('\n✅ Your leads are shown in the panel. You can refine or start connecting.');
     return p.join('\n');
 }
