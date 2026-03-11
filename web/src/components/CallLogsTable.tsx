@@ -275,18 +275,21 @@ export function CallLogsTable({
     const match = fileName.match(timestampPattern);
     
     if (match) {
-      const [_, year, month, day] = match;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      const formattedDate = date.toLocaleDateString('en-US', {
+      const [_, year, month, day, hours, minutes] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+      const formattedDateTime = date.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
       });
       
       // Extract the rest of the filename after the timestamp and Z-
       const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
       
-      return `${formattedDate} - ${restOfFileName}`;
+      return `${formattedDateTime} - ${restOfFileName}`;
     }
     
     return fileName;
@@ -722,6 +725,9 @@ export function CallLogsTable({
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
+                <span className="text-muted-foreground">
+                  {hasAttachment && `${formatAttachmentFileName(attachmentFileName)}`}
+                </span>
               </div>
             </div>
             {hasAttachment && (
@@ -733,8 +739,8 @@ export function CallLogsTable({
                 className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm font-medium"
                 title={`Download ${attachmentFileName}`}
               >
-                <Download className="w-4 h-4" />
-                <span>{formatAttachmentFileName(attachmentFileName)}</span>
+                <Download className="w-6 h-6" />
+                
               </button>
             )}
           </div>
