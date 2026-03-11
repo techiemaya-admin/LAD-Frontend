@@ -4,6 +4,7 @@ import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { LinkedInIntegration } from './LinkedInIntegration';
+import { TenantOnboarding } from './TenantOnboarding';
 export const IntegrationsSettings: React.FC = () => {
   return (
     <div className="space-y-8">
@@ -56,6 +57,11 @@ export const IntegrationsSettings: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <WhatsAppIntegration />
         </div>
+      </div>
+      {/* WhatsApp Accounts / Tenant Onboarding */}
+      <div>
+        <h3 className="text-gray-900 text-lg font-semibold mb-4">WhatsApp AI Accounts</h3>
+        <TenantOnboarding />
       </div>
     </div>
   );

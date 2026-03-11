@@ -1,0 +1,803 @@
+'use client';
+
+import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import {
+  Users,
+  ArrowLeft,
+  Loader2,
+  X,
+  Search,
+  Bell,
+  BellOff,
+  Star,
+  Lock,
+  ImageIcon,
+  FileText,
+  Link2,
+  LogOut,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Shield,
+  UserPlus,
+  UserMinus,
+  MessageCircle,
+  MoreVertical,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DateSeparator } from './DateSeparator';
+import { format, isSameDay } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { safeStorage } from '@/utils/storage';
+
+// ── Types ──────────────────────────────────────────────────────────
+
+interface GroupMember {
+  lead_id: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+  conversation_id: string;
+  channel: string;
+}
+
+interface GroupDetail {
+  id: string;
+  name: string;
+  color: string;
+  description: string | null;
+  members: GroupMember[];
+  member_count: number;
+}
+
+interface GroupMessage {
+  id: string;
+  conversation_id: string;
+  content: string;
+  role: string;
+  message_status: string;
+  created_at: string;
+  intent: string | null;
+  sender_name: string;
+  sender_phone: string | null;
+  sender_company: string | null;
+  channel: string;
+  is_outgoing: boolean;
+}
+
+interface GroupChatWindowProps {
+  groupId: string;
+  groupName: string;
+  groupColor: string;
+  onBack: () => void;
+  autoOpenInfo?: boolean;
+}
+
+// ── Sender color palette (WhatsApp-style) ──────────────────────────
+
+const SENDER_COLORS = [
+  '#25D366', '#34B7F1', '#E91E63', '#FF9800',
+  '#9C27B0', '#00BCD4', '#FF5722', '#4CAF50',
+  '#2196F3', '#F44336', '#795548', '#607D8B',
+];
+
+function getSenderColor(senderName: string, colorMap: Map<string, string>): string {
+  if (colorMap.has(senderName)) return colorMap.get(senderName)!;
+  const idx = colorMap.size % SENDER_COLORS.length;
+  const color = SENDER_COLORS[idx];
+  colorMap.set(senderName, color);
+  return color;
+}
+
+function getInitials(name: string): string {
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// ── List item types ────────────────────────────────────────────────
+
+interface DateItem { type: 'date'; data: Date; key: string; }
+interface MessageItem { type: 'message'; data: GroupMessage; key: string; senderColor: string; showSender: boolean; }
+type ListItem = DateItem | MessageItem;
+
+// ── Auth + API helpers ─────────────────────────────────────────────
+
+const GROUP_API = '/api/whatsapp-conversations/chat-groups';
+const CONV_API = '/api/whatsapp-conversations/conversations';
+
+function authHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${safeStorage.getItem('token') || ''}`,
+  };
+}
+
+// ── Conversation search result type ────────────────────────────────
+
+interface ConversationResult {
+  id: string;
+  lead_name: string;
+  lead_phone: string | null;
+  lead_email: string | null;
+  lead_company: string | null;
+  channel: string;
+}
+
+// ── Add Members Panel ──────────────────────────────────────────────
+
+interface AddMembersPanelProps {
+  groupId: string;
+  existingConvIds: Set<string>;
+  onClose: () => void;
+  onMembersAdded: () => void;
+}
+
+const AddMembersPanel = memo(function AddMembersPanel({
+  groupId,
+  existingConvIds,
+  onClose,
+  onMembersAdded,
+}: AddMembersPanelProps) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ConversationResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState(false);
+
+  // Search conversations
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) { setResults([]); return; }
+
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fetch(`${CONV_API}?search=${encodeURIComponent(q)}`, { headers: authHeaders() })
+        .then((r) => r.json())
+        .then((data) => {
+          const convs = data.data || data || [];
+          const mapped: ConversationResult[] = convs
+            .filter((c: Record<string, unknown>) => !existingConvIds.has(c.id as string))
+            .map((c: Record<string, unknown>) => ({
+              id: c.id as string,
+              lead_name: (c.contact as Record<string, unknown>)?.name as string || (c as Record<string, unknown>).lead_name as string || 'Unknown',
+              lead_phone: (c.contact as Record<string, unknown>)?.phone as string || (c as Record<string, unknown>).lead_phone as string || null,
+              lead_email: (c as Record<string, unknown>).lead_email as string || null,
+              lead_company: (c as Record<string, unknown>).lead_company as string || null,
+              channel: (c as Record<string, unknown>).channel as string || 'whatsapp',
+            }));
+          setResults(mapped);
+        })
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, existingConvIds]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleAdd = useCallback(async () => {
+    if (selected.size === 0) return;
+    setAdding(true);
+    try {
+      await fetch(`${GROUP_API}/${groupId}/conversations`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ conversation_ids: Array.from(selected) }),
+      });
+      onMembersAdded();
+    } catch (err) {
+      console.error('Error adding members:', err);
+    } finally {
+      setAdding(false);
+    }
+  }, [groupId, selected, onMembersAdded]);
+
+  return (
+    <div className="absolute inset-0 z-10 bg-card flex flex-col">
+      <div className="h-14 px-4 flex items-center gap-3 border-b border-border flex-shrink-0">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <span className="font-semibold text-sm">Add members</span>
+        {selected.size > 0 && (
+          <Button size="sm" className="ml-auto h-7 text-xs" onClick={handleAdd} disabled={adding}>
+            {adding ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            Add {selected.size}
+          </Button>
+        )}
+      </div>
+
+      <div className="px-4 py-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search conversations to add..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9 text-sm pl-9"
+            autoFocus
+          />
+        </div>
+      </div>
+
+      {/* Selected chips */}
+      {selected.size > 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
+          {Array.from(selected).map((id) => {
+            const r = results.find((x) => x.id === id);
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs cursor-pointer"
+                onClick={() => toggleSelect(id)}
+              >
+                {r?.lead_name || id.slice(0, 8)}
+                <X className="h-3 w-3" />
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !query.trim() ? (
+          <p className="text-xs text-muted-foreground text-center py-8">
+            Type a name or phone to search
+          </p>
+        ) : results.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-8">
+            No conversations found
+          </p>
+        ) : (
+          results.map((conv) => (
+            <button
+              key={conv.id}
+              className={cn(
+                'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors text-left',
+                selected.has(conv.id) && 'bg-primary/5'
+              )}
+              onClick={() => toggleSelect(conv.id)}
+            >
+              <div className={cn(
+                'h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                selected.has(conv.id) ? 'bg-primary' : 'bg-muted-foreground/30'
+              )}>
+                {selected.has(conv.id) ? '✓' : getInitials(conv.lead_name)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium truncate block">{conv.lead_name}</span>
+                <span className="text-[11px] text-muted-foreground truncate block">
+                  {conv.lead_phone || conv.lead_email || ''}
+                  {conv.lead_company ? ` · ${conv.lead_company}` : ''}
+                </span>
+              </div>
+              {conv.channel !== 'whatsapp' && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
+                  {conv.channel}
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ── Group Info Panel (WhatsApp-style) ──────────────────────────────
+
+interface GroupInfoPanelProps {
+  groupId: string;
+  detail: GroupDetail;
+  groupColor: string;
+  senderColorMap: Map<string, string>;
+  onClose: () => void;
+  onMembersChanged: () => void;
+}
+
+const GroupInfoPanel = memo(function GroupInfoPanel({
+  groupId,
+  detail,
+  groupColor,
+  senderColorMap,
+  onClose,
+  onMembersChanged,
+}: GroupInfoPanelProps) {
+  const [memberSearch, setMemberSearch] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isStarred, setIsStarred] = useState(false);
+  const [showAddMembers, setShowAddMembers] = useState(false);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const existingConvIds = useMemo(
+    () => new Set(detail.members.map((m) => m.conversation_id)),
+    [detail.members]
+  );
+
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return detail.members;
+    const q = memberSearch.toLowerCase();
+    return detail.members.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        (m.phone && m.phone.includes(q)) ||
+        (m.company && m.company.toLowerCase().includes(q))
+    );
+  }, [detail.members, memberSearch]);
+
+  const handleRemoveMember = useCallback(async (conversationId: string) => {
+    setRemovingId(conversationId);
+    try {
+      await fetch(`${GROUP_API}/${groupId}/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      onMembersChanged();
+    } catch (err) {
+      console.error('Error removing member:', err);
+    } finally {
+      setRemovingId(null);
+      setActionMenuId(null);
+    }
+  }, [groupId, onMembersChanged]);
+
+  const handleMembersAdded = useCallback(() => {
+    setShowAddMembers(false);
+    onMembersChanged();
+  }, [onMembersChanged]);
+
+  return (
+    <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden relative">
+      {/* Add Members overlay */}
+      {showAddMembers && (
+        <AddMembersPanel
+          groupId={groupId}
+          existingConvIds={existingConvIds}
+          onClose={() => setShowAddMembers(false)}
+          onMembersAdded={handleMembersAdded}
+        />
+      )}
+
+      {/* Header */}
+      <div className="h-14 px-4 flex items-center gap-3 border-b border-border flex-shrink-0">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+        <span className="font-semibold text-sm">Group info</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {/* Group avatar + name */}
+        <div className="flex flex-col items-center py-6 px-4 border-b border-border">
+          <div
+            className="h-20 w-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3"
+            style={{ backgroundColor: groupColor }}
+          >
+            {detail.name.charAt(0).toUpperCase()}
+          </div>
+          <h2 className="font-semibold text-lg text-center">{detail.name}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Group · {detail.member_count} members
+          </p>
+        </div>
+
+        {/* Description */}
+        {detail.description && (
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-xs text-muted-foreground mb-1">Description</p>
+            <p className="text-sm">{detail.description}</p>
+          </div>
+        )}
+
+        {/* Quick actions */}
+        <div className="px-2 py-2 border-b border-border">
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            {isMuted ? <BellOff className="h-4 w-4 text-muted-foreground" /> : <Bell className="h-4 w-4 text-muted-foreground" />}
+            <span className="text-sm flex-1 text-left">{isMuted ? 'Unmute notifications' : 'Mute notifications'}</span>
+          </button>
+          <button
+            onClick={() => setIsStarred(!isStarred)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <Star className={cn('h-4 w-4', isStarred ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground')} />
+            <span className="text-sm flex-1 text-left">{isStarred ? 'Starred' : 'Star group'}</span>
+          </button>
+        </div>
+
+        {/* Media, links, docs */}
+        <div className="px-2 py-2 border-b border-border">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm flex-1 text-left">Media</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm flex-1 text-left">Links</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm flex-1 text-left">Docs</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Encryption notice */}
+        <div className="px-4 py-3 border-b border-border flex items-start gap-3">
+          <Lock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Messages are end-to-end encrypted. Only people in this chat can read or listen to them.
+          </p>
+        </div>
+
+        {/* Members section */}
+        <div className="border-b border-border">
+          <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              {detail.member_count} members
+            </span>
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+
+          {/* Member search */}
+          <div className="px-4 pb-2">
+            <input
+              type="text"
+              placeholder="Search members..."
+              value={memberSearch}
+              onChange={(e) => setMemberSearch(e.target.value)}
+              className="w-full h-8 px-3 text-xs bg-muted/50 border border-border rounded-md outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {/* Add member button */}
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors"
+            onClick={() => setShowAddMembers(true)}
+          >
+            <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <UserPlus className="h-5 w-5 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-green-600">Add member</span>
+          </button>
+
+          {/* Admin row */}
+          <div className="px-4 py-2.5 flex items-center gap-3 hover:bg-muted/30 transition-colors">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium block">You</span>
+              <span className="text-[11px] text-muted-foreground">Admin</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+              Group admin
+            </span>
+          </div>
+
+          {/* Member list */}
+          {filteredMembers.map((member) => {
+            const color = getSenderColor(member.name, senderColorMap);
+            const isMenuOpen = actionMenuId === member.conversation_id;
+            const isRemoving = removingId === member.conversation_id;
+
+            return (
+              <div
+                key={member.conversation_id}
+                className="relative px-4 py-2.5 flex items-center gap-3 hover:bg-muted/30 transition-colors group/member"
+              >
+                <div
+                  className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                >
+                  {getInitials(member.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium block truncate">{member.name}</span>
+                  <span className="text-[11px] text-muted-foreground truncate block">
+                    {member.phone || member.email || ''}
+                    {member.company ? ` · ${member.company}` : ''}
+                  </span>
+                </div>
+                {member.channel && member.channel !== 'whatsapp' && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
+                    {member.channel}
+                  </span>
+                )}
+
+                {/* Action toggle */}
+                <button
+                  className={cn(
+                    'h-7 w-7 flex items-center justify-center rounded-md transition-all',
+                    isMenuOpen
+                      ? 'bg-muted text-foreground'
+                      : 'opacity-0 group-hover/member:opacity-100 hover:bg-muted text-muted-foreground'
+                  )}
+                  onClick={() => setActionMenuId(isMenuOpen ? null : member.conversation_id)}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+
+                {/* Action dropdown */}
+                {isMenuOpen && (
+                  <div className="absolute right-4 top-full z-20 w-48 bg-card border border-border rounded-lg shadow-xl py-1 mt-1">
+                    <button
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => setActionMenuId(null)}
+                    >
+                      <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                      Message {member.name.split(' ')[0]}
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-red-50 transition-colors text-left text-red-500"
+                      onClick={() => handleRemoveMember(member.conversation_id)}
+                      disabled={isRemoving}
+                    >
+                      {isRemoving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserMinus className="h-4 w-4" />
+                      )}
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Danger zone */}
+        <div className="px-2 py-2">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
+            <LogOut className="h-4 w-4" />
+            <span className="text-sm flex-1 text-left">Exit group</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
+            <Trash2 className="h-4 w-4" />
+            <span className="text-sm flex-1 text-left">Delete group</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ── Main Component ─────────────────────────────────────────────────
+
+export const GroupChatWindow = memo(function GroupChatWindow({
+  groupId,
+  groupName,
+  groupColor,
+  onBack,
+  autoOpenInfo = false,
+}: GroupChatWindowProps) {
+  const [detail, setDetail] = useState<GroupDetail | null>(null);
+  const [messages, setMessages] = useState<GroupMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showInfoPanel, setShowInfoPanel] = useState(autoOpenInfo);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const senderColorMap = useRef(new Map<string, string>()).current;
+
+  // Fetch group detail + messages
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setMessages([]);
+    setDetail(null);
+    senderColorMap.clear();
+
+    Promise.all([
+      fetch(`${GROUP_API}/${groupId}/detail`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`${GROUP_API}/${groupId}/messages?limit=100`, { headers: authHeaders() }).then((r) => r.json()),
+    ])
+      .then(([detailRes, msgsRes]) => {
+        if (detailRes.success) setDetail(detailRes.data);
+        if (msgsRes.success) {
+          const sorted = (msgsRes.data as GroupMessage[]).slice().reverse();
+          setMessages(sorted);
+        }
+      })
+      .catch((err) => console.error('Error loading group chat:', err))
+      .finally(() => setLoading(false));
+  }, [groupId, senderColorMap]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Refresh just the detail (after add/remove member)
+  const refreshDetail = useCallback(() => {
+    fetch(`${GROUP_API}/${groupId}/detail`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setDetail(res.data); })
+      .catch(() => {});
+  }, [groupId]);
+
+  // Build list items with date separators & sender attribution
+  const listItems = useMemo<ListItem[]>(() => {
+    const items: ListItem[] = [];
+    let lastDate: Date | null = null;
+    let lastSender: string | null = null;
+
+    messages.forEach((msg) => {
+      const msgDate = new Date(msg.created_at);
+
+      if (!lastDate || !isSameDay(lastDate, msgDate)) {
+        items.push({ type: 'date', data: msgDate, key: `date-${msgDate.toISOString()}` });
+        lastDate = msgDate;
+        lastSender = null;
+      }
+
+      const senderKey = msg.is_outgoing ? '__outgoing__' : (msg.sender_name || 'Unknown');
+      const showSender = !msg.is_outgoing && senderKey !== lastSender;
+      const color = msg.is_outgoing ? '#999' : getSenderColor(senderKey, senderColorMap);
+
+      items.push({ type: 'message', data: msg, key: msg.id, senderColor: color, showSender });
+      lastSender = senderKey;
+    });
+
+    return items;
+  }, [messages, senderColorMap]);
+
+  // Sync autoOpenInfo prop to showInfoPanel state
+  useEffect(() => {
+    setShowInfoPanel(autoOpenInfo);
+  }, [autoOpenInfo]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (virtuosoRef.current && listItems.length > 0) {
+      virtuosoRef.current.scrollToIndex({ index: listItems.length - 1, behavior: 'smooth' });
+    }
+  }, [listItems.length]);
+
+  const memberNames = useMemo(() => {
+    if (!detail) return '';
+    return detail.members.map((m) => m.name).join(', ');
+  }, [detail]);
+
+  const renderItem = useCallback(
+    (index: number) => {
+      const item = listItems[index];
+      if (item.type === 'date') {
+        return <DateSeparator date={item.data} />;
+      }
+
+      const { data: msg, senderColor, showSender } = item;
+
+      return (
+        <div className={cn('px-4 py-0.5', msg.is_outgoing ? 'flex justify-end' : 'flex justify-start')}>
+          <div className={cn('max-w-[70%] px-3 py-2 shadow-sm', msg.is_outgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming')}>
+            {showSender && (
+              <div className="flex items-baseline gap-2 mb-0.5">
+                <span className="text-xs font-semibold" style={{ color: senderColor }}>
+                  {msg.sender_name}
+                </span>
+                {msg.sender_phone && (
+                  <span className="text-[10px] opacity-60" style={{ color: senderColor }}>
+                    {msg.sender_phone}
+                  </span>
+                )}
+              </div>
+            )}
+            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+            <div className={cn('flex items-center gap-1 mt-1', msg.is_outgoing ? 'justify-end' : 'justify-start')}>
+              <span className={cn('text-[10px]', msg.is_outgoing ? 'opacity-80' : 'text-muted-foreground')}>
+                {format(new Date(msg.created_at), 'h:mm a')}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    },
+    [listItems]
+  );
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background/50">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex min-w-0">
+      {/* Main chat column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Group Header */}
+        <div className="h-16 px-4 flex items-center gap-3 bg-card border-b border-border flex-shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+
+          <div
+            className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 cursor-pointer"
+            style={{ backgroundColor: groupColor }}
+            onClick={() => setShowInfoPanel(true)}
+          >
+            {groupName.charAt(0).toUpperCase()}
+          </div>
+
+          <div
+            className="flex-1 min-w-0 cursor-pointer"
+            onClick={() => setShowInfoPanel(true)}
+          >
+            <h3 className="font-semibold text-sm truncate">{groupName}</h3>
+            <p className="text-xs text-muted-foreground truncate">
+              {detail ? `${detail.member_count} members` : ''}
+              {memberNames ? ` · ${memberNames}` : ''}
+            </p>
+          </div>
+
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowInfoPanel(!showInfoPanel)}>
+            <Users className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Messages area */}
+        <div className="flex-1 overflow-hidden whatsapp-chat-bg">
+          {listItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Users className="h-12 w-12 mb-3 opacity-40" />
+              <p className="text-sm font-medium">No messages yet</p>
+              <p className="text-xs mt-1">Messages from group members will appear here</p>
+            </div>
+          ) : (
+            <Virtuoso
+              ref={virtuosoRef}
+              style={{ height: '100%' }}
+              totalCount={listItems.length}
+              itemContent={renderItem}
+              followOutput="smooth"
+              alignToBottom
+              className="custom-scrollbar"
+              initialTopMostItemIndex={listItems.length - 1}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* WhatsApp-style Group Info Panel */}
+      {showInfoPanel && (
+        detail ? (
+          <GroupInfoPanel
+            groupId={groupId}
+            detail={detail}
+            groupColor={groupColor}
+            senderColorMap={senderColorMap}
+            onClose={() => setShowInfoPanel(false)}
+            onMembersChanged={refreshDetail}
+          />
+        ) : (
+          <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden">
+            <div className="h-14 px-4 flex items-center gap-3 border-b border-border flex-shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowInfoPanel(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold text-sm">Group info</span>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+});
