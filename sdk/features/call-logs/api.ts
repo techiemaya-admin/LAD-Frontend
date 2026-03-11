@@ -6,7 +6,6 @@ import type {
   BatchViewApiResponse,
   BatchCallLogsApiResponse,
   GetCallLogsParams,
-  GetCallLogsLeadStatusParams,
   BatchViewParams,
   EndCallParams,
   RetryCallsParams,
@@ -56,6 +55,10 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
     query.append("lead_category", params.lead_category);
   }
 
+  if (params?.lead_tag) {
+    query.append("lead_tag", params.lead_tag);
+  }
+
   const queryString = query.toString();
   const url = `/api/voice-agent/calls?${queryString}`;
 
@@ -87,36 +90,6 @@ export async function getCallLog(callId: string): Promise<any> {
  */
 export async function getCallLead({ callId }: CallLeadParams): Promise<CallLeadResponse> {
   const response = await apiGet<CallLeadResponse>(`/api/voice-agent/calls/${callId}/lead`);
-  return response.data;
-}
-
-/**
- * Get call logs filtered by status and/or lead_tag
- * Endpoint: GET /api/voice-agent/calls/lead-status
- */
-export async function getCallLogsLeadStatus(params?: GetCallLogsLeadStatusParams): Promise<CallLogsResponse> {
-  const query = new URLSearchParams();
-
-  if (params?.status) {
-    query.append("status", params.status);
-  }
-
-  if (params?.lead_tag) {
-    query.append("lead_tag", params.lead_tag);
-  }
-
-  if (params?.page) {
-    query.append("page", params.page.toString());
-  }
-
-  if (params?.limit) {
-    query.append("limit", params.limit.toString());
-  }
-
-  const queryString = query.toString();
-  const url = `/api/voice-agent/calls/lead-status${queryString ? `?${queryString}` : ""}`;
-
-  const response = await apiGet<CallLogsResponse>(url);
   return response.data;
 }
 export async function getBatchStatus(batchJobId: string): Promise<BatchApiResponse> {
