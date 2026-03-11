@@ -121,7 +121,7 @@ import {
   setSources, 
   setPriorities
 } from '@/store/slices/masterDataSlice';
-import { getStatuses, getSources, getPriorities, moveLeadToStage, createStage, createLead, updateLead, deleteLead, updateStage, deleteStage } from '@lad/frontend-features/deals-pipeline';
+import { getStatuses, getSources, getPriorities, moveLeadToStage, createStage, createLead, updateLead, deleteLead, updateStage, deleteStage, usePipelineLeads } from '@lad/frontend-features/deals-pipeline';
 const HEADER_HEIGHT = 64; 
 // Feature flags for gradual migration
 const USE_REDUX_PIPELINE = true; // Enable Redux data fetching
@@ -144,7 +144,24 @@ interface StageDataForCreate {
 interface StageUpdateData {
   [key: string]: unknown;
 }
-const PipelineBoard: React.FC = () => {
+
+type PipelineBoardProps = {
+  stage?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+};
+
+const PipelineBoard: React.FC<PipelineBoardProps> = ({
+  stage,
+  status,
+  page,
+  limit,
+  onPageChange,
+  onLimitChange,
+}) => {
   const router = useRouter();
   const initialPipelineLoadRequestedRef = useRef(false);
   const initialMasterDataLoadRequestedRef = useRef(false);
@@ -302,17 +319,40 @@ const PipelineBoard: React.FC = () => {
   );
   // List view pagination handlers - trigger API calls
   const handleListViewPageChange = useCallback((page: number) => {
+    onPageChange?.(page);
+    if (onPageChange) return;
+
     setListViewPage(page);
     // Trigger API call with new page
     dispatch(fetchLeadsAction(page, listViewPageSize));
-  }, [dispatch, listViewPageSize]);
+  }, [dispatch, listViewPageSize, onPageChange]);
 
   const handleListViewPageSizeChange = useCallback((size: number) => {
+    onLimitChange?.(size);
+    if (onLimitChange) return;
+
     setListViewPageSize(size);
     setListViewPage(1); // Reset to page 1 when size changes
     // Trigger API call to board endpoint with new limit
     dispatch(loadPipelineDataAction(1, size));
-  }, [dispatch]);
+  }, [dispatch, onLimitChange]);
+
+  const effectiveListViewPage = page ?? listViewPage;
+  const effectiveListViewLimit = limit ?? listViewPageSize;
+
+  const pipelineLeadsQuery = usePipelineLeads(
+    {
+      stage: activeFilters?.stages?.length
+        ? activeFilters.stages[activeFilters.stages.length - 1]
+        : undefined,
+      status: activeFilters?.statuses?.length
+        ? activeFilters.statuses[activeFilters.statuses.length - 1]
+        : undefined,
+      page: effectiveListViewPage,
+      limit: effectiveListViewLimit,
+    },
+    pipelineSettings.viewMode === 'list'
+  );
   useEffect(() => {
     const loadUserPreferences = async () => {
       try {
@@ -1059,7 +1099,7 @@ const PipelineBoard: React.FC = () => {
         }));
       } else {
         // Fallback to direct API call
-        await addStage(stageData.name, stageData.positionStageId, stageData.positionType);
+        await createStage(stageData.name, stageData.positionStageId, stageData.positionType);
         loadStagesAndLeads();
       }
     } catch (error) {
@@ -1189,7 +1229,7 @@ const PipelineBoard: React.FC = () => {
       if (USE_REDUX_ACTIONS) {
         await dispatch(moveLeadAction(leadId, newStageKey));
       } else {
-        await updateLeadStage(leadId, newStageKey);
+        await moveLeadToStage(leadId, newStageKey);
         loadStagesAndLeads();
       }
     } catch (err) {
@@ -1481,8 +1521,11 @@ const PipelineBoard: React.FC = () => {
             style={{ height: 0 }} // Force flex item to respect container height
           >
             {(() => {
+              const apiLeads = pipelineLeadsQuery.data?.leads || [];
+              const apiPagination = pipelineLeadsQuery.data?.pagination;
+
               // Normalize leads to ensure compatibility with PipelineListView's Lead interface
-              const normalizedLeads = sortedAndFilteredLeads.map(lead => ({
+              const normalizedLeads = apiLeads.map(lead => ({
                 ...lead,
                 name: lead.name ?? undefined,
                 email: lead.email ?? undefined,
@@ -1505,8 +1548,9 @@ const PipelineBoard: React.FC = () => {
                     Object.entries((pipelineSettings.visibleColumns as unknown as Record<string, boolean>) || {})
                       .filter(([key]) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key))
                   ) as Record<string, boolean>}
-                  totalLeadsCount={serverTotalLeadsCount}
-                  isLoading={isLoading}
+                  totalLeadsCount={apiPagination?.total}
+                  totalPages={apiPagination?.totalPages}
+                  isLoading={pipelineLeadsQuery.isLoading}
                   viewMode={viewMode}
                   onViewModeChange={handleViewModeChange}
                   onAddStage={() => dispatch(setAddStageDialogOpen(true))}
@@ -1518,8 +1562,8 @@ const PipelineBoard: React.FC = () => {
                   onPriorityChange={memoizedHandlers.onPriorityChange as ((leadId: string | number, priority: string) => Promise<void>) | undefined}
                   onAssigneeChange={memoizedHandlers.onAssigneeChange as ((leadId: string | number, assignee: string) => Promise<void>) | undefined}
                   // Pagination props for API-driven pagination
-                  currentPage={listViewPage}
-                  pageSize={listViewPageSize}
+                  currentPage={effectiveListViewPage}
+                  pageSize={effectiveListViewLimit}
                   onPageChange={handleListViewPageChange}
                   onPageSizeChange={handleListViewPageSizeChange}
                 />
@@ -1564,7 +1608,11 @@ const PipelineBoard: React.FC = () => {
               };
               await dispatch(createLeadAction(normalizedLeadData));
             } else {
-              await createLead(leadData as Lead);
+              const normalizedLeadData = {
+                ...leadData,
+                tags: leadData.tags ? (Array.isArray(leadData.tags) ? leadData.tags : [leadData.tags]).filter(Boolean) : undefined,
+              };
+              await createLead(normalizedLeadData as any);
               loadStagesAndLeads();
             }
             dispatch(setCreateLeadDialogOpen(false));
@@ -1585,7 +1633,7 @@ const PipelineBoard: React.FC = () => {
           dateRange: (activeFilters as { dateRange?: { start: string | null; end: string | null } }).dateRange || null
         }}
         onFiltersChange={handleFiltersChange}
-        stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
+        stages={currentStages}
         onClearFilters={() => {
           const clearedFilters = {
             stages: [],

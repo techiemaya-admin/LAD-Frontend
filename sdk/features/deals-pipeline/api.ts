@@ -289,6 +289,24 @@ export async function getPipelineData(page: number = 1, limit: number = 20): Pro
   return data;
 }
 
+export async function getPipelineLeads(params: {
+  stage?: string;
+  status?: string;
+  page: number;
+  limit: number;
+}): Promise<PaginatedLeads> {
+  const query = new URLSearchParams();
+
+  if (params.stage) query.append("stage", params.stage);
+  if (params.status) query.append("status", params.status);
+  query.append("page", String(params.page));
+  query.append("limit", String(params.limit));
+
+  const url = `/api/deals-pipeline/pipeline/leads?${query.toString()}`;
+  const response = await apiGet<PaginatedLeads>(url);
+  return response.data;
+}
+
 /**
  * Get pipeline overview/statistics
  */
