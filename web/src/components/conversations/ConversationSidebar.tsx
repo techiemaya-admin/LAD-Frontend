@@ -13,6 +13,8 @@ import {
   Filter,
   Send,
   Users,
+  UserMinus,
+  UserPlus,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,7 @@ import { ConversationListItem } from './ConversationListItem';
 import { ChannelIcon } from './ChannelIcon';
 import { TemplatePicker } from './TemplatePicker';
 import { ChatGroupManager, AddToGroupDropdown, type ChatGroup } from './ChatGroupManager';
+import { ImportLeadsDialog } from './ImportLeadsDialog';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -47,6 +50,9 @@ interface ConversationSidebarProps {
   onSearchChange: (query: string) => void;
   unreadCounts: Record<Channel | 'all', number>;
   onBulkAction?: (action: string, ids: string[]) => void;
+  onRefresh?: () => void;
+  onGroupSelect?: (group: ChatGroup) => void;
+  onOpenGroupInfo?: (group: ChatGroup) => void;
 }
 
 const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[] = [
@@ -109,6 +115,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onSearchChange,
   unreadCounts,
   onBulkAction,
+  onRefresh,
+  onGroupSelect,
+  onOpenGroupInfo,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -116,6 +125,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -202,6 +212,32 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     [onBulkAction, selectedIds, exitSelectMode]
   );
 
+  // Remove selected conversations from the active group
+  const [removingFromGroup, setRemovingFromGroup] = useState(false);
+  const handleRemoveFromGroup = useCallback(async () => {
+    if (!activeGroup || selectedIds.size === 0) return;
+    setRemovingFromGroup(true);
+    try {
+      const promises = Array.from(selectedIds).map((convId) =>
+        fetch(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations/${convId}`, {
+          method: 'DELETE',
+        })
+      );
+      await Promise.all(promises);
+      // Remove from local state immediately
+      setGroupConversationIds((prev) => {
+        const next = new Set(prev);
+        selectedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } catch (err) {
+      console.error('Error removing from group:', err);
+    } finally {
+      setRemovingFromGroup(false);
+      exitSelectMode();
+    }
+  }, [activeGroup, selectedIds, exitSelectMode]);
+
   const handleContextStatusClick = useCallback((status: string) => {
     onContextStatusFilterChange(status);
   }, [onContextStatusFilterChange]);
@@ -269,10 +305,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     setIsTemplatePickerOpen(true);
   }, []);
 
-  // Called from ChatGroupManager when user clicks a group to filter
+  // Called from ChatGroupManager when user clicks a group to view
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
-  }, []);
+    onGroupSelect?.(group);
+  }, [onGroupSelect]);
 
   const renderItem = useCallback(
     (index: number) => {
@@ -316,6 +353,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="pl-9 h-9 bg-secondary/50"
             />
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 flex-shrink-0"
+            onClick={() => setIsImportDialogOpen(true)}
+            title="Import Leads"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -484,6 +530,22 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             {selectedIds.size} selected
           </span>
           <AddToGroupDropdown selectedIds={selectedIds} onDone={exitSelectMode} />
+          {activeGroup && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-orange-600"
+              onClick={handleRemoveFromGroup}
+              disabled={removingFromGroup || selectedIds.size === 0}
+            >
+              {removingFromGroup ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <UserMinus className="h-3.5 w-3.5 mr-1" />
+              )}
+              Remove from Group
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -538,6 +600,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         onOpenChange={setIsGroupManagerOpen}
         onSelectGroup={handleSelectGroup}
         onSendTemplateToGroup={handleGroupTemplateSend}
+        onOpenGroupInfo={onOpenGroupInfo}
       />
 
       {/* Template Picker Dialog */}
@@ -550,6 +613,16 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+      />
+
+      {/* Import Leads Dialog */}
+      <ImportLeadsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => {
+          if (onRefresh) onRefresh();
+          else window.location.reload();
+        }}
       />
     </div>
   );

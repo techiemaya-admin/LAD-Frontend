@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
+import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
+import type { ChatGroup } from './ChatGroupManager';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
@@ -31,6 +33,39 @@ export function ConversationsPage() {
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
+  // Track whether user explicitly selected a conversation while in group view
+  const [groupMemberSelected, setGroupMemberSelected] = useState(false);
+  // Whether to auto-open the group info panel
+  const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
+
+  // When selecting a group, show group merged view
+  const handleSelectGroup = useCallback((group: ChatGroup) => {
+    setActiveGroup(group);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+  }, []);
+
+  // Open group view with info panel pre-opened (from Chat Groups list info button)
+  const handleOpenGroupInfo = useCallback((group: ChatGroup) => {
+    setActiveGroup(group);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(true);
+  }, []);
+
+  const handleBackFromGroup = useCallback(() => {
+    setActiveGroup(null);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+  }, []);
+
+  // Wrap selectConversation to track explicit member selection in group view
+  const handleSelectConversation = useCallback((id: string) => {
+    selectConversation(id);
+    if (activeGroup) {
+      setGroupMemberSelected(true); // user clicked a member in group → show their chat
+    }
+  }, [selectConversation, activeGroup]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((prev) => !prev);
@@ -130,7 +165,7 @@ export function ConversationsPage() {
               <ConversationSidebar
                 conversations={conversations}
                 selectedId={selectedId}
-                onSelectConversation={selectConversation}
+                onSelectConversation={handleSelectConversation}
                 channelFilter={channelFilter}
                 onChannelFilterChange={setChannelFilter}
                 contextStatusFilter={contextStatusFilter}
@@ -139,6 +174,8 @@ export function ConversationsPage() {
                 onSearchChange={setSearchQuery}
                 unreadCounts={unreadCounts}
                 onBulkAction={handleBulkAction}
+                onGroupSelect={handleSelectGroup}
+                onOpenGroupInfo={handleOpenGroupInfo}
               />
             </motion.div>
           )}
@@ -166,7 +203,7 @@ export function ConversationsPage() {
                   conversations={conversations}
                   selectedId={selectedId}
                   onSelectConversation={(id) => {
-                    selectConversation(id);
+                    handleSelectConversation(id);
                     setIsSidebarCollapsed(true);
                   }}
                   channelFilter={channelFilter}
@@ -177,6 +214,8 @@ export function ConversationsPage() {
                   onSearchChange={setSearchQuery}
                   unreadCounts={unreadCounts}
                   onBulkAction={handleBulkAction}
+                  onGroupSelect={handleSelectGroup}
+                  onOpenGroupInfo={handleOpenGroupInfo}
                 />
               </motion.div>
             </motion.div>
@@ -197,25 +236,35 @@ export function ConversationsPage() {
           </div>
         )}
 
-        {/* Main Chat Area */}
-        <ChatWindow
-          conversation={selectedConversation}
-          onMarkResolved={markAsResolved}
-          onMute={muteConversation}
-          onSendMessage={sendMessage}
-          onTogglePanel={toggleContextPanel}
-          isPanelOpen={isContextPanelOpen}
-          onPin={handlePin}
-          onLock={handleLock}
-          onFavorite={handleFavorite}
-          onExport={handleExport}
-          onBlock={handleBlock}
-          onDelete={handleDelete}
-        />
+        {/* Main Chat Area: group merged view OR individual chat */}
+        {activeGroup && !groupMemberSelected ? (
+          <GroupChatWindow
+            groupId={activeGroup.id}
+            groupName={activeGroup.name}
+            groupColor={activeGroup.color}
+            onBack={handleBackFromGroup}
+            autoOpenInfo={groupInfoAutoOpen}
+          />
+        ) : (
+          <ChatWindow
+            conversation={selectedConversation}
+            onMarkResolved={markAsResolved}
+            onMute={muteConversation}
+            onSendMessage={sendMessage}
+            onTogglePanel={toggleContextPanel}
+            isPanelOpen={isContextPanelOpen}
+            onPin={handlePin}
+            onLock={handleLock}
+            onFavorite={handleFavorite}
+            onExport={handleExport}
+            onBlock={handleBlock}
+            onDelete={handleDelete}
+          />
+        )}
 
-        {/* Context Panel */}
+        {/* Context Panel (hidden in group merged view, shown for individual chats) */}
         <AnimatePresence mode="wait">
-          {isContextPanelOpen && selectedConversation && (
+          {isContextPanelOpen && selectedConversation && (!activeGroup || groupMemberSelected) && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 320, opacity: 1 }}
