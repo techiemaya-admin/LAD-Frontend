@@ -101,13 +101,17 @@ interface CallLogsStatsCardsProps {
   loading?: boolean;
   selectedLeadTag?: "hot" | "warm" | "cold" | null;
   onLeadTagChange?: (tag: "hot" | "warm" | "cold" | null) => void;
+  selectedStatus?: "ended" | "failed" | "ongoing" | "queue" | null;
+  onStatusChange?: (status: "ended" | "failed" | "ongoing" | "queue" | null) => void;
 }
 
 export default function CallLogsStatsCards({ 
   stats, 
   loading = false,
   selectedLeadTag,
-  onLeadTagChange
+  onLeadTagChange,
+  selectedStatus,
+  onStatusChange
 }: CallLogsStatsCardsProps) {
   if (loading) {
     return (
@@ -136,6 +140,9 @@ export default function CallLogsStatsCards({
         value={stats.completed_calls || 0} 
         icon={<Phone className="w-6 h-6 text-green-600" />} 
         bgColor="bg-green-100" 
+        onClick={() => onStatusChange?.(selectedStatus === 'ended' ? null : 'ended')}
+        isLeadTag
+        isSelected={selectedStatus === 'ended'}
       />
       
       {/* Failed Calls */}
@@ -144,6 +151,9 @@ export default function CallLogsStatsCards({
         value={stats.failed_calls || 0} 
         icon={<PhoneMissed className="w-6 h-6 text-red-600" />} 
         bgColor="bg-red-100" 
+        onClick={() => onStatusChange?.(selectedStatus === 'failed' ? null : 'failed')}
+        isLeadTag
+        isSelected={selectedStatus === 'failed'}
       />
       
       {/* Ongoing Calls */}
@@ -152,6 +162,9 @@ export default function CallLogsStatsCards({
         value={stats.ongoing || 0} 
         icon={<PhoneCall className="w-6 h-6 text-purple-600" />} 
         bgColor="bg-purple-100" 
+        onClick={() => onStatusChange?.(selectedStatus === 'ongoing' ? null : 'ongoing')}
+        isLeadTag
+        isSelected={selectedStatus === 'ongoing'}
       />
       
       {/* Queue */}
@@ -160,6 +173,9 @@ export default function CallLogsStatsCards({
         value={stats.queue || 0} 
         icon={<Clock className="w-6 h-6 text-amber-600" />} 
         bgColor="bg-amber-100" 
+        onClick={() => onStatusChange?.(selectedStatus === 'queue' ? null : 'queue')}
+        isLeadTag
+        isSelected={selectedStatus === 'queue'}
       />
       
       {/* Hot Leads */}

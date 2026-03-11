@@ -19,6 +19,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CalendarRange,
   Copy,
+  Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -255,6 +256,40 @@ export function CallLogsTable({
     }
 
     return cleaned;
+  };
+
+  // Download attachment helper - uses pre-signed URL directly
+  const downloadAttachment = (signedUrl: string, fileName: string) => {
+    const link = document.createElement("a");
+    link.href = signedUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Format attachment filename - convert timestamp to readable date
+  const formatAttachmentFileName = (fileName: string): string => {
+    // Match pattern like "2026-03-09T12-41-19-128Z-bulk_call_template__9_.xlsx"
+    const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/;
+    const match = fileName.match(timestampPattern);
+    
+    if (match) {
+      const [_, year, month, day] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      
+      // Extract the rest of the filename after the timestamp and Z-
+      const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
+      
+      return `${formattedDate} - ${restOfFileName}`;
+    }
+    
+    return fileName;
   };
 
   const formatDateTime = (dateStr?: string) => {
@@ -652,6 +687,11 @@ export function CallLogsTable({
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
 
+    // Get attachment data from header row
+    const attachmentFileName = (headerRow as any)?.attachment_file_name;
+    const attachmentSignedUrl = (headerRow as any)?.attachment_signed_url;
+    const hasAttachment = attachmentSignedUrl && attachmentFileName;
+
     return (
       <TableRow
         key={`batch-${batchId}`}
@@ -684,6 +724,19 @@ export function CallLogsTable({
                 </span>
               </div>
             </div>
+            {hasAttachment && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadAttachment(attachmentSignedUrl, attachmentFileName);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm font-medium"
+                title={`Download ${attachmentFileName}`}
+              >
+                <Download className="w-4 h-4" />
+                <span>{formatAttachmentFileName(attachmentFileName)}</span>
+              </button>
+            )}
           </div>
         </TableCell>
       </TableRow>
