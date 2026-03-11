@@ -209,20 +209,22 @@ class ChatService {
   }
   async getConversations(): Promise<Conversation[]> {
     try {
-      // Use the old working endpoint until the new role-based endpoint is fixed
-      const response = await fetch(getApiUrl('/api/conversations'), {
-        ...defaultFetchOptions(),
+      // Fetch from tenant-aware Python conversation service via Next.js proxy
+      // The proxy extracts tenantId from the JWT to route to the correct tenant DB
+      const response = await fetch('/api/whatsapp-conversations/conversations', {
         headers: {
-          ...defaultFetchOptions().headers,
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch conversations');
       }
-      const data = await response.json();
-      logger.debug('Conversations fetched', { count: (data as Conversation[])?.length || 0 });
-      return data as Conversation[];
+      const result = await response.json();
+      // Python service returns {success, data, total} — unwrap the data array
+      const conversations = result.data || result;
+      logger.debug('Conversations fetched', { count: Array.isArray(conversations) ? conversations.length : 0 });
+      return conversations as Conversation[];
     } catch (error) {
       logger.error('Error fetching conversations', error);
       throw error;
@@ -230,17 +232,17 @@ class ChatService {
   }
   async getConversation(id: string): Promise<Conversation> {
     try {
-      const response = await fetch(getApiUrl(`/api/conversations/${id}`), {
-        ...defaultFetchOptions(),
+      const response = await fetch(`/api/whatsapp-conversations/conversations/${id}`, {
         headers: {
-          ...defaultFetchOptions().headers,
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch conversation');
       }
-      return await response.json();
+      const result = await response.json();
+      return (result.data || result) as Conversation;
     } catch (error) {
       logger.error('Error fetching conversation', error);
       throw error;
@@ -342,17 +344,17 @@ class ChatService {
   }
   async searchConversations(query: string): Promise<Conversation[]> {
     try {
-      const response = await fetch(getApiUrl(`/api/conversations?search=${encodeURIComponent(query)}`), {
-        ...defaultFetchOptions(),
+      const response = await fetch(`/api/whatsapp-conversations/conversations?search=${encodeURIComponent(query)}`, {
         headers: {
-          ...defaultFetchOptions().headers,
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to search conversations');
       }
-      return await response.json();
+      const result = await response.json();
+      return (result.data || result) as Conversation[];
     } catch (error) {
       logger.error('Error searching conversations', error);
       throw error;
