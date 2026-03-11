@@ -310,8 +310,8 @@ const PipelineBoard: React.FC = () => {
   const handleListViewPageSizeChange = useCallback((size: number) => {
     setListViewPageSize(size);
     setListViewPage(1); // Reset to page 1 when size changes
-    // Trigger API call with new limit
-    dispatch(fetchLeadsAction(1, size));
+    // Trigger API call to board endpoint with new limit
+    dispatch(loadPipelineDataAction(1, size));
   }, [dispatch]);
   useEffect(() => {
     const loadUserPreferences = async () => {
@@ -718,11 +718,11 @@ const PipelineBoard: React.FC = () => {
   useEffect(() => {
     if (!initialPipelineLoadRequestedRef.current) {
       initialPipelineLoadRequestedRef.current = true;
-      dispatch(loadPipelineDataAction());
+      dispatch(loadPipelineDataAction(1, listViewPageSize));
       dispatch(fetchUsersAction());
     }
     loadMasterData();
-  }, [dispatch, loadMasterData]);
+  }, [dispatch, loadMasterData, listViewPageSize]);
   // Memoize drag handlers to prevent child re-renders
   const handleDragStart = useCallback((event: DragStartEvent): void => {
     const { active } = event;

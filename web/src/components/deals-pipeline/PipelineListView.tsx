@@ -86,6 +86,7 @@ import {
   toggleColumnVisibility
 } from '@/store/slices/uiSlice';
 const COLUMN_LABELS: Record<string, string> = {
+  serialNo: 'S.No',
   name: 'Lead Name',
   company: 'Company',
   email: 'Email',
@@ -398,6 +399,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   }, [allLeads, localSearch, currentFilters, globalSortConfig, getSortableValue]);
   const DEFAULT_COLUMN_ORDER = useMemo(
     () => [
+      'serialNo',
       'name',
       'company',
       'email',
@@ -414,7 +416,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   );
   const visibleColumnKeys = useMemo(() => {
     const ordered = DEFAULT_COLUMN_ORDER.filter(
-      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && visibleColumns[key] !== false
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && (key === 'serialNo' || visibleColumns[key] !== false)
     );
     const extras = Object.keys(visibleColumns).filter(
       (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
@@ -541,6 +543,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       }
     };
     switch (column) {
+      case 'serialNo':
+        return (
+          <p className="text-sm font-medium text-[#64748B]">
+            {(currentPage - 1) * pageSize + (paginatedLeads.findIndex(l => l.id === lead.id) + 1)}
+          </p>
+        );
       case 'name':
         return (
           <div className="flex items-center gap-1 min-w-0">
@@ -1080,7 +1088,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 }}
                 className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
               >
-                {[5, 10, 20, 50].map((size) => (
+                {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>
@@ -1088,7 +1096,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               </select>
             </div>
             <span>
-              {`${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
+              {paginatedLeads.length < pageSize
+                ? `of ${paginatedLeads.length} `
+                : `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
               {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (
                 <span className="text-xs text-[#94A3B8] ml-1">(filtered from {totalLeadsCount} total)</span>
               )}
