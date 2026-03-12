@@ -588,7 +588,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
   };
   const resolveAttachmentNameAndUrl = (raw: any): { filename: string; url: string } => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
     const filename =
       raw?.file_name ||
       raw?.filename ||

@@ -9,8 +9,8 @@ import {
 } from '../store/slices/conversationSlice';
 import { addNotification } from '../store/slices/notificationSlice';
 // Use backend URL directly
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
 let socket: Socket | null = null;
 interface Conversation {
   id: string;
@@ -478,4 +478,4 @@ class ChatService {
   }
 }
 const chatService = new ChatService();
-export default chatService;
+export default chatService;
