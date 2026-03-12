@@ -43,6 +43,9 @@ class ProxyClient {
       ...options?.headers,
     };
 
+    const isConversationPath = path.includes('/api/whatsapp-conversations/conversations');
+    let selectedTenantId = '';
+
     // Add auth token from SafeStorage
     if (typeof window !== 'undefined') {
       const token = safeStorage.getItem('token');
@@ -50,9 +53,33 @@ class ProxyClient {
         headers['Authorization'] = `Bearer ${token}`;
       }
       // Forward selected tenant ID so proxy routes to correct tenant database
-      const selectedTenantId = safeStorage.getItem('selectedTenantId');
-      if (selectedTenantId && selectedTenantId !== 'default') {
-        headers['X-Tenant-ID'] = selectedTenantId;
+      selectedTenantId = safeStorage.getItem('selectedTenantId') || '';
+
+      // Fallback to tenant from cached user profile when explicit tenant switch is not set.
+      let userTenantId = '';
+      const rawUser = safeStorage.getItem('user');
+      if (rawUser) {
+        try {
+          const parsedUser = JSON.parse(rawUser);
+          userTenantId = parsedUser?.tenantId || parsedUser?.organizationId || '';
+        } catch {
+          userTenantId = '';
+        }
+      }
+
+      const effectiveTenantId = (selectedTenantId && selectedTenantId !== 'default')
+        ? selectedTenantId
+        : userTenantId;
+
+      if (effectiveTenantId) {
+        headers['X-Tenant-ID'] = effectiveTenantId;
+      }
+
+      // Quick end-to-end tenant trace marker for conversations API path.
+      if (isConversationPath) {
+        const traceId = `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        headers['X-Debug-Trace-Id'] = traceId;
+        headers['X-Debug-Client-Tenant'] = effectiveTenantId || 'none';
       }
     }
 

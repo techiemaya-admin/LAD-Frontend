@@ -24,6 +24,8 @@ import {
   UserMinus,
   MessageCircle,
   MoreVertical,
+  BadgeCheck,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,6 +114,24 @@ function authHeaders(): Record<string, string> {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${safeStorage.getItem('token') || ''}`,
   };
+}
+
+async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = (data as Record<string, string>)?.message
+      || (data as Record<string, string>)?.error
+      || `POST ${url} ${response.status}`;
+    throw new Error(message);
+  }
+
+  return data as T;
 }
 
 // ── Conversation search result type ────────────────────────────────
@@ -318,6 +338,13 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
   const [memberSearch, setMemberSearch] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
+  const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
+  const [metaAdsConnected, setMetaAdsConnected] = useState(false);
+  const [loadingAdsStatus, setLoadingAdsStatus] = useState(false);
+  const [connectingGoogleAds, setConnectingGoogleAds] = useState(false);
+  const [connectingMetaAds, setConnectingMetaAds] = useState(false);
+  const [disconnectingGoogleAds, setDisconnectingGoogleAds] = useState(false);
+  const [disconnectingMetaAds, setDisconnectingMetaAds] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -337,6 +364,134 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
         (m.company && m.company.toLowerCase().includes(q))
     );
   }, [detail.members, memberSearch]);
+
+  const getUserId = useCallback(async (): Promise<string | null> => {
+    const token = safeStorage.getItem('token') || '';
+    const meRes = await fetch('/api/auth/me', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!meRes.ok) return null;
+    const meData = await meRes.json();
+    return meData?.user?.id || meData?.id || null;
+  }, []);
+
+  const loadAdsStatus = useCallback(async () => {
+    setLoadingAdsStatus(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        setGoogleAdsConnected(false);
+        setMetaAdsConnected(false);
+        return;
+      }
+
+      const [googleStatus, metaStatus] = await Promise.all([
+        postJson<any>('/api/social-integration/ads/google/status', {
+          user_id: userId,
+          frontend_id: 'group-info',
+        }),
+        postJson<any>('/api/social-integration/ads/meta/status', {
+          user_id: userId,
+          frontend_id: 'group-info',
+        }),
+      ]);
+
+      setGoogleAdsConnected(!!googleStatus?.connected);
+      setMetaAdsConnected(!!metaStatus?.connected);
+    } catch {
+      setGoogleAdsConnected(false);
+      setMetaAdsConnected(false);
+    } finally {
+      setLoadingAdsStatus(false);
+    }
+  }, [getUserId]);
+
+  useEffect(() => {
+    loadAdsStatus();
+  }, [loadAdsStatus]);
+
+  const handleConnectGoogleAds = useCallback(async () => {
+    setConnectingGoogleAds(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const result = await postJson<any>('/api/social-integration/ads/google/start', {
+        user_id: userId,
+        frontend_id: 'group-info',
+      });
+
+      if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Failed to connect Google Ads:', error);
+    } finally {
+      setConnectingGoogleAds(false);
+    }
+  }, [getUserId]);
+
+  const handleConnectMetaAds = useCallback(async () => {
+    setConnectingMetaAds(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const result = await postJson<any>('/api/social-integration/ads/meta/start', {
+        user_id: userId,
+        frontend_id: 'group-info',
+      });
+
+      if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Failed to connect Meta Ads:', error);
+    } finally {
+      setConnectingMetaAds(false);
+    }
+  }, [getUserId]);
+
+  const handleDisconnectGoogleAds = useCallback(async () => {
+    setDisconnectingGoogleAds(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      await postJson('/api/social-integration/ads/google/disconnect', {
+        user_id: userId,
+        frontend_id: 'group-info',
+      });
+      await loadAdsStatus();
+    } catch (error) {
+      console.error('Failed to disconnect Google Ads:', error);
+    } finally {
+      setDisconnectingGoogleAds(false);
+    }
+  }, [getUserId, loadAdsStatus]);
+
+  const handleDisconnectMetaAds = useCallback(async () => {
+    setDisconnectingMetaAds(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      await postJson('/api/social-integration/ads/meta/disconnect', {
+        user_id: userId,
+        frontend_id: 'group-info',
+      });
+      await loadAdsStatus();
+    } catch (error) {
+      console.error('Failed to disconnect Meta Ads:', error);
+    } finally {
+      setDisconnectingMetaAds(false);
+    }
+  }, [getUserId, loadAdsStatus]);
 
   const handleRemoveMember = useCallback(async (conversationId: string) => {
     setRemovingId(conversationId);
@@ -420,23 +575,81 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
           </button>
         </div>
 
-        {/* Media, links, docs */}
+        {/* Campaign integrations */}
         <div className="px-2 py-2 border-b border-border">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm flex-1 text-left">Media</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm flex-1 text-left">Links</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm flex-1 text-left">Docs</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <div className="px-2 pb-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+              Campaign Integrations
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Google Ads</p>
+                <p className="text-[11px] text-muted-foreground">Link campaign source tracking</p>
+              </div>
+              {loadingAdsStatus ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : googleAdsConnected ? (
+                <BadgeCheck className="h-4 w-4 text-green-600" />
+              ) : null}
+              {googleAdsConnected ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={handleDisconnectGoogleAds}
+                  disabled={disconnectingGoogleAds}
+                >
+                  {disconnectingGoogleAds ? 'Disconnecting...' : 'Disconnect'}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={handleConnectGoogleAds}
+                  disabled={connectingGoogleAds}
+                >
+                  {connectingGoogleAds ? 'Connecting...' : 'Connect'}
+                </Button>
+              )}
+            </div>
+
+            <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Meta Ads</p>
+                <p className="text-[11px] text-muted-foreground">Link Facebook/Instagram ad account</p>
+              </div>
+              {loadingAdsStatus ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : metaAdsConnected ? (
+                <BadgeCheck className="h-4 w-4 text-green-600" />
+              ) : null}
+              {metaAdsConnected ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={handleDisconnectMetaAds}
+                  disabled={disconnectingMetaAds}
+                >
+                  {disconnectingMetaAds ? 'Disconnecting...' : 'Disconnect'}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={handleConnectMetaAds}
+                  disabled={connectingMetaAds}
+                >
+                  {connectingMetaAds ? 'Connecting...' : 'Connect'}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Encryption notice */}
@@ -590,6 +803,7 @@ export const GroupChatWindow = memo(function GroupChatWindow({
   autoOpenInfo = false,
 }: GroupChatWindowProps) {
   const [detail, setDetail] = useState<GroupDetail | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInfoPanel, setShowInfoPanel] = useState(autoOpenInfo);
@@ -601,17 +815,34 @@ export const GroupChatWindow = memo(function GroupChatWindow({
     setLoading(true);
     setMessages([]);
     setDetail(null);
+    setDetailError(null);
     senderColorMap.clear();
 
-    Promise.all([
+    Promise.allSettled([
       fetch(`${GROUP_API}/${groupId}/detail`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`${GROUP_API}/${groupId}/messages?limit=100`, { headers: authHeaders() }).then((r) => r.json()),
     ])
-      .then(([detailRes, msgsRes]) => {
-        if (detailRes.success) setDetail(detailRes.data);
-        if (msgsRes.success) {
-          const sorted = (msgsRes.data as GroupMessage[]).slice().reverse();
-          setMessages(sorted);
+      .then(([detailResult, messagesResult]) => {
+        if (detailResult.status === 'fulfilled') {
+          const detailRes = detailResult.value;
+          if (detailRes?.success) {
+            setDetail(detailRes.data);
+          } else {
+            setDetailError(detailRes?.error || 'Unable to load group info');
+          }
+        } else {
+          setDetailError('Unable to load group info');
+          console.error('Error loading group detail:', detailResult.reason);
+        }
+
+        if (messagesResult.status === 'fulfilled') {
+          const msgsRes = messagesResult.value;
+          if (msgsRes?.success) {
+            const sorted = (msgsRes.data as GroupMessage[]).slice().reverse();
+            setMessages(sorted);
+          }
+        } else {
+          console.error('Error loading group messages:', messagesResult.reason);
         }
       })
       .catch((err) => console.error('Error loading group chat:', err))
@@ -793,7 +1024,20 @@ export const GroupChatWindow = memo(function GroupChatWindow({
               <span className="font-semibold text-sm">Group info</span>
             </div>
             <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              {detailError ? (
+                <div className="px-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">{detailError}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={fetchData}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              )}
             </div>
           </div>
         )
