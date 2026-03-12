@@ -49,6 +49,11 @@ class ProxyClient {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      // Forward selected tenant ID so proxy routes to correct tenant database
+      const selectedTenantId = safeStorage.getItem('selectedTenantId');
+      if (selectedTenantId && selectedTenantId !== 'default') {
+        headers['X-Tenant-ID'] = selectedTenantId;
+      }
     }
 
     const config: RequestInit = {

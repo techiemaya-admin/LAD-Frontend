@@ -133,6 +133,13 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  // Forward selected tenant ID for correct tenant routing
+  if (typeof window !== 'undefined') {
+    const selectedTenantId = localStorage.getItem('selectedTenantId');
+    if (selectedTenantId && selectedTenantId !== 'default') {
+      headers['X-Tenant-ID'] = selectedTenantId;
+    }
+  }
   return fetch(url, {
     ...options,
     headers,
