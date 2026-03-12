@@ -18,8 +18,8 @@ export function getBackendUrl(): string {
   // Fallback based on environment
   const isProduction = process.env.NODE_ENV === 'production';
   const defaultUrl = isProduction
-    ? 'https://lad-backend-741719885039.us-central1.run.app'
-    : 'https://lad-backend-develop-741719885039.us-central1.run.app';
+    ? 'https://lad-backend-develop-160078175457.us-central1.run.app'
+    : 'https://lad-backend-develop-160078175457.us-central1.run.app';
   
   return defaultUrl;
 }

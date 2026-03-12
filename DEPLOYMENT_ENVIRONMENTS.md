@@ -11,9 +11,9 @@ LAD Frontend supports multiple deployment environments:
 
 | Environment | Service Name | Backend URL | Config File |
 |------------|--------------|-------------|-------------|
-| Development | lad-frontend-develop | https://lad-backend-develop-741719885039.us-central1.run.app | web/cloudbuild.yaml |
+| Development | lad-frontend-develop | https://lad-backend-develop-160078175457.us-central1.run.app | web/cloudbuild.yaml |
 | Staging | lad-frontend-stage | https://lad-backend-stage-741719885039.us-central1.run.app | web/cloudbuild-stage.yaml |
-| Production | lad-frontend | https://lad-backend-741719885039.us-central1.run.app | web/cloudbuild-prod.yaml |
+| Production | lad-frontend | https://lad-backend-develop-160078175457.us-central1.run.app | web/cloudbuild-prod.yaml |
 
 ## Deployment Scripts
 
@@ -57,7 +57,7 @@ cd /Users/naveenreddy/Desktop/AI-Maya/LAD/LAD-Web/LAD-Frontend
 gcloud builds submit \
   --config=web/cloudbuild-prod.yaml \
   --project=salesmaya-pluto \
-  --substitutions=_API_URL=https://lad-backend-741719885039.us-central1.run.app \
+  --substitutions=_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app \
   .
 ```
 
@@ -75,8 +75,8 @@ NEXT_PUBLIC_SOCKET_URL=https://lad-backend-stage-741719885039.us-central1.run.ap
 ```bash
 NODE_ENV=production
 ENVIRONMENT=production
-NEXT_PUBLIC_BACKEND_URL=https://lad-backend-741719885039.us-central1.run.app
-NEXT_PUBLIC_SOCKET_URL=https://lad-backend-741719885039.us-central1.run.app
+NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app
+NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-160078175457.us-central1.run.app
 ```
 
 ## Cloud Run Service URLs
