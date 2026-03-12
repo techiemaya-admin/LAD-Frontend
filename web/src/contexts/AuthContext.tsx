@@ -3,6 +3,14 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../utils/storage';
 import { logger } from '@/lib/logger';
+interface UserTenant {
+  id: string;
+  name: string;
+  planTier?: string;
+  status?: string;
+  role?: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -10,6 +18,8 @@ interface User {
   firstName?: string;
   lastName?: string;
   role?: string;
+  tenantId?: string;
+  tenants?: UserTenant[];
   capabilities?: string[];
   tenantFeatures?: string[];
 }

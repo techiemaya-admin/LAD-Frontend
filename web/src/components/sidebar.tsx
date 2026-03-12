@@ -30,11 +30,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logout as logoutAction } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTenant } from "@/contexts/TenantContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import LAD3DShowcase from "@/app/page";
 type RootState = {
@@ -66,6 +69,7 @@ export function Sidebar() {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
+  const { tenant, setTenantById, tenants } = useTenant();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -496,6 +500,18 @@ export function Sidebar() {
               side="top"
               className="w-56 mb-2 ml-2"
             >
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Tenant</DropdownMenuLabel>
+              {tenants.map((t) => (
+                <DropdownMenuItem
+                  key={t.id}
+                  onClick={() => setTenantById(t.id)}
+                  className={cn("cursor-pointer", tenant.id === t.id && "bg-accent font-medium")}
+                >
+                  {tenant.id === t.id && <span className="mr-1">✓</span>}
+                  <span>{t.name}</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
               {/* <DropdownMenuItem asChild>
                 <NavLink
                   href="/pricing"
