@@ -3,6 +3,14 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '../utils/storage';
 import { logger } from '@/lib/logger';
+interface UserTenant {
+  id: string;
+  name: string;
+  planTier?: string;
+  status?: string;
+  role?: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -10,6 +18,8 @@ interface User {
   firstName?: string;
   lastName?: string;
   role?: string;
+  tenantId?: string;
+  tenants?: UserTenant[];
   capabilities?: string[];
   tenantFeatures?: string[];
 }
@@ -116,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Use Next.js API route for local dev, direct backend call for production
       const apiUrl = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' 
         ? '/api/auth/login' 
-        : `${process.env.NEXT_PUBLIC_API_BASE || 'https://lad-backend-develop-741719885039.us-central1.run.app'}/api/auth/login`;
+        : `${process.env.NEXT_PUBLIC_API_BASE || 'https://lad-backend-develop-160078175457.us-central1.run.app'}/api/auth/login`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {

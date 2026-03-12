@@ -55,7 +55,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       const token = typeof window !== 'undefined'
         ? (localStorage.getItem('token') || document.cookie.split('token=')[1]?.split(';')[0] || '')
         : '';
-      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app').replace(/\/+$/, '');
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app').replace(/\/+$/, '');
 
       const res = await fetch(`${backendUrl}/api/campaigns/${campaignId}/analytics/export?filter=${filter}`, {
         method: 'GET',

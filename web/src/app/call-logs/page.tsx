@@ -18,6 +18,7 @@ import {
   useRetryFailedCalls,
   useCallLogsStats,
   useBatchStats,
+  useCallLogsLeadStatus,
   type CallLog,
   type BatchPayload,
   type VoiceAgentBatch,
@@ -110,6 +111,9 @@ export default function CallLogsPage() {
   }, [dateFilter, fromDate, toDate]);
 
   // SDK Hooks
+  // Use lead-status hook when status or lead_tag filter is active, otherwise use regular call logs
+  const shouldUseLeadStatusHook = !!(statusFilter || leadTagFilter);
+  
   const callLogsQuery = useCallLogs(
     {
       from_date: dateRange.from,
@@ -119,7 +123,7 @@ export default function CallLogsPage() {
       status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
       lead_tag: leadTagFilter || undefined,
     },
-    timeFilter !== "batch" || !!batchJobId
+    (timeFilter !== "batch" || !!batchJobId) && shouldUseLeadStatusHook
   );
 
   const callLogsStatsQuery = useCallLogsStats(tenantId, !!tenantId);
@@ -384,6 +388,16 @@ export default function CallLogsPage() {
       setInitialLoading(false);
     }
 
+    // Handle errors for lead-status endpoint
+    if (callLogsLeadStatusQuery.isError && shouldUseLeadStatusHook && timeFilter !== "batch" && !batchJobId) {
+      logger.error(
+        "[Call Logs] Failed to load lead-status call logs",
+        callLogsLeadStatusQuery.error,
+      );
+      setItems([]);
+      setInitialLoading(false);
+    }
+
     // Handle errors
     if (batchStatusQuery.isError && timeFilter === "batch" && batchJobId) {
       logger.error(
@@ -414,6 +428,11 @@ export default function CallLogsPage() {
       setSelectedBatchId(null);
     }
   }, [
+    callLogsLeadStatusQuery.data,
+    callLogsLeadStatusQuery.isSuccess,
+    callLogsLeadStatusQuery.isError,
+    callLogsLeadStatusQuery.error,
+    shouldUseLeadStatusHook,
     callLogsQuery.data,
     callLogsQuery.isSuccess,
     batchStatusQuery.data,
@@ -767,6 +786,8 @@ export default function CallLogsPage() {
   const isTableLoading =
     callLogsQuery.isLoading ||
     callLogsQuery.isFetching ||
+    callLogsLeadStatusQuery.isLoading ||
+    callLogsLeadStatusQuery.isFetching ||
     batchStatusQuery.isLoading ||
     batchStatusQuery.isFetching ||
     batchViewQuery.isLoading ||

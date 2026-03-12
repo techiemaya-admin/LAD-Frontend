@@ -57,9 +57,9 @@ export async function proxyToPythonService(
     }
   }
 
-  // Also check for X-Tenant-ID passed directly from the client
+  // Explicit X-Tenant-ID from client takes priority (supports tenant switching)
   const directTenantId = req.headers.get('x-tenant-id');
-  if (directTenantId && !headers['X-Tenant-ID']) {
+  if (directTenantId) {
     headers['X-Tenant-ID'] = directTenantId;
   }
 

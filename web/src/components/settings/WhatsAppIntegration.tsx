@@ -82,6 +82,35 @@ async function logoutAccount(accountId: string, tenantId: string | null): Promis
   }
 }
 
+async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]> {
+  try {
+    const token = typeof document !== 'undefined'
+      ? (() => {
+          const cookies = document.cookie ? document.cookie.split(';') : [];
+          for (const cookie of cookies) {
+            const [rawName, ...rawValueParts] = cookie.trim().split('=');
+            const name = rawName?.trim();
+            if (name === 'token') {
+              return decodeURIComponent(rawValueParts.join('=') || '');
+            }
+          }
+          return null;
+        })()
+      : null;
+
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${PERSONAL_WA_API}/accounts`, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.accounts) ? data.accounts : [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Component ────────────────────────────────────────────────────
 
 export const WhatsAppIntegration: React.FC = () => {
@@ -112,6 +141,22 @@ export const WhatsAppIntegration: React.FC = () => {
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
+
+  // ── Restore QR session on mount ─────────────────────────────
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const accounts = await listAccounts(tenantId);
+      // Find the first connected account
+      const connectedAccount = accounts.find((acc) => acc.status === 'connected');
+      if (connectedAccount) {
+        setAccount(connectedAccount);
+        setStatus('connected');
+      }
+    };
+
+    restoreSession();
+  }, [tenantId]);
 
   // ── Start QR generation ─────────────────────────────────────
 

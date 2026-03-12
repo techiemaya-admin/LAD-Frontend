@@ -121,5 +121,5 @@ substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'lad-frontend-prod'
   _ENV: 'production'
-  _API_URL: 'https://lad-backend-741719885039.us-central1.run.app'
-  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-741719885039.us-central1.run.app'
+  _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
+  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'

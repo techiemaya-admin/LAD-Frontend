@@ -6,6 +6,7 @@ import type {
   BatchViewApiResponse,
   BatchCallLogsApiResponse,
   GetCallLogsParams,
+  GetCallLogsLeadStatusParams,
   BatchViewParams,
   EndCallParams,
   RetryCallsParams,
