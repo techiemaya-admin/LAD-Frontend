@@ -82,10 +82,14 @@ async function handler(
       }
     }
     // Forward request to backend
+    console.log(`[PROXY] Forwarding ${req.method} to: ${url}`);
     const response = await fetch(url, {
       method: req.method,
       headers,
       body,
+    }).catch((err) => {
+      console.error(`[PROXY] Fetch error for ${url}:`, err.message);
+      throw err;
     });
     // Get response data
     const responseContentType = response.headers.get('content-type');

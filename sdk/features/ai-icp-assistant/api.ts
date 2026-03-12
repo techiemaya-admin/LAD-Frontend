@@ -45,7 +45,7 @@ function getBackendUrl(): string {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL or NEXT_PUBLIC_API_URL is required in production');
   }
   // DEVELOPMENT: Use localhost fallback
-  return url || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+  return url || 'https://lad-backend-develop-160078175457.us-central1.run.app';
 }
 /**
  * Get authorization headers from browser storage

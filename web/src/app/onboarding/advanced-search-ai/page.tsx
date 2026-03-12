@@ -46,7 +46,7 @@ interface ChatMsg {
 /* ═══════════════════════════════════════════════
    UTILS
    ═══════════════════════════════════════════════ */
-const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app').replace(/\/+$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app').replace(/\/+$/, '');
 
 function getToken(): string {
     if (typeof window === 'undefined') return '';

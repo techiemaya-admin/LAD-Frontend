@@ -54,7 +54,7 @@ export async function fetchICPQuestions(
 ): Promise<ICPQuestionsResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-160078175457.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -87,7 +87,7 @@ export async function fetchICPQuestionByStep(
 ): Promise<ICPQuestion | null> {
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-160078175457.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -122,7 +122,7 @@ export async function processICPAnswer(
 ): Promise<ICPAnswerResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-160078175457.us-central1.run.app');
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
