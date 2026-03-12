@@ -120,18 +120,8 @@ export default function CallLogsPage() {
       to_date: dateRange.to,
       page: page,
       limit: perPage,
-      lead_category: (!statusFilter && leadTagFilter) ? leadTagFilter : undefined,
-    },
-    (timeFilter !== "batch" || !!batchJobId) && !shouldUseLeadStatusHook
-  );
-
-  // New hook for status + lead_tag filtering
-  const callLogsLeadStatusQuery = useCallLogsLeadStatus(
-    {
-      status: statusFilter === 'queue' ? 'in_queue' : statusFilter || undefined,
+      status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
       lead_tag: leadTagFilter || undefined,
-      page: page,
-      limit: perPage,
     },
     (timeFilter !== "batch" || !!batchJobId) && shouldUseLeadStatusHook
   );
@@ -352,56 +342,8 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs from lead-status endpoint (when filters are active)
-    if (timeFilter !== "batch" && !batchJobId && shouldUseLeadStatusHook && callLogsLeadStatusQuery.isSuccess && callLogsLeadStatusQuery.data) {
-      logger.debug("[Call Logs] Processing lead-status call logs", {
-        rawData: callLogsLeadStatusQuery.data,
-        logsCount: callLogsLeadStatusQuery.data.logs?.length,
-        statusFilter,
-        leadTagFilter,
-      });
-
-      const logs: CallLog[] = (callLogsLeadStatusQuery.data.logs || []).map((r) => {
-        const leadName =
-          [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
-
-        const leadCategory =
-          r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
-
-        return {
-          id: String(r.call_log_id || r.id || ""),
-          assistant: r.agent_name || "",
-          lead_id: r.lead_id,
-          lead_name: leadName,
-          type: r.direction === "inbound" ? "Inbound" : "Outbound",
-          status: r.status || "",
-          metadata: (r as any).metadata ?? (r as any).meta_data ?? (r as any).meta,
-          startedAt: r.started_at,
-          duration: r.duration_seconds || r.call_duration || 0,
-          cost: r.cost ?? r.call_cost ?? 0,
-          batch_status: r.batch_status,
-          batch_id: r.batch_id,
-          lead_category: leadCategory,
-          lead_tags: r.lead_tags,
-          signed_recording_url: r.signed_recording_url,
-          recording_url: r.recording_url,
-          call_recording_url: r.call_recording_url,
-        };
-      });
-
-      logger.debug("[Call Logs] Loaded lead-status call logs with count:", {
-        total: logs.length,
-        withBatchId: logs.filter((l) => l.batch_id).length,
-        sample: logs.slice(0, 3),
-      });
-
-      setItems(logs);
-      setInitialLoading(false);
-    }
-
-    // Handle normal call logs (when no filters are active)
-    if (timeFilter !== "batch" && !batchJobId && !shouldUseLeadStatusHook && callLogsQuery.isSuccess && callLogsQuery.data) {
+    // Handle normal call logs (including status / lead_tag filtering via /calls)
+    if (timeFilter !== "batch" && !batchJobId && callLogsQuery.isSuccess && callLogsQuery.data) {
       logger.debug("[Call Logs] Processing normal call logs", {
         rawData: callLogsQuery.data,
         logsCount: callLogsQuery.data.logs?.length,
@@ -492,6 +434,7 @@ export default function CallLogsPage() {
     callLogsLeadStatusQuery.error,
     shouldUseLeadStatusHook,
     callLogsQuery.data,
+    callLogsQuery.isSuccess,
     batchStatusQuery.data,
     batchStatusQuery.isError,
     batchStatusQuery.error,
@@ -658,11 +601,10 @@ export default function CallLogsPage() {
   const paginated = sortedFiltered;
 
   // Use backend pagination metadata from the appropriate query
-  const paginationData = shouldUseLeadStatusHook
-    ? (callLogsLeadStatusQuery.data as any)
-    : timeFilter === "batch" && !batchJobId
-    ? (batchViewQuery.data as any)
-    : (callLogsQuery.data as any);
+  const paginationData =
+    timeFilter === "batch" && !batchJobId
+      ? (batchViewQuery.data as any)
+      : (callLogsQuery.data as any);
 
   const paginationMeta = paginationData?.pagination || {
     page: 1,

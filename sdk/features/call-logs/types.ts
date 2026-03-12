@@ -149,6 +149,7 @@ export interface GetCallLogsParams {
   page?: number;
   limit?: number;
   lead_category?: string;
+  lead_tag?: string;
 }
 
 export interface GetCallLogsLeadStatusParams {

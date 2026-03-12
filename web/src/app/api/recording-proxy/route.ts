@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             { status: 401 }
           );
         }
-        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://lad-backend-develop-741719885039.us-central1.run.app";
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://lad-backend-develop-160078175457.us-central1.run.app";
         const signingEndpoint = `${backendUrl}/api/voice-agent/agents/${agentId}/sample-signed-url`;
         const signingResp = await fetch(signingEndpoint, {
           method: "GET",
@@ -201,4 +201,4 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
-}
+}
