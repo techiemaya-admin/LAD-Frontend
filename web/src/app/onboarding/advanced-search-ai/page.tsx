@@ -118,10 +118,7 @@ export default function AdvancedSearchAIPage() {
         setSummaryLoading(true);
 
         try {
-            const dummyCampaignId = '00000000-0000-0000-0000-000000000000';
-            const dummyLeadId = '00000000-0000-0000-0000-000000000000';
-
-            const response = await fetch(`${API_BASE}/api/campaigns/${dummyCampaignId}/leads/${dummyLeadId}/summary`, {
+            const response = await fetch(`${API_BASE}/api/campaigns/preview/lead-summary`, {
                 method: 'POST',
                 headers: headers(),
                 body: JSON.stringify({
