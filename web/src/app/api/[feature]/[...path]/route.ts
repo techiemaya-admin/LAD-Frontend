@@ -54,6 +54,11 @@ async function handler(
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    // Forward tenant ID header
+    const tenantId = req.headers.get('x-tenant-id');
+    if (tenantId) {
+      headers['X-Tenant-ID'] = tenantId;
+    }
     // Get request body for non-GET requests
     let body: BodyInit | undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {

@@ -12,6 +12,21 @@ export function getWhatsAppServiceUrl(): string {
   return DEFAULT_SERVICE_URL;
 }
 
+/**
+ * Extract tenantId from a JWT token (base64 decode payload, no verification needed
+ * since the Python service doesn't verify — it just needs the tenant routing hint).
+ */
+function extractTenantIdFromJwt(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload.tenantId || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function proxyToPythonService(
   req: NextRequest,
   baseUrl: string,
@@ -32,7 +47,37 @@ export async function proxyToPythonService(
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
     headers['Authorization'] = authHeader;
+
+    // Extract tenant ID from JWT and forward as X-Tenant-ID header
+    // so the Python service routes to the correct per-tenant database
+    const token = authHeader.replace('Bearer ', '');
+    const tenantId = extractTenantIdFromJwt(token);
+    if (tenantId) {
+      headers['X-Tenant-ID'] = tenantId;
+    }
   }
+
+  // Explicit X-Tenant-ID from client takes priority (supports tenant switching)
+  const directTenantId = req.headers.get('x-tenant-id');
+  if (directTenantId) {
+    headers['X-Tenant-ID'] = directTenantId;
+  }
+
+  // Fallback: check cookie for token
+  if (!headers['X-Tenant-ID']) {
+    const cookieToken = req.cookies.get('access_token')?.value;
+    if (cookieToken) {
+      const tenantId = extractTenantIdFromJwt(cookieToken);
+      console.log(`[python-proxy] Extracted tenantId from cookie: ${tenantId}`);
+      if (tenantId) {
+        headers['X-Tenant-ID'] = tenantId;
+      }
+    } else {
+      console.log('[python-proxy] No access_token cookie found');
+    }
+  }
+
+  console.log(`[python-proxy] Final X-Tenant-ID: ${headers['X-Tenant-ID'] || 'NONE'}, path: ${path}`);
 
   const fetchOptions: RequestInit = {
     method: req.method,

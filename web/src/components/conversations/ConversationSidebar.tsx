@@ -13,6 +13,8 @@ import {
   Filter,
   Send,
   Users,
+  UserMinus,
+  UserPlus,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,7 @@ import { ConversationListItem } from './ConversationListItem';
 import { ChannelIcon } from './ChannelIcon';
 import { TemplatePicker } from './TemplatePicker';
 import { ChatGroupManager, AddToGroupDropdown, type ChatGroup } from './ChatGroupManager';
+import { ImportLeadsDialog } from './ImportLeadsDialog';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -41,10 +44,15 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string) => void;
   channelFilter: Channel | 'all';
   onChannelFilterChange: (channel: Channel | 'all') => void;
+  contextStatusFilter: string;
+  onContextStatusFilterChange: (status: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   unreadCounts: Record<Channel | 'all', number>;
   onBulkAction?: (action: string, ids: string[]) => void;
+  onRefresh?: () => void;
+  onGroupSelect?: (group: ChatGroup) => void;
+  onOpenGroupInfo?: (group: ChatGroup) => void;
 }
 
 const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[] = [
@@ -95,24 +103,72 @@ function getChipColor(value: string, isActive: boolean) {
   return isActive ? colors.active : colors.inactive;
 }
 
+/**
+ * Helper function to get auth token from cookies
+ * (so proxy can extract tenant ID from JWT)
+ */
+function getAuthToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    const name = rawName?.trim();
+    const value = rawValueParts.join('=');
+    if (name === 'token') {
+      return decodeURIComponent(value || '');
+    }
+  }
+  return null;
+}
+
+/**
+ * Make an authenticated API call with tenant routing
+ */
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  // Forward selected tenant ID for correct tenant routing
+  if (typeof window !== 'undefined') {
+    const selectedTenantId = localStorage.getItem('selectedTenantId');
+    if (selectedTenantId && selectedTenantId !== 'default') {
+      headers['X-Tenant-ID'] = selectedTenantId;
+    }
+  }
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
+
 export const ConversationSidebar = memo(function ConversationSidebar({
   conversations,
   selectedId,
   onSelectConversation,
   channelFilter,
   onChannelFilterChange,
+  contextStatusFilter,
+  onContextStatusFilterChange,
   searchQuery,
   onSearchChange,
   unreadCounts,
   onBulkAction,
+  onRefresh,
+  onGroupSelect,
+  onOpenGroupInfo,
 }: ConversationSidebarProps) {
-  const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -123,7 +179,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   // Fetch tenant-specific context statuses on mount
   useEffect(() => {
     setStatusesLoading(true);
-    fetch('/api/whatsapp-conversations/conversations/context-statuses')
+    fetchWithAuth('/api/whatsapp-conversations/conversations/context-statuses')
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -146,7 +202,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       setGroupConversationIds(new Set());
       return;
     }
-    fetch(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations`)
+    fetchWithAuth(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -156,23 +212,16 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {});
   }, [activeGroup]);
 
-  // Filter conversations: context status + group
+  // Filter conversations: group only (context status is now server-side)
   const filteredConversations = useMemo(() => {
     let list = conversations;
-
-    if (contextStatusFilter !== 'all') {
-      list = list.filter((conv) => {
-        const status = conv.conversationState || conv.context_status;
-        return status === contextStatusFilter;
-      });
-    }
 
     if (activeGroup && groupConversationIds.size > 0) {
       list = list.filter((conv) => groupConversationIds.has(conv.id));
     }
 
     return list;
-  }, [conversations, contextStatusFilter, activeGroup, groupConversationIds]);
+  }, [conversations, activeGroup, groupConversationIds]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -206,13 +255,39 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     [onBulkAction, selectedIds, exitSelectMode]
   );
 
+  // Remove selected conversations from the active group
+  const [removingFromGroup, setRemovingFromGroup] = useState(false);
+  const handleRemoveFromGroup = useCallback(async () => {
+    if (!activeGroup || selectedIds.size === 0) return;
+    setRemovingFromGroup(true);
+    try {
+      const promises = Array.from(selectedIds).map((convId) =>
+        fetchWithAuth(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations/${convId}`, {
+          method: 'DELETE',
+        })
+      );
+      await Promise.all(promises);
+      // Remove from local state immediately
+      setGroupConversationIds((prev) => {
+        const next = new Set(prev);
+        selectedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } catch (err) {
+      console.error('Error removing from group:', err);
+    } finally {
+      setRemovingFromGroup(false);
+      exitSelectMode();
+    }
+  }, [activeGroup, selectedIds, exitSelectMode]);
+
   const handleContextStatusClick = useCallback((status: string) => {
-    setContextStatusFilter(status);
-  }, []);
+    onContextStatusFilterChange(status);
+  }, [onContextStatusFilterChange]);
 
   const clearFilter = useCallback(() => {
-    setContextStatusFilter('all');
-  }, []);
+    onContextStatusFilterChange('all');
+  }, [onContextStatusFilterChange]);
 
   const clearGroupFilter = useCallback(() => {
     setActiveGroup(null);
@@ -225,7 +300,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       try {
         // If sending to a group (via group manager), use the group endpoint
         if (groupTemplateSendTarget) {
-          const res = await fetch(
+          const res = await fetchWithAuth(
             `/api/whatsapp-conversations/chat-groups/${groupTemplateSendTarget.groupId}/send-template`,
             {
               method: 'POST',
@@ -241,7 +316,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           if (!data.success) console.error('Group template send failed:', data.error);
         } else if (selectedIds.size > 0) {
           // Bulk send to selected conversations
-          const res = await fetch('/api/whatsapp-conversations/conversations/bulk', {
+          const res = await fetchWithAuth('/api/whatsapp-conversations/conversations/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -273,10 +348,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     setIsTemplatePickerOpen(true);
   }, []);
 
-  // Called from ChatGroupManager when user clicks a group to filter
+  // Called from ChatGroupManager when user clicks a group to view
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
-  }, []);
+    onGroupSelect?.(group);
+  }, [onGroupSelect]);
 
   const renderItem = useCallback(
     (index: number) => {
@@ -320,6 +396,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="pl-9 h-9 bg-secondary/50"
             />
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 flex-shrink-0"
+            onClick={() => setIsImportDialogOpen(true)}
+            title="Import Leads"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -395,7 +480,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           {contextStatuses.map(({ value, label, count }) => (
             <button
               key={value}
-              onClick={() => setContextStatusFilter(value)}
+              onClick={() => onContextStatusFilterChange(value)}
               className={cn(
                 'flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap',
                 getChipColor(value, contextStatusFilter === value),
@@ -488,6 +573,22 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             {selectedIds.size} selected
           </span>
           <AddToGroupDropdown selectedIds={selectedIds} onDone={exitSelectMode} />
+          {activeGroup && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-orange-600"
+              onClick={handleRemoveFromGroup}
+              disabled={removingFromGroup || selectedIds.size === 0}
+            >
+              {removingFromGroup ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <UserMinus className="h-3.5 w-3.5 mr-1" />
+              )}
+              Remove from Group
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -542,6 +643,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         onOpenChange={setIsGroupManagerOpen}
         onSelectGroup={handleSelectGroup}
         onSendTemplateToGroup={handleGroupTemplateSend}
+        onOpenGroupInfo={onOpenGroupInfo}
       />
 
       {/* Template Picker Dialog */}
@@ -554,6 +656,16 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+      />
+
+      {/* Import Leads Dialog */}
+      <ImportLeadsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => {
+          if (onRefresh) onRefresh();
+          else window.location.reload();
+        }}
       />
     </div>
   );
