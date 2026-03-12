@@ -116,6 +116,7 @@ interface PipelineListViewProps {
   stages: Array<{ key: string; label: string; name?: string }>;
   visibleColumns: Record<string, boolean>;
   totalLeadsCount?: number;
+  totalPages?: number;
   isLoading?: boolean;
   searchQuery?: string;
   selectedLead?: unknown;
@@ -146,6 +147,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   stages,
   visibleColumns,
   totalLeadsCount,
+  totalPages: controlledTotalPages,
   isLoading = false,
   searchQuery,
   selectedLead,
@@ -454,7 +456,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
     ? totalLeadsCount
     : filteredAndSortedLeads.length;
-  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / pageSize));
+  const totalPages = controlledTotalPages !== undefined
+    ? Math.max(1, controlledTotalPages)
+    : Math.max(1, Math.ceil(displayTotalRecords / pageSize));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
 

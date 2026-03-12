@@ -152,6 +152,13 @@ export interface GetCallLogsParams {
   lead_tag?: string;
 }
 
+export interface GetCallLogsLeadStatusParams {
+  status?: string;
+  lead_tag?: string;
+  page?: number;
+  limit?: number;
+}
+
 export interface BatchViewParams {
   page?: number;
   limit?: number;
