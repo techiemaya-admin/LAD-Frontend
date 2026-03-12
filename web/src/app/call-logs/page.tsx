@@ -123,8 +123,22 @@ export default function CallLogsPage() {
       status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
       lead_tag: leadTagFilter || undefined,
     },
+    (timeFilter !== "batch" || !!batchJobId) && !shouldUseLeadStatusHook
+  );
+
+  const callLogsLeadStatusQuery = useCallLogsLeadStatus(
+    {
+      from_date: dateRange.from,
+      to_date: dateRange.to,
+      page: page,
+      limit: perPage,
+      status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
+      lead_tag: leadTagFilter || undefined,
+    },
     (timeFilter !== "batch" || !!batchJobId) && shouldUseLeadStatusHook
   );
+
+  const activeCallLogsQuery = shouldUseLeadStatusHook ? callLogsLeadStatusQuery : callLogsQuery;
 
   const callLogsStatsQuery = useCallLogsStats(tenantId, !!tenantId);
   logger.debug("[Call Logs Page] Call logs stats query data", callLogsStatsQuery.data);
@@ -342,14 +356,19 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs (including status / lead_tag filtering via /calls)
-    if (timeFilter !== "batch" && !batchJobId && callLogsQuery.isSuccess && callLogsQuery.data) {
+    // Handle normal call logs (including status / lead_tag filtering)
+    if (
+      timeFilter !== "batch" &&
+      !batchJobId &&
+      activeCallLogsQuery.isSuccess &&
+      activeCallLogsQuery.data
+    ) {
       logger.debug("[Call Logs] Processing normal call logs", {
-        rawData: callLogsQuery.data,
-        logsCount: callLogsQuery.data.logs?.length,
+        rawData: activeCallLogsQuery.data,
+        logsCount: activeCallLogsQuery.data.logs?.length,
       });
 
-      const logs: CallLog[] = (callLogsQuery.data.logs || []).map((r) => {
+      const logs: CallLog[] = (activeCallLogsQuery.data.logs || []).map((r) => {
         const leadName =
           [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
