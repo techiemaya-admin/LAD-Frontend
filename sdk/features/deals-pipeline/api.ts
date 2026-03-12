@@ -302,7 +302,7 @@ export async function getPipelineLeads(params: {
   query.append("page", String(params.page));
   query.append("limit", String(params.limit));
 
-  const url = `/api/deals-pipeline/pipeline/leads?${query.toString()}`;
+  const url = `/api/deals-pipeline/leads?${query.toString()}`;
   const response = await apiGet<PaginatedLeads>(url);
   return response.data;
 }

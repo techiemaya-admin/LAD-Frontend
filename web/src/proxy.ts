@@ -5,10 +5,10 @@ import { validateAuthToken, getCurrentUser } from './utils/api-client';
 import { isOpenRoute, isAuthRoute } from './lib/routes';
 
 /**
- * Main middleware function
+ * Main proxy function
  * Handles routing based on authentication status
  */
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
   logger.debug('[Middleware] Processing request', { pathname });
