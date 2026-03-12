@@ -2,7 +2,7 @@
  * Call Logs Feature - useCallLead Hook
  *
  * React hook for fetching the lead associated with a call log via:
- *   GET /api/voiceagents/calls/{id}/lead
+ *   GET /api/voice-agent/calls/{id}/lead
  *
  * Framework-independent (no Next.js imports).
  */

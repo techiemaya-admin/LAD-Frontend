@@ -72,6 +72,11 @@ export default function CallLogsPage() {
     "hot" | "warm" | "cold" | null
   >(null);
 
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<
+    "ended" | "failed" | "ongoing" | "queue" | null
+  >(null);
+
   // Memoize date range to prevent unnecessary re-renders and API calls
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -111,7 +116,8 @@ export default function CallLogsPage() {
       to_date: dateRange.to,
       page: page,
       limit: perPage,
-      lead_category: leadTagFilter || undefined,
+      status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
+      lead_tag: leadTagFilter || undefined,
     },
     timeFilter !== "batch" || !!batchJobId
   );
@@ -319,6 +325,9 @@ export default function CallLogsPage() {
         batch_total_calls: b.total_calls || 0,
         batch_completed_calls: b.completed_calls || 0,
         batch_failed_calls: b.failed_calls || 0,
+        attachments: b.attachments,
+        attachment_file_name: b.attachment_file_name,
+        attachment_signed_url: b.attachment_signed_url,
       }));
 
       setItems((prev) => {
@@ -329,7 +338,7 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs
+    // Handle normal call logs (including status / lead_tag filtering via /calls)
     if (timeFilter !== "batch" && !batchJobId && callLogsQuery.isSuccess && callLogsQuery.data) {
       logger.debug("[Call Logs] Processing normal call logs", {
         rawData: callLogsQuery.data,
@@ -406,6 +415,7 @@ export default function CallLogsPage() {
     }
   }, [
     callLogsQuery.data,
+    callLogsQuery.isSuccess,
     batchStatusQuery.data,
     batchStatusQuery.isError,
     batchStatusQuery.error,
@@ -571,10 +581,11 @@ export default function CallLogsPage() {
   // Server-side pagination - use backend data directly
   const paginated = sortedFiltered;
 
-  // Use backend pagination metadata
-  const paginationData = timeFilter === "batch" && !batchJobId
-    ? (batchViewQuery.data as any)
-    : (callLogsQuery.data as any);
+  // Use backend pagination metadata from the appropriate query
+  const paginationData =
+    timeFilter === "batch" && !batchJobId
+      ? (batchViewQuery.data as any)
+      : (callLogsQuery.data as any);
 
   const paginationMeta = paginationData?.pagination || {
     page: 1,
@@ -822,6 +833,11 @@ export default function CallLogsPage() {
         selectedLeadTag={leadTagFilter}
         onLeadTagChange={(tag) => {
           setLeadTagFilter(tag);
+          setPage(1);
+        }}
+        selectedStatus={statusFilter}
+        onStatusChange={(status) => {
+          setStatusFilter(status);
           setPage(1);
         }}
       />

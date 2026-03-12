@@ -568,8 +568,9 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
     );
   }
 
-  // Unwrap: API returns { success, data: { ...lead } }
-  const lead = leadData?.data || leadData?.lead || null;
+  // Unwrap: API typically returns { success, data: { lead: { ... } } }
+  const payload = leadData?.data ?? leadData ?? null;
+  const lead = payload?.lead ?? payload?.data?.lead ?? payload ?? null;
 
   if (!lead) {
     return (
@@ -581,12 +582,16 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
       </ScrollArea>
     );
   }
+  
 
   const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
+  const phoneValue =
+    lead.phone ??
+    ([lead.country_code, lead.base_number].filter(Boolean).join('') || undefined);
 
   const contactFields = [
     { label: 'Full Name', value: fullName },
-    { label: 'Phone', value: lead.to_base_number },
+    { label: 'Phone', value: phoneValue },
     { label: 'Email', value: lead.email },
     { label: 'Company', value: lead.company_name },
     { label: 'Title', value: lead.title },
@@ -608,7 +613,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
   ];
 
   const metaFields = [
-    { label: 'Lead ID', value: lead.lead_id },
+    { label: 'Lead ID', value: lead.id },
     { label: 'Created At', value: lead.created_at ? formatDateTimeUnified(lead.created_at) : undefined },
     { label: 'Updated At', value: lead.updated_at ? formatDateTimeUnified(lead.updated_at) : undefined },
     { label: 'Archived', value: lead.is_archived !== undefined ? (lead.is_archived ? 'Yes' : 'No') : undefined },
