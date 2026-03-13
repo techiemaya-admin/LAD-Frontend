@@ -79,6 +79,8 @@ export const ChatWindow = memo(function ChatWindow({
         onSendMessage={onSendMessage}
         disabled={conversation.status === 'resolved'}
         contactName={conversation.contact?.name}
+        conversationId={conversation.id}
+        owner={conversation.owner}
       />
     </div>
   );
