@@ -1,29 +1,11 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { safeStorage } from '../utils/storage';
 
 export interface Tenant {
   id: string;
   name: string;
-  /** Optional override URL for conversations API (e.g. unified-comms service) */
-  conversationsUrl?: string;
 }
-
-/** Known tenants. Add new tenants here. */
-export const TENANTS: Tenant[] = [
-  {
-    id: 'default',
-    name: 'TPF (Default)',
-    // Uses the main backend — no override
-  },
-  {
-    id: '9ca4012a-2e02-5593-8cc1-fd5bd81483f9',
-    name: 'BNI Rising Phoenix',
-    conversationsUrl:
-      process.env.NEXT_PUBLIC_UNIFIED_COMMS_URL ||
-      'https://unified-comms-160078175457.us-central1.run.app',
-  },
-];
 
 interface TenantContextType {
   tenant: Tenant;
@@ -36,32 +18,72 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'selectedTenantId';
 
-export function TenantProvider({ children }: { children: ReactNode }) {
-  const [tenant, setTenant] = useState<Tenant>(TENANTS[0]);
+/**
+ * Build the tenants list dynamically from the logged-in user's data
+ * (returned by /api/auth/me and stored in safeStorage as 'user').
+ */
+function loadTenantsFromAuth(): Tenant[] {
+  try {
+    const raw = safeStorage.getItem('user');
+    if (!raw) return [];
+    const user = JSON.parse(raw);
+    if (Array.isArray(user.tenants)) {
+      return user.tenants.map((t: { id: string; name: string }) => ({
+        id: t.id,
+        name: t.name,
+      }));
+    }
+  } catch { /* ignore parse errors */ }
+  return [];
+}
 
+export function TenantProvider({ children }: { children: ReactNode }) {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Load tenants from auth data + restore last selection
   useEffect(() => {
+    const loaded = loadTenantsFromAuth();
+    setTenants(loaded);
     const stored = safeStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const found = TENANTS.find((t) => t.id === stored);
-      if (found) setTenant(found);
+    if (stored && loaded.find((t) => t.id === stored)) {
+      setSelectedId(stored);
+    } else if (loaded.length > 0) {
+      // Default to first tenant (primary tenant is first from backend)
+      setSelectedId(loaded[0].id);
     }
   }, []);
 
+  // Re-sync when storage changes (e.g. after login in another tab)
+  useEffect(() => {
+    const onStorage = () => {
+      const loaded = loadTenantsFromAuth();
+      setTenants(loaded);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const tenant = useMemo(
+    () => tenants.find((t) => t.id === selectedId) || tenants[0] || { id: 'default', name: 'Default' },
+    [tenants, selectedId],
+  );
+
   const setTenantById = (id: string) => {
-    const found = TENANTS.find((t) => t.id === id);
+    const found = tenants.find((t) => t.id === id);
     if (found) {
-      setTenant(found);
+      setSelectedId(id);
       safeStorage.setItem(STORAGE_KEY, id);
-      // Reload conversations when tenant changes
+      // Reload so all components refetch with the new tenant
       window.location.reload();
     }
   };
 
-  // tenantId to send as X-Tenant-ID header (null for default tenant)
+  // tenantId sent as X-Tenant-ID header
   const tenantId = tenant.id === 'default' ? null : tenant.id;
 
   return (
-    <TenantContext.Provider value={{ tenant, tenantId, setTenantById, tenants: TENANTS }}>
+    <TenantContext.Provider value={{ tenant, tenantId, setTenantById, tenants }}>
       {children}
     </TenantContext.Provider>
   );

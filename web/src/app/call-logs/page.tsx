@@ -18,6 +18,7 @@ import {
   useRetryFailedCalls,
   useCallLogsStats,
   useBatchStats,
+  useCallLogsLeadStatus,
   type CallLog,
   type BatchPayload,
   type VoiceAgentBatch,
@@ -72,6 +73,11 @@ export default function CallLogsPage() {
     "hot" | "warm" | "cold" | null
   >(null);
 
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<
+    "ended" | "failed" | "ongoing" | "queue" | null
+  >(null);
+
   // Memoize date range to prevent unnecessary re-renders and API calls
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -105,16 +111,34 @@ export default function CallLogsPage() {
   }, [dateFilter, fromDate, toDate]);
 
   // SDK Hooks
+  // Use lead-status hook when status or lead_tag filter is active, otherwise use regular call logs
+  const shouldUseLeadStatusHook = !!(statusFilter || leadTagFilter);
+  
   const callLogsQuery = useCallLogs(
     {
       from_date: dateRange.from,
       to_date: dateRange.to,
       page: page,
       limit: perPage,
-      lead_category: leadTagFilter || undefined,
+      status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
+      lead_tag: leadTagFilter || undefined,
     },
-    timeFilter !== "batch" || !!batchJobId
+    (timeFilter !== "batch" || !!batchJobId) && !shouldUseLeadStatusHook
   );
+
+  const callLogsLeadStatusQuery = useCallLogsLeadStatus(
+    {
+      from_date: dateRange.from,
+      to_date: dateRange.to,
+      page: page,
+      limit: perPage,
+      status: statusFilter === "queue" ? "in_queue" : statusFilter || undefined,
+      lead_tag: leadTagFilter || undefined,
+    },
+    (timeFilter !== "batch" || !!batchJobId) && shouldUseLeadStatusHook
+  );
+
+  const activeCallLogsQuery = shouldUseLeadStatusHook ? callLogsLeadStatusQuery : callLogsQuery;
 
   const callLogsStatsQuery = useCallLogsStats(tenantId, !!tenantId);
   logger.debug("[Call Logs Page] Call logs stats query data", callLogsStatsQuery.data);
@@ -319,6 +343,9 @@ export default function CallLogsPage() {
         batch_total_calls: b.total_calls || 0,
         batch_completed_calls: b.completed_calls || 0,
         batch_failed_calls: b.failed_calls || 0,
+        attachments: b.attachments,
+        attachment_file_name: b.attachment_file_name,
+        attachment_signed_url: b.attachment_signed_url,
       }));
 
       setItems((prev) => {
@@ -329,14 +356,19 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs
-    if (timeFilter !== "batch" && !batchJobId && callLogsQuery.isSuccess && callLogsQuery.data) {
+    // Handle normal call logs (including status / lead_tag filtering)
+    if (
+      timeFilter !== "batch" &&
+      !batchJobId &&
+      activeCallLogsQuery.isSuccess &&
+      activeCallLogsQuery.data
+    ) {
       logger.debug("[Call Logs] Processing normal call logs", {
-        rawData: callLogsQuery.data,
-        logsCount: callLogsQuery.data.logs?.length,
+        rawData: activeCallLogsQuery.data,
+        logsCount: activeCallLogsQuery.data.logs?.length,
       });
 
-      const logs: CallLog[] = (callLogsQuery.data.logs || []).map((r) => {
+      const logs: CallLog[] = (activeCallLogsQuery.data.logs || []).map((r) => {
         const leadName =
           [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
@@ -375,6 +407,16 @@ export default function CallLogsPage() {
       setInitialLoading(false);
     }
 
+    // Handle errors for lead-status endpoint
+    if (callLogsLeadStatusQuery.isError && shouldUseLeadStatusHook && timeFilter !== "batch" && !batchJobId) {
+      logger.error(
+        "[Call Logs] Failed to load lead-status call logs",
+        callLogsLeadStatusQuery.error,
+      );
+      setItems([]);
+      setInitialLoading(false);
+    }
+
     // Handle errors
     if (batchStatusQuery.isError && timeFilter === "batch" && batchJobId) {
       logger.error(
@@ -405,7 +447,13 @@ export default function CallLogsPage() {
       setSelectedBatchId(null);
     }
   }, [
+    callLogsLeadStatusQuery.data,
+    callLogsLeadStatusQuery.isSuccess,
+    callLogsLeadStatusQuery.isError,
+    callLogsLeadStatusQuery.error,
+    shouldUseLeadStatusHook,
     callLogsQuery.data,
+    callLogsQuery.isSuccess,
     batchStatusQuery.data,
     batchStatusQuery.isError,
     batchStatusQuery.error,
@@ -571,10 +619,11 @@ export default function CallLogsPage() {
   // Server-side pagination - use backend data directly
   const paginated = sortedFiltered;
 
-  // Use backend pagination metadata
-  const paginationData = timeFilter === "batch" && !batchJobId
-    ? (batchViewQuery.data as any)
-    : (callLogsQuery.data as any);
+  // Use backend pagination metadata from the appropriate query
+  const paginationData =
+    timeFilter === "batch" && !batchJobId
+      ? (batchViewQuery.data as any)
+      : (callLogsQuery.data as any);
 
   const paginationMeta = paginationData?.pagination || {
     page: 1,
@@ -756,6 +805,8 @@ export default function CallLogsPage() {
   const isTableLoading =
     callLogsQuery.isLoading ||
     callLogsQuery.isFetching ||
+    callLogsLeadStatusQuery.isLoading ||
+    callLogsLeadStatusQuery.isFetching ||
     batchStatusQuery.isLoading ||
     batchStatusQuery.isFetching ||
     batchViewQuery.isLoading ||
@@ -822,6 +873,11 @@ export default function CallLogsPage() {
         selectedLeadTag={leadTagFilter}
         onLeadTagChange={(tag) => {
           setLeadTagFilter(tag);
+          setPage(1);
+        }}
+        selectedStatus={statusFilter}
+        onStatusChange={(status) => {
+          setStatusFilter(status);
           setPage(1);
         }}
       />

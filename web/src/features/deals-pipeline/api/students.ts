@@ -81,24 +81,24 @@ export class StudentsApi {
     if (filters?.counsellor_id) params.append('counsellor_id', filters.counsellor_id);
     if (filters?.status) params.append('status', filters.status);
     const queryString = params.toString();
-    const url = `/api/deal-pipeline/students${queryString ? `?${queryString}` : ''}`;
+    const url = `/api/deals-pipeline/students${queryString ? `?${queryString}` : ''}`;
     return ApiClient.get(url);
   }
   static async getStudent(campaignId: string, studentId: string): Promise<StudentWithLead> {
-    return ApiClient.get(`/api/deal-pipeline/students/${studentId}`);
+    return ApiClient.get(`/api/deals-pipeline/students/${studentId}`);
   }
   static async createStudent(campaignId: string, data: StudentCreateData): Promise<StudentWithLead> {
-    return ApiClient.post(`/api/deal-pipeline/students`, data);
+    return ApiClient.post(`/api/deals-pipeline/students`, data);
   }
   static async updateStudent(
     campaignId: string, 
     studentId: string, 
     data: StudentUpdateData
   ): Promise<StudentWithLead> {
-    return ApiClient.put(`/api/deal-pipeline/students/${studentId}`, data);
+    return ApiClient.put(`/api/deals-pipeline/students/${studentId}`, data);
   }
   static async deleteStudent(campaignId: string, studentId: string): Promise<void> {
-    return ApiClient.delete(`/api/deal-pipeline/students/${studentId}`);
+    return ApiClient.delete(`/api/deals-pipeline/students/${studentId}`);
   }
   static async updateStudentStage(
     campaignId: string,
@@ -106,7 +106,7 @@ export class StudentsApi {
     stage: string,
     notes?: string
   ): Promise<StudentWithLead> {
-    return ApiClient.post(`/api/deal-pipeline/students/${studentId}/stage`, {
+    return ApiClient.post(`/api/deals-pipeline/students/${studentId}/stage`, {
       stage,
       notes
     });

@@ -34,6 +34,11 @@ const logger = {
  * DEVELOPMENT: Falls back to localhost:3000
  */
 function getBackendUrl(): string {
+  // In the browser, always use same-origin so auth token issuer/validator stay aligned.
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
   const url = (
     process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -45,7 +50,7 @@ function getBackendUrl(): string {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL or NEXT_PUBLIC_API_URL is required in production');
   }
   // DEVELOPMENT: Use localhost fallback
-  return url || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+  return url || 'http://localhost:3000';
 }
 /**
  * Get authorization headers from browser storage

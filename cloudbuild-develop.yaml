@@ -8,15 +8,15 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/lad-frontend-develop:latest'
       - '--build-arg'
-      - 'VITE_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'VITE_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_API_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
-      - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app'
+      - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
       - 'NEXT_PUBLIC_COMMUNITY_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
       - '--build-arg'
@@ -53,7 +53,7 @@ steps:
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-741719885039.us-central1.run.app,NEXT_PUBLIC_COMMUNITY_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
+          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_COMMUNITY_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
         
         echo "✅ Deployment completed successfully"
 

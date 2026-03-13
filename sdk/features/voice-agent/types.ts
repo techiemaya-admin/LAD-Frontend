@@ -145,6 +145,10 @@ export interface TriggerBatchCallRequest {
   added_context?: string;
   entries: BatchCallEntry[];
   initiated_by?: string;
+  // Batch Upload persistence fields
+  original_file?: string; // base64 encoded original Excel file
+  file_name?: string;
+  uploaded_at?: string;
 }
 
 export interface TriggerBatchCallResponse {

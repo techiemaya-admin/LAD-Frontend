@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { safeStorage } from '@/utils/storage';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -58,8 +59,15 @@ const COLOR_OPTIONS = [
 
 const API_BASE = '/api/whatsapp-conversations/chat-groups';
 
+function authHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${safeStorage.getItem('token') || ''}`,
+  };
+}
+
 async function fetchGroups(): Promise<ChatGroup[]> {
-  const res = await fetch(API_BASE);
+  const res = await fetch(API_BASE, { headers: authHeaders() });
   const data = await res.json();
   return data.success ? data.data : [];
 }
@@ -67,7 +75,7 @@ async function fetchGroups(): Promise<ChatGroup[]> {
 async function createGroup(name: string, color: string, description?: string): Promise<ChatGroup | null> {
   const res = await fetch(API_BASE, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ name, color, description: description || null }),
   });
   const data = await res.json();
@@ -77,7 +85,7 @@ async function createGroup(name: string, color: string, description?: string): P
 async function updateGroup(id: string, updates: { name?: string; color?: string; description?: string }): Promise<boolean> {
   const res = await fetch(`${API_BASE}/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(updates),
   });
   const data = await res.json();
@@ -85,7 +93,10 @@ async function updateGroup(id: string, updates: { name?: string; color?: string;
 }
 
 async function deleteGroup(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
   const data = await res.json();
   return data.success;
 }
@@ -504,7 +515,7 @@ export function AddToGroupDropdown({ selectedIds, onDone }: AddToGroupDropdownPr
     try {
       await fetch(`${API_BASE}/${groupId}/conversations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selectedIds) }),
       });
     } catch (err) {

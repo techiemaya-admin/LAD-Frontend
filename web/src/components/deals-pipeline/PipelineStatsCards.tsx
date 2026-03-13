@@ -51,11 +51,24 @@ interface StatCardProps {
   icon: React.ReactNode;
   bgColor: string;
   renderValue: () => React.ReactNode;
+  onClick?: () => void;
+  isSelected?: boolean;
 }
 
-const StatCard = ({ title, icon, bgColor, renderValue }: StatCardProps) => (
+const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div
+      className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
+        ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98]' : ''}
+        ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200'}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (!onClick) return;
+        if (e.key === 'Enter' || e.key === ' ') onClick();
+      }}
+    >
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
@@ -78,17 +91,21 @@ const StatCard = ({ title, icon, bgColor, renderValue }: StatCardProps) => (
 interface PipelineStatsCardsProps {
   totalLeads: number;
   connectionSentCount: number;
-  connectionAcceptedCount: number;
+  contacted: number;
   messageSentCount: number;
   loading?: boolean;
+  onCardClick?: (cardKey: string) => void;
+  selectedCard?: string | null;
 }
 
 export default function PipelineStatsCards({
   totalLeads,
   connectionSentCount,
-  connectionAcceptedCount,
+  contacted,
   messageSentCount,
   loading = false,
+  onCardClick,
+  selectedCard,
 }: PipelineStatsCardsProps) {
   if (loading) {
     return (
@@ -107,6 +124,7 @@ export default function PipelineStatsCards({
         renderValue={() => <AnimatedNumber value={totalLeads || 0} />}
         icon={<BookUser className="w-6 h-6 text-blue-700" />}
         bgColor="bg-blue-100"
+        isSelected={selectedCard === 'total'}
       />
 
       <StatCard
@@ -114,13 +132,17 @@ export default function PipelineStatsCards({
         renderValue={() => <AnimatedNumber value={connectionSentCount || 0} />}
         icon={<Link2 className="w-6 h-6 text-black-600" />}
         bgColor="bg-slate-100"
+        onClick={onCardClick ? () => onCardClick('connection_sent') : undefined}
+        isSelected={selectedCard === 'connection_sent'}
       />
 
       <StatCard
-        title="Success"
-        renderValue={() => <AnimatedNumber value={connectionAcceptedCount || 0} />}
+        title="Contacted"
+        renderValue={() => <AnimatedNumber value={contacted || 0} />}
         icon={<BadgeCheck className="w-6 h-6 text-green-600" />}
         bgColor="bg-green-100"
+        onClick={onCardClick ? () => onCardClick('contacted') : undefined}
+        isSelected={selectedCard === 'contacted'}
       />
 
       <StatCard
@@ -128,6 +150,8 @@ export default function PipelineStatsCards({
         renderValue={() => <AnimatedNumber value={messageSentCount || 0} />}
         icon={<Send className="w-6 h-6 text-purple-600" />}
         bgColor="bg-purple-100"
+        onClick={onCardClick ? () => onCardClick('message_sent') : undefined}
+        isSelected={selectedCard === 'message_sent'}
       />
     </div>
   );

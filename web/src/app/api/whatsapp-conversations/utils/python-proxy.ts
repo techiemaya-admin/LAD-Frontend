@@ -21,7 +21,7 @@ function extractTenantIdFromJwt(token: string): string | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return payload.tenantId || null;
+    return payload.tenantId || payload.tenant_id || payload.organizationId || payload.orgId || null;
   } catch {
     return null;
   }
@@ -43,6 +43,11 @@ export async function proxyToPythonService(
     'Content-Type': 'application/json',
   };
 
+  const debugTraceId = req.headers.get('x-debug-trace-id') || '';
+  const debugClientTenant = req.headers.get('x-debug-client-tenant') || '';
+  if (debugTraceId) headers['X-Debug-Trace-Id'] = debugTraceId;
+  if (debugClientTenant) headers['X-Debug-Client-Tenant'] = debugClientTenant;
+
   // Forward authorization header if present
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
@@ -57,15 +62,15 @@ export async function proxyToPythonService(
     }
   }
 
-  // Also check for X-Tenant-ID passed directly from the client
+  // Explicit X-Tenant-ID from client takes priority (supports tenant switching)
   const directTenantId = req.headers.get('x-tenant-id');
-  if (directTenantId && !headers['X-Tenant-ID']) {
+  if (directTenantId) {
     headers['X-Tenant-ID'] = directTenantId;
   }
 
-  // Fallback: check cookie for token
+  // Fallback: check cookie token aliases
   if (!headers['X-Tenant-ID']) {
-    const cookieToken = req.cookies.get('access_token')?.value;
+    const cookieToken = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
     if (cookieToken) {
       const tenantId = extractTenantIdFromJwt(cookieToken);
       console.log(`[python-proxy] Extracted tenantId from cookie: ${tenantId}`);
@@ -73,11 +78,11 @@ export async function proxyToPythonService(
         headers['X-Tenant-ID'] = tenantId;
       }
     } else {
-      console.log('[python-proxy] No access_token cookie found');
+      console.log('[python-proxy] No access_token/token cookie found');
     }
   }
 
-  console.log(`[python-proxy] Final X-Tenant-ID: ${headers['X-Tenant-ID'] || 'NONE'}, path: ${path}`);
+  console.log(`[python-proxy] Final X-Tenant-ID: ${headers['X-Tenant-ID'] || 'NONE'}, path: ${path}, trace: ${debugTraceId || 'none'}, clientTenant: ${debugClientTenant || 'none'}`);
 
   const fetchOptions: RequestInit = {
     method: req.method,
@@ -119,12 +124,20 @@ export async function proxyToPythonService(
     }
 
     const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    const nextResponse = NextResponse.json(data, { status: response.status });
+    nextResponse.headers.set('X-Debug-Trace-Id', debugTraceId || 'none');
+    nextResponse.headers.set('X-Debug-Resolved-Tenant', headers['X-Tenant-ID'] || 'none');
+    nextResponse.headers.set('X-Debug-Client-Tenant', debugClientTenant || 'none');
+    return nextResponse;
   } catch (error) {
     console.error(`[python-proxy] Error proxying to ${url}:`, error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { success: false, error: 'Failed to connect to BNI service' },
       { status: 502 },
     );
+    errorResponse.headers.set('X-Debug-Trace-Id', debugTraceId || 'none');
+    errorResponse.headers.set('X-Debug-Resolved-Tenant', headers['X-Tenant-ID'] || 'none');
+    errorResponse.headers.set('X-Debug-Client-Tenant', debugClientTenant || 'none');
+    return errorResponse;
   }
 }
