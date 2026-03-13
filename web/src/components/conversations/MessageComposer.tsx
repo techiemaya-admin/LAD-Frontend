@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { QuickReplyPicker } from './QuickReplyPicker';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 type AgentType = 'human' | 'ai';
 
@@ -76,9 +77,8 @@ export const MessageComposer = memo(function MessageComposer({
   const updateOwnership = useCallback(async (newOwner: 'AI' | 'human_agent') => {
     if (!conversationId) return;
     try {
-      await fetch(`${CONV_API}/${conversationId}/ownership`, {
+      await fetchWithTenant(`${CONV_API}/${conversationId}/ownership`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ owner: newOwner }),
       });
     } catch (err) {

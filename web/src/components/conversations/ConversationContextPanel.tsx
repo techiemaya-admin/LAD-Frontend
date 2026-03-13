@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { ChannelIcon } from './ChannelIcon';
 import { mockInternalComments } from '@/data/mockConversations';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConversationContextPanelProps {
@@ -106,7 +107,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   // Fetch all labels
   useEffect(() => {
-    fetch(LABELS_API)
+    fetchWithTenant(LABELS_API)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setAllLabels(data.data || []);
@@ -122,7 +123,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   // Fetch notes when conversation changes
   useEffect(() => {
     if (!conversation.id) return;
-    fetch(`${CONV_API}/${conversation.id}/notes`)
+    fetchWithTenant(`${CONV_API}/${conversation.id}/notes`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setNotes(data.data || []);
@@ -134,7 +135,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   useEffect(() => {
     if (!conversation.id) return;
     setProfileLoading(true);
-    fetch(`${CONV_API}/${conversation.id}/business-profile`)
+    fetchWithTenant(`${CONV_API}/${conversation.id}/business-profile`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setBusinessProfile(data.data);
@@ -149,9 +150,8 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const attachLabel = useCallback(
     async (labelId: string) => {
       try {
-        await fetch(`${CONV_API}/${conversation.id}/labels`, {
+        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ label_id: labelId }),
         });
         const label = allLabels.find((l) => l.id === labelId);
@@ -164,7 +164,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const detachLabel = useCallback(
     async (labelId: string) => {
       try {
-        await fetch(`${CONV_API}/${conversation.id}/labels/${labelId}`, {
+        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels/${labelId}`, {
           method: 'DELETE',
         });
         setConvLabels((prev) => prev.filter((l) => l.id !== labelId));
@@ -176,9 +176,8 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
     try {
-      const res = await fetch(LABELS_API, {
+      const res = await fetchWithTenant(LABELS_API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newLabelName.trim(), color: newLabelColor }),
       });
       const data = await res.json();
@@ -194,9 +193,8 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const addNote = useCallback(async () => {
     if (!newNote.trim()) return;
     try {
-      const res = await fetch(`${CONV_API}/${conversation.id}/notes`, {
+      const res = await fetchWithTenant(`${CONV_API}/${conversation.id}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newNote.trim(), author_name: 'Agent' }),
       });
       const data = await res.json();
@@ -211,9 +209,8 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
     async (noteId: string) => {
       if (!editingNoteContent.trim()) return;
       try {
-        const res = await fetch(`/api/whatsapp-conversations/notes/${noteId}`, {
+        const res = await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: editingNoteContent.trim() }),
         });
         const data = await res.json();
@@ -229,7 +226,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   const deleteNote = useCallback(async (noteId: string) => {
     try {
-      await fetch(`/api/whatsapp-conversations/notes/${noteId}`, { method: 'DELETE' });
+      await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}`, { method: 'DELETE' });
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
     } catch {}
   }, []);

@@ -33,6 +33,7 @@ import { DateSeparator } from './DateSeparator';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@/utils/storage';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -110,16 +111,19 @@ const GROUP_API = '/api/whatsapp-conversations/chat-groups';
 const CONV_API = '/api/whatsapp-conversations/conversations';
 
 function authHeaders(): Record<string, string> {
-  return {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${safeStorage.getItem('token') || ''}`,
   };
+  const tenantId = typeof window !== 'undefined'
+    ? localStorage.getItem('selectedTenantId') : null;
+  if (tenantId && tenantId !== 'default') headers['X-Tenant-ID'] = tenantId;
+  return headers;
 }
 
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetchWithTenant(url, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 

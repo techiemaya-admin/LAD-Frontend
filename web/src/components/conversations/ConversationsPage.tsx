@@ -10,6 +10,7 @@ import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const CONV_API = '/api/whatsapp-conversations/conversations';
 
@@ -76,29 +77,29 @@ export function ConversationsPage() {
     setIsContextPanelOpen((prev) => !prev);
   }, []);
 
-  // CRM action handlers
+  // CRM action handlers (all use fetchWithTenant for correct tenant DB routing)
   const handlePin = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
+      await fetchWithTenant(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
     } catch {}
   }, []);
 
   const handleLock = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
+      await fetchWithTenant(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
     } catch {}
   }, []);
 
   const handleFavorite = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
+      await fetchWithTenant(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
     } catch {}
   }, []);
 
   const handleExport = useCallback(async (id: string) => {
     // Client-side export: build text file from messages
     try {
-      const res = await fetch(`/api/whatsapp-conversations/conversations/${id}/messages`);
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${id}/messages`);
       const data = await res.json();
       if (!data.success) return;
       const lines = (data.data || []).map(
@@ -117,9 +118,8 @@ export function ConversationsPage() {
 
   const handleBlock = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/status`, {
+      await fetchWithTenant(`${CONV_API}/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'resolved' }),
       });
     } catch {}
@@ -127,22 +127,20 @@ export function ConversationsPage() {
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}`, { method: 'DELETE' });
+      await fetchWithTenant(`${CONV_API}/${id}`, { method: 'DELETE' });
     } catch {}
   }, []);
 
   const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
     try {
       if (action === 'resolve') {
-        await fetch(`${CONV_API}/bulk`, {
+        await fetchWithTenant(`${CONV_API}/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
         });
       } else if (action === 'delete') {
-        await fetch(`${CONV_API}/bulk`, {
+        await fetchWithTenant(`${CONV_API}/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete', ids }),
         });
       }

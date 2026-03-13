@@ -1,6 +1,7 @@
 import { safeStorage } from '../utils/storage';
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { logger } from '../lib/logger';
+import { fetchWithTenant } from '../lib/fetch-with-tenant';
 import { io, Socket } from 'socket.io-client';
 import store from '../store/store';
 import {
@@ -232,12 +233,7 @@ class ChatService {
   }
   async getConversation(id: string): Promise<Conversation> {
     try {
-      const response = await fetch(`/api/whatsapp-conversations/conversations/${id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
-        },
-      });
+      const response = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch conversation');
       }
@@ -344,12 +340,7 @@ class ChatService {
   }
   async searchConversations(query: string): Promise<Conversation[]> {
     try {
-      const response = await fetch(`/api/whatsapp-conversations/conversations?search=${encodeURIComponent(query)}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
-        },
-      });
+      const response = await fetchWithTenant(`/api/whatsapp-conversations/conversations?search=${encodeURIComponent(query)}`);
       if (!response.ok) {
         throw new Error('Failed to search conversations');
       }

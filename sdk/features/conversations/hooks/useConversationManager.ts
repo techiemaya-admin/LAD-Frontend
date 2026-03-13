@@ -100,6 +100,7 @@ export function useConversations(): UseConversationsReturn {
         conversationId: effectiveSelectedId,
         content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
+        phoneNumber: selectedConversation.contact.phone,
       });
     },
     [effectiveSelectedId, selectedConversation, sendMutation]
