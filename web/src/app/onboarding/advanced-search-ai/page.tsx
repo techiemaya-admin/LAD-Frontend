@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2 } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
 
 /* ═══════════════════════════════════════════════
@@ -35,6 +35,18 @@ interface LeadProfile {
     locked?: boolean;
 }
 
+interface ParsedInboundLead {
+    firstName: string;
+    lastName: string;
+    companyName: string;
+    linkedinProfile: string;
+    email: string;
+    whatsapp: string;
+    phone: string;
+    website: string;
+    notes: string;
+}
+
 interface ChatMsg {
     id: string;
     role: 'user' | 'ai';
@@ -44,6 +56,8 @@ interface ChatMsg {
     loading?: boolean;
     options?: { label: string; value: string }[];
     leads?: LeadProfile[];
+    inboundAction?: 'download' | 'upload' | 'summary';
+    inboundSummary?: { total: number; linkedin: number; email: number; whatsapp: number; phone: number; website: number };
 }
 
 /* ═══════════════════════════════════════════════
@@ -78,6 +92,94 @@ function initials(name: string): string {
     return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+const LinkedInIcon = ({ size = 14 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+);
+
+/* ═══════════════════════════════════════════════
+   INBOUND CSV UTILITIES
+   ═══════════════════════════════════════════════ */
+function downloadInboundTemplate() {
+    const hdrs = ['First Name', 'Last Name', 'Company Name', 'LinkedIn Profile URL', 'Email', 'WhatsApp Number', 'Phone Number', 'Website', 'Notes'];
+    const exRow = ['John', 'Doe', 'DELETE THIS ROW - Example Corp', 'https://linkedin.com/in/johndoe', 'example@example.com', "'+1234567890", "'+1234567890", 'https://example.com', 'DELETE THIS ROW - Remove before uploading'];
+    const instRow = ['Lead first name', 'Lead last name', 'INSTRUCTIONS: Format phone as TEXT', '', '', "Start with ' (apostrophe)", "Example: '+919087654321", '', 'Delete example rows before upload'];
+    const emptyRows = Array(10).fill(hdrs.map(() => ''));
+    const csv = [hdrs.join(','), exRow.map(c => `"${c}"`).join(','), instRow.map(c => `"${c}"`).join(','), ...emptyRows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'inbound_leads_template.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function parseCSVText(text: string): string[][] {
+    const rows: string[][] = []; let row: string[] = []; let cell = ''; let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i], n = text[i + 1];
+        if (c === '"') { if (inQ && n === '"') { cell += '"'; i++; } else inQ = !inQ; }
+        else if (c === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
+        else if ((c === '\n' || (c === '\r' && n === '\n')) && !inQ) { row.push(cell.trim()); if (row.some(x => x)) rows.push(row); row = []; cell = ''; if (c === '\r') i++; }
+        else if (c !== '\r') cell += c;
+    }
+    if (cell || row.length) { row.push(cell.trim()); if (row.some(x => x)) rows.push(row); }
+    return rows;
+}
+
+function fixPhone(v: string): string {
+    if (!v) return '';
+    let c = v.replace(/[\s\-\(\)]/g, '');
+    if (/^\d+\.?\d*e\+?\d+$/i.test(c)) c = parseFloat(c).toFixed(0);
+    if (c && !c.startsWith('+') && c.length > 10) c = '+' + c;
+    return c;
+}
+
+function parseInboundCSV(file: File): Promise<ParsedInboundLead[]> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                const rows = parseCSVText(text);
+                if (rows.length <= 1) { reject(new Error('File is empty or only has headers.')); return; }
+                const h = rows[0];
+                const ci = {
+                    firstName: h.findIndex(x => x.toLowerCase().includes('first') && x.toLowerCase().includes('name')),
+                    lastName: h.findIndex(x => x.toLowerCase().includes('last') && x.toLowerCase().includes('name')),
+                    company: h.findIndex(x => x.toLowerCase().includes('company')),
+                    linkedin: h.findIndex(x => x.toLowerCase().includes('linkedin')),
+                    email: h.findIndex(x => x.toLowerCase().includes('email')),
+                    whatsapp: h.findIndex(x => x.toLowerCase().includes('whatsapp')),
+                    phone: h.findIndex(x => x.toLowerCase().includes('phone')),
+                    website: h.findIndex(x => x.toLowerCase().includes('website')),
+                    notes: h.findIndex(x => x.toLowerCase().includes('notes')),
+                };
+                const leads = rows.slice(1).map(r => ({
+                    firstName: (ci.firstName >= 0 ? r[ci.firstName] : '') || '',
+                    lastName: (ci.lastName >= 0 ? r[ci.lastName] : '') || '',
+                    companyName: (ci.company >= 0 ? r[ci.company] : '') || '',
+                    linkedinProfile: (ci.linkedin >= 0 ? r[ci.linkedin] : '') || '',
+                    email: (ci.email >= 0 ? r[ci.email] : '') || '',
+                    whatsapp: fixPhone((ci.whatsapp >= 0 ? r[ci.whatsapp] : '') || ''),
+                    phone: fixPhone((ci.phone >= 0 ? r[ci.phone] : '') || ''),
+                    website: (ci.website >= 0 ? r[ci.website] : '') || '',
+                    notes: (ci.notes >= 0 ? r[ci.notes] : '') || '',
+                })).filter(l => {
+                    const isExample = l.companyName.toLowerCase().includes('delete this') || l.notes.toLowerCase().includes('delete this') || l.email.toLowerCase().includes('example.com');
+                    const hasData = (l.companyName && l.companyName.trim().length > 1) || (l.email && l.email.includes('@')) || (l.linkedinProfile && l.linkedinProfile.includes('linkedin.com'));
+                    return !isExample && hasData;
+                });
+                if (leads.length === 0) { reject(new Error('No valid leads found. Please add your lead data.')); return; }
+                resolve(leads);
+            } catch (err: any) { reject(err); }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+function isInboundIntent(text: string): boolean {
+    const lower = text.toLowerCase();
+    return /\b(i have leads|i have .* data|upload.*leads|inbound|import.*leads|have.*csv|have.*excel|already have.*leads|my leads|upload.*file|have.*spreadsheet|bulk.*upload)\b/i.test(lower);
+}
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════ */
@@ -94,6 +196,10 @@ export default function AdvancedSearchAIPage() {
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
 
+    // Inbound state
+    const [inboundMode, setInboundMode] = useState(false);
+    const [inboundLeads, setInboundLeads] = useState<ParsedInboundLead[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -160,6 +266,70 @@ export default function AdvancedSearchAIPage() {
     }, [input]);
 
     /* ── Core send logic ── */
+    /* ── Inbound file handler ── */
+    const handleInboundFile = useCallback(async (file: File) => {
+        setBusy(true);
+        const processingId = `l-${Date.now()}`;
+        setMessages(p => [...p, { id: `u-${Date.now()}`, role: 'user', text: `📎 Uploaded: ${file.name}`, ts: new Date() }, { id: processingId, role: 'ai', text: '', ts: new Date(), loading: true }]);
+        try {
+            const parsed = await parseInboundCSV(file);
+            setInboundLeads(parsed);
+            setInboundMode(true);
+
+            const counts = {
+                total: parsed.length,
+                linkedin: parsed.filter(l => l.linkedinProfile).length,
+                email: parsed.filter(l => l.email).length,
+                whatsapp: parsed.filter(l => l.whatsapp).length,
+                phone: parsed.filter(l => l.phone).length,
+                website: parsed.filter(l => l.website).length,
+            };
+
+            // Convert inbound leads to LeadProfile format for the panel
+            const panelLeads: LeadProfile[] = parsed.map((l, i) => ({
+                id: `inbound-${i}`,
+                name: `${l.firstName} ${l.lastName}`.trim() || `Lead ${i + 1}`,
+                first_name: l.firstName,
+                last_name: l.lastName,
+                headline: l.companyName ? `at ${l.companyName}` : '',
+                location: '',
+                current_company: l.companyName,
+                profile_url: l.linkedinProfile,
+                profile_picture: '',
+                industry: '',
+                network_distance: '',
+                locked: false,
+            }));
+            setLeads(panelLeads);
+
+            // Set a default targeting so the leads panel shows
+            const inboundTargeting: LeadTargeting = {
+                job_titles: [], industries: [], locations: [],
+                keywords: [`${counts.total} Inbound Leads`],
+            };
+            setTargeting(inboundTargeting);
+
+            let summaryText = `✅ **Successfully parsed ${counts.total} leads from your file!**\n\n📊 **Contact Channels Detected:**\n`;
+            if (counts.linkedin > 0) summaryText += `\n🔗 **LinkedIn:** ${counts.linkedin} profiles`;
+            if (counts.email > 0) summaryText += `\n✉️ **Email:** ${counts.email} addresses`;
+            if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
+            if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
+            if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
+            summaryText += `\n\n👉 Click **"Create Campaign Checkpoints"** to set up your campaign with these leads!`;
+
+            setMessages(p => p.filter(m => m.id !== processingId).concat({
+                id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
+                targeting: inboundTargeting, inboundAction: 'summary', inboundSummary: counts,
+            }));
+            setTimeout(() => setShowPanel('leads'), 500);
+        } catch (err: any) {
+            setMessages(p => p.filter(m => m.id !== processingId).concat({
+                id: `a-${Date.now()}`, role: 'ai', text: `⚠️ **Error parsing file:** ${err.message}\n\nPlease make sure you're uploading a valid CSV file with the correct format. You can download the template above and try again.`,
+                ts: new Date(), inboundAction: 'upload',
+            }));
+        } finally { setBusy(false); }
+    }, []);
+
     const doSend = useCallback(async (text: string) => {
         if (!text.trim() || busy) return;
         const uid = `u-${Date.now()}`;
@@ -167,6 +337,77 @@ export default function AdvancedSearchAIPage() {
         setMessages(p => [...p, { id: uid, role: 'user', text, ts: new Date() }, { id: lid, role: 'ai', text: '', ts: new Date(), loading: true }]);
         setBusy(true);
         setMsgCount(c => c + 1);
+
+        // ── INBOUND INTENT DETECTION (before API call) ──
+        if (isInboundIntent(text)) {
+            setInboundMode(true);
+            setMessages(p => p.filter(m => m.id !== lid).concat({
+                id: `a-${Date.now()}`, role: 'ai',
+                text: `📋 **Great! Let\'s import your leads.**\n\nHere\'s how it works:\n1. **Download** the CSV template below\n2. **Fill in** your leads data (name, email, LinkedIn, phone, etc.)\n3. **Upload** the filled file back here\n\nI\'ll analyze your data and help you create a campaign! 🚀`,
+                ts: new Date(), inboundAction: 'download',
+            }));
+            setBusy(false);
+            return;
+        }
+
+        // ── INBOUND FOLLOW-UP: Context-aware responses when leads are already uploaded ──
+        if (inboundMode && inboundLeads.length > 0) {
+            const lower = text.toLowerCase();
+            const isFollowUp = /\b(next step|what.*(next|do|now)|how to|help me|uploaded|create campaign|start campaign|launch|what can|guide|instructions|how does|proceed|continue)\b/i.test(lower);
+            const isRefine = /\b(refine|filter|remove|edit|change|modify|update|replace)\b/i.test(lower);
+            const isQuestion = /\b(how many|count|total|which|what.*leads|show me|list)\b/i.test(lower);
+
+            if (isFollowUp) {
+                const leadsCount = inboundLeads.length;
+                const linkedinCount = inboundLeads.filter(l => l.linkedinProfile).length;
+                const emailCount = inboundLeads.filter(l => l.email).length;
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Campaign Checkpoints"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Campaign Checkpoints"** button to get started!`,
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+
+            if (isRefine) {
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Campaign Checkpoints"** to set up your campaign!`,
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+
+            if (isQuestion) {
+                const counts = {
+                    total: inboundLeads.length,
+                    linkedin: inboundLeads.filter(l => l.linkedinProfile).length,
+                    email: inboundLeads.filter(l => l.email).length,
+                    whatsapp: inboundLeads.filter(l => l.whatsapp).length,
+                    phone: inboundLeads.filter(l => l.phone).length,
+                    website: inboundLeads.filter(l => l.website).length,
+                };
+                let summaryParts = [`📊 **Your uploaded leads summary:**\n\n• **Total Leads:** ${counts.total}`];
+                if (counts.linkedin > 0) summaryParts.push(`• **LinkedIn Profiles:** ${counts.linkedin}`);
+                if (counts.email > 0) summaryParts.push(`• **Email Addresses:** ${counts.email}`);
+                if (counts.whatsapp > 0) summaryParts.push(`• **WhatsApp Numbers:** ${counts.whatsapp}`);
+                if (counts.phone > 0) summaryParts.push(`• **Phone Numbers:** ${counts.phone}`);
+                if (counts.website > 0) summaryParts.push(`• **Websites:** ${counts.website}`);
+                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Campaign Checkpoints"**!`);
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: summaryParts.join('\n'),
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+        }
 
         try {
             // Build history array for context (last 6 messages)
@@ -353,7 +594,7 @@ export default function AdvancedSearchAIPage() {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
     };
 
-    const reset = () => { setScreen('landing'); setMessages([]); setTargeting(null); setLeads([]); setShowPanel(false); setConvId(null); setMsgCount(0); setPendingIntent(null); };
+    const reset = () => { setScreen('landing'); setMessages([]); setTargeting(null); setLeads([]); setShowPanel(false); setConvId(null); setMsgCount(0); setPendingIntent(null); setInboundMode(false); setInboundLeads([]); };
 
     /* ═══════════════════════════════════════════════
        SCREEN 1: LANDING
@@ -377,6 +618,9 @@ export default function AdvancedSearchAIPage() {
                             </button>
                             <button className="adv-idea" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
                                 <span>🎯</span> Target Specific Leads
+                            </button>
+                            <button className="adv-idea" onClick={() => { setInput('I have leads data to upload'); taRef.current?.focus(); }} style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderColor: '#6ee7b7' }}>
+                                <span>📋</span> I Have Leads Data
                             </button>
                         </div>
                         <button className="adv-send-circle" disabled={!input.trim()} onClick={onLandingSubmit}
@@ -417,7 +661,7 @@ export default function AdvancedSearchAIPage() {
                     </button>
 
                     <div className="adv-chat-msgs">
-                        {messages.map(m => <Bubble key={m.id} msg={m} onOpt={onOptClick} onShowPanel={setShowPanel} hasPanel={!!showPanel} leadsCount={leads.length} />)}
+                        {messages.map(m => <Bubble key={m.id} msg={m} onOpt={onOptClick} onShowPanel={setShowPanel} hasPanel={!!showPanel} leadsCount={leads.length} onFileUpload={() => fileInputRef.current?.click()} />)}
                         <div ref={endRef} />
                     </div>
 
@@ -433,10 +677,13 @@ export default function AdvancedSearchAIPage() {
                             </button>
                         </div>
                     </div>
+                    {/* Hidden file input for inbound CSV upload */}
+                    <input ref={fileInputRef} type="file" accept=".csv" className="hidden" style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
                 </div>
 
                 {/* RIGHT: PANELS */}
-                {showPanel === 'leads' && targeting && (
+                {showPanel === 'leads' && targeting && !inboundMode && (
                     <div className="adv-leads-panel">
                         <div className="adv-panel-header">
                             <button className="adv-close-panel" onClick={() => setShowPanel(false)}>
@@ -526,8 +773,57 @@ export default function AdvancedSearchAIPage() {
                     </div>
                 )}
 
+                {/* INBOUND LEADS PANEL */}
+                {showPanel === 'leads' && inboundMode && (
+                    <div className="adv-leads-panel">
+                        <div className="adv-panel-header">
+                            <button className="adv-close-panel" onClick={() => setShowPanel(false)}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                            <button className="adv-unlock-btn" onClick={() => setShowPanel('checkpoints')}>✨ Create Campaign Checkpoints</button>
+                        </div>
+                        <div className="adv-panel-body">
+                            <h2 className="adv-panel-title">Your Uploaded Leads</h2>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                {inboundLeads.filter(l => l.linkedinProfile).length > 0 && <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1e40af', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><LinkedInIcon size={12} /> LinkedIn ({inboundLeads.filter(l => l.linkedinProfile).length})</span>}
+                                {inboundLeads.filter(l => l.email).length > 0 && <span style={{ fontSize: '11px', background: '#fce7f3', color: '#be185d', padding: '4px 10px', borderRadius: '12px', fontWeight: 600 }}>✉️ Email ({inboundLeads.filter(l => l.email).length})</span>}
+                                {inboundLeads.filter(l => l.whatsapp).length > 0 && <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontWeight: 600 }}>💬 WhatsApp ({inboundLeads.filter(l => l.whatsapp).length})</span>}
+                                {inboundLeads.filter(l => l.phone).length > 0 && <span style={{ fontSize: '11px', background: '#ffedd5', color: '#9a3412', padding: '4px 10px', borderRadius: '12px', fontWeight: 600 }}>📞 Phone ({inboundLeads.filter(l => l.phone).length})</span>}
+                            </div>
+                            <div className="adv-leads-list">
+                                {inboundLeads.map((lead, i) => (
+                                    <div key={i} className="adv-lead-card">
+                                        <div className="adv-lead-avatar" style={{ background: avatarColor(`${lead.firstName} ${lead.lastName}`) }}>
+                                            {initials(`${lead.firstName} ${lead.lastName}`.trim() || `L${i + 1}`)}
+                                        </div>
+                                        <div className="adv-lead-info">
+                                            <div className="adv-lead-name">
+                                                {`${lead.firstName} ${lead.lastName}`.trim() || `Lead ${i + 1}`}
+                                                <span className="adv-verified">✓</span>
+                                            </div>
+                                            <div className="adv-lead-title">{lead.companyName || lead.email || 'Imported Lead'}</div>
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                {lead.linkedinProfile && <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center' }}><LinkedInIcon size={10} /></span>}
+                                                {lead.email && <span style={{ fontSize: '10px', background: '#fce7f3', color: '#be185d', padding: '2px 6px', borderRadius: '6px' }}>✉️</span>}
+                                                {lead.whatsapp && <span style={{ fontSize: '10px', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '6px' }}>💬</span>}
+                                                {lead.phone && <span style={{ fontSize: '10px', background: '#ffedd5', color: '#9a3412', padding: '2px 6px', borderRadius: '6px' }}>📞</span>}
+                                            </div>
+                                        </div>
+                                        <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }} title="Remove" onClick={() => {
+                                            setInboundLeads(p => p.filter((_, idx) => idx !== i));
+                                            setLeads(p => p.filter((_, idx) => idx !== i));
+                                        }}>
+                                            <Trash2 size={14} color="#ef4444" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showPanel === 'checkpoints' && (
-                    <CheckpointsPanel onClose={() => setShowPanel(false)} targeting={targeting} />
+                    <CheckpointsPanel onClose={() => setShowPanel(false)} targeting={targeting} inboundLeads={inboundMode ? inboundLeads : undefined} />
                 )}
 
                 <ProfileSummaryDialog
@@ -547,7 +843,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'checkpoints') => void; hasPanel: boolean; leadsCount: number }) {
+function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount, onFileUpload }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'checkpoints') => void; hasPanel: boolean; leadsCount: number; onFileUpload?: () => void }) {
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
             <div className="adv-ai-avatar"><span>✦</span></div>
@@ -661,6 +957,40 @@ function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMs
                     </div>
                 )}
 
+                {/* ── Inbound: Download Template + Upload buttons ── */}
+                {(msg.inboundAction === 'download' || msg.inboundAction === 'upload') && (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                        <button onClick={downloadInboundTemplate} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff',
+                            border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s',
+                        }}><Download size={16} /> Download Template</button>
+                        <button onClick={() => onFileUpload?.()} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
+                        }}><Upload size={16} /> Upload CSV File</button>
+                    </div>
+                )}
+
+                {/* ── Inbound: Summary with platform badges ── */}
+                {msg.inboundAction === 'summary' && msg.inboundSummary && (
+                    <div style={{ marginTop: '12px', padding: '14px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', borderRadius: '14px', border: '1px solid #a7f3d0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                            <CheckCircle2 size={18} color="#059669" />
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#065f46' }}>{msg.inboundSummary.total} Leads Ready</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {msg.inboundSummary.linkedin > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#1e40af', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><LinkedInIcon size={12} /> LinkedIn ({msg.inboundSummary.linkedin})</span>}
+                            {msg.inboundSummary.email > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#be185d', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #fbcfe8' }}>✉️ Email ({msg.inboundSummary.email})</span>}
+                            {msg.inboundSummary.whatsapp > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #bbf7d0' }}>💬 WhatsApp ({msg.inboundSummary.whatsapp})</span>}
+                            {msg.inboundSummary.phone > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#9a3412', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #fed7aa' }}>📞 Phone ({msg.inboundSummary.phone})</span>}
+                            {msg.inboundSummary.website > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#6b21a8', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #e9d5ff' }}>🌐 Website ({msg.inboundSummary.website})</span>}
+                        </div>
+                    </div>
+                )}
+
                 {/* Option buttons from AI */}
                 {msg.options && msg.options.length > 0 && (
                     <div className="adv-opts">
@@ -675,7 +1005,8 @@ function Bubble({ msg, onOpt, onShowPanel, hasPanel, leadsCount }: { msg: ChatMs
 /* ═══════════════════════════════════════════════
    CHECKPOINTS PANEL
    ═══════════════════════════════════════════════ */
-function CheckpointsPanel({ onClose, targeting }: { onClose: () => void; targeting: LeadTargeting | null }) {
+function CheckpointsPanel({ onClose, targeting, inboundLeads }: { onClose: () => void; targeting: LeadTargeting | null; inboundLeads?: ParsedInboundLead[] }) {
+    const isInbound = !!inboundLeads && inboundLeads.length > 0;
     const [openIdx, setOpenIdx] = useState(0);
     const [actions, setActions] = useState<string[]>(['connect']);
     const [connMsg, setConnMsg] = useState('');
@@ -684,6 +1015,17 @@ function CheckpointsPanel({ onClose, targeting }: { onClose: () => void; targeti
     const [followLoading, setFollowLoading] = useState(false);
     const [days, setDays] = useState('30');
     const [name, setName] = useState('');
+    const [leadsPerDay, setLeadsPerDay] = useState('20');
+    const [campaignGoal, setCampaignGoal] = useState('');
+    const [dailyLimit, setDailyLimit] = useState<number | null>(null);
+
+    // Fetch the user's LinkedIn daily limit on mount
+    useEffect(() => {
+        fetch(`${API_BASE}/api/campaigns/linkedin/limits`, { headers: headers() })
+            .then(r => r.json())
+            .then(d => { if (d.success) setDailyLimit(d.remainingDailyLimit !== undefined ? d.remainingDailyLimit : (d.totalDailyLimit || null)); })
+            .catch(() => {});
+    }, []);
 
     const toggleAction = (a: string) => {
         setActions(p => p.includes(a) ? p.filter(x => x !== a) : [...p, a]);
@@ -757,7 +1099,7 @@ Ask a relevant, polite question to spark conversation. Do not pitch.`;
             </div>
             <div className="adv-panel-body" style={{ background: "transparent", padding: "32px 24px" }}>
                 <div style={{ background: "rgba(255,255,255,0.75)", border: "1px solid #c2d6eb", borderRadius: "18px", padding: "20px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(23,37,96,0.04)" }}>
-                    <h2 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 20px", color: "#172560" }}>4 Checkpoints</h2>
+                    <h2 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 20px", color: "#172560" }}>6 Checkpoints</h2>
 
                     {/* CP 1: Actions */}
                     <div style={{ borderBottom: "1px solid #e0eaf5", paddingBottom: "16px", marginBottom: "16px", opacity: openIdx !== 0 && openIdx > 0 ? 0.6 : 1, transition: "opacity 0.2s" }}>
@@ -869,113 +1211,145 @@ Ask a relevant, polite question to spark conversation. Do not pitch.`;
                                     <input type="text" style={{ flex: 1, border: "1px solid #c2d6eb", borderRadius: "10px", padding: "10px 12px", fontSize: "13px", outline: "none", background: "#fff", minWidth: 0 }} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Q3 Outreach Strategy" />
                                     <button style={{ background: "#e0eaf5", border: "1.5px solid #172560", borderRadius: "10px", padding: "0 14px", fontSize: "12px", fontWeight: 700, color: "#172560", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }} onClick={suggestName} onMouseLeave={e => { e.currentTarget.style.background = "#e0eaf5"; e.currentTarget.style.color = "#172560" }} onMouseEnter={e => { e.currentTarget.style.background = "#172560"; e.currentTarget.style.color = "#fff" }}>✨ Auto Suggest</button>
                                 </div>
-                                <button className="adv-unlock-btn" style={{ marginTop: "24px", width: "100%", justifyContent: "center", background: "#10b981", padding: "12px", fontSize: "14px", fontWeight: 700 }} onClick={async (e) => {
+                                <button className="adv-unlock-btn" style={{ marginTop: "24px", width: "100%", justifyContent: "center", background: "#172560" }} onClick={() => setOpenIdx(4)}>Save Name &amp; Continue</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* CP 5: Daily Leads Target */}
+                    <div style={{ borderBottom: "1px solid #e0eaf5", paddingBottom: "16px", marginBottom: "16px", opacity: openIdx !== 4 && openIdx > 4 ? 0.6 : openIdx < 4 ? 0.4 : 1, transition: "opacity 0.2s" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }} onClick={() => { if (openIdx >= 4) setOpenIdx(4); }}>
+                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: openIdx > 4 ? "#10b981" : "#e5e7eb", color: openIdx > 4 ? "#fff" : "#9ca3af", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "12px" }}>
+                                    {openIdx > 4 ? "✓" : "🎯"}
+                                </div>
+                                <div style={{ fontSize: "14px", fontWeight: 600, color: openIdx < 4 ? "#9ca3af" : "#111827", textDecoration: openIdx > 4 ? "line-through" : "none" }}>5. Daily Leads Target</div>
+                            </div>
+                            <div style={{ transform: openIdx === 4 ? "rotate(180deg)" : "", transition: "transform 0.2s", color: "#9ca3af" }}>▼</div>
+                        </div>
+                        {openIdx === 4 && (
+                            <div style={{ marginTop: "16px", paddingLeft: "36px", animation: "fadeUp 0.3s ease both" }}>
+                                <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "10px" }}>
+                                    How many leads do you want to target per day?
+                                    {dailyLimit !== null && (
+                                        <span style={{ marginLeft: "8px", color: "#6b7280", fontWeight: 400, fontSize: "11px" }}>
+                                            (Your remaining LinkedIn daily limit: <strong style={{ color: "#172560" }}>{dailyLimit}</strong>)
+                                        </span>
+                                    )}
+                                </label>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
+                                    {(dailyLimit !== null
+                                        ? [Math.ceil(dailyLimit * 0.25), Math.ceil(dailyLimit * 0.5), Math.ceil(dailyLimit * 0.75), dailyLimit]
+                                        : [10, 20, 30, 40, 50]
+                                    ).map(opt => (
+                                        <div key={opt} onClick={() => setLeadsPerDay(String(opt))} style={{
+                                            padding: "8px 18px", border: `1.5px solid ${leadsPerDay === String(opt) ? '#172560' : '#e5e7eb'}`,
+                                            background: leadsPerDay === String(opt) ? '#e0eaf5' : '#fff',
+                                            borderRadius: "20px", cursor: "pointer", fontSize: "13px", fontWeight: 600,
+                                            color: leadsPerDay === String(opt) ? "#172560" : "#4b5563"
+                                        }}>
+                                            {opt} leads/day {leadsPerDay === String(opt) && '✓'}
+                                        </div>
+                                    ))}
+                                </div>
+                                <label style={{ fontSize: "11px", color: "#6b7280", display: "block", marginBottom: "4px" }}>Or enter a custom number:</label>
+                                <input type="number" min="1" max={dailyLimit || 100} style={{ width: "100%", border: "1px solid #c2d6eb", borderRadius: "10px", padding: "10px 12px", fontSize: "14px", outline: "none", background: "#fff", marginBottom: "16px" }}
+                                    value={leadsPerDay} onChange={e => setLeadsPerDay(e.target.value)} />
+                                <button className="adv-unlock-btn" style={{ width: "100%", justifyContent: "center", background: "#172560" }} onClick={() => setOpenIdx(5)}>Save Daily Target</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* CP 6: Campaign Goal */}
+                    <div style={{ opacity: openIdx < 5 ? 0.4 : 1, transition: "opacity 0.2s" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }} onClick={() => { if (openIdx >= 5) setOpenIdx(5); }}>
+                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: openIdx > 5 ? "#10b981" : "#e5e7eb", color: openIdx > 5 ? "#fff" : "#9ca3af", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "12px" }}>
+                                    {openIdx > 5 ? "✓" : "🚀"}
+                                </div>
+                                <div style={{ fontSize: "14px", fontWeight: 600, color: openIdx < 5 ? "#9ca3af" : "#111827" }}>6. Campaign Goal</div>
+                            </div>
+                            <div style={{ transform: openIdx === 5 ? "rotate(180deg)" : "", transition: "transform 0.2s", color: "#9ca3af" }}>▼</div>
+                        </div>
+                        {openIdx === 5 && (
+                            <div style={{ marginTop: "16px", paddingLeft: "36px", animation: "fadeUp 0.3s ease both" }}>
+                                <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "10px" }}>What is the goal of this campaign?</label>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                                    {[
+                                        { id: 'generate_leads', label: '🎯 Generate qualified leads', desc: 'Grow your pipeline with targeted prospects' },
+                                        { id: 'brand_awareness', label: '📢 Build brand awareness', desc: 'Increase visibility and personal branding' },
+                                        { id: 'hiring', label: '👥 Hiring / Recruitment', desc: 'Find and connect with potential candidates' },
+                                        { id: 'partnership', label: '🤝 Partnership / BD', desc: 'Find potential partners or collaborators' },
+                                        { id: 'event_invite', label: '📅 Event / Webinar Invitations', desc: 'Invite people to events or webinars' },
+                                        { id: 'other', label: '✏️ Other', desc: 'Custom campaign goal' },
+                                    ].map(g => (
+                                        <div key={g.id} onClick={() => setCampaignGoal(g.id)} style={{
+                                            padding: "10px 14px", border: `1.5px solid ${campaignGoal === g.id ? '#172560' : '#e5e7eb'}`,
+                                            background: campaignGoal === g.id ? '#e0eaf5' : '#fff',
+                                            borderRadius: "12px", cursor: "pointer", transition: "all 0.15s"
+                                        }}>
+                                            <div style={{ fontSize: "13px", fontWeight: 600, color: campaignGoal === g.id ? "#172560" : "#111827" }}>{g.label} {campaignGoal === g.id && '✓'}</div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>{g.desc}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="adv-unlock-btn" style={{ width: "100%", justifyContent: "center", background: "#10b981", padding: "12px", fontSize: "14px", fontWeight: 700 }} onClick={async (e) => {
                                     const btn = e.currentTarget;
                                     const oldHtml = btn.innerHTML;
                                     btn.innerHTML = '🚀 Launching...';
                                     btn.style.opacity = '0.7';
                                     btn.style.pointerEvents = 'none';
-
                                     try {
                                         const campaignDays = parseInt(days) || 30;
+                                        const lpd = parseInt(leadsPerDay) || 20;
                                         const startDate = new Date();
                                         const endDate = new Date();
                                         endDate.setDate(endDate.getDate() + campaignDays);
-
                                         const actionSteps: any[] = [];
                                         let orderIdx = 1;
-
                                         if (actions.includes('connect')) {
-                                            actionSteps.push({
-                                                type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++,
-                                                config: { message: connMsg || '' }
-                                            });
+                                            actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
                                         }
                                         if (actions.includes('message')) {
-                                            actionSteps.push({
-                                                type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++,
-                                                config: { message: followMsg || '' }
-                                            });
+                                            actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
                                         }
-
-                                        const processedTargeting = targeting || {
-                                            keywords: [], industries: [], locations: [], job_titles: [], profile_language: []
-                                        };
-
-                                        const campaignPayload = {
+                                        const processedTargeting = targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] };
+                                        const campaignPayload = isInbound ? {
+                                            name: name || 'Inbound Leads Campaign',
+                                            status: 'active',
+                                            campaign_type: 'linkedin_outreach',
+                                            leads_per_day: lpd,
+                                            campaign_goal: campaignGoal || 'generate_leads',
+                                            campaign_start_date: startDate.toISOString(),
+                                            campaign_end_date: endDate.toISOString(),
+                                            config: { data_source: 'inbound', leads_per_day: lpd, daily_lead_limit: lpd, campaign_goal: campaignGoal || 'generate_leads', working_days: 'monday-friday', campaign_days: campaignDays, linkedin_actions: actions, connection_message: connMsg || '', followup_message: followMsg || '' },
+                                            steps: [...actionSteps],
+                                            inbound_leads: inboundLeads!.map(l => ({ first_name: l.firstName, last_name: l.lastName, name: `${l.firstName} ${l.lastName}`.trim(), company_name: l.companyName, linkedin_url: l.linkedinProfile, email: l.email, whatsapp: l.whatsapp, phone: l.phone, website: l.website, notes: l.notes, source: 'inbound_csv' })),
+                                        } : {
                                             name: name || 'AI Growth Campaign',
                                             status: 'active',
                                             campaign_type: 'linkedin_outreach',
-                                            leads_per_day: 40,
+                                            leads_per_day: lpd,
+                                            campaign_goal: campaignGoal || 'generate_leads',
                                             campaign_start_date: startDate.toISOString(),
                                             campaign_end_date: endDate.toISOString(),
-                                            config: {
-                                                data_source: 'linkedin_search',
-                                                search_intent: processedTargeting,
-                                                search_query: processedTargeting.keywords?.join(' ') || '',
-                                                leads_per_day: 40,
-                                                daily_lead_limit: 40,
-                                                working_days: 'monday-friday',
-                                                campaign_days: campaignDays,
-                                                linkedin_actions: actions,
-                                                connection_message: connMsg || '',
-                                                followup_message: followMsg || '',
-                                                location: processedTargeting.locations?.[0] || '',
-                                                industries: processedTargeting.industries || [],
-                                                job_titles: processedTargeting.job_titles || [],
-                                                profile_language: processedTargeting.profile_language || [],
-                                                search_filters: {
-                                                    keywords: processedTargeting.keywords?.join(' ') || '',
-                                                    industries: processedTargeting.industries || [],
-                                                    locations: processedTargeting.locations || [],
-                                                    job_titles: processedTargeting.job_titles || [],
-                                                    profile_language: processedTargeting.profile_language || [],
-                                                }
-                                            },
-                                            steps: [
-                                                {
-                                                    type: 'lead_generation',
-                                                    title: 'LinkedIn Lead Search',
-                                                    channel: 'linkedin',
-                                                    order_index: 0,
-                                                    config: {
-                                                        source: 'linkedin_search',
-                                                        leadGenerationFilters: {
-                                                            keywords: processedTargeting.keywords?.join(' ') || '',
-                                                            industries: processedTargeting.industries || [],
-                                                            locations: processedTargeting.locations || [],
-                                                            job_titles: processedTargeting.job_titles || [],
-                                                        },
-                                                        leadGenerationLimit: 40,
-                                                    }
-                                                },
-                                                ...actionSteps,
-                                            ],
+                                            config: { data_source: 'linkedin_search', search_intent: processedTargeting, search_query: processedTargeting.keywords?.join(' ') || '', leads_per_day: lpd, daily_lead_limit: lpd, campaign_goal: campaignGoal || 'generate_leads', working_days: 'monday-friday', campaign_days: campaignDays, linkedin_actions: actions, connection_message: connMsg || '', followup_message: followMsg || '', location: processedTargeting.locations?.[0] || '', industries: processedTargeting.industries || [], job_titles: processedTargeting.job_titles || [], profile_language: processedTargeting.profile_language || [], search_filters: { keywords: processedTargeting.keywords?.join(' ') || '', industries: processedTargeting.industries || [], locations: processedTargeting.locations || [], job_titles: processedTargeting.job_titles || [], profile_language: processedTargeting.profile_language || [] } },
+                                            steps: [{ type: 'lead_generation', title: 'LinkedIn Lead Search', channel: 'linkedin', order_index: 0, config: { source: 'linkedin_search', leadGenerationFilters: { keywords: processedTargeting.keywords?.join(' ') || '', industries: processedTargeting.industries || [], locations: processedTargeting.locations || [], job_titles: processedTargeting.job_titles || [] }, leadGenerationLimit: lpd } }, ...actionSteps],
                                         };
-
-                                        const res = await fetch(`${API_BASE}/api/campaigns`, {
-                                            method: 'POST',
-                                            headers: headers(),
-                                            body: JSON.stringify(campaignPayload)
-                                        });
-
+                                        const res = await fetch(`${API_BASE}/api/campaigns`, { method: 'POST', headers: headers(), body: JSON.stringify(campaignPayload) });
                                         const data = await res.json();
                                         if (data.success) {
                                             window.location.href = '/campaigns';
                                         } else {
                                             alert('Failed to launch campaign: ' + (data.error || 'Unknown error'));
-                                            btn.innerHTML = oldHtml;
-                                            btn.style.opacity = '1';
-                                            btn.style.pointerEvents = 'auto';
+                                            btn.innerHTML = oldHtml; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
                                         }
                                     } catch (err: any) {
                                         console.error('Campaign creation error', err);
                                         alert('Error launching campaign: ' + err.message);
-                                        btn.innerHTML = oldHtml;
-                                        btn.style.opacity = '1';
-                                        btn.style.pointerEvents = 'auto';
+                                        btn.innerHTML = oldHtml; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
                                     }
-                                }}>🚀 Finalize & Launch Campaign</button>
+                                }}>🚀 Finalize &amp; Launch Campaign</button>
                             </div>
                         )}
                     </div>
