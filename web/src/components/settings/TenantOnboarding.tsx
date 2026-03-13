@@ -17,6 +17,7 @@ import {
   EyeOff,
   RefreshCw,
 } from 'lucide-react';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ interface CreateAccountForm {
 const ADMIN_API = '/api/whatsapp-conversations/admin/whatsapp-accounts';
 
 async function fetchAccounts(): Promise<WhatsAppAccount[]> {
-  const res = await fetch(ADMIN_API);
+  const res = await fetchWithTenant(ADMIN_API);
   const data = await res.json();
   return data.success ? data.data : [];
 }
@@ -64,7 +65,7 @@ async function createAccount(form: CreateAccountForm): Promise<{ success: boolea
     if (!body[key]) delete body[key];
   }
 
-  const res = await fetch(ADMIN_API, {
+  const res = await fetchWithTenant(ADMIN_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -73,7 +74,7 @@ async function createAccount(form: CreateAccountForm): Promise<{ success: boolea
 }
 
 async function updateAccount(slug: string, updates: Record<string, any>): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${ADMIN_API}/${encodeURIComponent(slug)}`, {
+  const res = await fetchWithTenant(`${ADMIN_API}/${encodeURIComponent(slug)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
@@ -82,7 +83,7 @@ async function updateAccount(slug: string, updates: Record<string, any>): Promis
 }
 
 async function deactivateAccount(slug: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${ADMIN_API}/${encodeURIComponent(slug)}`, {
+  const res = await fetchWithTenant(`${ADMIN_API}/${encodeURIComponent(slug)}`, {
     method: 'DELETE',
   });
   return res.json();
