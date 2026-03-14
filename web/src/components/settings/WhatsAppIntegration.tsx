@@ -13,11 +13,18 @@ import {
   Wifi,
   WifiOff,
   Users,
+  Search,
+  User,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +53,14 @@ interface AutoAssignConfig {
   enabled: boolean;
   saved_contacts_to: string;
   unsaved_contacts_to: string;
+}
+
+interface SyncedContact {
+  phone: string;
+  name: string | null;
+  whatsapp_id: string | null;
+  synced_at: string | null;
+  is_saved: boolean;
 }
 
 // ── API helpers ──────────────────────────────────────────────────
@@ -79,6 +94,19 @@ async function updateAutoAssignConfig(tenantId: string | null, config: Partial<A
     return data?.data || null;
   } catch {
     return null;
+  }
+}
+
+async function fetchSyncedContacts(tenantId: string | null): Promise<SyncedContact[]> {
+  try {
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const res = await fetch(`${PERSONAL_WA_API}/contacts`, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data?.data || [];
+  } catch {
+    return [];
   }
 }
 
@@ -174,6 +202,10 @@ export const WhatsAppIntegration: React.FC = () => {
   });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [autoAssignSaving, setAutoAssignSaving] = useState(false);
+  const [contacts, setContacts] = useState<SyncedContact[]>([]);
+  const [contactsSearch, setContactsSearch] = useState('');
+  const [contactsExpanded, setContactsExpanded] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -204,6 +236,9 @@ export const WhatsAppIntegration: React.FC = () => {
       if (connectedAccount) {
         setAccount(connectedAccount);
         setStatus('connected');
+        // Load contacts when connected
+        const syncedContacts = await fetchSyncedContacts(tenantId);
+        setContacts(syncedContacts);
       }
     };
 
@@ -276,6 +311,8 @@ export const WhatsAppIntegration: React.FC = () => {
         setAccount(statusResult);
         setQrImage(null);
         setStatus('connected');
+        // Load contacts after successful connection
+        fetchSyncedContacts(tenantId).then(setContacts);
       } else if (statusResult.status === 'error' || statusResult.status === 'disconnected' || statusResult.status === 'expired') {
         cleanup();
         setQrImage(null);
@@ -489,6 +526,137 @@ export const WhatsAppIntegration: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Synced Contacts List */}
+        {status === 'connected' && (
+          <div className="border-t pt-4 mt-2">
+            <button
+              type="button"
+              className="flex items-center justify-between w-full text-left"
+              onClick={() => {
+                if (!contactsExpanded && contacts.length === 0) {
+                  setContactsLoading(true);
+                  fetchSyncedContacts(tenantId).then((c) => {
+                    setContacts(c);
+                    setContactsLoading(false);
+                  });
+                }
+                setContactsExpanded(!contactsExpanded);
+              }}
+            >
+              <div className="flex gap-3 items-center">
+                <Users className="h-5 w-5 text-gray-500" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Synced Contacts
+                    {contacts.length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-gray-500">
+                        ({contacts.filter(c => c.is_saved).length} saved / {contacts.length} total)
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Contacts from your connected WhatsApp account
+                  </p>
+                </div>
+              </div>
+              {contactsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+
+            {contactsExpanded && (
+              <div className="mt-3 space-y-3">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search name or number..."
+                    value={contactsSearch}
+                    onChange={(e) => setContactsSearch(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
+
+                {/* Contacts list */}
+                {contactsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-500">Loading contacts...</span>
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400">
+                    No contacts synced yet. Contacts will appear after WhatsApp syncs your address book.
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[360px]">
+                    <div className="space-y-0.5">
+                      {contacts
+                        .filter((c) => {
+                          if (!contactsSearch) return true;
+                          const q = contactsSearch.toLowerCase();
+                          return (
+                            (c.name && c.name.toLowerCase().includes(q)) ||
+                            c.phone.includes(q)
+                          );
+                        })
+                        .map((contact) => (
+                          <div
+                            key={contact.phone}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                              {contact.is_saved ? (
+                                <span className="text-sm font-medium text-gray-600">
+                                  {(contact.name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              ) : (
+                                <User className="h-5 w-5 text-gray-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {contact.name || contact.phone}
+                              </p>
+                              {contact.name && (
+                                <p className="text-xs text-gray-500 truncate">+{contact.phone}</p>
+                              )}
+                            </div>
+                            <Badge
+                              variant={contact.is_saved ? 'default' : 'secondary'}
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {contact.is_saved ? 'Saved' : 'Unsaved'}
+                            </Badge>
+                          </div>
+                        ))}
+                    </div>
+                  </ScrollArea>
+                )}
+
+                {/* Refresh button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={contactsLoading}
+                  onClick={() => {
+                    setContactsLoading(true);
+                    fetchSyncedContacts(tenantId).then((c) => {
+                      setContacts(c);
+                      setContactsLoading(false);
+                    });
+                  }}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-2 ${contactsLoading ? 'animate-spin' : ''}`} />
+                  Refresh Contacts
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
 
       {/* Confirmation Dialog */}
