@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { LinkedInIntegration } from './LinkedInIntegration';
 import { TenantOnboarding } from './TenantOnboarding';
+import { useTenant } from '@/contexts/TenantContext';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 type IntegrationView = 'grid' | string;
 
@@ -18,6 +20,7 @@ interface IntegrationCard {
   icon: React.ReactNode;
   iconBg: string;
   category: string;
+  comingSoon?: boolean;
 }
 
 const INTEGRATIONS: IntegrationCard[] = [
@@ -89,12 +92,243 @@ const INTEGRATIONS: IntegrationCard[] = [
     ),
     iconBg: 'bg-purple-50',
     category: 'Social',
+    comingSoon: true,
+  },
+  // Coming Soon integrations
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    description: 'Connect Instagram for DM automation and lead capture from social interactions.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <defs>
+          <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FD5" />
+            <stop offset="50%" stopColor="#FF543E" />
+            <stop offset="100%" stopColor="#C837AB" />
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="url(#ig-grad)" strokeWidth="2"/>
+        <circle cx="12" cy="12" r="5" fill="none" stroke="url(#ig-grad)" strokeWidth="2"/>
+        <circle cx="18" cy="6" r="1.5" fill="url(#ig-grad)"/>
+      </svg>
+    ),
+    iconBg: 'bg-pink-50',
+    category: 'Social',
+    comingSoon: true,
+  },
+  {
+    id: 'facebook',
+    name: 'Facebook',
+    description: 'Connect Facebook Messenger and Pages for lead engagement and messaging.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
+      </svg>
+    ),
+    iconBg: 'bg-blue-50',
+    category: 'Social',
+    comingSoon: true,
+  },
+  {
+    id: 'twitter',
+    name: 'Twitter / X',
+    description: 'Monitor mentions, engage with leads, and automate outreach on Twitter.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="#000"/>
+      </svg>
+    ),
+    iconBg: 'bg-gray-50',
+    category: 'Social',
+    comingSoon: true,
+  },
+  {
+    id: 'tiktok',
+    name: 'TikTok',
+    description: 'Integrate TikTok for lead generation and social commerce automation.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.29 6.29 0 0 0-.79-.05 6.27 6.27 0 0 0-6.27 6.27 6.27 6.27 0 0 0 6.27 6.27 6.27 6.27 0 0 0 6.27-6.27V8.98a8.22 8.22 0 0 0 4.83 1.56V7.09a4.84 4.84 0 0 1-1-.4z" fill="#000"/>
+      </svg>
+    ),
+    iconBg: 'bg-gray-50',
+    category: 'Social',
+    comingSoon: true,
+  },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    description: 'Sync contacts, deals, and activities with your Salesforce CRM.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <path d="M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.862 3.677 2.14a5.1 5.1 0 0 1 2.16-.478c2.82 0 5.112 2.293 5.112 5.112 0 2.82-2.293 5.113-5.112 5.113a5.1 5.1 0 0 1-1.303-.169 3.744 3.744 0 0 1-3.412 2.198 3.72 3.72 0 0 1-1.623-.371A4.495 4.495 0 0 1 8.39 20.22a4.494 4.494 0 0 1-2.2.572c-1.682 0-3.139-.923-3.912-2.29A4.038 4.038 0 0 1 1 18.59c-1.1 0-2.1-.448-2.823-1.172A3.982 3.982 0 0 1-3 14.595c0-1.4.723-2.633 1.815-3.345A4.03 4.03 0 0 1-.5 8.595c0-2.2 1.8-4 4-4a3.98 3.98 0 0 1 2.5.878 4.195 4.195 0 0 1 4.006.942z" fill="#00A1E0" transform="translate(3 2)"/>
+      </svg>
+    ),
+    iconBg: 'bg-sky-50',
+    category: 'CRM',
+    comingSoon: true,
+  },
+  {
+    id: 'zoho',
+    name: 'Zoho CRM',
+    description: 'Integrate Zoho CRM for contact sync, deal tracking, and workflow automation.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <path d="M5.6 7.2L1 12l4.6 4.8L8 14.5 6 12l2-2.5zM12 4l-2.4 1.4L12 16l2.4-10.6zm6.4 3.2L16 9.5l2 2.5-2 2.5 2.4 2.3L23 12z" fill="#E42527"/>
+      </svg>
+    ),
+    iconBg: 'bg-red-50',
+    category: 'CRM',
+    comingSoon: true,
   },
 ];
 
+// Connection status for integrations that support it
+type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
+
 export const IntegrationsSettings: React.FC = () => {
+  const { tenantId } = useTenant();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
+  const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
+
+  // Helper to update a single integration's status
+  const setStatus = useCallback((id: string, status: ConnectionStatus) => {
+    setStatusMap((prev) => ({ ...prev, [id]: status }));
+  }, []);
+
+  // Check all integration statuses on mount
+  useEffect(() => {
+    // WhatsApp Personal
+    const checkWaPersonal = async () => {
+      setStatus('whatsapp-personal', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
+        if (!res.ok) { setStatus('whatsapp-personal', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+        const connected = accounts.some((a: { status: string }) => a.status === 'connected');
+        setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
+      } catch { setStatus('whatsapp-personal', 'disconnected'); }
+    };
+
+    // WhatsApp AI (Business API)
+    const checkWaAI = async () => {
+      setStatus('whatsapp-ai', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
+        if (!res.ok) { setStatus('whatsapp-ai', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+        const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
+        setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
+      } catch { setStatus('whatsapp-ai', 'disconnected'); }
+    };
+
+    // Google
+    const checkGoogle = async () => {
+      setStatus('google', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        if (!res.ok) { setStatus('google', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('google', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('google', 'disconnected'); }
+    };
+
+    // Microsoft
+    const checkMicrosoft = async () => {
+      setStatus('microsoft', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('microsoft', 'disconnected'); }
+    };
+
+    // LinkedIn
+    const checkLinkedIn = async () => {
+      setStatus('linkedin', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
+        if (!res.ok) { setStatus('linkedin', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+        const connected = accounts.some((a: { status?: string }) =>
+          a.status === 'connected' || a.status === 'active'
+        );
+        setStatus('linkedin', connected ? 'connected' : 'disconnected');
+      } catch { setStatus('linkedin', 'disconnected'); }
+    };
+
+    checkWaPersonal();
+    checkWaAI();
+    checkGoogle();
+    checkMicrosoft();
+    checkLinkedIn();
+  }, [tenantId, setStatus]);
+
+  // Re-check all statuses
+  const refreshStatuses = useCallback(() => {
+    // Trigger re-check by re-running the effect
+    const checkAll = async () => {
+      // WhatsApp Personal
+      setStatus('whatsapp-personal', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
+        if (!res.ok) { setStatus('whatsapp-personal', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+        const connected = accounts.some((a: { status: string }) => a.status === 'connected');
+        setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
+      } catch { setStatus('whatsapp-personal', 'disconnected'); }
+
+      // WhatsApp AI
+      setStatus('whatsapp-ai', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
+        if (!res.ok) { setStatus('whatsapp-ai', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+        const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
+        setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
+      } catch { setStatus('whatsapp-ai', 'disconnected'); }
+
+      // Google
+      setStatus('google', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        if (!res.ok) { setStatus('google', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('google', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('google', 'disconnected'); }
+
+      // Microsoft
+      setStatus('microsoft', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('microsoft', 'disconnected'); }
+
+      // LinkedIn
+      setStatus('linkedin', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
+        if (!res.ok) { setStatus('linkedin', 'disconnected'); return; }
+        const data = await res.json();
+        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+        const connected = accounts.some((a: { status?: string }) =>
+          a.status === 'connected' || a.status === 'active'
+        );
+        setStatus('linkedin', connected ? 'connected' : 'disconnected');
+      } catch { setStatus('linkedin', 'disconnected'); }
+    };
+    checkAll();
+  }, [setStatus]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return INTEGRATIONS;
@@ -109,7 +343,10 @@ export const IntegrationsSettings: React.FC = () => {
     return (
       <div className="space-y-4">
         <button
-          onClick={() => setActiveView('grid')}
+          onClick={() => {
+            setActiveView('grid');
+            refreshStatuses();
+          }}
           className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
         >
           &larr; Back to Integrations
@@ -155,9 +392,41 @@ export const IntegrationsSettings: React.FC = () => {
         {filtered.map((integration) => (
           <div
             key={integration.id}
-            className="group relative flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
-            onClick={() => setActiveView(integration.id)}
+            className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
+              integration.comingSoon
+                ? 'opacity-75 cursor-default'
+                : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
+            }`}
+            onClick={() => {
+              if (!integration.comingSoon) setActiveView(integration.id);
+            }}
           >
+            {/* Coming Soon badge (top-right) */}
+            {integration.comingSoon && (
+              <div className="absolute top-3 right-3">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  <Clock className="h-2.5 w-2.5" />
+                  Coming Soon
+                </span>
+              </div>
+            )}
+
+            {/* Status badge (top-right) — only for non-coming-soon integrations */}
+            {!integration.comingSoon && statusMap[integration.id] && statusMap[integration.id] !== 'loading' && (
+              <div className="absolute top-3 right-3">
+                <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                  statusMap[integration.id] === 'connected'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-50 text-gray-500 border border-gray-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    statusMap[integration.id] === 'connected' ? 'bg-green-500' : 'bg-gray-400'
+                  }`} />
+                  {statusMap[integration.id] === 'connected' ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            )}
+
             {/* Icon + Title */}
             <div className="flex items-start gap-3 mb-3">
               <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${integration.iconBg} flex items-center justify-center`}>
@@ -175,10 +444,20 @@ export const IntegrationsSettings: React.FC = () => {
             </p>
 
             {/* Action */}
-            <button className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-primary border border-border rounded-lg py-2 hover:bg-primary/5 transition-colors">
-              <Settings2 className="h-3.5 w-3.5" />
-              Manage
-            </button>
+            {integration.comingSoon ? (
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground border border-border rounded-lg py-2 cursor-not-allowed"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Coming Soon
+              </button>
+            ) : (
+              <button className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-primary border border-border rounded-lg py-2 hover:bg-primary/5 transition-colors">
+                <Settings2 className="h-3.5 w-3.5" />
+                Manage
+              </button>
+            )}
           </div>
         ))}
       </div>
