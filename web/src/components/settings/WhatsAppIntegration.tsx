@@ -12,10 +12,20 @@ import {
   LogOut,
   Wifi,
   WifiOff,
+  Users,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useTenant } from '@/contexts/TenantContext';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -32,9 +42,45 @@ interface PersonalAccount {
   qr_expires_in?: number;
 }
 
+interface AutoAssignConfig {
+  enabled: boolean;
+  saved_contacts_to: string;
+  unsaved_contacts_to: string;
+}
+
 // ── API helpers ──────────────────────────────────────────────────
 
 const PERSONAL_WA_API = '/api/personal-whatsapp';
+
+async function getAutoAssignConfig(tenantId: string | null): Promise<AutoAssignConfig> {
+  try {
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const res = await fetch(`${PERSONAL_WA_API}/auto-assign`, { headers });
+    if (!res.ok) return { enabled: false, saved_contacts_to: 'human_agent', unsaved_contacts_to: 'AI' };
+    const data = await res.json();
+    return data?.data || { enabled: false, saved_contacts_to: 'human_agent', unsaved_contacts_to: 'AI' };
+  } catch {
+    return { enabled: false, saved_contacts_to: 'human_agent', unsaved_contacts_to: 'AI' };
+  }
+}
+
+async function updateAutoAssignConfig(tenantId: string | null, config: Partial<AutoAssignConfig>): Promise<AutoAssignConfig | null> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const res = await fetch(`${PERSONAL_WA_API}/auto-assign`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(config),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data || null;
+  } catch {
+    return null;
+  }
+}
 
 async function createAccount(tenantId: string | null): Promise<PersonalAccount | null> {
   try {
@@ -121,6 +167,13 @@ export const WhatsAppIntegration: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
+  const [autoAssign, setAutoAssign] = useState<AutoAssignConfig>({
+    enabled: false,
+    saved_contacts_to: 'human_agent',
+    unsaved_contacts_to: 'AI',
+  });
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [autoAssignSaving, setAutoAssignSaving] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -147,7 +200,6 @@ export const WhatsAppIntegration: React.FC = () => {
   useEffect(() => {
     const restoreSession = async () => {
       const accounts = await listAccounts(tenantId);
-      // Find the first connected account
       const connectedAccount = accounts.find((acc) => acc.status === 'connected');
       if (connectedAccount) {
         setAccount(connectedAccount);
@@ -155,7 +207,13 @@ export const WhatsAppIntegration: React.FC = () => {
       }
     };
 
+    const loadAutoAssign = async () => {
+      const config = await getAutoAssignConfig(tenantId);
+      setAutoAssign(config);
+    };
+
     restoreSession();
+    loadAutoAssign();
   }, [tenantId]);
 
   // ── Start QR generation ─────────────────────────────────────
@@ -241,6 +299,34 @@ export const WhatsAppIntegration: React.FC = () => {
     setError(null);
     setLoading(false);
   }, [account, tenantId, cleanup]);
+
+  // ── Auto-assign toggle ─────────────────────────────────────
+
+  const handleAutoAssignToggle = useCallback((checked: boolean) => {
+    if (checked) {
+      // Enabling: show confirmation dialog
+      setShowConfirmDialog(true);
+    } else {
+      // Disabling: no confirmation needed
+      setAutoAssignSaving(true);
+      updateAutoAssignConfig(tenantId, { enabled: false }).then((result) => {
+        if (result) setAutoAssign(result);
+        setAutoAssignSaving(false);
+      });
+    }
+  }, [tenantId]);
+
+  const confirmAutoAssign = useCallback(async () => {
+    setAutoAssignSaving(true);
+    setShowConfirmDialog(false);
+    const result = await updateAutoAssignConfig(tenantId, {
+      enabled: true,
+      saved_contacts_to: 'human_agent',
+      unsaved_contacts_to: 'AI',
+    });
+    if (result) setAutoAssign(result);
+    setAutoAssignSaving(false);
+  }, [tenantId]);
 
   // ── Helpers ─────────────────────────────────────────────────
 
@@ -371,7 +457,63 @@ export const WhatsAppIntegration: React.FC = () => {
             Disconnect
           </Button>
         )}
+
+        {/* Auto-Assign Settings */}
+        <div className="border-t pt-4 mt-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-3 items-start">
+              <Users className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Auto-assign contacts</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Saved contacts are assigned to Human Agent. Unsaved numbers go to AI Agent.
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={autoAssign.enabled}
+              onCheckedChange={handleAutoAssignToggle}
+              disabled={autoAssignSaving}
+            />
+          </div>
+          {autoAssign.enabled && (
+            <div className="mt-3 ml-8 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-gray-600">Saved contacts → <span className="font-medium text-gray-800">Human Agent</span></span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-gray-600">Unsaved numbers → <span className="font-medium text-gray-800">AI Agent</span></span>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enable auto-assign for saved contacts?</DialogTitle>
+            <DialogDescription>
+              When enabled, new conversations from your saved WhatsApp contacts will be automatically assigned to a Human Agent. Messages from unsaved numbers will continue to be handled by the AI Agent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+            This means the AI will not respond to messages from your saved contacts. A human agent must handle those conversations manually.
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmAutoAssign} disabled={autoAssignSaving}>
+              {autoAssignSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
+              Yes, enable auto-assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
