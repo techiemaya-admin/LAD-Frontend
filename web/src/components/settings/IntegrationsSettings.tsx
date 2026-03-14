@@ -26,9 +26,15 @@ interface IntegrationCard {
 const INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'whatsapp-ai',
-    name: 'WhatsApp AI Agent',
+    name: 'WhatsApp API Agent',
     description: 'Configure your WhatsApp Business API account for AI-powered conversations.',
-    icon: <Bot className="h-6 w-6 text-green-600" />,
+    icon: (
+      <svg viewBox="0 0 175.216 175.552" className="h-7 w-7">
+        <defs><linearGradient id="wa1" x1="85.915" x2="86.535" y1="32.567" y2="137.092" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#57d163"/><stop offset="1" stopColor="#23b33a"/></linearGradient></defs>
+        <path d="M87.184 25.227c-33.733 0-61.166 27.423-61.178 61.13a60.98 60.98 0 009.349 32.535l1.455 2.313-6.179 22.558 23.146-6.069 2.235 1.324a60.95 60.95 0 0031.29 8.57c33.754 0 61.178-27.444 61.178-61.156a60.8 60.8 0 00-17.895-43.251 60.8 60.8 0 00-43.401-17.954z" fill="url(#wa1)"/>
+        <path d="M68.772 55.603c-1.378-3.061-2.828-3.123-4.137-3.176l-3.524-.043a6.76 6.76 0 00-4.894 2.3c-1.682 1.837-6.426 6.278-6.426 15.312s6.578 17.765 7.497 18.99 12.701 20.326 31.346 27.7c15.518 6.138 18.689 4.918 22.061 4.611s10.877-4.447 12.408-8.74 1.532-7.977 1.073-8.74-1.685-1.226-3.525-2.146-10.877-5.367-12.56-5.981-2.91-.918-4.137.92-4.746 5.979-5.819 7.206-2.144 1.381-3.984.462-7.76-2.861-14.784-9.124c-5.465-4.873-9.154-10.891-10.228-12.73s-.114-2.835.808-3.751c.825-.824 1.838-2.147 2.759-3.22s1.224-1.837 1.836-3.064.307-2.301-.153-3.22-4.032-10.011-5.666-13.647" fill="#fff" fillRule="evenodd"/>
+      </svg>
+    ),
     iconBg: 'bg-green-50',
     category: 'AI',
   },
@@ -36,8 +42,14 @@ const INTEGRATIONS: IntegrationCard[] = [
     id: 'whatsapp-personal',
     name: 'WhatsApp Personal',
     description: 'Connect your personal WhatsApp number via QR code for direct messaging.',
-    icon: <Smartphone className="h-6 w-6 text-emerald-600" />,
-    iconBg: 'bg-emerald-50',
+    icon: (
+      <svg viewBox="0 0 175.216 175.552" className="h-7 w-7">
+        <defs><linearGradient id="wa2" x1="85.915" x2="86.535" y1="32.567" y2="137.092" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#57d163"/><stop offset="1" stopColor="#23b33a"/></linearGradient></defs>
+        <path d="M87.184 25.227c-33.733 0-61.166 27.423-61.178 61.13a60.98 60.98 0 009.349 32.535l1.455 2.313-6.179 22.558 23.146-6.069 2.235 1.324a60.95 60.95 0 0031.29 8.57c33.754 0 61.178-27.444 61.178-61.156a60.8 60.8 0 00-17.895-43.251 60.8 60.8 0 00-43.401-17.954z" fill="url(#wa2)"/>
+        <path d="M68.772 55.603c-1.378-3.061-2.828-3.123-4.137-3.176l-3.524-.043a6.76 6.76 0 00-4.894 2.3c-1.682 1.837-6.426 6.278-6.426 15.312s6.578 17.765 7.497 18.99 12.701 20.326 31.346 27.7c15.518 6.138 18.689 4.918 22.061 4.611s10.877-4.447 12.408-8.74 1.532-7.977 1.073-8.74-1.685-1.226-3.525-2.146-10.877-5.367-12.56-5.981-2.91-.918-4.137.92-4.746 5.979-5.819 7.206-2.144 1.381-3.984.462-7.76-2.861-14.784-9.124c-5.465-4.873-9.154-10.891-10.228-12.73s-.114-2.835.808-3.751c.825-.824 1.838-2.147 2.759-3.22s1.224-1.837 1.836-3.064.307-2.301-.153-3.22-4.032-10.011-5.666-13.647" fill="#fff" fillRule="evenodd"/>
+      </svg>
+    ),
+    iconBg: 'bg-green-50',
     category: 'Messaging',
   },
   {

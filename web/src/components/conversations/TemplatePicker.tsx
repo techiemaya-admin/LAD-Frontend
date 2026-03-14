@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 interface WhatsAppTemplate {
   name: string;
@@ -58,7 +59,7 @@ export function TemplatePicker({
     setSelectedTemplate(null);
     setParamValues([]);
     setSearch('');
-    fetch(TEMPLATES_API)
+    fetchWithTenant(TEMPLATES_API)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setTemplates(data.data || []);
