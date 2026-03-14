@@ -97,16 +97,36 @@ async function updateAutoAssignConfig(tenantId: string | null, config: Partial<A
   }
 }
 
-async function fetchSyncedContacts(tenantId: string | null): Promise<SyncedContact[]> {
+interface ContactsResponse {
+  data: SyncedContact[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+async function fetchSyncedContacts(
+  tenantId: string | null,
+  opts: { page?: number; limit?: number; search?: string } = {},
+): Promise<ContactsResponse> {
+  const empty = { data: [], total: 0, page: 1, limit: 100 };
   try {
     const headers: Record<string, string> = {};
     if (tenantId) headers['X-Tenant-ID'] = tenantId;
-    const res = await fetch(`${PERSONAL_WA_API}/contacts`, { headers });
-    if (!res.ok) return [];
+    const params = new URLSearchParams();
+    params.set('page', String(opts.page || 1));
+    params.set('limit', String(opts.limit || 100));
+    if (opts.search) params.set('search', opts.search);
+    const res = await fetch(`${PERSONAL_WA_API}/contacts?${params}`, { headers });
+    if (!res.ok) return empty;
     const data = await res.json();
-    return data?.data || [];
+    return {
+      data: data?.data || [],
+      total: data?.total || 0,
+      page: data?.page || 1,
+      limit: data?.limit || 100,
+    };
   } catch {
-    return [];
+    return empty;
   }
 }
 
@@ -203,9 +223,21 @@ export const WhatsAppIntegration: React.FC = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [autoAssignSaving, setAutoAssignSaving] = useState(false);
   const [contacts, setContacts] = useState<SyncedContact[]>([]);
+  const [contactsTotal, setContactsTotal] = useState(0);
+  const [contactsPage, setContactsPage] = useState(1);
   const [contactsSearch, setContactsSearch] = useState('');
   const [contactsExpanded, setContactsExpanded] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(false);
+  const contactsSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadContacts = useCallback(async (page = 1, search = '') => {
+    setContactsLoading(true);
+    const result = await fetchSyncedContacts(tenantId, { page, limit: 100, search });
+    setContacts(result.data);
+    setContactsTotal(result.total);
+    setContactsPage(result.page);
+    setContactsLoading(false);
+  }, [tenantId]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,8 +269,7 @@ export const WhatsAppIntegration: React.FC = () => {
         setAccount(connectedAccount);
         setStatus('connected');
         // Load contacts when connected
-        const syncedContacts = await fetchSyncedContacts(tenantId);
-        setContacts(syncedContacts);
+        await loadContacts();
       }
     };
 
@@ -312,7 +343,7 @@ export const WhatsAppIntegration: React.FC = () => {
         setQrImage(null);
         setStatus('connected');
         // Load contacts after successful connection
-        fetchSyncedContacts(tenantId).then(setContacts);
+        loadContacts();
       } else if (statusResult.status === 'error' || statusResult.status === 'disconnected' || statusResult.status === 'expired') {
         cleanup();
         setQrImage(null);
@@ -535,11 +566,7 @@ export const WhatsAppIntegration: React.FC = () => {
               className="flex items-center justify-between w-full text-left"
               onClick={() => {
                 if (!contactsExpanded && contacts.length === 0) {
-                  setContactsLoading(true);
-                  fetchSyncedContacts(tenantId).then((c) => {
-                    setContacts(c);
-                    setContactsLoading(false);
-                  });
+                  loadContacts();
                 }
                 setContactsExpanded(!contactsExpanded);
               }}
@@ -551,7 +578,7 @@ export const WhatsAppIntegration: React.FC = () => {
                     Synced Contacts
                     {contacts.length > 0 && (
                       <span className="ml-2 text-xs font-normal text-gray-500">
-                        ({contacts.filter(c => c.is_saved).length} saved / {contacts.length} total)
+                        ({contactsTotal} total)
                       </span>
                     )}
                   </p>
@@ -575,7 +602,14 @@ export const WhatsAppIntegration: React.FC = () => {
                   <Input
                     placeholder="Search name or number..."
                     value={contactsSearch}
-                    onChange={(e) => setContactsSearch(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setContactsSearch(val);
+                      if (contactsSearchTimerRef.current) clearTimeout(contactsSearchTimerRef.current);
+                      contactsSearchTimerRef.current = setTimeout(() => {
+                        loadContacts(1, val);
+                      }, 400);
+                    }}
                     className="pl-9 h-9 text-sm"
                   />
                 </div>
@@ -591,49 +625,71 @@ export const WhatsAppIntegration: React.FC = () => {
                     No contacts synced yet. Contacts will appear after WhatsApp syncs your address book.
                   </div>
                 ) : (
-                  <ScrollArea className="h-[360px]">
-                    <div className="space-y-0.5">
-                      {contacts
-                        .filter((c) => {
-                          if (!contactsSearch) return true;
-                          const q = contactsSearch.toLowerCase();
-                          return (
-                            (c.name && c.name.toLowerCase().includes(q)) ||
-                            c.phone.includes(q)
-                          );
-                        })
-                        .map((contact) => (
-                          <div
-                            key={contact.phone}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                              {contact.is_saved ? (
-                                <span className="text-sm font-medium text-gray-600">
-                                  {(contact.name || '?').charAt(0).toUpperCase()}
-                                </span>
-                              ) : (
-                                <User className="h-5 w-5 text-gray-400" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">
-                                {contact.name || contact.phone}
-                              </p>
-                              {contact.name && (
-                                <p className="text-xs text-gray-500 truncate">+{contact.phone}</p>
-                              )}
-                            </div>
-                            <Badge
-                              variant={contact.is_saved ? 'default' : 'secondary'}
-                              className="text-[10px] px-1.5 py-0"
+                  <>
+                    <ScrollArea className="h-[360px]">
+                      <div className="space-y-0.5">
+                        {contacts.map((contact) => (
+                            <div
+                              key={contact.phone}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                              {contact.is_saved ? 'Saved' : 'Unsaved'}
-                            </Badge>
-                          </div>
-                        ))}
-                    </div>
-                  </ScrollArea>
+                              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                {contact.is_saved ? (
+                                  <span className="text-sm font-medium text-gray-600">
+                                    {(contact.name || '?').charAt(0).toUpperCase()}
+                                  </span>
+                                ) : (
+                                  <User className="h-5 w-5 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">
+                                  {contact.name || contact.phone}
+                                </p>
+                                {contact.name && (
+                                  <p className="text-xs text-gray-500 truncate">+{contact.phone}</p>
+                                )}
+                              </div>
+                              <Badge
+                                variant={contact.is_saved ? 'default' : 'secondary'}
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {contact.is_saved ? 'Saved' : 'Unsaved'}
+                              </Badge>
+                            </div>
+                          ))}
+                      </div>
+                    </ScrollArea>
+
+                    {/* Pagination */}
+                    {contactsTotal > 100 && (
+                      <div className="flex items-center justify-between pt-2 text-xs text-gray-500">
+                        <span>
+                          Showing {(contactsPage - 1) * 100 + 1}–{Math.min(contactsPage * 100, contactsTotal)} of {contactsTotal}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={contactsPage <= 1 || contactsLoading}
+                            onClick={() => loadContacts(contactsPage - 1, contactsSearch)}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={contactsPage * 100 >= contactsTotal || contactsLoading}
+                            onClick={() => loadContacts(contactsPage + 1, contactsSearch)}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Refresh button */}
@@ -642,13 +698,7 @@ export const WhatsAppIntegration: React.FC = () => {
                   size="sm"
                   className="w-full"
                   disabled={contactsLoading}
-                  onClick={() => {
-                    setContactsLoading(true);
-                    fetchSyncedContacts(tenantId).then((c) => {
-                      setContacts(c);
-                      setContactsLoading(false);
-                    });
-                  }}
+                  onClick={() => loadContacts(1, contactsSearch)}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 mr-2 ${contactsLoading ? 'animate-spin' : ''}`} />
                   Refresh Contacts
