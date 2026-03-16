@@ -5,7 +5,7 @@
  * LAD Architecture Compliant - Uses shared apiClient
  */
 import { apiClient } from '../../shared/apiClient';
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
 const BASE_PATH = `${API_BASE_URL}/api/apollo-leads`;
 /**
  * Search companies using Apollo.io
@@ -134,4 +134,4 @@ export async function revealSinglePhone(
     }
   }
   return null;
-}
+}

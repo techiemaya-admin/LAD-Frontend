@@ -8,7 +8,8 @@ import {
   Save, 
   RotateCcw,
   AlertCircle,
-  Loader2
+  Loader2,
+  Languages
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AgentFormData, LANGUAGES, GENDERS } from '@/types/agent';
+import { AgentFormData, LANGUAGES, GENDERS, Voice } from '@/types/agent';
 import { PromptEditor } from './PromptEditor';
 import { VoicePreview } from './VoicePreview';
 import { CharacterCounter } from './CharacterCounter';
@@ -48,6 +49,8 @@ interface AgentFormProps {
   isSaving: boolean;
   isEditMode: boolean;
   voiceSampleUrl?: string;
+  voices: Voice[];
+  isLoadingVoices: boolean;
   onUpdateField: <K extends keyof AgentFormData>(field: K, value: AgentFormData[K]) => void;
   onSave: () => void;
   onReset: () => void;
@@ -87,11 +90,16 @@ export function AgentForm({
   isSaving,
   isEditMode,
   voiceSampleUrl,
+  voices,
+  isLoadingVoices,
   onUpdateField,
   onSave,
   onReset,
   getCharCount,
 }: AgentFormProps) {
+  // Filter voices by selected gender
+  const filteredVoices = voices.filter((v: Voice) => v.gender === formData.gender);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -230,8 +238,8 @@ export function AgentForm({
       <Card className="form-section animate-fade-in-up stagger-2">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="icon-container bg-accent/10">
-              <Globe className="h-5 w-5 text-accent" />
+            <div className="icon-container">
+              <Languages className="h-5 w-5 text-blue" />
             </div>
             <div>
               <CardTitle className="text-lg">Voice & Language</CardTitle>
@@ -241,6 +249,48 @@ export function AgentForm({
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
+            {/* Voice Selection */}
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="voice">Voice</Label>
+              <Select
+                value={formData.voice_id}
+                onValueChange={(value) => {
+                  onUpdateField('voice_id', value);
+                  const selectedVoice = voices.find(v => v.id === value);
+                  if (selectedVoice) {
+                    // Update voice sample URL for preview
+                    // This would typically be handled via callback to parent
+                  }
+                }}
+                disabled={isLoadingVoices || filteredVoices.length === 0}
+              >
+                <SelectTrigger id="voice" className="w-full">
+                  <SelectValue placeholder={isLoadingVoices ? "Loading voices..." : "Select voice"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredVoices.length === 0 && !isLoadingVoices && (
+                    <SelectItem value="no-voices" disabled>
+                      No voices available for selected gender
+                    </SelectItem>
+                  )}
+                  {filteredVoices.map((voice) => (
+                    <SelectItem key={voice.id} value={voice.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="capitalize text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-muted">
+                          {voice.gender}
+                        </span>
+                        <span>{voice.description}</span>
+                        <span className="text-xs text-muted-foreground">({voice.accent})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {filteredVoices.length} voice{filteredVoices.length !== 1 ? 's' : ''} available for {formData.gender} gender
+              </p>
+            </div>
+
             <div className="flex-1 space-y-2">
               <Label htmlFor="language">Language</Label>
               <Select

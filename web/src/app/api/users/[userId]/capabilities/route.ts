@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 function getBackendBase() {
-  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
   return backendInternal.replace(/\/$/, '');
 }
 // PUT /api/users/:userId/capabilities
@@ -35,4 +35,4 @@ export async function PUT(
     logger.error('[/api/users/:userId/capabilities] PUT Error', e);
     return NextResponse.json({ error: 'Internal error', details: e?.message }, { status: 500 });
   }
-}
+}

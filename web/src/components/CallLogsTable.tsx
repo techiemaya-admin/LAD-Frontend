@@ -19,6 +19,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CalendarRange,
   Copy,
+  Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,10 @@ interface CallLog {
   lead_id?: string;
   type: string;
   status: string;
+  metadata?: {
+    status_reason?: string;
+    [key: string]: any;
+  };
   startedAt?: string;
   duration?: number;
   cost?: number;
@@ -253,6 +258,43 @@ export function CallLogsTable({
     return cleaned;
   };
 
+  // Download attachment helper - uses pre-signed URL directly
+  const downloadAttachment = (signedUrl: string, fileName: string) => {
+    const link = document.createElement("a");
+    link.href = signedUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Format attachment filename - convert timestamp to readable date
+  const formatAttachmentFileName = (fileName: string): string => {
+    // Match pattern like "2026-03-09T12-41-19-128Z-bulk_call_template__9_.xlsx"
+    const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/;
+    const match = fileName.match(timestampPattern);
+    
+    if (match) {
+      const [_, year, month, day, hours, minutes] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+      const formattedDateTime = date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      // Extract the rest of the filename after the timestamp and Z-
+      const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
+      
+      return `${formattedDateTime} - ${restOfFileName}`;
+    }
+    
+    return fileName;
+  };
+
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
     return formatDateTimeUnified(dateStr);
@@ -265,11 +307,26 @@ export function CallLogsTable({
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  // Add computed tag to items
-  const itemsWithTags = useMemo(() => items.map(item => ({
+  const getStatusReason = (item: CallLog): string | undefined => {
+    const raw: any = (item as any)?.metadata;
+    if (!raw) return undefined;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed?.status_reason || parsed?.sip_trail?.status_reason;
+      } catch {
+        return undefined;
+      }
+    }
+    return raw?.status_reason || raw?.sip_trail?.status_reason;
+  };
+
+  // Add computed tag and serial number to items
+  const itemsWithTags = useMemo(() => items.map((item, index) => ({
     ...item,
     tag: getLeadTag(item),
-  })), [items, getLeadTag]);
+    serialNo: ((currentPage - 1) * perPage) + index + 1,
+  })), [items, getLeadTag, currentPage, perPage]);
 
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
@@ -365,14 +422,15 @@ export function CallLogsTable({
       ),
     },
     {
-      id: 'id',
-      accessorKey: 'id',
+      id: 'serialNo',
+      accessorKey: 'serialNo',
       header: 'Serial No',
       size: 60,
       maxSize: 80,
-      cell: ({ row }) => (
+      enableSortingRemoval: false,
+      cell: ({ getValue }) => (
         <span className="font-mono text-xs text-muted-foreground">
-          {((currentPage - 1) * perPage) + row.index + 1}
+          {getValue() as number}
         </span>
       ),
     },
@@ -446,6 +504,15 @@ export function CallLogsTable({
         const status = row.getValue(columnId) as string;
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
+    },
+    {
+      id: 'response',
+      header: 'Response',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground capitalize">
+          {getStatusReason(row.original) || "—"}
+        </span>
+      ),
     },
     {
       id: 'startedAt',
@@ -623,6 +690,11 @@ export function CallLogsTable({
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
 
+    // Get attachment data from header row
+    const attachmentFileName = (headerRow as any)?.attachment_file_name;
+    const attachmentSignedUrl = (headerRow as any)?.attachment_signed_url;
+    const hasAttachment = attachmentSignedUrl && attachmentFileName;
+
     return (
       <TableRow
         key={`batch-${batchId}`}
@@ -653,8 +725,24 @@ export function CallLogsTable({
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
+                <span className="text-muted-foreground">
+                  {hasAttachment && `${formatAttachmentFileName(attachmentFileName)}`}
+                </span>
               </div>
             </div>
+            {hasAttachment && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadAttachment(attachmentSignedUrl, attachmentFileName);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm font-medium"
+                title={`Download ${attachmentFileName}`}
+              >
+                <Download className="w-6 h-6" />
+                
+              </button>
+            )}
           </div>
         </TableCell>
       </TableRow>
@@ -796,12 +884,13 @@ export function CallLogsTable({
         </div>
         {/* Custom Date Inputs (only show when custom is selected) */}
         {dateFilter === 'custom' && (
-          <div className="flex gap-3 px-4">
+          <div className="flex gap-3 px-4 justify-end mt-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">From:</label>
               <input
                 type="date"
                 value={fromDate || ""}
+                max={toDate || undefined}
                 onChange={(e) => onFromDateChange?.(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
@@ -811,8 +900,20 @@ export function CallLogsTable({
               <input
                 type="date"
                 value={toDate || ""}
-                onChange={(e) => onToDateChange?.(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                min={fromDate || undefined}
+                onChange={(e) => {
+                  const newToDate = e.target.value;
+                  if (fromDate && newToDate < fromDate) {
+                    toast({
+                      title: "Invalid Date Range",
+                      description: "To date cannot be before From date",
+                      variant: "error",
+                    });
+                    return;
+                  }
+                  onToDateChange?.(newToDate);
+                }}
+                className={`px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${fromDate && toDate && toDate < fromDate ? 'border-destructive' : 'border-[#E2E8F0]'}`}
               />
             </div>
           </div>
@@ -1081,7 +1182,10 @@ export function CallLogsTable({
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span>of {totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            <span>of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (
+              <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
+            )}
             {callFilter === 'batch' && batchStats && (
               <div className="ml-4 flex items-center gap-3 border-l pl-4">
                 <span className="text-xs">

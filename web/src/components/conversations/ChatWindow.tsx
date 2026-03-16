@@ -13,6 +13,12 @@ interface ChatWindowProps {
   onSendMessage: (content: string) => void;
   onTogglePanel: () => void;
   isPanelOpen: boolean;
+  onPin?: (id: string) => void;
+  onLock?: (id: string) => void;
+  onFavorite?: (id: string) => void;
+  onExport?: (id: string) => void;
+  onBlock?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const ChatWindow = memo(function ChatWindow({
@@ -22,6 +28,12 @@ export const ChatWindow = memo(function ChatWindow({
   onSendMessage,
   onTogglePanel,
   isPanelOpen,
+  onPin,
+  onLock,
+  onFavorite,
+  onExport,
+  onBlock,
+  onDelete,
 }: ChatWindowProps) {
   // Fetch messages from backend (replaces conversation.messages)
   const { messages, isLoading: messagesLoading } = useConversationMessages(
@@ -48,6 +60,12 @@ export const ChatWindow = memo(function ChatWindow({
         onMute={() => onMute(conversation.id)}
         onTogglePanel={onTogglePanel}
         isPanelOpen={isPanelOpen}
+        onPin={() => onPin?.(conversation.id)}
+        onLock={() => onLock?.(conversation.id)}
+        onFavorite={() => onFavorite?.(conversation.id)}
+        onExport={() => onExport?.(conversation.id)}
+        onBlock={() => onBlock?.(conversation.id)}
+        onDelete={() => onDelete?.(conversation.id)}
       />
       {messagesLoading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -60,6 +78,9 @@ export const ChatWindow = memo(function ChatWindow({
         channel={conversation.channel}
         onSendMessage={onSendMessage}
         disabled={conversation.status === 'resolved'}
+        contactName={conversation.contact?.name}
+        conversationId={conversation.id}
+        owner={conversation.owner}
       />
     </div>
   );

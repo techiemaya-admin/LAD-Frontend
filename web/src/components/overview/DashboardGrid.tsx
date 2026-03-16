@@ -74,11 +74,12 @@ type CallLog = {
 
 interface DashboardGridProps {
   className?: string;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 const DAYS_RANGE = 30;
 
-export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
+export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadingChange }) => {
   const { layout, setLayout, isEditMode } = useDashboardStore();
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -121,6 +122,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const { stats: creditsData, loading: creditsLoading } = useWalletStats();
   const { numbers, loading: numbersLoading } = useAvailableNumbers();
 
+  const isLoading = callsLoading || creditsLoading || numbersLoading;
+
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [isLoading, onLoadingChange]);
 
   // Format call duration - prefer duration_seconds from API if available
   const formatDuration = (call: BackendCallLog) => {

@@ -86,6 +86,9 @@ export interface VoiceAgentBatch {
   is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
+  attachments?: string | null;
+  attachment_file_name?: string | null;
+  attachment_signed_url?: string | null;
 }
 
 export interface BatchViewApiResponse {
@@ -133,6 +136,9 @@ export interface CallLog {
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
+  attachments?: string | null;
+  attachment_file_name?: string | null;
+  attachment_signed_url?: string | null;
 }
 
 export interface GetCallLogsParams {
@@ -143,6 +149,14 @@ export interface GetCallLogsParams {
   page?: number;
   limit?: number;
   lead_category?: string;
+  lead_tag?: string;
+}
+
+export interface GetCallLogsLeadStatusParams {
+  status?: string;
+  lead_tag?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface BatchViewParams {

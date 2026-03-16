@@ -10,6 +10,7 @@ interface PipelineActiveFilters {
   priorities: string[];
   sources: string[];
   assignees: string[];
+  dateRange?: { start: string | null; end: string | null } | null;
 }
 interface PipelineSortConfig {
   field: string;
@@ -185,7 +186,8 @@ const initialState: UIState = {
       statuses: [],
       priorities: [],
       sources: [],
-      assignees: []
+      assignees: [],
+      dateRange: { start: null, end: null }
     },
     sortConfig: {
       field: 'createdAt',
@@ -370,7 +372,8 @@ const uiSlice = createSlice({
         statuses: [],
         priorities: [],
         sources: [],
-        assignees: []
+        assignees: [],
+        dateRange: { start: null, end: null }
       };
       state.pipeline.searchQuery = '';
     },

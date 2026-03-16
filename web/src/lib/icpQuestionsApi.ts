@@ -45,6 +45,32 @@ export interface ICPAnswerResponse {
   extractedData?: Record<string, any>;
   error?: string;
 }
+
+function getApiBaseUrl(): string {
+  // Keep browser requests on same-origin to avoid cross-environment JWT mismatch.
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:3000'
+  );
+}
+
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 /**
  * Fetch all ICP questions for a category
  */
@@ -52,9 +78,7 @@ export async function fetchICPQuestions(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestionsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  const baseUrl = getApiBaseUrl();
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -64,6 +88,7 @@ export async function fetchICPQuestions(
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
     });
@@ -85,9 +110,7 @@ export async function fetchICPQuestionByStep(
   category: string = 'lead_generation',
   apiClient?: any
 ): Promise<ICPQuestion | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  const baseUrl = getApiBaseUrl();
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -97,6 +120,7 @@ export async function fetchICPQuestionByStep(
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
     });
@@ -120,9 +144,7 @@ export async function processICPAnswer(
   request: ICPAnswerRequest,
   apiClient?: any
 ): Promise<ICPAnswerResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:4003' : 'https://lad-backend-develop-741719885039.us-central1.run.app');
+  const baseUrl = getApiBaseUrl();
   if (!baseUrl && process.env.NODE_ENV === 'production') {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL must be set in production');
   }
@@ -132,6 +154,7 @@ export async function processICPAnswer(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       credentials: 'include',
       body: JSON.stringify({

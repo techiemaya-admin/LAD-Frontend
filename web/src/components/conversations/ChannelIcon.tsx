@@ -1,7 +1,8 @@
 import { memo } from 'react';
-import { Linkedin, Mail } from 'lucide-react';
+import { Linkedin, Mail, Instagram } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import { faMicrosoft } from '@fortawesome/free-brands-svg-icons';
 import { Channel } from '@/types/conversation';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,16 @@ const channelConfig: Record<Channel, { colorClass: string; bgClass: string; colo
     bgClass: 'bg-orange-100',
     color: '#FFB563',
   },
+  outlook: {
+    colorClass: 'text-blue-700',
+    bgClass: 'bg-blue-50',
+    color: '#0078D4',
+  },
+  instagram: {
+    colorClass: 'text-pink-600',
+    bgClass: 'bg-pink-50',
+    color: '#E4405F',
+  },
 };
 
 export const ChannelIcon = memo(function ChannelIcon({
@@ -51,6 +62,16 @@ export const ChannelIcon = memo(function ChannelIcon({
       return <Linkedin size={size} style={{ color: config.color }} />;
     } else if (channel === 'gmail') {
       return <Mail size={size} style={{ color: config.color }} />;
+    } else if (channel === 'outlook') {
+      return (
+        <FontAwesomeIcon
+          icon={faMicrosoft}
+          size={`${size}px` as any}
+          style={{ color: config.color }}
+        />
+      );
+    } else if (channel === 'instagram') {
+      return <Instagram size={size} style={{ color: config.color }} />;
     }
   };
 

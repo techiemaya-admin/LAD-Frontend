@@ -9,3 +9,4 @@ export { CallLogsSkeleton } from './CallLogsSkeleton';
 export { SettingsSkeleton } from './SettingsSkeleton';
 export { CampaignsSkeleton } from './CampaignsSkeleton';
 export { ConversationSkeleton } from './ConversationSkeleton';
+export { TeamManagementSkeleton } from './TeamManagementSkeleton';

@@ -42,34 +42,31 @@ export default function ProfileSummaryDialog({
     : '';
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] rounded-2xl">
-        <DialogHeader className="flex-row items-center gap-4 pb-4 border-b">
-          <Avatar className="w-14 h-14 border-[3px] border-[#0b1957]">
-            <AvatarImage src={employee?.photo_url} alt={employeeName} />
-            <AvatarFallback className="bg-[#0b1957] text-white">
-              <User className="w-8 h-8" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <DialogTitle className="font-bold text-[#1E293B] m-0">
-              {employeeName}
-            </DialogTitle>
-            {employee?.title && (
-              <Badge className="mt-1 font-semibold text-xs h-6">
-                {employee.title}
-              </Badge>
-            )}
+      <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+        <DialogHeader className="border-b pb-4 shrink-0">
+          <div className="flex flex-row items-center gap-4 w-full">
+            <Avatar className="w-14 h-14 border-[3px] border-[#0b1957] shrink-0">
+              <AvatarImage src={employee?.photo_url || ''} alt={employeeName} />
+              <AvatarFallback className="bg-[#0b1957] text-white">
+                <User className="w-8 h-8" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0 pr-8 overflow-hidden">
+              <DialogTitle className="font-bold text-[#1E293B] m-0 text-lg break-words whitespace-normal leading-snug">
+                {employeeName}
+              </DialogTitle>
+              {employee?.title && (
+                <div className="mt-1">
+                  <Badge className="font-semibold text-xs py-0.5 px-2 bg-[#e0eaf5] text-[#172560] hover:bg-[#c2d6eb] whitespace-normal break-words max-w-full inline-block">
+                    {employee.title}
+                  </Badge>
+                </div>
+              )}
+            </div>
+            <DialogTitle className="hidden">Summary</DialogTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="p-2 text-[#64748B] hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </Button>
         </DialogHeader>
-        <div className="pt-6 pb-4">
+        <div className="pt-6 pb-4 overflow-y-auto flex-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#0b1957] mb-4" />

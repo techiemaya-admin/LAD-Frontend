@@ -35,13 +35,15 @@ export function useConversations(): UseConversationsReturn {
   // Local UI state
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
+  const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Build filters from local state
   const filters: ConversationListFilters = useMemo(() => ({
     channel: channelFilter !== 'all' ? channelFilter : undefined,
     search: searchQuery || undefined,
-  }), [channelFilter, searchQuery]);
+    context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
+  }), [channelFilter, searchQuery, contextStatusFilter]);
 
   // Fetch conversations from backend
   const conversationsQuery = useQuery(getConversationsOptions(filters));
@@ -98,6 +100,7 @@ export function useConversations(): UseConversationsReturn {
         conversationId: effectiveSelectedId,
         content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
+        phoneNumber: selectedConversation.contact.phone,
       });
     },
     [effectiveSelectedId, selectedConversation, sendMutation]
@@ -137,6 +140,8 @@ export function useConversations(): UseConversationsReturn {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 
                     process.env.NEXT_PUBLIC_BACKEND_URL || 
                     process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
-                    'https://lad-backend-develop-741719885039.us-central1.run.app';
+                    'https://lad-backend-develop-160078175457.us-central1.run.app';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

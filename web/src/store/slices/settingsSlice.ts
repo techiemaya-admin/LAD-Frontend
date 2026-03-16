@@ -11,6 +11,11 @@ interface SettingsState {
   dateFormat: 'DD-MM-YYYY' | 'MM-DD-YYYY';
   companyName: string;
   companyLogo: string;
+  companyLocation: string;
+  companyIcp: string;
+  companyAbout: string;
+  companyServices: string;
+  companyBusinessHours: string;
   [key: string]: unknown;
 }
 
@@ -34,17 +39,17 @@ const loadSettingsFromStorage = (): Partial<SettingsState> => {
   if (typeof window === 'undefined') return {};
   try {
     let stored: string | null = null;
-    
+
     // Try user-scoped storage first
     if (userStorage) {
       stored = userStorage.getItem('app_settings');
     }
-    
+
     // Fallback to regular localStorage
     if (!stored) {
       stored = localStorage.getItem('app_settings');
     }
-    
+
     if (stored) {
       const parsed = JSON.parse(stored);
       if (process.env.NODE_ENV === 'development') {
@@ -88,6 +93,11 @@ const defaultState: SettingsState = {
   dateFormat: 'DD-MM-YYYY',
   companyName: 'Techiemaya',
   companyLogo: 'https://agent.techiemaya.com/assets/logo-DtZyzd-3.png',
+  companyLocation: '',
+  companyIcp: '',
+  companyAbout: '',
+  companyServices: '',
+  companyBusinessHours: '',
   // ...other settings as needed
 };
 
@@ -124,6 +134,31 @@ const settingsSlice = createSlice({
       state.companyLogo = action.payload;
       saveSettingsToStorage(state);
     },
+    // Set company location
+    setCompanyLocation(state, action: PayloadAction<string>) {
+      state.companyLocation = action.payload;
+      saveSettingsToStorage(state);
+    },
+    // Set company ICP
+    setCompanyIcp(state, action: PayloadAction<string>) {
+      state.companyIcp = action.payload;
+      saveSettingsToStorage(state);
+    },
+    // Set about company
+    setCompanyAbout(state, action: PayloadAction<string>) {
+      state.companyAbout = action.payload;
+      saveSettingsToStorage(state);
+    },
+    // Set business services
+    setCompanyServices(state, action: PayloadAction<string>) {
+      state.companyServices = action.payload;
+      saveSettingsToStorage(state);
+    },
+    // Set business hours
+    setCompanyBusinessHours(state, action: PayloadAction<string>) {
+      state.companyBusinessHours = action.payload;
+      saveSettingsToStorage(state);
+    },
     // Set multiple user settings at once
     setUserSettings(state, action: PayloadAction<Partial<SettingsState>>) {
       Object.assign(state, action.payload);
@@ -132,7 +167,7 @@ const settingsSlice = createSlice({
   },
 });
 // Export actions for use in components
-export const { rehydrateSettings, setTheme, setLanguage, setCompanyName, setCompanyLogo, setUserSettings } = settingsSlice.actions;
+export const { rehydrateSettings, setTheme, setLanguage, setCompanyName, setCompanyLogo, setCompanyLocation, setCompanyIcp, setCompanyAbout, setCompanyServices, setCompanyBusinessHours, setUserSettings } = settingsSlice.actions;
 export default settingsSlice.reducer;
 // Selector to get the settings object from state
 export const selectSettings = (state: { settings: SettingsState }): SettingsState => state.settings;

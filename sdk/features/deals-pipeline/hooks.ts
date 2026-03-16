@@ -3,4 +3,4 @@
  * Delegates to ./hooks/ directory for all hook implementations
  */
 
-export * from './hooks/index';
+export * from "./hooks";

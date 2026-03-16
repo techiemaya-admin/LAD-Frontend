@@ -135,7 +135,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
           onClick={onOpenFilter}
           className="rounded-lg text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
         >
-          <Filter className="mr-2 h-4 w-4" />
+          <Filter className="h-4 w-4" />
           Filter
         </Button>
         <Button
@@ -143,7 +143,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
           onClick={onOpenSort}
           className="rounded-lg text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
         >
-          <ArrowUpDown className="mr-2 h-4 w-4" />
+          <ArrowUpDown className="h-4 w-4" />
           Sort
         </Button>
         <button

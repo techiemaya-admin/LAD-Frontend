@@ -14,6 +14,9 @@ import {
   LayoutGrid,
   List
 } from 'lucide-react';
+
+const isLocal = process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true';
+
 interface PipelineBoardToolbarProps {
   // Data
   totalLeads: number;
@@ -115,7 +118,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
             </div>
 
             {/* Action buttons (hidden in list view) */}
-            {viewMode !== 'list' && (
+            {viewMode !== 'list' && isLocal && (
               <>
               
                 <Button
@@ -187,7 +190,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                   onClick={onOpenFilter}
                   className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                 >
-                  <Filter className="mr-1 h-4 w-4" />
+                  <Filter className="h-4 w-4" />
                   Filter
                 </Button>
                 <DropdownMenu>
@@ -196,7 +199,7 @@ const PipelineBoardToolbar: React.FC<PipelineBoardToolbarProps> = ({
                       variant="outline"
                       className="rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                     >
-                      <Download className="mr-1 h-4 w-4" />
+                      <Download className="h-4 w-4" />
                       Export
                     </Button>
                   </DropdownMenuTrigger>

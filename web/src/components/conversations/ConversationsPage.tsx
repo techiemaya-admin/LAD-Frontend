@@ -1,15 +1,22 @@
 "use client";
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
+import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
-import { NotificationBell } from './NotificationBell';
+import type { ChatGroup } from './ChatGroupManager';
+import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+
+const CONV_API = '/api/whatsapp-conversations/conversations';
 
 export function ConversationsPage() {
+  const queryClient = useQueryClient();
   const {
     conversations,
     selectedConversation,
@@ -17,6 +24,8 @@ export function ConversationsPage() {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,
@@ -28,6 +37,39 @@ export function ConversationsPage() {
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
+  // Track whether user explicitly selected a conversation while in group view
+  const [groupMemberSelected, setGroupMemberSelected] = useState(false);
+  // Whether to auto-open the group info panel
+  const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
+
+  // When selecting a group, show group merged view
+  const handleSelectGroup = useCallback((group: ChatGroup) => {
+    setActiveGroup(group);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+  }, []);
+
+  // Open group view with info panel pre-opened (from Chat Groups list info button)
+  const handleOpenGroupInfo = useCallback((group: ChatGroup) => {
+    setActiveGroup(group);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(true);
+  }, []);
+
+  const handleBackFromGroup = useCallback(() => {
+    setActiveGroup(null);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+  }, []);
+
+  // Wrap selectConversation to track explicit member selection in group view
+  const handleSelectConversation = useCallback((id: string) => {
+    selectConversation(id);
+    if (activeGroup) {
+      setGroupMemberSelected(true); // user clicked a member in group → show their chat
+    }
+  }, [selectConversation, activeGroup]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((prev) => !prev);
@@ -37,20 +79,131 @@ export function ConversationsPage() {
     setIsContextPanelOpen((prev) => !prev);
   }, []);
 
-  const handleNotificationClick = useCallback((conversationId: string) => {
-    selectConversation(conversationId);
-  }, [selectConversation]);
+  // CRM action handlers (all use fetchWithTenant for correct tenant DB routing)
+  const handlePin = useCallback(async (id: string) => {
+    try {
+      const res = await fetchWithTenant(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_pinned status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  const handleLock = useCallback(async (id: string) => {
+    try {
+      const res = await fetchWithTenant(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_locked status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  const handleFavorite = useCallback(async (id: string) => {
+    try {
+      const res = await fetchWithTenant(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_favorite status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  const handleExport = useCallback(async (id: string) => {
+    // Client-side export: build text file from messages
+    try {
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${id}/messages`);
+      const data = await res.json();
+      if (!data.success) return;
+      const lines = (data.data || []).map(
+        (m: { role: string; content: string; created_at: string }) =>
+          `[${m.created_at || ''}] ${m.role}: ${m.content}`
+      );
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation-${id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, []);
+
+  const handleBlock = useCallback(async (id: string) => {
+    try {
+      const res = await fetchWithTenant(`${CONV_API}/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'resolved' }),
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const res = await fetchWithTenant(`${CONV_API}/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
+    try {
+      let res: Response | undefined;
+      if (action === 'resolve') {
+        res = await fetchWithTenant(`${CONV_API}/bulk`, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
+        });
+      } else if (action === 'delete') {
+        res = await fetchWithTenant(`${CONV_API}/bulk`, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', ids }),
+        });
+      }
+      if (res?.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch {}
+  }, [queryClient]);
+
+  // Type conversions and data enrichment
+  const typedConversations = useMemo(
+    () => conversations as Conversation[],
+    [conversations]
+  );
+
+  const typedSelectedConversation = useMemo(
+    () => selectedConversation as Conversation | null,
+    [selectedConversation]
+  );
+
+  const allUnreadCounts = useMemo(() => {
+    const channels: (Channel | 'all')[] = ['all', 'whatsapp', 'linkedin', 'gmail', 'outlook', 'instagram'];
+    const result: Record<Channel | 'all', number> = {
+      all: 0,
+      whatsapp: 0,
+      linkedin: 0,
+      gmail: 0,
+      outlook: 0,
+      instagram: 0,
+    };
+    
+    channels.forEach((channel) => {
+      if (channel in unreadCounts) {
+        result[channel] = (unreadCounts as any)[channel];
+      }
+    });
+    
+    return result;
+  }, [unreadCounts]);
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header with notification bell */}
-      <div className="flex items-center justify-end px-4 py-3 border-b border-border bg-white">
-        <NotificationBell
-          conversations={allConversations}
-          onNotificationClick={handleNotificationClick}
-        />
-      </div>
-
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
@@ -64,14 +217,19 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
             >
               <ConversationSidebar
-                conversations={conversations}
+                conversations={typedConversations}
                 selectedId={selectedId}
-                onSelectConversation={selectConversation}
+                onSelectConversation={handleSelectConversation}
                 channelFilter={channelFilter}
                 onChannelFilterChange={setChannelFilter}
+                contextStatusFilter={contextStatusFilter}
+                onContextStatusFilterChange={setContextStatusFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                unreadCounts={unreadCounts}
+                unreadCounts={allUnreadCounts}
+                onBulkAction={handleBulkAction}
+                onGroupSelect={handleSelectGroup}
+                onOpenGroupInfo={handleOpenGroupInfo}
               />
             </motion.div>
           )}
@@ -96,17 +254,22 @@ export function ConversationsPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <ConversationSidebar
-                  conversations={conversations}
+                  conversations={typedConversations}
                   selectedId={selectedId}
                   onSelectConversation={(id) => {
-                    selectConversation(id);
+                    handleSelectConversation(id);
                     setIsSidebarCollapsed(true);
                   }}
                   channelFilter={channelFilter}
                   onChannelFilterChange={setChannelFilter}
+                  contextStatusFilter={contextStatusFilter}
+                  onContextStatusFilterChange={setContextStatusFilter}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
-                  unreadCounts={unreadCounts}
+                  unreadCounts={allUnreadCounts}
+                  onBulkAction={handleBulkAction}
+                  onGroupSelect={handleSelectGroup}
+                  onOpenGroupInfo={handleOpenGroupInfo}
                 />
               </motion.div>
             </motion.div>
@@ -127,19 +290,35 @@ export function ConversationsPage() {
           </div>
         )}
 
-        {/* Main Chat Area */}
-        <ChatWindow
-          conversation={selectedConversation}
-          onMarkResolved={markAsResolved}
-          onMute={muteConversation}
-          onSendMessage={sendMessage}
-          onTogglePanel={toggleContextPanel}
-          isPanelOpen={isContextPanelOpen}
-        />
+        {/* Main Chat Area: group merged view OR individual chat */}
+        {activeGroup && !groupMemberSelected ? (
+          <GroupChatWindow
+            groupId={activeGroup.id}
+            groupName={activeGroup.name}
+            groupColor={activeGroup.color}
+            onBack={handleBackFromGroup}
+            autoOpenInfo={groupInfoAutoOpen}
+          />
+        ) : (
+          <ChatWindow
+            conversation={typedSelectedConversation}
+            onMarkResolved={markAsResolved}
+            onMute={muteConversation}
+            onSendMessage={sendMessage}
+            onTogglePanel={toggleContextPanel}
+            isPanelOpen={isContextPanelOpen}
+            onPin={handlePin}
+            onLock={handleLock}
+            onFavorite={handleFavorite}
+            onExport={handleExport}
+            onBlock={handleBlock}
+            onDelete={handleDelete}
+          />
+        )}
 
-        {/* Context Panel */}
+        {/* Context Panel (hidden in group merged view, shown for individual chats) */}
         <AnimatePresence mode="wait">
-          {isContextPanelOpen && selectedConversation && (
+          {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 320, opacity: 1 }}
@@ -148,7 +327,7 @@ export function ConversationsPage() {
               className="h-full flex-shrink-0 overflow-hidden hidden md:block"
             >
               <ConversationContextPanel
-                conversation={selectedConversation}
+                conversation={typedSelectedConversation}
                 onClose={toggleContextPanel}
               />
             </motion.div>

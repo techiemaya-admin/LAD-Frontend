@@ -40,14 +40,14 @@ const createUserScopedStorage = () => {
     getItem: async (name: string): Promise<string | null> => {
       try {
         if (typeof window === 'undefined') return null;
-        
+
         // Try user-scoped storage first
         const userStorage = await getUserStorageInstance();
         if (userStorage) {
           const value = userStorage.getItem(name);
           if (value) return value;
         }
-        
+
         // Fallback to regular localStorage
         return localStorage.getItem(name);
       } catch (e) {
@@ -58,7 +58,7 @@ const createUserScopedStorage = () => {
     setItem: async (name: string, value: string): Promise<void> => {
       try {
         if (typeof window === 'undefined') return;
-        
+
         // Try user-scoped storage first
         const userStorage = await getUserStorageInstance();
         if (userStorage) {
@@ -74,7 +74,7 @@ const createUserScopedStorage = () => {
     removeItem: async (name: string): Promise<void> => {
       try {
         if (typeof window === 'undefined') return;
-        
+
         // Try user-scoped storage first
         const userStorage = await getUserStorageInstance();
         if (userStorage) {
@@ -93,7 +93,7 @@ const createUserScopedStorage = () => {
 // New onboarding state structure
 export type MainOption = 'automation' | 'leads' | null;
 export type LeadType = 'inbound' | 'outbound' | null;
-export type CampaignDataType = 'inbound' | 'outbound' | null;
+export type CampaignDataType = 'inbound' | 'outbound' | 'advanced_search' | null;
 // Inbound data structure for user submission
 export interface InboundLeadData {
   companyName: string;
@@ -267,6 +267,7 @@ interface OnboardingState {
   inboundLeadData: InboundLeadData | null; // User-submitted inbound lead data
   inboundAnalysis: InboundAnalysisResult | null; // Gemini analysis of inbound data
   isInboundFormVisible: boolean; // Show the inbound data entry form
+  advancedSearchIntent: Record<string, any> | null; // Gemini-extracted search intent for Advanced Search
   // Actions
   setCurrentScreen: (screen: 0 | 1 | 2 | 3) => void;
   setIsEditMode: (editMode: boolean) => void;
@@ -366,6 +367,7 @@ const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' |
   inboundLeadData: null,
   inboundAnalysis: null,
   isInboundFormVisible: false,
+  advancedSearchIntent: null,
 };
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
