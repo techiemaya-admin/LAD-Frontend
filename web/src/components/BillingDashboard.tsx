@@ -5,6 +5,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { CreditUsageAnalytics } from './CreditUsageAnalytics';
 import Link from 'next/link';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { getCreditsBalance, getCreditsBalanceLegacy } from '@lad/frontend-features/billing';
 interface CreditBalance {
   credits: number;
   lastRecharge: {
@@ -27,49 +28,35 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
   }, []);
   const fetchCreditBalance = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/billing/wallet`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const walletData = await getCreditsBalance();
+
+      setBalance({
+        credits: walletData.availableBalance || walletData.currentBalance || 0,
+        lastRecharge: null,
+        monthlyUsage: 0,
+        totalSpent: 0
       });
-      if (!response.ok) {
-        // Fall back to legacy endpoint
-        const legacyResponse = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!legacyResponse.ok) {
-          throw new Error('Failed to fetch credit balance');
-        }
-        const legacyData = await legacyResponse.json();
+
+    } catch (err) {
+      // Fallback to legacy endpoint
+      try {
+        const legacyData = await getCreditsBalanceLegacy();
         setBalance({
           credits: legacyData.credits || legacyData.balance || 0,
           lastRecharge: legacyData.lastRecharge || null,
           monthlyUsage: legacyData.monthlyUsage || 0,
           totalSpent: legacyData.totalSpent || 0
         });
-        setLoading(false);
-        return;
+      } catch (legacyErr) {
+        console.error('Error fetching credit balance:', legacyErr);
+        setBalance({
+          credits: 0,
+          lastRecharge: null,
+          monthlyUsage: 0,
+          totalSpent: 0
+        });
       }
-      const data = await response.json();
-      // Transform new API response to balance data
-      setBalance({
-        credits: data.wallet?.availableBalance || data.wallet?.currentBalance || 0,
-        lastRecharge: data.lastRecharge || null,
-        monthlyUsage: data.monthlyUsage || 0,
-        totalSpent: data.totalSpent || 0
-      });
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching credit balance:', err);
-      // Show zero balance on error
-      setBalance({
-        credits: 0,
-        lastRecharge: null,
-        monthlyUsage: 0,
-        totalSpent: 0
-      });
+    } finally {
       setLoading(false);
     }
   };
@@ -211,7 +198,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
                   <h3 className="text-sm font-medium text-yellow-800">Low Credit Balance</h3>
                   <div className="mt-2 text-sm text-yellow-700">
                     <p>
-                      You're running low on credits. Consider purchasing the <strong>Starter Plan</strong> (1,000 credits for $99) 
+                      You're running low on credits. Consider purchasing the <strong>Starter Plan</strong> (1,000 credits for $99)
                       to continue using all features without interruption.
                     </p>
                   </div>
@@ -237,7 +224,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
                   <h3 className="text-sm font-medium text-blue-800">High Usage Detected</h3>
                   <div className="mt-2 text-sm text-blue-700">
                     <p>
-                      You're using an average of {balance.monthlyUsage.toLocaleString()} credits per month. 
+                      You're using an average of {balance.monthlyUsage.toLocaleString()} credits per month.
                       Consider the <strong>Professional Plan</strong> (3,000 credits for $199) for better value.
                     </p>
                   </div>
@@ -265,7 +252,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
                   <h3 className="text-sm font-medium text-green-800">You're All Set!</h3>
                   <div className="mt-2 text-sm text-green-700">
                     <p>
-                      You have plenty of credits for your current usage. Your balance of {balance.credits.toLocaleString()} credits 
+                      You have plenty of credits for your current usage. Your balance of {balance.credits.toLocaleString()} credits
                       will last approximately {Math.floor(balance.credits / (balance.monthlyUsage / 30))} days at your current rate.
                     </p>
                   </div>

@@ -20,6 +20,7 @@ import { MiniStepper } from './MiniStepper';
 import { StatusStepper } from './StatusStepper';
 import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
 import { LiveBadge } from '@/components/LiveBadge';
+import { exportCampaignLeads } from '../../../../sdk/features/campaigns/api';
 
 interface LiveActivityTableProps {
   campaignId: string;
@@ -52,107 +53,84 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
   const handleExportLeads = async (filter: string) => {
     try {
-      const token = typeof window !== 'undefined'
-        ? (localStorage.getItem('token') || document.cookie.split('token=')[1]?.split(';')[0] || '')
-        : '';
-      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app').replace(/\/+$/, '');
+      const leads = await exportCampaignLeads(campaignId, filter);
 
-      const res = await fetch(`${backendUrl}/api/campaigns/${campaignId}/analytics/export?filter=${filter}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Export API error:', res.status, errorText);
-        alert(`Export failed: ${res.status} ${errorText}`);
+      if (leads.length === 0) {
+        alert('No leads found for the selected category.');
         return;
       }
 
-      const response = await res.json();
+      try {
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Leads');
 
-      if (response.success && response.data) {
-        const leads = response.data;
-        if (leads.length === 0) {
-          alert('No leads found for the selected category.');
-          return;
+        worksheet.columns = [
+          { header: 'First Name', key: 'first_name', width: 18 },
+          { header: 'Last Name', key: 'last_name', width: 18 },
+          { header: 'Company', key: 'company_name', width: 25 },
+          { header: 'Title / Headline', key: 'title', width: 25 },
+          { header: 'Email', key: 'email', width: 30 },
+          { header: 'Phone', key: 'phone', width: 18 },
+          { header: 'LinkedIn URL', key: 'linkedin_url', width: 45 },
+          { header: 'Location', key: 'location', width: 20 },
+          { header: 'Industry', key: 'industry', width: 22 },
+          { header: 'Added At', key: 'added_at', width: 25 },
+        ];
+
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1957' } };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        headerRow.height = 24;
+
+        for (const lead of leads) {
+          const raw = lead.raw_info || {};
+          worksheet.addRow({
+            first_name: lead.first_name || '',
+            last_name: lead.last_name || '',
+            company_name: lead.company_name || '',
+            title: lead.title || '',
+            email: lead.email || '',
+            phone: lead.phone || '',
+            linkedin_url: lead.linkedin_url || '',
+            location: lead.location || raw.city || '',
+            industry: lead.industry || raw.industry || '',
+            added_at: lead.added_at || '',
+          });
         }
 
-        try {
-          const ExcelJS = await import('exceljs');
-          const workbook = new ExcelJS.Workbook();
-          const worksheet = workbook.addWorksheet('Leads');
+        worksheet.autoFilter = { from: 'A1', to: `J${leads.length + 1}` };
 
-          worksheet.columns = [
-            { header: 'First Name', key: 'first_name', width: 18 },
-            { header: 'Last Name', key: 'last_name', width: 18 },
-            { header: 'Company', key: 'company_name', width: 25 },
-            { header: 'Title / Headline', key: 'title', width: 25 },
-            { header: 'Email', key: 'email', width: 30 },
-            { header: 'Phone', key: 'phone', width: 18 },
-            { header: 'LinkedIn URL', key: 'linkedin_url', width: 45 },
-            { header: 'Location', key: 'location', width: 20 },
-            { header: 'Industry', key: 'industry', width: 22 },
-            { header: 'Added At', key: 'added_at', width: 25 },
-          ];
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const { saveAs } = await import('file-saver');
+        saveAs(blob, `leads_${filter}_${new Date().getTime()}.xlsx`);
 
-          const headerRow = worksheet.getRow(1);
-          headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-          headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1957' } };
-          headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-          headerRow.height = 24;
-
-          for (const lead of leads) {
-            const raw = lead.raw_info || {};
-            worksheet.addRow({
-              first_name: lead.first_name || '',
-              last_name: lead.last_name || '',
-              company_name: lead.company_name || '',
-              title: lead.title || '',
-              email: lead.email || '',
-              phone: lead.phone || '',
-              linkedin_url: lead.linkedin_url || '',
-              location: lead.location || raw.city || '',
-              industry: lead.industry || raw.industry || '',
-              added_at: lead.added_at || '',
-            });
-          }
-
-          worksheet.autoFilter = { from: 'A1', to: `J${leads.length + 1}` };
-
-          const buffer = await workbook.xlsx.writeBuffer();
-          const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-          const { saveAs } = await import('file-saver');
-          saveAs(blob, `leads_${filter}_${new Date().getTime()}.xlsx`);
-        } catch (excelError) {
-          console.warn('ExcelJS failed, falling back to CSV:', excelError);
-          const headers = ['First Name', 'Last Name', 'Company', 'Title/Headline', 'Email', 'Phone', 'LinkedIn URL', 'Location', 'Industry', 'Added At'];
-          const escape = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
-          const csvRows = [headers.join(',')];
-          for (const lead of leads) {
-            const raw = lead.raw_info || {};
-            csvRows.push([
-              escape(lead.first_name), escape(lead.last_name), escape(lead.company_name),
-              escape(lead.title), escape(lead.email), escape(lead.phone),
-              escape(lead.linkedin_url), escape(lead.location || raw.city || ''),
-              escape(lead.industry || raw.industry || ''), escape(lead.added_at),
-            ].join(','));
-          }
-          const csvContent = '\uFEFF' + csvRows.join('\r\n');
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `leads_${filter}_${new Date().getTime()}.csv`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+      } catch (excelError) {
+        console.warn('ExcelJS failed, falling back to CSV:', excelError);
+        const headers = ['First Name', 'Last Name', 'Company', 'Title/Headline', 'Email', 'Phone', 'LinkedIn URL', 'Location', 'Industry', 'Added At'];
+        const escape = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
+        const csvRows = [headers.join(',')];
+        for (const lead of leads) {
+          const raw = lead.raw_info || {};
+          csvRows.push([
+            escape(lead.first_name), escape(lead.last_name), escape(lead.company_name),
+            escape(lead.title), escape(lead.email), escape(lead.phone),
+            escape(lead.linkedin_url), escape(lead.location || raw.city || ''),
+            escape(lead.industry || raw.industry || ''), escape(lead.added_at),
+          ].join(','));
         }
-      } else {
-        alert('Failed to export leads.');
+        const csvContent = '\uFEFF' + csvRows.join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `leads_${filter}_${new Date().getTime()}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
+
     } catch (error) {
       console.error('Export failed:', error);
       alert('Error occurred while exporting: ' + (error instanceof Error ? error.message : String(error)));
