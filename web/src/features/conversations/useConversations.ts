@@ -93,13 +93,17 @@ export function useConversations(): UseConversationsReturn {
     dispatch(markConversationRead(id));
   }, [dispatch]);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!selectedId || !content.trim()) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-    };
+    const conv = conversationsFromRedux.find((c) => String(c.id) === String(selectedId));
+    const leadId = conv?.leadId;
 
+    // Optimistically add to local state
+    const tempId = `msg-${Date.now()}`;
+    const newMessage: Message = {
+      id: tempId,
+    };
     dispatch(
       addMessageToConversation({
         conversationId: selectedId,
@@ -107,7 +111,28 @@ export function useConversations(): UseConversationsReturn {
         isActive: true,
       })
     );
-  }, [selectedId, dispatch]);
+
+    // Send to backend API (which sends via WhatsApp)
+    try {
+      const res = await fetch(
+        `/api/whatsapp-conversations/conversations/${selectedId}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: content.trim(),
+            lead_id: leadId ? String(leadId) : undefined,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        console.error('Failed to send message via WhatsApp:', data.error);
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  }, [selectedId, conversationsFromRedux, dispatch]);
 
   const markAsResolved = useCallback((id: string | number) => {
     dispatch(

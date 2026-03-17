@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@lad/frontend-features/conversations';
 import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
@@ -10,10 +11,12 @@ import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const CONV_API = '/api/whatsapp-conversations/conversations';
 
 export function ConversationsPage() {
+  const queryClient = useQueryClient();
   const {
     conversations,
     selectedConversation,
@@ -76,29 +79,41 @@ export function ConversationsPage() {
     setIsContextPanelOpen((prev) => !prev);
   }, []);
 
-  // CRM action handlers
+  // CRM action handlers (all use fetchWithTenant for correct tenant DB routing)
   const handlePin = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
+      const res = await fetchWithTenant(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_pinned status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   const handleLock = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
+      const res = await fetchWithTenant(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_locked status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   const handleFavorite = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
+      const res = await fetchWithTenant(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
+      if (res.ok) {
+        // Refetch conversations to update is_favorite status
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   const handleExport = useCallback(async (id: string) => {
     // Client-side export: build text file from messages
     try {
-      const res = await fetch(`/api/whatsapp-conversations/conversations/${id}/messages`);
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${id}/messages`);
       const data = await res.json();
       if (!data.success) return;
       const lines = (data.data || []).map(
@@ -117,37 +132,44 @@ export function ConversationsPage() {
 
   const handleBlock = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}/status`, {
+      const res = await fetchWithTenant(`${CONV_API}/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'resolved' }),
       });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      await fetch(`${CONV_API}/${id}`, { method: 'DELETE' });
+      const res = await fetchWithTenant(`${CONV_API}/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
     try {
+      let res: Response | undefined;
       if (action === 'resolve') {
-        await fetch(`${CONV_API}/bulk`, {
+        res = await fetchWithTenant(`${CONV_API}/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
         });
       } else if (action === 'delete') {
-        await fetch(`${CONV_API}/bulk`, {
+        res = await fetchWithTenant(`${CONV_API}/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete', ids }),
         });
       }
+      if (res?.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
     } catch {}
-  }, []);
+  }, [queryClient]);
 
   // Type conversions and data enrichment
   const typedConversations = useMemo(

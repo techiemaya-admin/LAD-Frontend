@@ -33,6 +33,7 @@ import { DateSeparator } from './DateSeparator';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@/utils/storage';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -110,16 +111,19 @@ const GROUP_API = '/api/whatsapp-conversations/chat-groups';
 const CONV_API = '/api/whatsapp-conversations/conversations';
 
 function authHeaders(): Record<string, string> {
-  return {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${safeStorage.getItem('token') || ''}`,
   };
+  const tenantId = typeof window !== 'undefined'
+    ? localStorage.getItem('selectedTenantId') : null;
+  if (tenantId && tenantId !== 'default') headers['X-Tenant-ID'] = tenantId;
+  return headers;
 }
 
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetchWithTenant(url, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -166,6 +170,72 @@ const AddMembersPanel = memo(function AddMembersPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
 
+  // Saved contacts state
+  const [savedContacts, setSavedContacts] = useState<ConversationResult[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsTotal, setContactsTotal] = useState(0);
+
+  // Load saved WhatsApp contacts on mount
+  useEffect(() => {
+    const loadContacts = async (page = 1, search = '') => {
+      setContactsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('limit', '50');
+        if (search) params.set('search', search);
+        const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { headers: authHeaders() });
+        if (!res.ok) { setSavedContacts([]); return; }
+        const data = await res.json();
+        const contacts = data?.data || [];
+        setContactsTotal(data?.total || 0);
+        setContactsPage(data?.page || 1);
+        const mapped: ConversationResult[] = contacts.map((c: { phone: string; name: string | null; whatsapp_id: string | null }) => ({
+          id: `contact_${c.phone}`,
+          lead_name: c.name || c.phone,
+          lead_phone: c.phone,
+          lead_email: null,
+          lead_company: null,
+          channel: 'whatsapp-personal',
+        }));
+        setSavedContacts(mapped);
+      } catch {
+        setSavedContacts([]);
+      } finally {
+        setContactsLoading(false);
+      }
+    };
+    loadContacts();
+  }, []);
+
+  // Load more contacts (pagination) or search contacts
+  const loadContactsPage = useCallback((page: number, search = '') => {
+    setContactsLoading(true);
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '50');
+    if (search) params.set('search', search);
+    fetch(`/api/personal-whatsapp/contacts?${params}`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) { setSavedContacts([]); return; }
+        setContactsTotal(data?.total || 0);
+        setContactsPage(data?.page || 1);
+        const contacts = data?.data || [];
+        setSavedContacts(contacts.map((c: { phone: string; name: string | null }) => ({
+          id: `contact_${c.phone}`,
+          lead_name: c.name || c.phone,
+          lead_phone: c.phone,
+          lead_email: null,
+          lead_company: null,
+          channel: 'whatsapp-personal',
+        })));
+      })
+      .catch(() => setSavedContacts([]))
+      .finally(() => setContactsLoading(false));
+  }, []);
+
   // Search conversations
   useEffect(() => {
     const q = query.trim();
@@ -173,11 +243,12 @@ const AddMembersPanel = memo(function AddMembersPanel({
 
     const timer = setTimeout(() => {
       setLoading(true);
-      fetch(`${CONV_API}?search=${encodeURIComponent(q)}`, { headers: authHeaders() })
+      // Search both conversations and contacts in parallel
+      const convSearch = fetch(`${CONV_API}?search=${encodeURIComponent(q)}`, { headers: authHeaders() })
         .then((r) => r.json())
         .then((data) => {
           const convs = data.data || data || [];
-          const mapped: ConversationResult[] = convs
+          return convs
             .filter((c: Record<string, unknown>) => !existingConvIds.has(c.id as string))
             .map((c: Record<string, unknown>) => ({
               id: c.id as string,
@@ -186,14 +257,19 @@ const AddMembersPanel = memo(function AddMembersPanel({
               lead_email: (c as Record<string, unknown>).lead_email as string || null,
               lead_company: (c as Record<string, unknown>).lead_company as string || null,
               channel: (c as Record<string, unknown>).channel as string || 'whatsapp',
-            }));
-          setResults(mapped);
+            })) as ConversationResult[];
         })
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false));
+        .catch(() => [] as ConversationResult[]);
+
+      // Also search saved contacts server-side
+      loadContactsPage(1, q);
+
+      convSearch.then((convResults) => {
+        setResults(convResults);
+      }).finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(timer);
-  }, [query, existingConvIds]);
+  }, [query, existingConvIds, loadContactsPage]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -268,48 +344,123 @@ const AddMembersPanel = memo(function AddMembersPanel({
       )}
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {loading ? (
+        {loading && contactsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : !query.trim() ? (
-          <p className="text-xs text-muted-foreground text-center py-8">
-            Type a name or phone to search
-          </p>
-        ) : results.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-8">
-            No conversations found
-          </p>
         ) : (
-          results.map((conv) => (
-            <button
-              key={conv.id}
-              className={cn(
-                'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors text-left',
-                selected.has(conv.id) && 'bg-primary/5'
-              )}
-              onClick={() => toggleSelect(conv.id)}
-            >
-              <div className={cn(
-                'h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
-                selected.has(conv.id) ? 'bg-primary' : 'bg-muted-foreground/30'
-              )}>
-                {selected.has(conv.id) ? '✓' : getInitials(conv.lead_name)}
+          <>
+            {/* Conversation results (when searching) */}
+            {query.trim() && results.length > 0 && (
+              <>
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Conversations
+                </p>
+                {results.map((conv) => (
+                  <button
+                    key={conv.id}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors text-left',
+                      selected.has(conv.id) && 'bg-primary/5'
+                    )}
+                    onClick={() => toggleSelect(conv.id)}
+                  >
+                    <div className={cn(
+                      'h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                      selected.has(conv.id) ? 'bg-primary' : 'bg-muted-foreground/30'
+                    )}>
+                      {selected.has(conv.id) ? '✓' : getInitials(conv.lead_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">{conv.lead_name}</span>
+                      <span className="text-[11px] text-muted-foreground truncate block">
+                        {conv.lead_phone || conv.lead_email || ''}
+                        {conv.lead_company ? ` · ${conv.lead_company}` : ''}
+                      </span>
+                    </div>
+                    {conv.channel !== 'whatsapp' && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
+                        {conv.channel}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Saved contacts section */}
+            {contactsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-xs text-muted-foreground">Loading contacts...</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium truncate block">{conv.lead_name}</span>
-                <span className="text-[11px] text-muted-foreground truncate block">
-                  {conv.lead_phone || conv.lead_email || ''}
-                  {conv.lead_company ? ` · ${conv.lead_company}` : ''}
-                </span>
-              </div>
-              {conv.channel !== 'whatsapp' && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
-                  {conv.channel}
-                </span>
-              )}
-            </button>
-          ))
+            ) : savedContacts.length > 0 ? (
+              <>
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Saved Contacts ({contactsTotal})
+                </p>
+                {savedContacts.map((contact) => (
+                  <button
+                    key={contact.id}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors text-left',
+                      selected.has(contact.id) && 'bg-primary/5'
+                    )}
+                    onClick={() => toggleSelect(contact.id)}
+                  >
+                    <div className={cn(
+                      'h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                      selected.has(contact.id) ? 'bg-primary' : 'bg-emerald-500/70'
+                    )}>
+                      {selected.has(contact.id) ? '✓' : getInitials(contact.lead_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">{contact.lead_name}</span>
+                      <span className="text-[11px] text-muted-foreground truncate block">
+                        +{contact.lead_phone}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+                {/* Pagination for contacts */}
+                {contactsTotal > 50 && (
+                  <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
+                    <span>
+                      {(contactsPage - 1) * 50 + 1}–{Math.min(contactsPage * 50, contactsTotal)} of {contactsTotal}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={contactsPage <= 1 || contactsLoading}
+                        onClick={() => loadContactsPage(contactsPage - 1, query.trim())}
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={contactsPage * 50 >= contactsTotal || contactsLoading}
+                        onClick={() => loadContactsPage(contactsPage + 1, query.trim())}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : !query.trim() ? (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                No saved contacts found
+              </p>
+            ) : results.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                No results found
+              </p>
+            ) : null}
+          </>
         )}
       </div>
     </div>

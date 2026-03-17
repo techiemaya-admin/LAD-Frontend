@@ -3,6 +3,7 @@
  *
  * Fetches messages for a specific conversation with pagination.
  */
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getConversationMessagesOptions } from '../api';
 import type { Message } from '../types';
@@ -25,6 +26,13 @@ export function useConversationMessages(
     ...getConversationMessagesOptions(conversationId || '', pagination),
     enabled: !!conversationId,
   });
+
+  // Force refetch when conversation ID changes to get latest messages
+  useEffect(() => {
+    if (conversationId) {
+      query.refetch();
+    }
+  }, [conversationId]);
 
   return {
     messages: query.data?.messages || [],
