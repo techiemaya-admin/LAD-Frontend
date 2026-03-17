@@ -223,6 +223,11 @@ export default function AdvancedSearchAIPage() {
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
 
+    // Inbound CSV upload state
+    const [inboundMode, setInboundMode] = useState(false);
+    const [inboundLeads, setInboundLeads] = useState<ParsedInboundLead[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     // Search history (persisted in localStorage)
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
     useEffect(() => {
