@@ -42,7 +42,7 @@ export default function ProfileSummaryDialog({
     : '';
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] rounded-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] rounded-2xl overflow-y-auto">
         <DialogHeader className="flex-row items-center gap-4 pb-4 border-b">
           <Avatar className="w-14 h-14 border-[3px] border-[#0b1957]">
             <AvatarImage src={employee?.photo_url} alt={employeeName} />
