@@ -13,6 +13,8 @@ export interface CreditsBalance {
   currency: string;
   status: string;
   lowBalanceThreshold?: number;
+  balance?: number;
+  transactions?: [];
 }
 // Backward compatibility alias
 export type WalletBalance = CreditsBalance;
@@ -145,6 +147,17 @@ export async function listUsage(params?: {
   return response.data.usage;
 }
 /**
+ * Recharge wallet via package selection
+ */
+export async function rechargeWallet(params: {
+  packageId: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ sessionUrl: string }> {
+  const response = await apiClient.post('/api/wallet/recharge', params);
+  return response.data;
+}
+/**
  * Get usage aggregation summary
  */
 export async function getUsageAggregation(params?: {
@@ -213,5 +226,30 @@ export async function createStripeCheckoutSession(params: {
     cancelUrl: params.cancelUrl,
     metadata: params.metadata,
   });
+  return response.data;
+}
+
+/**
+ * Get wallet usage analytics
+ */
+export async function getWalletUsageAnalytics(params: {
+  timeRange: '7d' | '30d' | '90d';
+}): Promise<{
+  totalCreditsUsed: number;
+  topFeatures: Array<{
+    featureName: string;
+    totalCredits: number;
+    usageCount: number;
+    percentage: number;
+    icon: string;
+  }>;
+  dailyUsage: Array<{ date: string; credits: number }>;
+  monthlyTrend: {
+    currentMonth: number;
+    lastMonth: number;
+    percentageChange: number;
+  };
+}> {
+  const response = await apiClient.get('/api/wallet/usage/analytics', { params });
   return response.data;
 }

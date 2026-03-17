@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2 } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
 
 /* ═══════════════════════════════════════════════
@@ -44,6 +44,18 @@ interface LeadProfile {
     };
 }
 
+interface ParsedInboundLead {
+    firstName: string;
+    lastName: string;
+    companyName: string;
+    linkedinProfile: string;
+    email: string;
+    whatsapp: string;
+    phone: string;
+    website: string;
+    notes: string;
+}
+
 interface ChatMsg {
     id: string;
     role: 'user' | 'ai';
@@ -53,6 +65,8 @@ interface ChatMsg {
     loading?: boolean;
     options?: { label: string; value: string }[];
     leads?: LeadProfile[];
+    inboundAction?: 'download' | 'upload' | 'summary';
+    inboundSummary?: { total: number; linkedin: number; email: number; whatsapp: number; phone: number; website: number };
 }
 
 /* ═══════════════════════════════════════════════
@@ -85,6 +99,94 @@ function avatarColor(name: string): string {
 
 function initials(name: string): string {
     return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+const LinkedInIcon = ({ size = 14 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+);
+
+/* ═══════════════════════════════════════════════
+   INBOUND CSV UTILITIES
+   ═══════════════════════════════════════════════ */
+function downloadInboundTemplate() {
+    const hdrs = ['First Name', 'Last Name', 'Company Name', 'LinkedIn Profile URL', 'Email', 'WhatsApp Number', 'Phone Number', 'Website', 'Notes'];
+    const exRow = ['John', 'Doe', 'DELETE THIS ROW - Example Corp', 'https://linkedin.com/in/johndoe', 'example@example.com', "'+1234567890", "'+1234567890", 'https://example.com', 'DELETE THIS ROW - Remove before uploading'];
+    const instRow = ['Lead first name', 'Lead last name', 'INSTRUCTIONS: Format phone as TEXT', '', '', "Start with ' (apostrophe)", "Example: '+919087654321", '', 'Delete example rows before upload'];
+    const emptyRows = Array(10).fill(hdrs.map(() => ''));
+    const csv = [hdrs.join(','), exRow.map(c => `"${c}"`).join(','), instRow.map(c => `"${c}"`).join(','), ...emptyRows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'inbound_leads_template.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function parseCSVText(text: string): string[][] {
+    const rows: string[][] = []; let row: string[] = []; let cell = ''; let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i], n = text[i + 1];
+        if (c === '"') { if (inQ && n === '"') { cell += '"'; i++; } else inQ = !inQ; }
+        else if (c === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
+        else if ((c === '\n' || (c === '\r' && n === '\n')) && !inQ) { row.push(cell.trim()); if (row.some(x => x)) rows.push(row); row = []; cell = ''; if (c === '\r') i++; }
+        else if (c !== '\r') cell += c;
+    }
+    if (cell || row.length) { row.push(cell.trim()); if (row.some(x => x)) rows.push(row); }
+    return rows;
+}
+
+function fixPhone(v: string): string {
+    if (!v) return '';
+    let c = v.replace(/[\s\-\(\)]/g, '');
+    if (/^\d+\.?\d*e\+?\d+$/i.test(c)) c = parseFloat(c).toFixed(0);
+    if (c && !c.startsWith('+') && c.length > 10) c = '+' + c;
+    return c;
+}
+
+function parseInboundCSV(file: File): Promise<ParsedInboundLead[]> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                const rows = parseCSVText(text);
+                if (rows.length <= 1) { reject(new Error('File is empty or only has headers.')); return; }
+                const h = rows[0];
+                const ci = {
+                    firstName: h.findIndex(x => x.toLowerCase().includes('first') && x.toLowerCase().includes('name')),
+                    lastName: h.findIndex(x => x.toLowerCase().includes('last') && x.toLowerCase().includes('name')),
+                    company: h.findIndex(x => x.toLowerCase().includes('company')),
+                    linkedin: h.findIndex(x => x.toLowerCase().includes('linkedin')),
+                    email: h.findIndex(x => x.toLowerCase().includes('email')),
+                    whatsapp: h.findIndex(x => x.toLowerCase().includes('whatsapp')),
+                    phone: h.findIndex(x => x.toLowerCase().includes('phone')),
+                    website: h.findIndex(x => x.toLowerCase().includes('website')),
+                    notes: h.findIndex(x => x.toLowerCase().includes('notes')),
+                };
+                const leads = rows.slice(1).map(r => ({
+                    firstName: (ci.firstName >= 0 ? r[ci.firstName] : '') || '',
+                    lastName: (ci.lastName >= 0 ? r[ci.lastName] : '') || '',
+                    companyName: (ci.company >= 0 ? r[ci.company] : '') || '',
+                    linkedinProfile: (ci.linkedin >= 0 ? r[ci.linkedin] : '') || '',
+                    email: (ci.email >= 0 ? r[ci.email] : '') || '',
+                    whatsapp: fixPhone((ci.whatsapp >= 0 ? r[ci.whatsapp] : '') || ''),
+                    phone: fixPhone((ci.phone >= 0 ? r[ci.phone] : '') || ''),
+                    website: (ci.website >= 0 ? r[ci.website] : '') || '',
+                    notes: (ci.notes >= 0 ? r[ci.notes] : '') || '',
+                })).filter(l => {
+                    const isExample = l.companyName.toLowerCase().includes('delete this') || l.notes.toLowerCase().includes('delete this') || l.email.toLowerCase().includes('example.com');
+                    const hasData = (l.companyName && l.companyName.trim().length > 1) || (l.email && l.email.includes('@')) || (l.linkedinProfile && l.linkedinProfile.includes('linkedin.com'));
+                    return !isExample && hasData;
+                });
+                if (leads.length === 0) { reject(new Error('No valid leads found. Please add your lead data.')); return; }
+                resolve(leads);
+            } catch (err: any) { reject(err); }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+function isInboundIntent(text: string): boolean {
+    const lower = text.toLowerCase();
+    return /\b(i have leads|i have .* data|upload.*leads|inbound|import.*leads|have.*csv|have.*excel|already have.*leads|my leads|upload.*file|have.*spreadsheet|bulk.*upload)\b/i.test(lower);
 }
 
 /* ═══════════════════════════════════════════════
@@ -269,6 +371,70 @@ export default function AdvancedSearchAIPage() {
     }, [input]);
 
     /* ── Core send logic ── */
+    /* ── Inbound file handler ── */
+    const handleInboundFile = useCallback(async (file: File) => {
+        setBusy(true);
+        const processingId = `l-${Date.now()}`;
+        setMessages(p => [...p, { id: `u-${Date.now()}`, role: 'user', text: `📎 Uploaded: ${file.name}`, ts: new Date() }, { id: processingId, role: 'ai', text: '', ts: new Date(), loading: true }]);
+        try {
+            const parsed = await parseInboundCSV(file);
+            setInboundLeads(parsed);
+            setInboundMode(true);
+
+            const counts = {
+                total: parsed.length,
+                linkedin: parsed.filter(l => l.linkedinProfile).length,
+                email: parsed.filter(l => l.email).length,
+                whatsapp: parsed.filter(l => l.whatsapp).length,
+                phone: parsed.filter(l => l.phone).length,
+                website: parsed.filter(l => l.website).length,
+            };
+
+            // Convert inbound leads to LeadProfile format for the panel
+            const panelLeads: LeadProfile[] = parsed.map((l, i) => ({
+                id: `inbound-${i}`,
+                name: `${l.firstName} ${l.lastName}`.trim() || `Lead ${i + 1}`,
+                first_name: l.firstName,
+                last_name: l.lastName,
+                headline: l.companyName ? `at ${l.companyName}` : '',
+                location: '',
+                current_company: l.companyName,
+                profile_url: l.linkedinProfile,
+                profile_picture: '',
+                industry: '',
+                network_distance: '',
+                locked: false,
+            }));
+            setLeads(panelLeads);
+
+            // Set a default targeting so the leads panel shows
+            const inboundTargeting: LeadTargeting = {
+                job_titles: [], industries: [], locations: [],
+                keywords: [`${counts.total} Inbound Leads`],
+            };
+            setTargeting(inboundTargeting);
+
+            let summaryText = `✅ **Successfully parsed ${counts.total} leads from your file!**\n\n📊 **Contact Channels Detected:**\n`;
+            if (counts.linkedin > 0) summaryText += `\n🔗 **LinkedIn:** ${counts.linkedin} profiles`;
+            if (counts.email > 0) summaryText += `\n✉️ **Email:** ${counts.email} addresses`;
+            if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
+            if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
+            if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
+            summaryText += `\n\n👉 Click **"Create Campaign Checkpoints"** to set up your campaign with these leads!`;
+
+            setMessages(p => p.filter(m => m.id !== processingId).concat({
+                id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
+                targeting: inboundTargeting, inboundAction: 'summary', inboundSummary: counts,
+            }));
+            setTimeout(() => setShowPanel('leads'), 500);
+        } catch (err: any) {
+            setMessages(p => p.filter(m => m.id !== processingId).concat({
+                id: `a-${Date.now()}`, role: 'ai', text: `⚠️ **Error parsing file:** ${err.message}\n\nPlease make sure you're uploading a valid CSV file with the correct format. You can download the template above and try again.`,
+                ts: new Date(), inboundAction: 'upload',
+            }));
+        } finally { setBusy(false); }
+    }, []);
+
     const doSend = useCallback(async (text: string) => {
         if (!text.trim() || busy) return;
         // Enforce 10-message limit only when user has no credits
@@ -278,6 +444,77 @@ export default function AdvancedSearchAIPage() {
         setMessages(p => [...p, { id: uid, role: 'user', text, ts: new Date() }, { id: lid, role: 'ai', text: '', ts: new Date(), loading: true }]);
         setBusy(true);
         setMsgCount(c => c + 1);
+
+        // ── INBOUND INTENT DETECTION (before API call) ──
+        if (isInboundIntent(text)) {
+            setInboundMode(true);
+            setMessages(p => p.filter(m => m.id !== lid).concat({
+                id: `a-${Date.now()}`, role: 'ai',
+                text: `📋 **Great! Let\'s import your leads.**\n\nHere\'s how it works:\n1. **Download** the CSV template below\n2. **Fill in** your leads data (name, email, LinkedIn, phone, etc.)\n3. **Upload** the filled file back here\n\nI\'ll analyze your data and help you create a campaign! 🚀`,
+                ts: new Date(), inboundAction: 'download',
+            }));
+            setBusy(false);
+            return;
+        }
+
+        // ── INBOUND FOLLOW-UP: Context-aware responses when leads are already uploaded ──
+        if (inboundMode && inboundLeads.length > 0) {
+            const lower = text.toLowerCase();
+            const isFollowUp = /\b(next step|what.*(next|do|now)|how to|help me|uploaded|create campaign|start campaign|launch|what can|guide|instructions|how does|proceed|continue)\b/i.test(lower);
+            const isRefine = /\b(refine|filter|remove|edit|change|modify|update|replace)\b/i.test(lower);
+            const isQuestion = /\b(how many|count|total|which|what.*leads|show me|list)\b/i.test(lower);
+
+            if (isFollowUp) {
+                const leadsCount = inboundLeads.length;
+                const linkedinCount = inboundLeads.filter(l => l.linkedinProfile).length;
+                const emailCount = inboundLeads.filter(l => l.email).length;
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Campaign Checkpoints"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Campaign Checkpoints"** button to get started!`,
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+
+            if (isRefine) {
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Campaign Checkpoints"** to set up your campaign!`,
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+
+            if (isQuestion) {
+                const counts = {
+                    total: inboundLeads.length,
+                    linkedin: inboundLeads.filter(l => l.linkedinProfile).length,
+                    email: inboundLeads.filter(l => l.email).length,
+                    whatsapp: inboundLeads.filter(l => l.whatsapp).length,
+                    phone: inboundLeads.filter(l => l.phone).length,
+                    website: inboundLeads.filter(l => l.website).length,
+                };
+                let summaryParts = [`📊 **Your uploaded leads summary:**\n\n• **Total Leads:** ${counts.total}`];
+                if (counts.linkedin > 0) summaryParts.push(`• **LinkedIn Profiles:** ${counts.linkedin}`);
+                if (counts.email > 0) summaryParts.push(`• **Email Addresses:** ${counts.email}`);
+                if (counts.whatsapp > 0) summaryParts.push(`• **WhatsApp Numbers:** ${counts.whatsapp}`);
+                if (counts.phone > 0) summaryParts.push(`• **Phone Numbers:** ${counts.phone}`);
+                if (counts.website > 0) summaryParts.push(`• **Websites:** ${counts.website}`);
+                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Campaign Checkpoints"**!`);
+                setMessages(p => p.filter(m => m.id !== lid).concat({
+                    id: `a-${Date.now()}`, role: 'ai',
+                    text: summaryParts.join('\n'),
+                    ts: new Date(),
+                    targeting: targeting || undefined,
+                }));
+                setBusy(false);
+                return;
+            }
+        }
 
         try {
             // Build history array for context (last 6 messages)
@@ -700,10 +937,13 @@ export default function AdvancedSearchAIPage() {
                             </button>
                         </div>
                     </div>
+                    {/* Hidden file input for inbound CSV upload */}
+                    <input ref={fileInputRef} type="file" accept=".csv" className="hidden" style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
                 </div>
 
                 {/* RIGHT: PANELS */}
-                {showPanel === 'leads' && targeting && (
+                {showPanel === 'leads' && targeting && !inboundMode && (
                     <div className="adv-leads-panel">
                         <div className="adv-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px' }}>
                             <button className="adv-close-panel" onClick={() => setShowPanel(false)}>
@@ -1102,6 +1342,40 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCo
                         <button className="adv-act-btn" style={{
                             padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
                         }} onClick={onStartCheckpoints}>Create Campaign Checkpoints</button>
+                    </div>
+                )}
+
+                {/* ── Inbound: Download Template + Upload buttons ── */}
+                {(msg.inboundAction === 'download' || msg.inboundAction === 'upload') && (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                        <button onClick={downloadInboundTemplate} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff',
+                            border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s',
+                        }}><Download size={16} /> Download Template</button>
+                        <button onClick={() => onFileUpload?.()} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
+                        }}><Upload size={16} /> Upload CSV File</button>
+                    </div>
+                )}
+
+                {/* ── Inbound: Summary with platform badges ── */}
+                {msg.inboundAction === 'summary' && msg.inboundSummary && (
+                    <div style={{ marginTop: '12px', padding: '14px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', borderRadius: '14px', border: '1px solid #a7f3d0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                            <CheckCircle2 size={18} color="#059669" />
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#065f46' }}>{msg.inboundSummary.total} Leads Ready</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {msg.inboundSummary.linkedin > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#1e40af', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><LinkedInIcon size={12} /> LinkedIn ({msg.inboundSummary.linkedin})</span>}
+                            {msg.inboundSummary.email > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#be185d', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #fbcfe8' }}>✉️ Email ({msg.inboundSummary.email})</span>}
+                            {msg.inboundSummary.whatsapp > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #bbf7d0' }}>💬 WhatsApp ({msg.inboundSummary.whatsapp})</span>}
+                            {msg.inboundSummary.phone > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#9a3412', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #fed7aa' }}>📞 Phone ({msg.inboundSummary.phone})</span>}
+                            {msg.inboundSummary.website > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#6b21a8', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #e9d5ff' }}>🌐 Website ({msg.inboundSummary.website})</span>}
+                        </div>
                     </div>
                 )}
 

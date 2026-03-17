@@ -60,16 +60,8 @@ export default function ProfileSummaryDialog({
               </Badge>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="p-2 text-[#64748B] hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </Button>
         </DialogHeader>
-        <div className="pt-6 pb-4">
+        <div className="pt-6 pb-4 overflow-y-auto flex-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#0b1957] mb-4" />
