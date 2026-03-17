@@ -9,16 +9,7 @@ export function useAudioPreview(selectedAgent: Agent | undefined) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [signedSampleUrl, setSignedSampleUrl] = useState<string | null>(null);
-    const [token, setToken] = useState<string | null>(null);
     const signedSampleUrlCache = useRef<Map<string, string>>(new Map());
-
-    // Fetch token from /api/token endpoint
-    useEffect(() => {
-        fetch('/api/token', { credentials: 'include' })
-            .then(r => r.json())
-            .then(d => setToken(d.token ?? null))
-            .catch(() => setToken(null));
-    }, []);
 
     const getAgentSampleUrl = (agent: Agent | undefined): string | null => {
         if (!agent?.voice_sample_url) return null;
@@ -27,7 +18,7 @@ export function useAudioPreview(selectedAgent: Agent | undefined) {
 
         return `/api/recording-proxy?url=${encodeURIComponent(
             agent.voice_sample_url
-        )}&agentId=${encodeURIComponent(String(agent.id))}&token=${encodeURIComponent(token ?? '')}`;
+        )}&agentId=${encodeURIComponent(String(agent.id))}`;
     };
 
     // When agent changes, reset signed URL

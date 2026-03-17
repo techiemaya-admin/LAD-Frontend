@@ -5,21 +5,35 @@ import { UsageCalculator } from '@/components/UsageCalculator';
 import { Shield, Zap, Users, Check } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { getCurrentUser } from '@/lib/auth';
+import { clearFlagsCache } from '../../../../sdk/shared/featureFlags';
 
 export default function PricingPage() {
   const router = useRouter();
-
-  const [token, setToken] = useState<string | null>(null);
+  const [isAuth, setIsAuth] = useState(false);
 
   useEffect(() => {
-    fetch('/api/token', { credentials: 'include' })
-      .then(r => r.json())
-      .then(d => setToken(d.token ?? null))
-      .catch(() => setToken(null));
+    (async () => {
+      try {
+        const userData = await getCurrentUser();
+        if (userData) {
+          const { success, user } = userData;
+          if (success) {
+            setIsAuth(true)
+          } else {
+            setIsAuth(false);
+          }
+        } else {
+          setIsAuth(false);
+        }
+      } catch {
+        setIsAuth(false);
+      }
+    })();
   }, []);
 
   const handleGetStarted = () => {
-    if (token) {
+    if (isAuth) {
       router.push('/settings?tab=credits&action=add');
     } else {
       router.push('/login');
@@ -27,7 +41,7 @@ export default function PricingPage() {
   };
 
   const handleViewAllPlans = () => {
-    if (token) {
+    if (isAuth) {
       router.push('/settings?tab=credits');
     } else {
       router.push('/login');

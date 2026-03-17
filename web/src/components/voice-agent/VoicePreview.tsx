@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Play, Square, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getCurrentUser } from '@/lib/auth';
 
 interface VoicePreviewProps {
   language: string;
@@ -11,16 +12,29 @@ interface VoicePreviewProps {
 }
 
 export function VoicePreview({ language, gender, disabled = false, voice_sample_url }: VoicePreviewProps) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAuth, setIsAuth] = useState(false);
 
-  // Fetch token from /api/token on mount
   useEffect(() => {
-    fetch('/api/token', { credentials: 'include' })
-      .then(r => r.json())
-      .then(d => setToken(d.token ?? null))
-      .catch(() => setToken(null));
+    (async () => {
+      try {
+        const userData = await getCurrentUser();
+        if (userData) {
+          const { success, user } = userData;
+          if (success) {
+            setIsAuth(true)
+          } else {
+            setIsAuth(false);
+          }
+        } else {
+          setIsAuth(false);
+        }
+      } catch {
+        setIsAuth(false);
+      }
+    })();
   }, []);
 
   // Get the playable audio URL
