@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UsageCalculator } from '@/components/UsageCalculator';
 import { Shield, Zap, Users, Check } from 'lucide-react';
@@ -8,17 +8,32 @@ import Footer from '@/components/layout/Footer';
 
 export default function PricingPage() {
   const router = useRouter();
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/token', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => setToken(d.token ?? null))
+      .catch(() => setToken(null));
+  }, []);
+
   const handleGetStarted = () => {
-    // Check if user is logged in by checking for token in localStorage
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
-      // User is logged in, go to settings with credits tab and open modal
       router.push('/settings?tab=credits&action=add');
     } else {
-      // User not logged in, go to login page
       router.push('/login');
     }
   };
+
+  const handleViewAllPlans = () => {
+    if (token) {
+      router.push('/settings?tab=credits');
+    } else {
+      router.push('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0b1957]">
 
@@ -109,7 +124,7 @@ export default function PricingPage() {
                     <span>CRM pipeline</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={handleGetStarted}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -156,7 +171,7 @@ export default function PricingPage() {
                     <span>AI Recommendations for deal closure</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={handleGetStarted}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -194,7 +209,7 @@ export default function PricingPage() {
                     <span>Priority Support</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={handleGetStarted}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -264,7 +279,7 @@ export default function PricingPage() {
                     <span>Dedicated Support</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={() => window.location.href = '/contact'}
                   className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -323,7 +338,7 @@ export default function PricingPage() {
                     <span>Dedicated Support</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={() => window.location.href = '/contact'}
                   className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -373,7 +388,7 @@ export default function PricingPage() {
                     <span>Dedicated Support</span>
                   </li>
                 </ul>
-                <button 
+                <button
                   onClick={() => window.location.href = '/contact'}
                   className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors cursor-pointer mt-auto"
                 >
@@ -545,7 +560,7 @@ export default function PricingPage() {
                 What are credits and how do they work?
               </h3>
               <p className="text-gray-600">
-                Credits are our unified currency for all platform features. Each action (voice calls, data scraping, 
+                Credits are our unified currency for all platform features. Each action (voice calls, data scraping,
                 AI queries) costs a specific number of credits. You buy credits once and use them across any feature.
               </p>
             </div>
@@ -554,7 +569,7 @@ export default function PricingPage() {
                 Do credits expire?
               </h3>
               <p className="text-gray-600">
-                No! Credits never expire. Buy once and use them whenever you need, at your own pace. There are no 
+                No! Credits never expire. Buy once and use them whenever you need, at your own pace. There are no
                 monthly subscriptions or recurring fees.
               </p>
             </div>
@@ -563,7 +578,7 @@ export default function PricingPage() {
                 Can I buy more credits anytime?
               </h3>
               <p className="text-gray-600">
-                Yes! You can purchase additional credit packages anytime. Your new credits are added to your existing 
+                Yes! You can purchase additional credit packages anytime. Your new credits are added to your existing
                 balance immediately, and they all work together as one pool.
               </p>
             </div>
@@ -572,7 +587,7 @@ export default function PricingPage() {
                 Can I get a refund on credits?
               </h3>
               <p className="text-gray-600">
-                We offer a 7-day money-back guarantee on credit purchases if you're not satisfied with our service 
+                We offer a 7-day money-back guarantee on credit purchases if you're not satisfied with our service
                 and have used less than 10% of your purchased credits.
               </p>
             </div>
@@ -581,7 +596,7 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-gray-600">
-                We accept all major credit cards (Visa, MasterCard, American Express) and debit cards 
+                We accept all major credit cards (Visa, MasterCard, American Express) and debit cards
                 through our secure Stripe payment processor.
               </p>
             </div>
@@ -590,8 +605,8 @@ export default function PricingPage() {
                 How much do specific features cost?
               </h3>
               <p className="text-gray-600">
-                Voice calls: 3 cr/min (Cartesia) or 4 cr/min (ElevenLabs) • Email + LinkedIn URL: 2 credits • 
-                LinkedIn Connection: 1 credit • Template Message: 5 credits • Phone reveal: 10 credits • 
+                Voice calls: 3 cr/min (Cartesia) or 4 cr/min (ElevenLabs) • Email + LinkedIn URL: 2 credits •
+                LinkedIn Connection: 1 credit • Template Message: 5 credits • Phone reveal: 10 credits •
                 Platform connections: LinkedIn 50 cr/mo, Google/Outlook 20 cr/mo. See detailed pricing above.
               </p>
             </div>
@@ -600,7 +615,7 @@ export default function PricingPage() {
                 How do I get started?
               </h3>
               <p className="text-gray-600">
-                Choose a plan that fits your needs, sign up, and start using all features immediately. 
+                Choose a plan that fits your needs, sign up, and start using all features immediately.
                 Credits are added to your account upon purchase and never expire.
               </p>
             </div>
@@ -623,15 +638,9 @@ export default function PricingPage() {
             >
               Get Started
             </button>
+
             <button
-              onClick={() => {
-                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-                if (token) {
-                  router.push('/settings?tab=credits');
-                } else {
-                  router.push('/login');
-                }
-              }}
+              onClick={handleViewAllPlans}
               className="px-8 py-3 border border-blue-300 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
             >
               View All Plans

@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  Bot, 
-  Globe, 
-  Brain, 
-  MessageSquare, 
-  PhoneOutgoing, 
-  Save, 
+import {
+  Bot,
+  Globe,
+  Brain,
+  MessageSquare,
+  PhoneOutgoing,
+  Save,
   RotateCcw,
   AlertCircle,
   Loader2,
@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 interface AgentFormProps {
   formData: AgentFormData;
   errors: Partial<Record<keyof AgentFormData, string>>;
-  
+
   isDirty: boolean;
   isValid: boolean;
   isSaving: boolean;
@@ -109,8 +109,8 @@ export function AgentForm({
             {isEditMode ? 'Edit Agent' : 'Create New Agent'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isEditMode 
-              ? 'Modify your voice agent configuration' 
+            {isEditMode
+              ? 'Modify your voice agent configuration'
               : 'Configure a new AI voice agent'}
           </p>
         </div>
@@ -121,7 +121,7 @@ export function AgentForm({
               Unsaved changes
             </span>
           )}
-          
+
           {isEditMode ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -150,8 +150,8 @@ export function AgentForm({
             </Button>
           )}
 
-          <Button 
-            onClick={onSave} 
+          <Button
+            onClick={onSave}
             disabled={!isValid || isSaving}
             className="gradient-primary min-w-32"
           >
@@ -189,9 +189,9 @@ export function AgentForm({
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center justify-between">
                 <span>Agent Name <span className="text-destructive">*</span></span>
-                <CharacterCounter 
-                  current={getCharCount('name').current} 
-                  max={getCharCount('name').max} 
+                <CharacterCounter
+                  current={getCharCount('name').current}
+                  max={getCharCount('name').max}
                 />
               </Label>
               <Input
@@ -220,7 +220,7 @@ export function AgentForm({
                 {GENDERS.map((gender) => (
                   <div key={gender.value} className="flex items-center space-x-2">
                     <RadioGroupItem value={gender.value} id={`gender-${gender.value}`} />
-                    <Label 
+                    <Label
                       htmlFor={`gender-${gender.value}`}
                       className="cursor-pointer font-normal"
                     >
@@ -310,8 +310,8 @@ export function AgentForm({
               </Select>
             </div>
             <div className="sm:self-end">
-              <VoicePreview 
-                language={formData.language} 
+              <VoicePreview
+                language={formData.language}
                 gender={formData.gender}
                 voice_sample_url={voiceSampleUrl}
               />

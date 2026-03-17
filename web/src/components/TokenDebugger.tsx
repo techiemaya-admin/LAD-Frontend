@@ -10,17 +10,17 @@ export function TokenDebugger() {
     const checkToken = () => {
       // Check SafeStorage
       const tokenFromSafeStorage = safeStorage.getItem('token');
-      
+
       // Check localStorage directly
-      const tokenFromLocalStorage = typeof window !== 'undefined' 
-        ? localStorage.getItem('token') 
+      const tokenFromLocalStorage = typeof window !== 'undefined'
+        ? localStorage.getItem('token')
         : null;
-      
+
       // Check all cookies
-      const allCookies = typeof document !== 'undefined' 
-        ? document.cookie 
+      const allCookies = typeof document !== 'undefined'
+        ? document.cookie
         : '';
-      
+
       // Parse cookies
       const cookies: Record<string, string> = {};
       if (typeof document !== 'undefined') {
@@ -31,7 +31,7 @@ export function TokenDebugger() {
           }
         });
       }
-      
+
       setDebugInfo({
         tokenFromSafeStorage,
         tokenFromLocalStorage,
@@ -46,7 +46,7 @@ export function TokenDebugger() {
     checkToken();
     // Re-check every 2 seconds
     const interval = setInterval(checkToken, 2000);
-    
+
     return () => clearInterval(interval);
   }, []);
 

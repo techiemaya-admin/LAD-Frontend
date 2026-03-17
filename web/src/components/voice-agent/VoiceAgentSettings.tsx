@@ -38,7 +38,7 @@ export function VoiceAgentSettings() {
       try {
         // Get token using existing pattern from auth.ts
         const token = safeStorage.getItem("token") || safeStorage.getItem("token");
-        
+
         logger.debug('[VoiceAgentSettings] Token presence check', { hasToken: !!token });
 
         // First check authentication using /api/auth/me endpoint
@@ -94,7 +94,7 @@ export function VoiceAgentSettings() {
 
         const data = await agentsResponse.json();
         logger.debug('[VoiceAgentSettings] Agents fetched successfully', { count: Array.isArray(data) ? data.length : data.data?.length });
-        
+
         // Fetch voices
         if (voicesResponse.ok) {
           const voicesData = await voicesResponse.json();
@@ -109,7 +109,7 @@ export function VoiceAgentSettings() {
             provider_voice_id: v.provider_voice_id,
           })));
         }
-        
+
         // Map API response to Agent interface
         const agentsArray = Array.isArray(data) ? data : (data.data ? data.data : []);
         const mappedAgents = agentsArray.map((agent: any) => ({
@@ -132,7 +132,7 @@ export function VoiceAgentSettings() {
           system_instructions: agent.system_instructions || '',
           outbound_starter_prompt: agent.outbound_starter_prompt || '',
         }));
-        
+
         logger.debug('[VoiceAgentSettings] Agents mapped', { count: mappedAgents.length });
         setAgents(mappedAgents);
       } catch (error) {
@@ -167,7 +167,7 @@ export function VoiceAgentSettings() {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 500));
         const agent = agents.find(a => (a.id || a.agent_id) === selectedAgentId);
-        
+
         if (agent) {
           const formData: AgentFormData = {
             name: agent.name || agent.agent_name || '',
@@ -220,7 +220,7 @@ export function VoiceAgentSettings() {
     setIsSaving(true);
     try {
       const token = safeStorage.getItem("token");
-      
+
       if (selectedAgentId) {
         // Update existing agent
         const response = await fetch(`/api/voice-agent/settings/agents/${selectedAgentId}`, {
@@ -247,15 +247,15 @@ export function VoiceAgentSettings() {
         }
 
         const updatedAgent = await response.json();
-        setAgents(prev => prev.map(agent => 
+        setAgents(prev => prev.map(agent =>
           agent.id === selectedAgentId
-            ? { 
-                ...agent, 
-                ...formData, 
-                voice_id: formData.voice_id,
-                voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url || agent.voice_sample_url,
-                updated_at: new Date().toISOString() 
-              }
+            ? {
+              ...agent,
+              ...formData,
+              voice_id: formData.voice_id,
+              voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url || agent.voice_sample_url,
+              updated_at: new Date().toISOString()
+            }
             : agent
         ));
         toast({
@@ -306,7 +306,7 @@ export function VoiceAgentSettings() {
           created_at: newAgent.created_at,
           updated_at: newAgent.updated_at,
         };
-        
+
         setAgents(prev => [...prev, mappedAgent]);
         setSelectedAgentId(mappedAgent.id!);
         toast({
