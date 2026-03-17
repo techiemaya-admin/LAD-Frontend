@@ -1451,7 +1451,7 @@ function CheckpointFormInline({
 
     // Compute LinkedIn capacity based on campaign duration
     const campaignDays = parseInt(days) || 30;
-    const workingDays = Math.floor(campaignDays * 5 / 7); // Mon-Fri only
+    const workingDays = Math.max(1, Math.floor(campaignDays * 5 / 7)); // Mon-Fri only, at least 1
     const campaignWeeks = Math.ceil(campaignDays / 7);
     const dailyCapacity = workingDays * LINKEDIN_DAILY_LIMIT;
     const weeklyCapacity = campaignWeeks * LINKEDIN_WEEKLY_LIMIT;
@@ -1934,8 +1934,8 @@ function CheckpointFormInline({
                                     padding: '10px 14px', borderRadius: '10px', fontSize: '12px', lineHeight: 1.5,
                                     background: '#fef3c7', border: '1px solid #f59e0b', color: '#92400e', marginTop: '4px',
                                 }}>
-                                    <strong>LinkedIn limit warning:</strong> You have {qualifiedLeadCount} qualified leads but only ~{totalLinkedInCapacity} can be reached in {campaignDays} days at {LINKEDIN_DAILY_LIMIT} actions/day.
-                                    Campaign will process {safeLeadsPerDay} leads/day. Consider extending the duration to {Math.ceil(qualifiedLeadCount / LINKEDIN_DAILY_LIMIT * 7 / 5)} days or more.
+                                    <strong>LinkedIn limit warning:</strong> You have {qualifiedLeadCount} qualified leads but only ~{totalLinkedInCapacity} can be reached in {campaignDays} {campaignDays === 1 ? 'day' : 'days'} at {LINKEDIN_DAILY_LIMIT} actions/day.
+                                    Campaign will process {safeLeadsPerDay} leads/day. Consider extending the duration to {Math.max(2, Math.ceil(qualifiedLeadCount / LINKEDIN_DAILY_LIMIT * 7 / 5))} days or more.
                                 </div>
                             )}
                         </div>
