@@ -39,7 +39,13 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (canDelete && id) removeWorkflowStep(id);
+    if (canDelete && id) {
+      removeWorkflowStep(id);
+      // Notify page so the checkpoint form can reverse-sync its state
+      window.dispatchEvent(new CustomEvent('workflowNodeDeleted', {
+        detail: { stepId: id, stepType: data?.type }
+      }));
+    }
   };
 
   const handleEdit = (e: React.MouseEvent) => {

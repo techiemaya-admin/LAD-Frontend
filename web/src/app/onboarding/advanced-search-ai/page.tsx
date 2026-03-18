@@ -345,6 +345,34 @@ export default function AdvancedSearchAIPage() {
 
         setWorkflowPreview(steps);
     }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
+
+    // Reverse sync: Workflow builder → Checkpoint form
+    // When user deletes a node in the workflow panel, update the form state to match
+    useEffect(() => {
+        const handleNodeDeleted = (e: Event) => {
+            const { stepType } = (e as CustomEvent<{ stepId: string; stepType: string }>).detail;
+            if (stepType === 'linkedin_connect') {
+                setCpActions(prev => prev.filter(a => a !== 'connect'));
+            } else if (stepType === 'linkedin_message') {
+                setCpActions(prev => prev.filter(a => a !== 'message'));
+            } else if (stepType === 'linkedin_visit') {
+                setCpActions(prev => prev.filter(a => a !== 'profile_view'));
+            } else if (stepType === 'email_send' || stepType === 'email_message') {
+                setCpNextChannels(prev => prev.filter(c => c !== 'email'));
+            } else if (stepType === 'whatsapp_send' || stepType === 'whatsapp_message') {
+                setCpNextChannels(prev => prev.filter(c => c !== 'whatsapp'));
+            } else if (stepType === 'voice_agent_call') {
+                setCpNextChannels(prev => prev.filter(c => c !== 'voice_call'));
+            } else if (stepType === 'wait_for_condition') {
+                // Deleting the condition gate removes all downstream channels too
+                setCpTriggerCondition('');
+                setCpNextChannels([]);
+            }
+        };
+        window.addEventListener('workflowNodeDeleted', handleNodeDeleted);
+        return () => window.removeEventListener('workflowNodeDeleted', handleNodeDeleted);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     const [cpDays, setCpDays] = useState('30');
     const [cpName, setCpName] = useState('');
     const [cpGenLoading, setCpGenLoading] = useState(false);
