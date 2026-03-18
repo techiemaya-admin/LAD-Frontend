@@ -41,6 +41,7 @@ export {
   saveInboundLeads,
   getInboundLeads,
   cancelLeadBookingsForReNurturing,
+  getLinkedInLimits,
 } from './api';
 
 // ============================================================================
@@ -56,6 +57,8 @@ export { useLeadProfileSummary, useGenerateLeadProfileSummary } from './hooks/us
 export { useRevealLeadEmail, useRevealLeadPhone, useRevealLeadLinkedIn } from './hooks/useLeadReveal';
 export { useSaveInboundLeads, useInboundLeads } from './hooks/useInboundLeads';
 export { useCampaignActivityFeed } from './hooks/useCampaignActivityFeed';
+export { useLinkedInLimits } from './hooks/useLinkedInLimits';
+export type { UseLinkedInLimitsReturn } from './hooks/useLinkedInLimits';
 // ============================================================================
 // TYPES
 // ============================================================================

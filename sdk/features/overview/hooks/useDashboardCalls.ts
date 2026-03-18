@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getDashboardCalls } from '../api';
 import { CallLog, CallSummary, GetDashboardCallsParams } from '../types';
 
 export function useDashboardCalls(params?: GetDashboardCallsParams) {
@@ -20,7 +20,7 @@ export function useDashboardCalls(params?: GetDashboardCallsParams) {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getDashboardCalls(params);
+            const response = await getDashboardCalls(params);
             if (response.success && response.data) {
                 setCalls(response.data.logs || []);
                 setSummary(response.data.summary || []);

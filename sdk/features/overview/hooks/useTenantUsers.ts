@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getTenantUsers } from '../api';
 import { User } from '../types';
 
 export function useTenantUsers() {
@@ -11,15 +11,13 @@ export function useTenantUsers() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getTenantUsers();
+            const response = await getTenantUsers();
             if (response.success && response.data) {
                 setUsers(response.data);
             } else {
-                // Silently handle API not available - return empty users
                 setUsers([]);
             }
         } catch (err) {
-            // Silently handle errors - don't block UI
             const errorObj = err instanceof Error ? err : new Error('Unknown error');
             setError(errorObj);
             setUsers([]);

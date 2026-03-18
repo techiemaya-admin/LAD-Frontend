@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getWalletStats } from '../api';
 import { WalletStats } from '../types';
 
 export function useWalletStats() {
@@ -11,7 +11,7 @@ export function useWalletStats() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getWalletStats();
+            const response = await getWalletStats();
             if (response.success && response.data) {
                 setStats(response.data);
             } else {

@@ -587,3 +587,43 @@ export async function exportCampaignLeads(
 
   return response.data.data;
 }
+
+// ====================
+// LinkedIn Limits Functions
+// ====================
+
+export interface LinkedInLimits {
+  remaining: number;
+  total: number;
+}
+
+/**
+ * Get LinkedIn daily limits
+ */
+export async function getLinkedInLimits(): Promise<LinkedInLimits> {
+  const response = await apiClient.get<{
+    success: boolean;
+    totalDailyLimit: number;
+    remainingDailyLimit: number;
+  }>('/api/campaigns/linkedin/limits');
+
+  if (!response.data.success) {
+    throw new Error('Failed to fetch LinkedIn limits');
+  }
+
+  return {
+    remaining: response.data.remainingDailyLimit,
+    total: response.data.totalDailyLimit,
+  };
+}
+
+/**
+ * TanStack Query options for getting LinkedIn limits
+ */
+export const getLinkedInLimitsOptions = () =>
+  queryOptions({
+    queryKey: [...campaignKeys.all, 'linkedinLimits'] as const,
+    queryFn: getLinkedInLimits,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });

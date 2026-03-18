@@ -13,10 +13,10 @@ import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFr
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
 import { clearBufferedMessages, clearAllBufferedMessages } from '@lad/frontend-features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
-import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
+import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign, useLinkedInLimits } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
-import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { apiPost, apiPut } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { toast } from '@/hooks/use-toast';
@@ -100,28 +100,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     setIsInboundFormVisible,
   } = useOnboardingStore();
 
-  const [limits, setLimits] = useState<{ remaining: number; total: number } | null>(null);
-  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
-
-  useEffect(() => {
-    setIsLoadingLimits(true);
-    apiGet<{ success: boolean; totalDailyLimit: number; remainingDailyLimit: number }>('/api/campaigns/linkedin/limits')
-      .then(res => {
-        logger.debug('LinkedIn limits received', res);
-        if (res.success) {
-          setLimits({
-            remaining: res.remainingDailyLimit,
-            total: res.totalDailyLimit
-          });
-        }
-      })
-      .catch(err => {
-        logger.error('Failed to fetch limits', err);
-        // Fallback to 0 if error, to be safe
-        setLimits({ remaining: 0, total: 0 });
-      })
-      .finally(() => setIsLoadingLimits(false));
-  }, []);
+  const { limits, isLoading: isLoadingLimits } = useLinkedInLimits();
 
   // State for duplicate lead detection
   const [duplicateLeadsInfo, setDuplicateLeadsInfo] = useState<any>(null);
