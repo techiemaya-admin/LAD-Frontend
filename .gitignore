@@ -64,3 +64,4 @@ next-env.d.ts
 # OS
 Thumbs.dbfrontend_1502.zip
 web/src/app/api/token/route.ts
+.claude/
