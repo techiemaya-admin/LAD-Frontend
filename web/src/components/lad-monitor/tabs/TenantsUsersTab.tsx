@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useMemo } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/app-toaster';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { monitorApi as api } from '@/services/monitorApi';
-import { useTenants, useDashboardStats, useCampaigns, useVoiceAgents, useCallLogs } from '@/services/monitorApi';
+import { useTenants, useDashboardStats, useCampaigns, useVoiceAgents, useCallLogs, useTenantVoiceAgents } from '@/services/monitorApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MetricCard } from '@/components/lad-monitor/components/MetricCard';
 import { StatusBadge } from '@/components/lad-monitor/components/StatusBadge';
+import { CallAuditTrails } from '@/components/lad-monitor/components/CallAuditTrails';
 import type { Tenant, TenantPlan, TenantUser, UserRole, UserStatus, TimeRange } from '@/components/lad-monitor/types';
 import {
   Search, Plus, ArrowLeft, Users, Send, MessageSquare, Phone,
@@ -317,6 +318,10 @@ function CallLogsTab({ tenantId }: { tenantId: string }) {
           />
         )}
       </div>
+
+      {calls && calls.length > 0 && (
+        <CallAuditTrails calls={calls} />
+      )}
     </div>
   );
 }
@@ -900,23 +905,45 @@ function PipelineTab({ tenant }: { tenant: Tenant }) {
 
 // ─── Voice Agents Management Tab ─────────────────────────────────────────────
 
-function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
+function VoiceAgentsManagement({ tenant, onVoiceAgentsUpdate }: { tenant: Tenant, onVoiceAgentsUpdate?: (agents: any[]) => void }) {
   const queryClient = useQueryClient();
-  const [localAgents, setLocalAgents] = useState(tenant.voiceAgents || []);
+  const { push: toast } = useToast();
+  
+  const agents = tenant.voiceAgents || [];
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
-    localAgents[0]?.id || null
+    agents[0]?.id || null
   );
   const [searchQuery, setSearchQuery] = useState('');
 
-  const agents = localAgents;
-  const filteredAgents = agents.filter(a =>
+  // Update selected agent if current one disappears or if none selected
+  useEffect(() => {
+    if (!selectedAgentId && agents.length > 0) {
+      setSelectedAgentId(agents[0].id);
+    }
+  }, [agents, selectedAgentId]);
+  const filteredAgents = agents.filter((a: any) =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const voices = await api.settings.getVoices(tenant.id);
+        setAvailableVoices(Array.isArray(voices) ? voices : (voices.data || []));
+      } catch (err) {
+        console.error('Failed to fetch voices:', err);
+      }
+    };
+    fetchVoices();
+  }, []);
+
   const isCreating = selectedAgentId === 'new';
   const activeAgent = isCreating
-    ? { id: 'new', name: '', gender: 'Female', language: 'en', voiceId: '', instructions: '', systemInstructions: '', provider: 'Vapi', status: 'Active', outboundStarterPrompt: '', inboundStarterPrompt: '' }
-    : agents.find(a => a.id === selectedAgentId) || (agents.length > 0 ? agents[0] : null);
+    ? { id: 'new', name: '', gender: 'Female', language: 'en', voiceId: '', instructions: '', systemInstructions: '', provider: 'Vapi', status: 'Active', outboundStarterPrompt: '', inboundStarterPrompt: '', description: '' }
+    : (agents.find((a: any) => a.id === selectedAgentId) || (agents.length > 0 ? agents[0] : null));
 
   const [formName, setFormName] = useState('');
   const [formGender, setFormGender] = useState('Female');
@@ -945,43 +972,89 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
   };
 
   const handleSave = async () => {
+    console.log('[LAD] handleSave triggered', { formName, formVoiceId, isCreating });
     try {
+      if (!formName || !formVoiceId) {
+        toast({ 
+          title: 'Missing Fields', 
+          description: 'Please provide a name and select a voice ID', 
+          variant: 'warning' 
+        });
+        return;
+      }
+
       const payload = {
         name: formName,
+        description: formInstructions.slice(0, 100), // Simple mapping for description
+        voice_id: formVoiceId, // Backend expects snake_case
         gender: formGender,
         language: formLanguage,
-        voiceId: formVoiceId,
-        instructions: formInstructions,
-        systemInstructions: formSystemPrompt,
-        outboundStarterPrompt: formOutboundPrompt,
-        inboundStarterPrompt: formInboundPrompt,
+        settings: {
+          language: formLanguage,
+          instructions: formInstructions,
+          systemInstructions: formSystemPrompt,
+          outboundStarterPrompt: formOutboundPrompt,
+          inboundStarterPrompt: formInboundPrompt,
+        }
       };
 
       if (isCreating) {
-        const result = await api.createVoiceAgent(payload, tenant.id);
-        toast.success('Agent created successfully');
-        // Reset state so we are no longer in "creating" mode
-        setSelectedAgentId(result?.id || null);
+        console.log('[LAD] Creating agent with payload:', payload);
+        const result = await api.settings.createAgent(payload, tenant.id);
+        console.log('[LAD] Agent created successfully:', result);
+        toast({ title: 'Success', description: 'Agent created successfully', variant: 'success' });
+        const newId = result?.id || result?.data?.id || null;
+        if (newId) {
+          setSelectedAgentId(newId);
+          const newAgent = result?.data || result;
+          onVoiceAgentsUpdate?.([...agents, newAgent]);
+        }
       } else if (selectedAgentId) {
-        await api.updateVoiceAgent(selectedAgentId, payload, tenant.id);
-        toast.success('Agent changes saved successfully');
+        console.log('[LAD] Updating agent:', selectedAgentId, payload);
+        const result = await api.settings.updateAgent(selectedAgentId, payload, tenant.id);
+        toast({ title: 'Success', description: 'Agent changes saved successfully', variant: 'success' });
+        const updatedAgent = result?.data || result;
+        onVoiceAgentsUpdate?.(agents.map(a => a.id === selectedAgentId ? { ...a, ...updatedAgent } : a));
       }
 
-      // Invalidate queries to refresh data from server
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['monitor'] });
     } catch (err) {
       console.error('Failed to save agent:', err);
-      toast.error('Failed to save agent. Check console for details.');
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to save agent. Check console for details.', 
+        variant: 'error' 
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedAgentId || isCreating) return;
+    if (!confirm('Are you sure you want to delete this agent?')) return;
+
+    try {
+      setIsDeleting(true);
+      await api.settings.deleteAgent(selectedAgentId, tenant.id);
+      toast({ title: 'Success', description: 'Agent deleted successfully', variant: 'success' });
+      const remaining = agents.filter(a => a.id !== selectedAgentId);
+      onVoiceAgentsUpdate?.(remaining);
+      setSelectedAgentId(remaining[0]?.id || null);
+      queryClient.invalidateQueries({ queryKey: ['monitor'] });
+    } catch (err) {
+      console.error('Failed to delete agent:', err);
+      toast({ title: 'Error', description: 'Failed to delete agent.', variant: 'error' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // Helper for status badge
   const AgentStatusBadge = ({ status }: { status: string }) => {
-    const isActive = status.toLowerCase() === 'active';
+    const isActive = (status || '').toLowerCase() === 'active';
     return (
       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase transition-all ${isActive ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-        {status}
+        {status || 'Inactive'}
       </span>
     );
   };
@@ -999,7 +1072,6 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
     );
   }
 
-  if (!activeAgent) return null;
 
   return (
     <div className="flex bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-[750px] overflow-hidden">
@@ -1031,7 +1103,7 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredAgents.map(agent => (
+          {filteredAgents.map((agent: any) => (
             <button
               key={agent.id}
               onClick={() => setSelectedAgentId(agent.id)}
@@ -1097,6 +1169,16 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
               >
                 {isCreating ? 'Create Agent' : 'Save Changes'}
               </Button>
+              {!isCreating && (
+                <Button
+                  variant="ghost"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="h-10 px-4 rounded-xl border-red-200 dark:border-red-900/50 font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1176,12 +1258,27 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
                 </div>
                 <div className="flex-1 w-full space-y-2">
                   <Label className="text-slate-700 dark:text-slate-300 font-bold ml-1">Voice ID</Label>
-                  <Input
-                    placeholder="e.g., poly-alex"
-                    value={formVoiceId}
-                    onChange={(e) => setFormVoiceId(e.target.value)}
-                    className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl px-5 text-sm dark:text-white font-medium"
-                  />
+                  {availableVoices.length > 0 ? (
+                    <Select value={formVoiceId} onValueChange={setFormVoiceId}>
+                      <SelectTrigger className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl px-5 text-sm dark:text-white font-medium">
+                        <SelectValue placeholder="Select a voice" />
+                      </SelectTrigger>
+                      <SelectContent className="dark:bg-slate-900 dark:border-slate-800">
+                        {availableVoices.map(v => (
+                          <SelectItem key={v.id || v.voiceId} value={v.id || v.voiceId}>
+                            {v.name} ({v.provider || v.model})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      placeholder="e.g., poly-alex"
+                      value={formVoiceId}
+                      onChange={(e) => setFormVoiceId(e.target.value)}
+                      className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl px-5 text-sm dark:text-white font-medium"
+                    />
+                  )}
                 </div>
                 <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 gap-2">
                   <Volume2 className="h-4 w-4" /> Preview
@@ -1301,19 +1398,20 @@ function VoiceAgentsManagement({ tenant }: { tenant: Tenant }) {
   );
 }
 
-function TenantDetailTabs({ tenant, onRemoveUser, onEditUser, onAddUser }: {
-  tenant: Tenant; onRemoveUser: (id: string) => void; onEditUser: (u: TenantUser) => void; onAddUser: () => void;
+function TenantDetailTabs({ tenant, onRemoveUser, onEditUser, onAddUser, onVoiceAgentsUpdate }: {
+  tenant: Tenant; onRemoveUser: (id: string) => void; onEditUser: (u: TenantUser) => void; onAddUser: () => void; onVoiceAgentsUpdate?: (agents: any[]) => void;
 }) {
+  const { push: toast } = useToast();
   const queryClient = useQueryClient();
   const [billingTimeRange, setBillingTimeRange] = useState('30 days');
 
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     try {
       await api.updateUser(userId, { role: newRole }, tenant.id);
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('User role updated');
+      queryClient.invalidateQueries({ queryKey: ['monitor', 'tenants'] });
+      toast({ title: 'Success', description: 'User role updated', variant: 'success' });
     } catch (err) {
-      toast.error('Failed to update role');
+      toast({ title: 'Error', description: 'Failed to update role', variant: 'error' });
     }
   };
   return (
@@ -1544,7 +1642,7 @@ function TenantDetailTabs({ tenant, onRemoveUser, onEditUser, onAddUser }: {
 
       {/* ── Voice Agents Tab ── */}
       <TabsContent value="voice-agents">
-        <VoiceAgentsManagement tenant={tenant} />
+        <VoiceAgentsManagement tenant={tenant} onVoiceAgentsUpdate={onVoiceAgentsUpdate} />
       </TabsContent>
 
       <TabsContent value="calls"><CallLogsTab tenantId={tenant.id} /></TabsContent>
@@ -1974,6 +2072,7 @@ function TenantDetailTabs({ tenant, onRemoveUser, onEditUser, onAddUser }: {
 
 
 export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRange: TimeRange; onTenantSelect?: (selected: boolean) => void; isDark: boolean }) {
+  const { push: toast } = useToast();
   const { data: backendTenants = [], isLoading } = useTenants(timeRange);
   const { data: dashboardStats } = useDashboardStats(timeRange);
   const queryClient = useQueryClient();
@@ -2071,12 +2170,12 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
         await api.inviteTenant(inviteEmail);
       }
 
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['monitor', 'tenants'] });
       setShowAddTenant(false);
       setInviteEmail('');
-      toast.success(autoSendInvite ? 'Invitation email sent!' : 'Tenant added to list.');
+      toast({ title: 'Success', description: autoSendInvite ? 'Invitation email sent!' : 'Tenant added to list.', variant: 'success' });
     } catch (err) {
-      toast.error('Failed to send invitation');
+      toast({ title: 'Error', description: 'Failed to send invitation', variant: 'error' });
     } finally {
       setIsInviting(false);
     }
@@ -2097,7 +2196,7 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
           capabilities: newUser.capabilities
         }, selectedTenant.id);
 
-        queryClient.invalidateQueries({ queryKey: ['tenants'] });
+        queryClient.invalidateQueries({ queryKey: ['monitor', 'tenants'] });
         setSelectedTenant((prev) => {
           if (!prev) return null;
           return {
@@ -2116,7 +2215,7 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
             ),
           };
         });
-        toast.success('User updated successfully');
+        toast({ title: 'Success', description: 'User updated successfully', variant: 'success' });
       } else {
         // Add Mode - Call API
         const createdUser = await api.createUser({
@@ -2138,16 +2237,16 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
           capabilities: createdUser.capabilities || []
         };
 
-        queryClient.invalidateQueries({ queryKey: ['tenants'] });
+        queryClient.invalidateQueries({ queryKey: ['monitor', 'tenants'] });
         setSelectedTenant((prev) => prev ? { ...prev, users: [...prev.users, user], activeUsers: (prev.activeUsers || 0) + 1 } : null);
-        toast.success('Team member added successfully');
+        toast({ title: 'Success', description: 'Team member added successfully', variant: 'success' });
       }
 
       setShowAddUser(false);
       setNewUser({ id: '', firstName: '', lastName: '', email: '', role: 'viewer', capabilities: [] });
     } catch (err) {
       console.error('Failed to add user:', err);
-      toast.error('Failed to save user to server');
+      toast({ title: 'Error', description: 'Failed to save user to server', variant: 'error' });
     }
   };
 
@@ -2174,13 +2273,16 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
 
   const handleRemoveUser = (userId: string) => {
     if (!selectedTenant) return;
-    queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    queryClient.invalidateQueries({ queryKey: ['monitor', 'tenants'] });
     setSelectedTenant((prev) => prev ? { ...prev, users: prev.users.filter((u) => u.id !== userId) } : null);
   };
 
   // Tenant detail view
   if (selectedTenant) {
-    const tenant = backendTenants.find((t) => t.id === selectedTenant.id) || selectedTenant;
+    const backendT = backendTenants.find((t) => t.id === selectedTenant.id);
+    const tenant = backendT 
+      ? { ...backendT, voiceAgents: selectedTenant.voiceAgents || backendT.voiceAgents } 
+      : selectedTenant;
 
     return (
       <div className="space-y-6">
@@ -2248,7 +2350,15 @@ export function TenantsUsersTab({ timeRange, onTenantSelect, isDark }: { timeRan
         </div>
 
         {/* Tabs for Team, Voice Agents, Integrations, Billing, Calls, Campaigns, Pipeline Leads */}
-        <TenantDetailTabs tenant={tenant} onRemoveUser={handleRemoveUser} onEditUser={openEditUser} onAddUser={() => setShowAddUser(true)} />
+        <TenantDetailTabs 
+          tenant={tenant} 
+          onRemoveUser={handleRemoveUser} 
+          onEditUser={openEditUser} 
+          onAddUser={() => setShowAddUser(true)} 
+          onVoiceAgentsUpdate={(newAgents) => {
+            setSelectedTenant(prev => prev ? { ...prev, voiceAgents: newAgents } : null);
+          }}
+        />
 
         {/* Add/Edit User Dialog */}
         <Dialog open={showAddUser} onOpenChange={setShowAddUser}>

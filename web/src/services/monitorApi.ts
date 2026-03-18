@@ -32,6 +32,7 @@ const monitorFetch = async (endpoint: string, options: RequestOptions = {}) => {
     const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         headers,
+        cache: 'no-store',
     });
 
     if (response.status === 401) {
@@ -49,8 +50,7 @@ const monitorFetch = async (endpoint: string, options: RequestOptions = {}) => {
 };
 
 // ─── API Methods ─────────────────────────────────────────────────────────────
-
-export const monitorApi = {
+const monitorApiBase = {
     getDashboardStats: (timeView?: string): Promise<DashboardStats | null> => {
         const now = new Date();
         let startDate: string;
@@ -188,6 +188,63 @@ export const monitorApi = {
         }),
 };
 
+const proxyFetch = async (endpoint: string, options: any = {}, tenantId?: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('monitorAuthToken') : null;
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
+        ...options.headers,
+    };
+    const response = await fetch(endpoint, { ...options, headers });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `Proxy Error: ${response.status}`);
+    }
+    return data;
+};
+
+export const monitorApi = {
+    ...monitorApiBase,
+    settings: {
+        getAgents: (tenantId?: string) => proxyFetch('/api/voice-agent/settings/agents', {}, tenantId),
+        getAgentById: (id: string, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/agents/${id}`, {}, tenantId),
+        createAgent: (data: any, tenantId?: string) => proxyFetch('/api/voice-agent/settings/agents', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }, tenantId),
+        updateAgent: (id: string, data: any, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/agents/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        }, tenantId),
+        deleteAgent: (id: string, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/agents/${id}`, {
+            method: 'DELETE'
+        }, tenantId),
+        searchAgents: (query: string, tenantId?: string) =>
+            proxyFetch(`/api/voice-agent/settings/agents/search?q=${encodeURIComponent(query)}`, {}, tenantId),
+
+        getVoices: (tenantId?: string) => proxyFetch('/api/voice-agent/settings/voices', {}, tenantId),
+        getVoiceById: (id: string, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/voices/${id}`, {}, tenantId),
+        createVoice: (data: any, tenantId?: string) => proxyFetch('/api/voice-agent/settings/voices', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }, tenantId),
+        updateVoice: (id: string, data: any, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/voices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        }, tenantId),
+        deleteVoice: (id: string, tenantId?: string) => proxyFetch(`/api/voice-agent/settings/voices/${id}`, {
+            method: 'DELETE'
+        }, tenantId),
+        getVoicesByProvider: (provider: string, tenantId?: string) =>
+            proxyFetch(`/api/voice-agent/settings/voices/provider/${provider}`, {}, tenantId),
+        searchVoices: (query: string, tenantId?: string) =>
+            proxyFetch(`/api/voice-agent/settings/voices/search?q=${encodeURIComponent(query)}`, {}, tenantId),
+        getAgentsByVoiceId: (voiceId: string, tenantId?: string) =>
+            proxyFetch(`/api/voice-agent/settings/voices/${voiceId}/agents`, {}, tenantId),
+    }
+};
+
 // ─── React Query Hooks ────────────────────────────────────────────────────────
 
 export function useSystemHealth() {
@@ -253,6 +310,16 @@ export function useVoiceAgents() {
         queryKey: ['monitor', 'voice-agents'],
         queryFn: monitorApi.getVoiceAgents,
         refetchInterval: 60000,
+        initialData: [] as any[],
+    });
+}
+
+export function useTenantVoiceAgents(tenantId?: string) {
+    return useQuery({
+        queryKey: ['monitor', 'tenant-agents', tenantId],
+        queryFn: () => monitorApi.settings.getAgents(tenantId),
+        refetchInterval: 60000,
+        enabled: !!tenantId,
         initialData: [] as any[],
     });
 }
