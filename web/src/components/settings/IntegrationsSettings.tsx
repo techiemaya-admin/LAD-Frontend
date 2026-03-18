@@ -8,6 +8,7 @@ import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { LinkedInIntegration } from './LinkedInIntegration';
 import { TenantOnboarding } from './TenantOnboarding';
+import { GoHighLevelIntegration } from './GoHighLevelIntegration';
 import { useTenant } from '@/contexts/TenantContext';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
@@ -89,6 +90,29 @@ const INTEGRATIONS: IntegrationCard[] = [
     icon: <Linkedin className="h-6 w-6 text-blue-700" />,
     iconBg: 'bg-blue-50',
     category: 'Social',
+  },
+  {
+    id: 'gohighlevel',
+    name: 'GoHighLevel',
+    description: 'Connect GoHighLevel CRM to sync contacts, deals, and automate workflows.',
+    icon: (
+      <svg viewBox="0 0 120 120" className="h-6 w-6">
+        {/* Yellow arrow (left) - shortest */}
+        <polygon points="15,100 27,100 27,60 15,60" fill="#FFB902"/>
+        <polygon points="7,60 35,60 21,30" fill="#FFB902"/>
+        <polygon points="21,30 35,60 28,60 28,42" fill="#E0A300"/>
+        {/* Blue arrow (center) */}
+        <polygon points="40,100 52,100 52,55 40,55" fill="#0B81FF"/>
+        <polygon points="32,55 60,55 46,22" fill="#0B81FF"/>
+        <polygon points="46,22 60,55 53,55 53,36" fill="#0066CC"/>
+        {/* Green arrow (right) - tallest */}
+        <polygon points="65,100 77,100 77,48 65,48" fill="#00C853"/>
+        <polygon points="57,48 85,48 71,12" fill="#00C853"/>
+        <polygon points="71,12 85,48 78,48 78,28" fill="#009624"/>
+      </svg>
+    ),
+    iconBg: 'bg-white',
+    category: 'CRM',
   },
   {
     id: 'slack',
@@ -275,11 +299,23 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('linkedin', 'disconnected'); }
     };
 
+    // GoHighLevel
+    const checkGHL = async () => {
+      setStatus('gohighlevel', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
+        if (!res.ok) { setStatus('gohighlevel', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('gohighlevel', 'disconnected'); }
+    };
+
     checkWaPersonal();
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
     checkLinkedIn();
+    checkGHL();
   }, [tenantId, setStatus]);
 
   // Re-check all statuses
@@ -338,6 +374,15 @@ export const IntegrationsSettings: React.FC = () => {
         );
         setStatus('linkedin', connected ? 'connected' : 'disconnected');
       } catch { setStatus('linkedin', 'disconnected'); }
+
+      // GoHighLevel
+      setStatus('gohighlevel', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
+        if (!res.ok) { setStatus('gohighlevel', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('gohighlevel', 'disconnected'); }
     };
     checkAll();
   }, [setStatus]);
@@ -369,6 +414,7 @@ export const IntegrationsSettings: React.FC = () => {
         {activeView === 'google' && <GoogleAuthIntegration />}
         {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
         {activeView === 'linkedin' && <LinkedInIntegration />}
+        {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
         {activeView === 'slack' && (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
             Slack integration coming soon.

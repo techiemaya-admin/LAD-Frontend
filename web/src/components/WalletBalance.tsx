@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { getCreditPackages, getWalletBalance, getWalletBalanceLegacy } from '@lad/frontend-features/billing';
+import { rechargeWallet } from '../../../sdk/features/billing/api';
 interface WalletData {
   balance: number;
   currency: string;
@@ -42,22 +44,10 @@ export const WalletBalance: React.FC = () => {
   }, []);
   const fetchWalletData = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/billing/wallet`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!response.ok) {
-        // Fall back to legacy endpoint if new endpoint not available
-        const legacyResponse = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!legacyResponse.ok) {
-          throw new Error('Failed to fetch wallet data');
-        }
-        const legacyData = await legacyResponse.json();
+
+      const responseWallet = await getWalletBalance()
+      if (!responseWallet.walletId) {
+        const legacyData = await getWalletBalanceLegacy()
         setWallet({
           balance: legacyData.balance || 0,
           currency: legacyData.currency || 'USD',
@@ -65,13 +55,13 @@ export const WalletBalance: React.FC = () => {
         });
         return;
       }
-      const data = await response.json();
+      // const data = await response.json();
       // Transform new API response to wallet data
       // The new endpoint returns { wallet: { availableBalance, ... } }
       setWallet({
-        balance: data.wallet?.availableBalance || data.wallet?.currentBalance || data.balance || 0,
-        currency: data.wallet?.currency || data.currency || 'USD',
-        transactions: data.transactions || []
+        balance: responseWallet?.availableBalance || responseWallet?.currentBalance || responseWallet.balance || 0,
+        currency: responseWallet?.currency || responseWallet.currency || 'USD',
+        transactions: responseWallet.transactions || []
       });
     } catch (error) {
       console.error('Error fetching wallet:', error);
@@ -87,17 +77,8 @@ export const WalletBalance: React.FC = () => {
   };
   const fetchCreditPackages = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/packages`, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch credit packages');
-      }
-      const data = await response.json();
-      setPackages(data.packages || []);
+      const packageData = await getCreditPackages()
+      setPackages(packageData || []);
     } catch (error) {
       console.error('Error fetching packages:', error);
       // Show empty packages on error
@@ -107,22 +88,11 @@ export const WalletBalance: React.FC = () => {
   const handleRecharge = async (packageId: string) => {
     setProcessing(true);
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/recharge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          packageId,
-          successUrl: `${window.location.origin}/wallet/success`,
-          cancelUrl: `${window.location.origin}/wallet/cancel`,
-        }),
+      const { sessionUrl } = await rechargeWallet({
+        packageId,
+        successUrl: `${window.location.origin}/wallet/success`,
+        cancelUrl: `${window.location.origin}/wallet/cancel`,
       });
-      if (!response.ok) {
-        throw new Error('Failed to create recharge session');
-      }
-      const { sessionUrl } = await response.json();
       window.location.href = sessionUrl;
     } catch (error) {
       console.error('Error processing recharge:', error);
@@ -201,11 +171,10 @@ export const WalletBalance: React.FC = () => {
                   <div
                     key={pkg.id}
                     onClick={() => setSelectedPackage(pkg.id)}
-                    className={`relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
-                      selectedPackage === pkg.id
-                        ? 'border-blue-600 bg-blue-50 shadow-lg'
-                        : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
-                    } ${pkg.popular ? 'ring-2 ring-blue-400' : ''}`}
+                    className={`relative cursor-pointer rounded-xl border-2 p-6 transition-all ${selectedPackage === pkg.id
+                      ? 'border-blue-600 bg-blue-50 shadow-lg'
+                      : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+                      } ${pkg.popular ? 'ring-2 ring-blue-400' : ''}`}
                   >
                     {pkg.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -285,11 +254,10 @@ export const WalletBalance: React.FC = () => {
               <div key={transaction.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1">
-                    <div className={`rounded-full p-2 mr-4 ${
-                      transaction.type === 'credit' 
-                        ? 'bg-green-100 text-green-600' 
-                        : 'bg-orange-100 text-orange-600'
-                    }`}>
+                    <div className={`rounded-full p-2 mr-4 ${transaction.type === 'credit'
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-orange-100 text-orange-600'
+                      }`}>
                       {transaction.status === 'completed' ? (
                         <CheckCircle2 className="h-5 w-5" />
                       ) : transaction.status === 'pending' ? (
@@ -306,9 +274,8 @@ export const WalletBalance: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-lg font-semibold ${
-                      transaction.type === 'credit' ? 'text-green-600' : 'text-orange-600'
-                    }`}>
+                    <p className={`text-lg font-semibold ${transaction.type === 'credit' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
                       {transaction.type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
                     </p>
                     <p className="text-xs text-gray-500 capitalize">{transaction.status}</p>

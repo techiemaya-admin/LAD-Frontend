@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -8,11 +8,14 @@ import {
   X,
   Loader2,
   FolderPlus,
-  MessageCircle,
   ChevronRight,
   Search,
   Info,
-  Eye,
+  Check,
+  ChevronDown,
+  Phone,
+  Mail,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@/utils/storage';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -101,6 +105,87 @@ async function deleteGroup(id: string): Promise<boolean> {
   return data.success;
 }
 
+// ── Contact source types ─────────────────────────────────────────
+
+interface SourceContact {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  company_name?: string | null;
+  profile_photo?: string | null;
+}
+
+interface ContactSource {
+  key: string;
+  label: string;
+  color: string;
+  fetchContacts: (page: number, search: string) => Promise<{ contacts: SourceContact[]; total: number }>;
+}
+
+const CONTACT_SOURCES: ContactSource[] = [
+  {
+    key: 'crm',
+    label: 'CRM Contacts',
+    color: '#3b82f6',
+    fetchContacts: async (page, search) => {
+      const params = new URLSearchParams({ page: String(page), limit: '50' });
+      if (search) params.set('search', search);
+      const res = await fetchWithTenant(`/api/social-integration/gohighlevel/contacts/local?${params}`);
+      const data = await res.json();
+      return {
+        contacts: (data.data || []).map((c: Record<string, unknown>) => ({
+          id: c.id || c.source_id,
+          name: c.name,
+          phone: c.phone,
+          email: c.email,
+          company_name: c.company_name,
+          profile_photo: c.profile_photo,
+        })),
+        total: data.total || 0,
+      };
+    },
+  },
+  {
+    key: 'whatsapp',
+    label: 'WhatsApp Contacts',
+    color: '#25D366',
+    fetchContacts: async (page, search) => {
+      const params = new URLSearchParams({ page: String(page), limit: '50' });
+      if (search) params.set('search', search);
+      const res = await fetchWithTenant(`/api/personal-whatsapp/contacts?${params}`);
+      const data = await res.json();
+      return {
+        contacts: (data.data || []).map((c: Record<string, unknown>) => ({
+          id: String(c.phone || c.whatsapp_id),
+          name: c.name as string | null,
+          phone: c.phone as string | null,
+          email: null,
+        })),
+        total: data.total || 0,
+      };
+    },
+  },
+  {
+    key: 'google',
+    label: 'Google Contacts',
+    color: '#ea4335',
+    fetchContacts: async () => ({ contacts: [], total: 0 }),
+  },
+  {
+    key: 'microsoft',
+    label: 'Microsoft Contacts',
+    color: '#00a4ef',
+    fetchContacts: async () => ({ contacts: [], total: 0 }),
+  },
+  {
+    key: 'other',
+    label: 'Other',
+    color: '#78716c',
+    fetchContacts: async () => ({ contacts: [], total: 0 }),
+  },
+];
+
 // ── WhatsApp-style Group Avatar ──────────────────────────────────
 
 function GroupAvatar({ name, color, size = 'md' }: { name: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
@@ -150,6 +235,18 @@ export function ChatGroupManager({
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[0]);
   const [newDesc, setNewDesc] = useState('');
 
+  // Contact picker state (step 2 of create)
+  const [createStep, setCreateStep] = useState<'details' | 'contacts'>('details');
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const [sourceContacts, setSourceContacts] = useState<SourceContact[]>([]);
+  const [sourceTotal, setSourceTotal] = useState(0);
+  const [sourcePage, setSourcePage] = useState(1);
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<Map<string, SourceContact>>(new Map());
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Edit form
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
@@ -172,6 +269,11 @@ export function ChatGroupManager({
       setIsCreating(false);
       setEditingId(null);
       setConfirmDeleteId(null);
+      setCreateStep('details');
+      setSelectedSource(null);
+      setSourceContacts([]);
+      setSelectedContacts(new Map());
+      setSourceSearch('');
     }
   }, [open]);
 
@@ -179,17 +281,103 @@ export function ChatGroupManager({
     ? groups.filter((g) => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : groups;
 
+  // Load contacts from a source
+  const loadSourceContacts = useCallback(async (sourceKey: string, page = 1, search = '') => {
+    const source = CONTACT_SOURCES.find(s => s.key === sourceKey);
+    if (!source) return;
+    setSourceLoading(true);
+    try {
+      const result = await source.fetchContacts(page, search);
+      setSourceContacts(result.contacts);
+      setSourceTotal(result.total);
+      setSourcePage(page);
+    } catch {
+      setSourceContacts([]);
+      setSourceTotal(0);
+    } finally {
+      setSourceLoading(false);
+    }
+  }, []);
+
+  // Handle source selection
+  const handleSelectSource = useCallback((key: string) => {
+    setSelectedSource(key);
+    setSourceDropdownOpen(false);
+    setSourceSearch('');
+    setSourceContacts([]);
+    setSourceTotal(0);
+    setSourcePage(1);
+    loadSourceContacts(key, 1, '');
+  }, [loadSourceContacts]);
+
+  // Handle source search with debounce
+  const handleSourceSearch = useCallback((value: string) => {
+    setSourceSearch(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      if (selectedSource) loadSourceContacts(selectedSource, 1, value);
+    }, 400);
+  }, [selectedSource, loadSourceContacts]);
+
+  // Toggle contact selection
+  const toggleContact = useCallback((contact: SourceContact) => {
+    setSelectedContacts(prev => {
+      const next = new Map(prev);
+      if (next.has(contact.id)) {
+        next.delete(contact.id);
+      } else {
+        next.set(contact.id, contact);
+      }
+      return next;
+    });
+  }, []);
+
+  // Step 1 -> Step 2
+  const handleNextStep = useCallback(() => {
+    if (!newName.trim()) return;
+    setCreateStep('contacts');
+  }, [newName]);
+
+  // Create group with selected contacts
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
     const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined);
     if (group) {
-      setGroups((prev) => [...prev, group]);
+      // If contacts are selected, add them to the group via backend
+      if (selectedContacts.size > 0) {
+        try {
+          const contactsList = Array.from(selectedContacts.values());
+          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts`, {
+            method: 'POST',
+            body: JSON.stringify({
+              contacts: contactsList.map(c => ({
+                name: c.name,
+                phone: c.phone,
+                email: c.email,
+              })),
+            }),
+          });
+          // Refresh group to get updated count
+          const refreshed = await fetchGroups();
+          setGroups(refreshed);
+        } catch (err) {
+          console.error('Error importing contacts to group:', err);
+          setGroups((prev) => [...prev, group]);
+        }
+      } else {
+        setGroups((prev) => [...prev, group]);
+      }
+      // Reset all create state
       setNewName('');
       setNewDesc('');
       setNewColor(COLOR_OPTIONS[0]);
       setIsCreating(false);
+      setCreateStep('details');
+      setSelectedSource(null);
+      setSourceContacts([]);
+      setSelectedContacts(new Map());
     }
-  }, [newName, newColor, newDesc]);
+  }, [newName, newColor, newDesc, selectedContacts]);
 
   const handleDelete = useCallback(async (id: string) => {
     const ok = await deleteGroup(id);
@@ -269,47 +457,241 @@ export function ChatGroupManager({
             </button>
           ) : (
             <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
-              <Input
-                placeholder="Group name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="h-9 text-sm"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              />
-              <Input
-                placeholder="Description (optional)"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                className="h-8 text-xs"
-              />
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground mr-1 font-medium">Color:</span>
-                {COLOR_OPTIONS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setNewColor(c)}
-                    className={cn(
-                      'h-5 w-5 rounded-full transition-all',
-                      newColor === c ? 'ring-2 ring-offset-1 ring-primary scale-110' : 'hover:scale-110'
-                    )}
-                    style={{ backgroundColor: c }}
+              {createStep === 'details' ? (
+                <>
+                  <Input
+                    placeholder="Group name"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="h-9 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && newName.trim() && handleNextStep()}
                   />
-                ))}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button size="sm" className="h-8 text-xs flex-1" onClick={handleCreate} disabled={!newName.trim()}>
-                  Create Group
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); }}
-                >
-                  Cancel
-                </Button>
-              </div>
+                  <Input
+                    placeholder="Description (optional)"
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-muted-foreground mr-1 font-medium">Color:</span>
+                    {COLOR_OPTIONS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setNewColor(c)}
+                        className={cn(
+                          'h-5 w-5 rounded-full transition-all',
+                          newColor === c ? 'ring-2 ring-offset-1 ring-primary scale-110' : 'hover:scale-110'
+                        )}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" className="h-8 text-xs flex-1" onClick={handleNextStep} disabled={!newName.trim()}>
+                      Next: Add Contacts
+                    </Button>
+                    <Button size="sm" className="h-8 text-xs" variant="outline" onClick={handleCreate} disabled={!newName.trim()}>
+                      Skip & Create
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Step 2: Contact source picker */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <button
+                      onClick={() => setCreateStep('details')}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-sm font-medium">Add contacts to &quot;{newName}&quot;</span>
+                    {selectedContacts.size > 0 && (
+                      <Badge variant="default" className="text-[10px] ml-auto">{selectedContacts.size} selected</Badge>
+                    )}
+                  </div>
+
+                  {/* Source dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setSourceDropdownOpen(!sourceDropdownOpen)}
+                      className="w-full flex items-center justify-between h-8 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <span className={selectedSource ? 'text-foreground' : 'text-muted-foreground'}>
+                        {selectedSource
+                          ? CONTACT_SOURCES.find(s => s.key === selectedSource)?.label
+                          : 'Select contact source...'}
+                      </span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', sourceDropdownOpen && 'rotate-180')} />
+                    </button>
+                    {sourceDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 rounded-md border border-border bg-card shadow-lg z-50 py-1">
+                        {CONTACT_SOURCES.map((src) => (
+                          <button
+                            key={src.key}
+                            onClick={() => handleSelectSource(src.key)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 text-left text-sm"
+                          >
+                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: src.color }} />
+                            <span>{src.label}</span>
+                            {selectedSource === src.key && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected contacts chips */}
+                  {selectedContacts.size > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from(selectedContacts.values()).slice(0, 8).map((c) => (
+                        <Badge
+                          key={c.id}
+                          variant="secondary"
+                          className="text-[10px] pl-1.5 pr-1 py-0.5 gap-1 cursor-pointer hover:bg-destructive/10"
+                          onClick={() => toggleContact(c)}
+                        >
+                          {c.name || c.phone || c.email || 'Unknown'}
+                          <X className="h-2.5 w-2.5" />
+                        </Badge>
+                      ))}
+                      {selectedContacts.size > 8 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          +{selectedContacts.size - 8} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Contact list from selected source */}
+                  {selectedSource && (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search contacts..."
+                          value={sourceSearch}
+                          onChange={(e) => handleSourceSearch(e.target.value)}
+                          className="h-7 text-xs pl-7"
+                        />
+                      </div>
+
+                      {sourceLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : sourceContacts.length === 0 ? (
+                        <div className="text-center py-6 text-xs text-muted-foreground">
+                          {['google', 'microsoft', 'other'].includes(selectedSource)
+                            ? 'Coming soon — integration not yet configured.'
+                            : sourceSearch ? 'No contacts found.' : 'No contacts available.'}
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-[200px]">
+                          <div className="space-y-0.5">
+                            {sourceContacts.map((contact) => {
+                              const isSelected = selectedContacts.has(contact.id);
+                              return (
+                                <button
+                                  key={contact.id}
+                                  onClick={() => toggleContact(contact)}
+                                  className={cn(
+                                    'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors',
+                                    isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
+                                  )}
+                                >
+                                  <div className={cn(
+                                    'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
+                                    isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                                  )}>
+                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  </div>
+                                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                                    {contact.profile_photo ? (
+                                      <img src={contact.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" />
+                                    ) : (
+                                      (contact.name || contact.email || '?')[0]?.toUpperCase()
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium truncate">
+                                      {contact.name || contact.phone || contact.email || 'Unknown'}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                      {contact.phone && (
+                                        <span className="flex items-center gap-0.5">
+                                          <Phone className="h-2.5 w-2.5" />{contact.phone}
+                                        </span>
+                                      )}
+                                      {contact.email && (
+                                        <span className="flex items-center gap-0.5 truncate">
+                                          <Mail className="h-2.5 w-2.5" />{contact.email}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      )}
+
+                      {/* Pagination for source contacts */}
+                      {sourceTotal > 50 && (
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                          <span>
+                            {Math.min((sourcePage - 1) * 50 + 1, sourceTotal)}-{Math.min(sourcePage * 50, sourceTotal)} of {sourceTotal}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline" size="sm" className="h-6 px-2 text-[10px]"
+                              disabled={sourcePage <= 1 || sourceLoading}
+                              onClick={() => loadSourceContacts(selectedSource, sourcePage - 1, sourceSearch)}
+                            >
+                              Prev
+                            </Button>
+                            <Button
+                              variant="outline" size="sm" className="h-6 px-2 text-[10px]"
+                              disabled={sourcePage * 50 >= sourceTotal || sourceLoading}
+                              onClick={() => loadSourceContacts(selectedSource, sourcePage + 1, sourceSearch)}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Create button */}
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" className="h-8 text-xs flex-1" onClick={handleCreate}>
+                      {selectedContacts.size > 0
+                        ? `Create Group with ${selectedContacts.size} Contact${selectedContacts.size > 1 ? 's' : ''}`
+                        : 'Create Group'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); setSelectedContacts(new Map()); }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Phone, Search, Brain, Linkedin, BarChart3, Calendar } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { getWalletUsageAnalytics } from '../../../sdk/features/billing/api';
 interface FeatureUsage {
   featureName: string;
   totalCredits: number;
@@ -25,8 +26,8 @@ interface UsageAnalytics {
 interface CreditUsageAnalyticsProps {
   timeRange?: '7d' | '30d' | '90d';
 }
-export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({ 
-  timeRange = '30d' 
+export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
+  timeRange = '30d'
 }) => {
   const [analytics, setAnalytics] = useState<UsageAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,22 +38,10 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getApiBaseUrl()}/api/wallet/usage/analytics?timeRange=${selectedRange}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
-      }
-      const data = await response.json();
+      const data = await getWalletUsageAnalytics({ timeRange: selectedRange });
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      // Show empty analytics on error
       setAnalytics({
         totalCreditsUsed: 0,
         topFeatures: [],
@@ -120,11 +109,10 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
             <button
               key={range}
               onClick={() => setSelectedRange(range as '7d' | '30d' | '90d')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedRange === range
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedRange === range
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {range === '7d' && 'Last 7 days'}
               {range === '30d' && 'Last 30 days'}
@@ -246,4 +234,4 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
       </div>
     </div>
   );
-};
+};

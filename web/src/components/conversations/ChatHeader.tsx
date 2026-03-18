@@ -3,7 +3,6 @@ import { Conversation } from '@/types/conversation';
 import { ChannelIcon } from './ChannelIcon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -151,7 +150,6 @@ export const ChatHeader = memo(function ChatHeader({
             <Video className="h-4 w-4" />
           </Button>
 
-          <ThemeToggle />
 
           <MessageSettings />
 
