@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackendUrl } from '../../../utils/backend';
+import { getBackendUrl, getVoagHeaders } from '../../../utils/backend';
 
 const BACKEND_PATH = '/api/social-integration/calendar/google/status';
-
-function buildHeaders(req: NextRequest): Record<string, string> {
-  const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-Frontend-ID': 'settings',
-    'X-API-Key': process.env.BASE_URL_FRONTEND_APIKEY || '',
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +9,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const resp = await fetch(`${backend}${BACKEND_PATH}`, {
       method: 'POST',
-      headers: buildHeaders(req),
+      headers: getVoagHeaders(req),
       body: JSON.stringify(body),
     });
     const data = await resp.json().catch(() => ({}));
@@ -38,7 +27,7 @@ export async function GET(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get('user_id');
     const resp = await fetch(`${backend}${BACKEND_PATH}`, {
       method: 'POST',
-      headers: buildHeaders(req),
+      headers: getVoagHeaders(req),
       body: JSON.stringify({ user_id: userId }),
     });
     const data = await resp.json().catch(() => ({}));

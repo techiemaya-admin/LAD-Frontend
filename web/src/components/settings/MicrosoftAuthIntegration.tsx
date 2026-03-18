@@ -130,7 +130,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       // Start Microsoft Calendar OAuth flow - use Next.js proxy to avoid CORS
       const result = await calendarFetch<any>('/api/calendar/microsoft/start', {
         user_id: userId,
-        frontend_id: 'settings'
+        frontend_id: process.env.NEXT_PUBLIC_VOAG_FRONTEND_ID || 'settings',
       });
       if (!result?.url) {
         console.error('[Microsoft Integration] No OAuth URL in response:', result);

@@ -122,7 +122,7 @@ export const GoogleAuthIntegration: React.FC = () => {
       // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
       const result = await calendarFetch<any>('/api/calendar/google/start', {
         user_id: userId,
-        frontend_id: 'settings',
+        frontend_id: process.env.NEXT_PUBLIC_VOAG_FRONTEND_ID || 'settings',
       });
       if (!result?.url) {
         console.error('[Google Integration] No OAuth URL in response:', result);
