@@ -273,12 +273,19 @@ export default function AdvancedSearchAIPage() {
     useEffect(() => {
         const steps: any[] = [];
         let order = 1;
-        // Start node
+
+        // Helper: truncate long text for node descriptions
+        const trunc = (s: string, n = 60) => s && s.length > n ? s.slice(0, n) + '…' : s;
+
+        // Lead generation — show keywords if targeting is set
+        const keywordDesc = targeting?.keywords?.length
+            ? `Keywords: ${targeting.keywords.slice(0, 3).join(', ')}${targeting.keywords.length > 3 ? '…' : ''}`
+            : 'Find target leads on LinkedIn';
         steps.push({
             id: 'lead-gen',
             type: 'lead_generation',
             title: 'LinkedIn Lead Search',
-            description: 'Find target leads on LinkedIn',
+            description: keywordDesc,
             channel: 'linkedin',
             order_index: order++
         });
@@ -288,7 +295,7 @@ export default function AdvancedSearchAIPage() {
                 id: 'connect',
                 type: 'linkedin_connect',
                 title: 'Send Connection Request',
-                description: 'Auto-connect with leads on LinkedIn',
+                description: cpConnMsg ? trunc(cpConnMsg) : 'Auto-connect with leads on LinkedIn',
                 channel: 'linkedin',
                 order_index: order++
             });
@@ -299,7 +306,7 @@ export default function AdvancedSearchAIPage() {
                 id: 'message',
                 type: 'linkedin_message',
                 title: 'Send Follow-up Message',
-                description: 'Message after connection accepted',
+                description: cpFollowMsg ? trunc(cpFollowMsg) : 'Message after connection accepted',
                 channel: 'linkedin',
                 order_index: order++
             });
@@ -316,35 +323,42 @@ export default function AdvancedSearchAIPage() {
             });
         }
 
+        // Condition gate — only if a trigger condition is chosen
         if (cpNextChannels.length > 0 && cpTriggerCondition) {
             const condLabels: Record<string, string> = {
-                connection_accepted: 'Wait for Connection Accepted',
-                message_replied: 'Wait for Message Reply',
-                profile_visited: 'Wait for Profile Visit'
+                connection_accepted: 'Wait: Connection Accepted',
+                message_replied: 'Wait: Message Replied',
+                profile_visited: 'Wait: Profile Visited'
             };
             steps.push({
                 id: 'condition',
                 type: 'wait_for_condition',
                 title: condLabels[cpTriggerCondition] || 'Wait for Condition',
-                description: 'Trigger condition',
+                description: 'Proceed when condition is met',
                 channel: 'system',
                 order_index: order++
             });
-
-            cpNextChannels.forEach((ch, idx) => {
-                steps.push({
-                    id: `ch-${ch}-${idx}`,
-                    type: ch === 'voice_call' ? 'voice_agent_call' : `${ch}_send`,
-                    title: ch === 'email' ? 'Send Follow-up Email' : ch === 'whatsapp' ? 'Send WhatsApp Message' : 'AI Voice Call',
-                    description: `Follow up via ${ch}`,
-                    channel: ch.split('_')[0],
-                    order_index: order++
-                });
-            });
         }
 
+        // Channel nodes — show as soon as user selects them, no gate required
+        cpNextChannels.forEach((ch, idx) => {
+            const chDesc = ch === 'email'
+                ? (cpEmailSubject ? trunc(cpEmailSubject) : (cpEmailBody ? trunc(cpEmailBody) : 'Send follow-up email'))
+                : ch === 'whatsapp'
+                    ? 'Send WhatsApp follow-up message'
+                    : 'Trigger an AI voice call';
+            steps.push({
+                id: `ch-${ch}-${idx}`,
+                type: ch === 'voice_call' ? 'voice_agent_call' : `${ch}_send`,
+                title: ch === 'email' ? 'Send Follow-up Email' : ch === 'whatsapp' ? 'Send WhatsApp Message' : 'AI Voice Call',
+                description: chDesc,
+                channel: ch === 'voice_call' ? 'voice' : ch,
+                order_index: order++
+            });
+        });
+
         setWorkflowPreview(steps);
-    }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
+    }, [cpActions, cpNextChannels, cpTriggerCondition, cpConnMsg, cpFollowMsg, cpEmailSubject, cpEmailBody, targeting, setWorkflowPreview]);
 
     // Reverse sync: Workflow builder → Checkpoint form
     // When user deletes a node in the workflow panel, update the form state to match
