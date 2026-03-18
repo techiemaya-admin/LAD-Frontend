@@ -315,7 +315,7 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_search_history');
             if (stored) setSearchHistory(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const addToHistory = (query: string) => {
         const trimmed = query.trim();
@@ -323,7 +323,7 @@ export default function AdvancedSearchAIPage() {
         setSearchHistory(prev => {
             const filtered = prev.filter(h => h.toLowerCase() !== trimmed.toLowerCase());
             const updated = [trimmed, ...filtered].slice(0, 10);
-            try { localStorage.setItem('lad_search_history', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_search_history', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -334,13 +334,13 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_lead_feedback');
             if (stored) setLeadFeedback(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const toggleFeedback = (leadId: string, rating: 'good' | 'bad') => {
         setLeadFeedback(prev => {
             const updated = { ...prev };
             if (updated[leadId] === rating) { delete updated[leadId]; } else { updated[leadId] = rating; }
-            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -351,13 +351,13 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_search_sessions');
             if (stored) setSearchSessions(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const addSearchSession = (query: string, tgt: LeadTargeting | null, icpDesc: string) => {
         setSearchSessions(prev => {
             const entry = { query, targeting: tgt, icp_description: icpDesc, timestamp: new Date().toISOString() };
             const updated = [entry, ...prev].slice(0, 20);
-            try { localStorage.setItem('lad_search_sessions', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_search_sessions', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -936,9 +936,9 @@ export default function AdvancedSearchAIPage() {
                                     onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.borderColor = '#172560'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                 >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q}</span>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
                                 </button>
                             ))}
                         </div>
@@ -1325,10 +1325,29 @@ export default function AdvancedSearchAIPage() {
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
 function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCount }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; hasPanel: boolean; leadsCount: number }) {
+    const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
+    const [thinkIdx, setThinkIdx] = React.useState(0);
+    const [thinkVisible, setThinkVisible] = React.useState(true);
+    React.useEffect(() => {
+        if (!msg.loading) return;
+        const iv = setInterval(() => {
+            setThinkVisible(false);
+            setTimeout(() => { setThinkIdx(p => (p + 1) % THINKING_WORDS.length); setThinkVisible(true); }, 300);
+        }, 1400);
+        return () => clearInterval(iv);
+    }, [msg.loading]);
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
             <div className="adv-ai-avatar"><span>✦</span></div>
-            <div><div className="adv-ai-name">AI Lead Finder</div><div className="adv-thinking">Thinking...</div></div>
+            <div>
+                <div className="adv-ai-name">AI Lead Finder</div>
+                <div className="adv-thinking-wrap">
+                    <span className={`adv-thinking-word${thinkVisible ? ' adv-tw-in' : ' adv-tw-out'}`}>
+                        {THINKING_WORDS[thinkIdx]}...
+                    </span>
+                    <span className="adv-thinking-dots"><span /><span /><span /></span>
+                </div>
+            </div>
         </div>
     );
     if (msg.role === 'user') return (
@@ -1551,7 +1570,7 @@ function CheckpointFormInline({
 
     // Compute LinkedIn capacity based on campaign duration
     const campaignDays = parseInt(days) || 30;
-    const workingDays = Math.floor(campaignDays * 5 / 7); // Mon-Fri only
+    const workingDays = Math.max(1, Math.floor(campaignDays * 5 / 7)); // Mon-Fri only, at least 1
     const campaignWeeks = Math.ceil(campaignDays / 7);
     const dailyCapacity = workingDays * LINKEDIN_DAILY_LIMIT;
     const weeklyCapacity = campaignWeeks * LINKEDIN_WEEKLY_LIMIT;
@@ -1696,7 +1715,7 @@ function CheckpointFormInline({
                 localStorage.setItem('lad_campaign_checkpoints', JSON.stringify(checkpointSelections));
                 localStorage.setItem('lad_campaign_icp_input', initialIcpInput);
                 localStorage.setItem('lad_campaign_user_messages', JSON.stringify(userMessages));
-            } catch {}
+            } catch { }
 
             // Collect leads marked as "good match" by the user during setup
             const goodMatchLeads = leads
@@ -1735,19 +1754,21 @@ function CheckpointFormInline({
                     conversation_history: chatMessages.map(m => ({ role: m.role, text: m.text, ts: m.ts })).slice(0, 50),
                 },
                 steps: [
-                    { type: 'lead_generation', title: 'LinkedIn Lead Search', channel: 'linkedin', order_index: 0, config: {
-                        source: 'linkedin_search',
-                        leadGenerationFilters: {
-                            keywords: t.keywords?.join(' ') || '',
-                            industries: t.industries || [],
-                            locations: t.locations || [],
-                            job_titles: t.job_titles || [],
-                            profile_language: t.profile_language || [],
-                        },
-                        leadGenerationLimit: safeLeadsPerDay,
-                        icp_input: initialIcpInput,
-                        icp_threshold: icpMin,
-                    } },
+                    {
+                        type: 'lead_generation', title: 'LinkedIn Lead Search', channel: 'linkedin', order_index: 0, config: {
+                            source: 'linkedin_search',
+                            leadGenerationFilters: {
+                                keywords: t.keywords?.join(' ') || '',
+                                industries: t.industries || [],
+                                locations: t.locations || [],
+                                job_titles: t.job_titles || [],
+                                profile_language: t.profile_language || [],
+                            },
+                            leadGenerationLimit: safeLeadsPerDay,
+                            icp_input: initialIcpInput,
+                            icp_threshold: icpMin,
+                        }
+                    },
                     ...actionSteps,
                 ],
             };
@@ -2034,8 +2055,8 @@ function CheckpointFormInline({
                                     padding: '10px 14px', borderRadius: '10px', fontSize: '12px', lineHeight: 1.5,
                                     background: '#fef3c7', border: '1px solid #f59e0b', color: '#92400e', marginTop: '4px',
                                 }}>
-                                    <strong>LinkedIn limit warning:</strong> You have {qualifiedLeadCount} qualified leads but only ~{totalLinkedInCapacity} can be reached in {campaignDays} days at {LINKEDIN_DAILY_LIMIT} actions/day.
-                                    Campaign will process {safeLeadsPerDay} leads/day. Consider extending the duration to {Math.ceil(qualifiedLeadCount / LINKEDIN_DAILY_LIMIT * 7 / 5)} days or more.
+                                    <strong>LinkedIn limit warning:</strong> You have {qualifiedLeadCount} qualified leads but only ~{totalLinkedInCapacity} can be reached in {campaignDays} {campaignDays === 1 ? 'day' : 'days'} at {LINKEDIN_DAILY_LIMIT} actions/day.
+                                    Campaign will process {safeLeadsPerDay} leads/day. Consider extending the duration to {Math.max(2, Math.ceil(qualifiedLeadCount / LINKEDIN_DAILY_LIMIT * 7 / 5))} days or more.
                                 </div>
                             )}
                         </div>
@@ -2204,7 +2225,15 @@ const css = `
             .adv-ai-text {font - size:14.5px; line-height:1.7; color:#374151; }
             .adv-ai-text p {margin:0 0 4px; }
             .adv-ai-text strong {color:#111827; }
-            .adv-thinking {font - size:14px; color:#9ca3af; font-style:italic; animation:pulse 1.5s ease infinite; }
+            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:20px;overflow:hidden}
+            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
+            .adv-tw-in{opacity:1;transform:translateY(0)}
+            .adv-tw-out{opacity:0;transform:translateY(-7px)}
+            .adv-thinking-dots{display:inline-flex;gap:3px;align-items:center}
+            .adv-thinking-dots span{width:4px;height:4px;border-radius:50%;background:#9ca3af;display:inline-block;animation:adv-db 1.1s ease-in-out infinite}
+            .adv-thinking-dots span:nth-child(2){animation-delay:.18s}
+            .adv-thinking-dots span:nth-child(3){animation-delay:.36s}
+            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-4px);opacity:1}}
 
             /* ── TARGETING CARD ── */
             .adv-targeting-card {margin - top:12px; background:linear-gradient(135deg,#f2f6fa,#e0eaf5); border:1px solid #c2d6eb; border-radius:16px; padding:14px 16px; }
