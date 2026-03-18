@@ -268,7 +268,10 @@ export default function AdvancedSearchAIPage() {
     const [cpFollowMsg, setCpFollowMsg] = useState('');
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
-    
+    // Declared before the workflow useEffect to avoid temporal dead zone
+    const [cpEmailSubject, setCpEmailSubject] = useState('');
+    const [cpEmailBody, setCpEmailBody] = useState('');
+
     // Dynamically build workflow preview
     useEffect(() => {
         const steps: any[] = [];
@@ -398,8 +401,7 @@ export default function AdvancedSearchAIPage() {
     const [cpSelectedVoiceId, setCpSelectedVoiceId] = useState('');
     const [cpSelectedFromNumber, setCpSelectedFromNumber] = useState('');
     // Email config (populated when email channel selected)
-    const [cpEmailSubject, setCpEmailSubject] = useState('');
-    const [cpEmailBody, setCpEmailBody] = useState('');
+    // cpEmailSubject / cpEmailBody declared earlier (before workflow useEffect)
     // cpEmailTemplates removed — loaded via useEmailTemplates SDK hook inside CheckpointFormInline
     const [cpSelectedEmailTemplateId, setCpSelectedEmailTemplateId] = useState('');
     const [cpSaveTemplateMode, setCpSaveTemplateMode] = useState(false);
