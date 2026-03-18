@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
+import { useOnboardingStore } from '@/store/onboardingStore';
+import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
 import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
 
@@ -253,18 +255,96 @@ export default function AdvancedSearchAIPage() {
     const [busy, setBusy] = useState(false);
     const [targeting, setTargeting] = useState<LeadTargeting | null>(null);
     const [leads, setLeads] = useState<LeadProfile[]>([]);
-    const [showPanel, setShowPanel] = useState<false | 'leads'>(false);
+    const [showPanel, setShowPanel] = useState<false | 'leads' | 'workflow'>(false);
+    const setWorkflowPreview = useOnboardingStore(s => s.setWorkflowPreview);
     // Activity tracking for SearchingThinker
     const [activities, setActivities] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     // Checkpoint form state (inline in chat)
     const [cpStep, setCpStep] = useState(-1); // -1 = not started, 0-6 = steps
     const [cpIcpThreshold, setCpIcpThreshold] = useState('75');
-    const [cpActions, setCpActions] = useState<string[]>(['connect']);
+    const [cpActions, setCpActions] = useState<string[]>([]);
     const [cpConnMsg, setCpConnMsg] = useState('');
     const [cpFollowMsg, setCpFollowMsg] = useState('');
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
+    
+    // Dynamically build workflow preview
+    useEffect(() => {
+        const steps: any[] = [];
+        let order = 1;
+        // Start node
+        steps.push({
+            id: 'lead-gen',
+            type: 'lead_generation',
+            title: 'LinkedIn Lead Search',
+            description: 'Find target leads on LinkedIn',
+            channel: 'linkedin',
+            order_index: order++
+        });
+
+        if (cpActions.includes('connect')) {
+            steps.push({
+                id: 'connect',
+                type: 'linkedin_connect',
+                title: 'Send Connection Request',
+                description: 'Auto-connect with leads on LinkedIn',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpActions.includes('message')) {
+            steps.push({
+                id: 'message',
+                type: 'linkedin_message',
+                title: 'Send Follow-up Message',
+                description: 'Message after connection accepted',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpActions.includes('profile_view')) {
+            steps.push({
+                id: 'profile_view',
+                type: 'linkedin_visit',
+                title: 'View Profile',
+                description: 'Visit their LinkedIn profile',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpNextChannels.length > 0 && cpTriggerCondition) {
+            const condLabels: Record<string, string> = {
+                connection_accepted: 'Wait for Connection Accepted',
+                message_replied: 'Wait for Message Reply',
+                profile_visited: 'Wait for Profile Visit'
+            };
+            steps.push({
+                id: 'condition',
+                type: 'wait_for_condition',
+                title: condLabels[cpTriggerCondition] || 'Wait for Condition',
+                description: 'Trigger condition',
+                channel: 'system',
+                order_index: order++
+            });
+
+            cpNextChannels.forEach((ch, idx) => {
+                steps.push({
+                    id: `ch-${ch}-${idx}`,
+                    type: ch === 'voice_call' ? 'voice_agent_call' : `${ch}_send`,
+                    title: ch === 'email' ? 'Send Follow-up Email' : ch === 'whatsapp' ? 'Send WhatsApp Message' : 'AI Voice Call',
+                    description: `Follow up via ${ch}`,
+                    channel: ch.split('_')[0],
+                    order_index: order++
+                });
+            });
+        }
+
+        setWorkflowPreview(steps);
+    }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
     const [cpDays, setCpDays] = useState('30');
     const [cpName, setCpName] = useState('');
     const [cpGenLoading, setCpGenLoading] = useState(false);
@@ -1245,17 +1325,19 @@ export default function AdvancedSearchAIPage() {
                 </div>
 
                 {/* RIGHT: PANELS */}
-                {showPanel === 'leads' && targeting && !inboundMode && (
+                {(showPanel === 'leads' || showPanel === 'workflow') && targeting && !inboundMode && (
                     <div className="adv-leads-panel">
                         <div className="adv-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', gap: '16px', flex: 1 }}>
+                                <button onClick={() => setShowPanel('leads')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: showPanel === 'leads' ? 700 : 500, color: showPanel === 'leads' ? '#172560' : '#6b7280', borderBottom: showPanel === 'leads' ? '2px solid #172560' : '2px solid transparent', paddingBottom: '4px', cursor: 'pointer' }}>Leads</button>
+                                <button onClick={() => setShowPanel('workflow')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: showPanel === 'workflow' ? 700 : 500, color: showPanel === 'workflow' ? '#172560' : '#6b7280', borderBottom: showPanel === 'workflow' ? '2px solid #172560' : '2px solid transparent', paddingBottom: '4px', cursor: 'pointer' }}>Workflow</button>
+                            </div>
                             <button className="adv-close-panel" onClick={() => setShowPanel(false)}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                                {leads.length} lead{leads.length !== 1 ? 's' : ''}{totalResults > 0 && <span style={{ color: '#9ca3af', fontWeight: 400 }}> of {totalResults}</span>}
-                            </span>
                         </div>
 
+                        {showPanel === 'leads' ? (
                         <div className="adv-panel-body">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="adv-panel-title" style={{ margin: 0 }}>Start connecting with your potential customers</h2>
@@ -1435,6 +1517,11 @@ export default function AdvancedSearchAIPage() {
                                 </div>
                             )}
                         </div>
+                        ) : (
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <WorkflowPreviewPanel />
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1533,7 +1620,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; onUploadClick?: () => void }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; onUploadClick?: () => void }) {
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -1545,7 +1632,6 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
         }, 1400);
         return () => clearInterval(iv);
     }, [msg.loading]);
-
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
             <div className="adv-ai-avatar"><span>✦</span></div>
@@ -1649,6 +1735,18 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Leads</div>
                                 <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>{leadsCount} Leads found</div>
+                            </div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                        </div>
+                        <div className="adv-rc adv-rc-leads" onClick={() => onShowPanel('workflow')} style={{
+                            flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
+                        }}>
+                            <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                ⚡
+                            </div>
+                            <div className="adv-rc-body" style={{ flex: 1 }}>
+                                <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
+                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>Live preview</div>
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
