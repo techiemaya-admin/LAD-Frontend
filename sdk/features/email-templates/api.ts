@@ -35,18 +35,18 @@ export async function listEmailTemplates(
 
   const query = params.toString();
   const res = await apiClient.get<EmailTemplateListApiResponse>(`${BASE}${query ? `?${query}` : ''}`);
-  return res.data;
+  return res.data.data;
 }
 
 export async function getEmailTemplate(id: string): Promise<EmailTemplate> {
   const res = await apiClient.get<EmailTemplateApiResponse>(`${BASE}/${id}`);
-  return res.data;
+  return res.data.data;
 }
 
 export async function getDefaultEmailTemplate(): Promise<EmailTemplate | null> {
   try {
     const res = await apiClient.get<EmailTemplateApiResponse>(`${BASE}/default`);
-    return res.data;
+    return res.data.data;
   } catch {
     return null;
   }
@@ -56,7 +56,7 @@ export async function createEmailTemplate(
   input: CreateEmailTemplateInput
 ): Promise<EmailTemplate> {
   const res = await apiClient.post<EmailTemplateApiResponse>(BASE, input);
-  return res.data;
+  return res.data.data;
 }
 
 export async function updateEmailTemplate(
@@ -64,7 +64,7 @@ export async function updateEmailTemplate(
   input: UpdateEmailTemplateInput
 ): Promise<EmailTemplate> {
   const res = await apiClient.put<EmailTemplateApiResponse>(`${BASE}/${id}`, input);
-  return res.data;
+  return res.data.data;
 }
 
 export async function deleteEmailTemplate(id: string): Promise<void> {
