@@ -251,18 +251,17 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 value={formData.leadLimit}
                 onChange={(e) => {
                   let val = parseInt(e.target.value) || 1;
-                  const max = dailyLimit || 100;
-                  if (val > max) val = max;
+                  if (dailyLimit !== null && val > dailyLimit) val = dailyLimit;
                   if (val < 1) val = 1;
                   setFormData({ ...formData, leadLimit: val });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="1"
-                max={dailyLimit || 100}
+                {...(dailyLimit !== null ? { max: dailyLimit } : {})}
                 placeholder="10"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Number of leads to generate per day (1–{dailyLimit || 100})
+                Number of leads to generate per day {dailyLimit !== null ? `(1–${dailyLimit})` : '(minimum 1)'}
               </p>
             </div>
           </div>
