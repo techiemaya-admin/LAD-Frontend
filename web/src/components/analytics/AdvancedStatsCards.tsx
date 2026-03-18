@@ -12,7 +12,7 @@ interface StatCardProps {
   subtitle?: string;
 }
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, progress, subtitle }) => (
-  <Card className="min-w-[220px] rounded-2xl shadow-lg bg-white/85 backdrop-blur-sm transition-transform hover:-translate-y-1 hover:scale-105 hover:shadow-xl">
+  <Card className="w-full rounded-2xl shadow-lg bg-white/85 backdrop-blur-sm transition-transform hover:-translate-y-1 hover:scale-105 hover:shadow-xl">
     <CardContent className="p-6">
       <div className="flex items-center space-x-4">
         <Avatar className="w-12 h-12" style={{ backgroundColor: color }}>
@@ -34,7 +34,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, progress
   </Card>
 );
 export const AdvancedStatsCards: React.FC<{ stats: any }> = ({ stats }) => (
-  <div className="flex flex-col md:flex-row gap-6 mb-8">
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
     <StatCard title="Total Leads" value={stats.leads} icon={<Users className="w-6 h-6" />} color="#6366F1" />
     <StatCard title="Messages Sent" value={stats.messages} icon={<Send className="w-6 h-6" />} color="#06b6d4" />
     <StatCard title="Replies" value={stats.replies} icon={<CheckCircle className="w-6 h-6" />} color="#10b981" progress={stats.replyRate} subtitle="Reply Rate" />

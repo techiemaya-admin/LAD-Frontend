@@ -28,7 +28,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 
 // Skeleton loading component
 const SkeletonCard = () => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-full">
     <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
@@ -63,7 +63,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected }: StatCardProps) => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-full">
     <div 
       className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer' : ''}
@@ -115,7 +115,7 @@ export default function CallLogsStatsCards({
 }: CallLogsStatsCardsProps) {
   if (loading) {
     return (
-      <div className="flex gap-4 mb-6 flex-wrap items-stretch">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Show 8 skeleton cards to match the actual number of cards */}
         {Array.from({ length: 8 }, (_, index) => (
           <SkeletonCard key={index} />
@@ -125,7 +125,7 @@ export default function CallLogsStatsCards({
   }
 
   return (
-    <div className="flex gap-4 mb-6 flex-wrap items-stretch">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {/* Total Calls */}
       <StatCard 
         title="Total Calls" 
