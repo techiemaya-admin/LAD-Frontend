@@ -7,9 +7,9 @@ import {
 const COLORS = ['#0b1957', '#06b6d4', '#6366F1', '#f59e42', '#F59E0B', '#EC4899'];
 
 export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+  <div className="flex flex-wrap gap-8">
     {/* Leads Over Time */}
-    <Card className="w-full rounded-2xl shadow-md">
+    <Card className="flex-1 min-w-[350px] rounded-2xl shadow-md">
       <CardHeader>
         <CardTitle className="text-lg font-bold">Leads Over Time</CardTitle>
       </CardHeader>
@@ -26,7 +26,7 @@ export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
       </CardContent>
     </Card>
     {/* Channel Breakdown */}
-    <Card className="w-full rounded-2xl shadow-md">
+    <Card className="flex-1 min-w-[350px] rounded-2xl shadow-md">
       <CardHeader>
         <CardTitle className="text-lg font-bold">Channel Breakdown</CardTitle>
       </CardHeader>
@@ -45,7 +45,7 @@ export const AnalyticsCharts: React.FC<{ data: any }> = ({ data }) => (
       </CardContent>
     </Card>
     {/* Conversion Funnel */}
-    <Card className="w-full rounded-2xl shadow-md md:col-span-2 xl:col-span-1">
+    <Card className="flex-1 min-w-[350px] rounded-2xl shadow-md">
       <CardHeader>
         <CardTitle className="text-lg font-bold">Conversion Funnel</CardTitle>
       </CardHeader>

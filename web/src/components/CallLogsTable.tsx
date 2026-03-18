@@ -428,7 +428,6 @@ export function CallLogsTable({
       size: 60,
       maxSize: 80,
       enableSortingRemoval: false,
-      meta: { responsive: 'hidden sm:table-cell' },
       cell: ({ getValue }) => (
         <span className="font-mono text-xs text-muted-foreground">
           {getValue() as number}
@@ -509,7 +508,6 @@ export function CallLogsTable({
     {
       id: 'response',
       header: 'Response',
-      meta: { responsive: 'hidden md:table-cell' },
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
           {getStatusReason(row.original) || "—"}
@@ -608,7 +606,6 @@ export function CallLogsTable({
     {
       id: 'cost',
       header: 'Cost',
-      meta: { responsive: 'hidden md:table-cell' },
       cell: ({ row }) => {
         const cost = row.original.cost || row.original.call_cost;
         return (
@@ -628,7 +625,7 @@ export function CallLogsTable({
           <div onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => handleScheduleClick(item)}
-              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
               title="Schedule"
             >
               <CalendarRange className="w-5 h-5" />
@@ -647,7 +644,7 @@ export function CallLogsTable({
             {item.status?.toLowerCase().includes("ongoing") && (
               <button
                 onClick={() => onEndCall(item.id)}
-                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
                 title="End Call"
               >
                 <StopCircle className="w-5 h-5" />
@@ -800,7 +797,7 @@ export function CallLogsTable({
                     e.stopPropagation();
                   }
                 }}
-                className={`${cellIndex === 0 && indent ? "pl-8" : ""} ${(column.meta as any)?.responsive || ''}`}
+                className={cellIndex === 0 && indent ? "pl-8" : ""}
               >
                 {flexRender(column.cell, cellContext as any)}
               </TableCell>
@@ -826,7 +823,7 @@ export function CallLogsTable({
                 e.stopPropagation();
               }
             }}
-            className={`${cellIndex === 0 && indent ? "pl-8" : ""} ${(cell.column.columnDef.meta as any)?.responsive || ''}`}
+            className={cellIndex === 0 && indent ? "pl-8" : ""}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
@@ -839,7 +836,7 @@ export function CallLogsTable({
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar */}
       <div className="p-4 border-b border-[#E2E8F0] bg-red">
-        <div className="flex gap-3 flex-col sm:flex-row justify-end items-stretch sm:items-center">
+        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
             <input
@@ -851,7 +848,7 @@ export function CallLogsTable({
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:min-w-[140px] h-10">
+            <SelectTrigger className="min-w-[150px] h-10">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -864,7 +861,7 @@ export function CallLogsTable({
             </SelectContent>
           </Select>
           <Select value={dateFilter} onValueChange={onDateFilterChange}>
-            <SelectTrigger className="w-full sm:min-w-[140px] h-10">
+            <SelectTrigger className="min-w-[150px] h-10">
               <SelectValue placeholder="Date Filter" />
             </SelectTrigger>
             <SelectContent>
@@ -875,7 +872,7 @@ export function CallLogsTable({
             </SelectContent>
           </Select>
           <Select value={callFilter} onValueChange={onCallFilterChange}>
-            <SelectTrigger className="w-full sm:min-w-[140px] h-10">
+            <SelectTrigger className="min-w-[150px] h-10">
               <SelectValue placeholder="Call Type" />
             </SelectTrigger>
             <SelectContent>
@@ -922,7 +919,6 @@ export function CallLogsTable({
           </div>
         )}
       </div>
-      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -930,7 +926,8 @@ export function CallLogsTable({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${(header.column.columnDef.meta as any)?.responsive || ''}`}
+                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                    }`}
                   onClick={header.column.getToggleSortingHandler()}
                 >
                   {header.isPlaceholder ? null : (
@@ -959,7 +956,7 @@ export function CallLogsTable({
             Array.from({ length: 8 }).map((_, i) => (
               <TableRow key={`skeleton-${i}`} className="animate-pulse">
                 {columns.map((col, j) => (
-                  <TableCell key={`skeleton-cell-${i}-${j}`} className={`py-4 ${(col.meta as any)?.responsive || ''}`}>
+                  <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
                     <div className="h-4 bg-gray-200 rounded w-full" />
                   </TableCell>
                 ))}
@@ -1157,7 +1154,6 @@ export function CallLogsTable({
                         e.stopPropagation();
                       }
                     }}
-                    className={(cell.column.columnDef.meta as any)?.responsive || ''}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
@@ -1167,10 +1163,9 @@ export function CallLogsTable({
           )}
         </TableBody>
       </Table>
-      </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-t border-[#E2E8F0]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
           {/* Left: Show [N] of X calls + batch stats */}
           <div className="flex items-center gap-2 text-sm text-[#64748B]">
             <span>Show</span>

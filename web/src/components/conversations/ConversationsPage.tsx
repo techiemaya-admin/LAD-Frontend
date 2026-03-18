@@ -205,7 +205,7 @@ export function ConversationsPage() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         <AnimatePresence mode="wait">
           {!isSidebarCollapsed && (
@@ -290,49 +290,31 @@ export function ConversationsPage() {
           </div>
         )}
 
-        {/* Mobile: back-to-conversations list button shown when sidebar is hidden on small screens */}
-        {isSidebarCollapsed && (
-          <div className="lg:hidden absolute top-0 left-0 z-10 w-full flex items-center gap-1 px-2 h-10 border-b border-border bg-card pointer-events-none">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 gap-1.5 pointer-events-auto"
-              onClick={() => setIsSidebarCollapsed(false)}
-            >
-              <PanelLeft className="h-4 w-4" />
-              <span className="text-xs font-medium">Conversations</span>
-            </Button>
-          </div>
-        )}
-
         {/* Main Chat Area: group merged view OR individual chat */}
-        {/* On mobile, add top padding when the back-bar is shown (sidebar collapsed) */}
-        <div className={`flex-1 flex flex-col min-w-0 ${isSidebarCollapsed ? 'pt-10 lg:pt-0' : ''}`}>
-          {activeGroup && !groupMemberSelected ? (
-            <GroupChatWindow
-              groupId={activeGroup.id}
-              groupName={activeGroup.name}
-              groupColor={activeGroup.color}
-              onBack={handleBackFromGroup}
-              autoOpenInfo={groupInfoAutoOpen}
-            />
-          ) : (
-            <ChatWindow
-              conversation={typedSelectedConversation}
-              onMarkResolved={markAsResolved}
-              onMute={muteConversation}
-              onSendMessage={sendMessage}
-              onTogglePanel={toggleContextPanel}
-              isPanelOpen={isContextPanelOpen}
-              onPin={handlePin}
-              onLock={handleLock}
-              onFavorite={handleFavorite}
-              onExport={handleExport}
-              onBlock={handleBlock}
-              onDelete={handleDelete}
-            />
-          )}
-        </div>
+        {activeGroup && !groupMemberSelected ? (
+          <GroupChatWindow
+            groupId={activeGroup.id}
+            groupName={activeGroup.name}
+            groupColor={activeGroup.color}
+            onBack={handleBackFromGroup}
+            autoOpenInfo={groupInfoAutoOpen}
+          />
+        ) : (
+          <ChatWindow
+            conversation={typedSelectedConversation}
+            onMarkResolved={markAsResolved}
+            onMute={muteConversation}
+            onSendMessage={sendMessage}
+            onTogglePanel={toggleContextPanel}
+            isPanelOpen={isContextPanelOpen}
+            onPin={handlePin}
+            onLock={handleLock}
+            onFavorite={handleFavorite}
+            onExport={handleExport}
+            onBlock={handleBlock}
+            onDelete={handleDelete}
+          />
+        )}
 
         {/* Context Panel (hidden in group merged view, shown for individual chats) */}
         <AnimatePresence mode="wait">
