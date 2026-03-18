@@ -2114,11 +2114,15 @@ function CheckpointFormInline({
                 campaign_name: name || 'AI Growth Campaign',
             };
 
-            // Get original ICP input (first user message in chat)
+            // Build ICP input: prefer the most recent search session's icp_description
+            // (e.g. "naveen from techiemaya") over the first generic user message
+            // (e.g. "I want to find leads at a specific company") so that campaign
+            // execution re-qualifies leads against the same specific ICP used at search time.
             const userMessages = chatMessages.filter(m => m.role === 'user').map(m => m.text);
-            const initialIcpInput = userMessages[0] || (searchSessions.length > 0
-                ? searchSessions[searchSessions.length - 1]?.icp_description || ''
-                : '');
+            const latestIcpDesc = searchSessions.length > 0
+                ? (searchSessions[searchSessions.length - 1]?.icp_description || '')
+                : '';
+            const initialIcpInput = latestIcpDesc || userMessages[0] || '';
 
             // Persist all user inputs to localStorage
             try {
