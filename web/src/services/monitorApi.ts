@@ -7,9 +7,9 @@ import type {
 
 const getApiBase = () => {
     if (typeof window !== 'undefined') {
-        return (process.env.NEXT_PUBLIC_MONITOR_API_URL as string) || 'http://localhost:3002/api';
+        return process.env.NEXT_PUBLIC_MONITOR_API_URL as string;
     }
-    return (process.env.MONITOR_API_URL as string) || 'http://localhost:3002/api';
+    return process.env.MONITOR_API_URL as string;
 };
 
 interface RequestOptions extends RequestInit {
@@ -18,7 +18,7 @@ interface RequestOptions extends RequestInit {
 
 const monitorFetch = async (endpoint: string, options: RequestOptions = {}) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('monitorAuthToken') : null;
-    const schema = process.env.NEXT_PUBLIC_LAD_SCHEMA || 'lad_dev';
+    const schema = process.env.NEXT_PUBLIC_LAD_SCHEMA || '';
 
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
