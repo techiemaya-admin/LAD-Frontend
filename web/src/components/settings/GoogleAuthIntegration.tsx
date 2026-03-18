@@ -3,9 +3,26 @@ import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiPost } from '@/lib/api';
-import { getApiBaseUrl } from '@/lib/api-utils';
 import { safeStorage } from '@/utils/storage';
+
+// Calls our Next.js proxy routes — never hits the backend directly
+async function calendarFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const token = safeStorage.getItem('token');
+  const res = await fetch(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
 export const GoogleAuthIntegration: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +53,7 @@ export const GoogleAuthIntegration: React.FC = () => {
         const userId = meData?.user?.id || meData?.id;
         if (userId) {
           // Check calendar connection status from our database with timeout
-          const statusPromise = apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
+          const statusPromise = calendarFetch<any>('/api/calendar/google/status', { user_id: userId });
           const statusData = await Promise.race([statusPromise, timeoutPromise]);
           setIsConnected(statusData.connected || false);
           setUserEmail(statusData.email || null);
@@ -65,7 +82,7 @@ export const GoogleAuthIntegration: React.FC = () => {
         const userId = meData?.user?.id || meData?.id;
         if (userId) {
           // Check status from our backend (which already has the data from VOAG callback)
-          const statusData = await apiPost<any>('/api/social-integration/calendar/google/status', { user_id: userId });
+          const statusData = await calendarFetch<any>('/api/calendar/google/status', { user_id: userId });
           if (statusData.connected && statusData.email) {
             // Connection is already recorded in database from callback
             setIsConnected(true);
@@ -103,9 +120,9 @@ export const GoogleAuthIntegration: React.FC = () => {
         return;
       }
       // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
-      const result = await apiPost<any>('/api/social-integration/calendar/google/start', { 
-        user_id: userId, 
-        frontend_id: 'settings' 
+      const result = await calendarFetch<any>('/api/calendar/google/start', {
+        user_id: userId,
+        frontend_id: process.env.NEXT_PUBLIC_VOAG_FRONTEND_ID || 'settings',
       });
       if (!result?.url) {
         console.error('[Google Integration] No OAuth URL in response:', result);
@@ -141,7 +158,7 @@ export const GoogleAuthIntegration: React.FC = () => {
       const userId = meData?.user?.id || meData?.id;
       if (userId) {
         // Call our backend to disconnect (it will update voag and database)
-        const response = await apiPost<any>('/api/social-integration/calendar/google/disconnect', { user_id: userId });
+        const response = await calendarFetch<any>('/api/calendar/google/disconnect', { user_id: userId });
         if (response.success) {
           setIsConnected(false);
           setUserEmail(null);
