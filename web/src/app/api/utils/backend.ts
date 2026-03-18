@@ -41,3 +41,47 @@ export function getBackendUrl(): string {
   // Safe local default to prevent accidental remote calls during dev.
   return 'http://localhost:3004';
 }
+
+/**
+ * VOAG (Voice Agent / OAuth Gateway) helper utilities
+ *
+ * Frontend ID identifies which integration context is making the request.
+ * VOAG uses it to select the correct OAuth redirect URIs and call configs.
+ *
+ * Env vars (server-side, no NEXT_PUBLIC_ needed — only used in API routes):
+ *   VOAG_FRONTEND_ID          → default context (calendar, voice calls)  default: 'settings'
+ *   VOAG_ADS_FRONTEND_ID      → ads/social integration context            default: 'group-info'
+ *   VOAG_API_KEY              → API key for VOAG service (same as BASE_URL_FRONTEND_APIKEY)
+ */
+export function getVoagFrontendId(context: 'settings' | 'ads' = 'settings'): string {
+  if (context === 'ads') {
+    return process.env.VOAG_ADS_FRONTEND_ID || 'group-info';
+  }
+  return process.env.VOAG_FRONTEND_ID || process.env.BASE_URL_FRONTEND_HEADER || 'settings';
+}
+
+export function getVoagApiKey(): string {
+  return process.env.VOAG_API_KEY || process.env.BASE_URL_FRONTEND_APIKEY || '';
+}
+
+/**
+ * Build standard VOAG request headers for server-side API routes.
+ * Eliminates the need to hardcode 'X-Frontend-ID' and 'X-API-Key' in each route.
+ */
+export function getVoagHeaders(
+  req: { cookies: { get: (name: string) => { value: string } | undefined }; headers: { get: (name: string) => string | null } },
+  context: 'settings' | 'ads' = 'settings'
+): Record<string, string> {
+  const token =
+    req.cookies.get('token')?.value ||
+    req.cookies.get('access_token')?.value ||
+    req.headers.get('authorization')?.replace('Bearer ', '');
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Frontend-ID': getVoagFrontendId(context),
+    'X-API-Key': getVoagApiKey(),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
