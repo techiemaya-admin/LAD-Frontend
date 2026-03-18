@@ -40,7 +40,9 @@
       "@lad/frontend-features/bookings": ["../sdk/features/bookings"],
       "@lad/frontend-features/social-integration": ["../sdk/features/social-integration"],
       "@lad/frontend-features/call-logs": ["../sdk/features/call-logs"],
-      "@lad/frontend-features/settings": ["../sdk/features/settings"]
+      "@lad/frontend-features/settings": ["../sdk/features/settings"],
+      "@lad/frontend-features/email-templates": ["../sdk/features/email-templates"],
+      "@lad/frontend-features/email-senders": ["../sdk/features/email-senders"]
     }
   },
   "include": [

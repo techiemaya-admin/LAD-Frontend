@@ -2,8 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2 } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
+import { useOnboardingStore } from '@/store/onboardingStore';
+import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
+import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
+import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -18,6 +22,12 @@ interface LeadTargeting {
     seniority?: string[];
     company_headcount?: string[];
     company_names?: string[];
+    decision_maker_nationality?: string[];
+    decision_maker_experience_level?: string[];
+    company_size?: string[];
+    company_age?: string[];
+    decision_maker_education?: string[];
+    decision_maker_skills?: string[];
 }
 
 interface LeadProfile {
@@ -189,6 +199,51 @@ function isInboundIntent(text: string): boolean {
     return /\b(i have leads|i have .* data|upload.*leads|inbound|import.*leads|have.*csv|have.*excel|already have.*leads|my leads|upload.*file|have.*spreadsheet|bulk.*upload)\b/i.test(lower);
 }
 
+/** Returns true when the user's reply is a confirmation of a search preview. */
+function isConfirmation(text: string): boolean {
+    return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
+}
+
+/* ═══════════════════════════════════════════════
+   TARGETING FILTER OPTIONS (CONSTANTS)
+   ═══════════════════════════════════════════════ */
+const NATIONALITIES = [
+    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia',
+    'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium',
+    'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei',
+    'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde',
+    'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo',
+    'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Czechia', 'Denmark',
+    'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
+    'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland',
+    'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada',
+    'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hong Kong',
+    'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel',
+    'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Korea',
+    'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia',
+    'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao', 'Madagascar', 'Malawi',
+    'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius',
+    'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco',
+    'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand',
+    'Nicaragua', 'Niger', 'Nigeria', 'North Macedonia', 'Norway', 'Oman', 'Pakistan',
+    'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines',
+    'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis',
+    'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino',
+    'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles',
+    'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia',
+    'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan',
+    'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania',
+    'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
+    'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
+    'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+    'Yemen', 'Zambia', 'Zimbabwe'
+];
+
+const EXPERIENCE_LEVELS = ['Entry Level (0-3 yrs)', 'Mid-Level (3-8 yrs)', 'Senior (8-15 yrs)', 'Executive (15+ yrs)'];
+const COMPANY_SIZES = ['1-50 employees', '51-250 employees', '251-1000 employees', '1000+ employees'];
+const COMPANY_AGES = ['Startup (<1 year)', 'Growth (1-5 years)', 'Established (5-10 years)', 'Mature (10+ years)'];
+const EDUCATION_OPTIONS = ['MBA', 'Bachelor\'s', 'Master\'s', 'PhD', 'Bootcamp', 'Other'];
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════ */
@@ -200,15 +255,96 @@ export default function AdvancedSearchAIPage() {
     const [busy, setBusy] = useState(false);
     const [targeting, setTargeting] = useState<LeadTargeting | null>(null);
     const [leads, setLeads] = useState<LeadProfile[]>([]);
-    const [showPanel, setShowPanel] = useState<false | 'leads'>(false);
+    const [showPanel, setShowPanel] = useState<false | 'leads' | 'workflow'>(false);
+    const setWorkflowPreview = useOnboardingStore(s => s.setWorkflowPreview);
+    // Activity tracking for SearchingThinker
+    const [activities, setActivities] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
     // Checkpoint form state (inline in chat)
     const [cpStep, setCpStep] = useState(-1); // -1 = not started, 0-6 = steps
     const [cpIcpThreshold, setCpIcpThreshold] = useState('75');
-    const [cpActions, setCpActions] = useState<string[]>(['connect']);
+    const [cpActions, setCpActions] = useState<string[]>([]);
     const [cpConnMsg, setCpConnMsg] = useState('');
     const [cpFollowMsg, setCpFollowMsg] = useState('');
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
+    
+    // Dynamically build workflow preview
+    useEffect(() => {
+        const steps: any[] = [];
+        let order = 1;
+        // Start node
+        steps.push({
+            id: 'lead-gen',
+            type: 'lead_generation',
+            title: 'LinkedIn Lead Search',
+            description: 'Find target leads on LinkedIn',
+            channel: 'linkedin',
+            order_index: order++
+        });
+
+        if (cpActions.includes('connect')) {
+            steps.push({
+                id: 'connect',
+                type: 'linkedin_connect',
+                title: 'Send Connection Request',
+                description: 'Auto-connect with leads on LinkedIn',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpActions.includes('message')) {
+            steps.push({
+                id: 'message',
+                type: 'linkedin_message',
+                title: 'Send Follow-up Message',
+                description: 'Message after connection accepted',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpActions.includes('profile_view')) {
+            steps.push({
+                id: 'profile_view',
+                type: 'linkedin_visit',
+                title: 'View Profile',
+                description: 'Visit their LinkedIn profile',
+                channel: 'linkedin',
+                order_index: order++
+            });
+        }
+
+        if (cpNextChannels.length > 0 && cpTriggerCondition) {
+            const condLabels: Record<string, string> = {
+                connection_accepted: 'Wait for Connection Accepted',
+                message_replied: 'Wait for Message Reply',
+                profile_visited: 'Wait for Profile Visit'
+            };
+            steps.push({
+                id: 'condition',
+                type: 'wait_for_condition',
+                title: condLabels[cpTriggerCondition] || 'Wait for Condition',
+                description: 'Trigger condition',
+                channel: 'system',
+                order_index: order++
+            });
+
+            cpNextChannels.forEach((ch, idx) => {
+                steps.push({
+                    id: `ch-${ch}-${idx}`,
+                    type: ch === 'voice_call' ? 'voice_agent_call' : `${ch}_send`,
+                    title: ch === 'email' ? 'Send Follow-up Email' : ch === 'whatsapp' ? 'Send WhatsApp Message' : 'AI Voice Call',
+                    description: `Follow up via ${ch}`,
+                    channel: ch.split('_')[0],
+                    order_index: order++
+                });
+            });
+        }
+
+        setWorkflowPreview(steps);
+    }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
     const [cpDays, setCpDays] = useState('30');
     const [cpName, setCpName] = useState('');
     const [cpGenLoading, setCpGenLoading] = useState(false);
@@ -219,9 +355,31 @@ export default function AdvancedSearchAIPage() {
     const [cpSelectedAgentId, setCpSelectedAgentId] = useState('');
     const [cpSelectedVoiceId, setCpSelectedVoiceId] = useState('');
     const [cpSelectedFromNumber, setCpSelectedFromNumber] = useState('');
+    // Email config (populated when email channel selected)
+    const [cpEmailSubject, setCpEmailSubject] = useState('');
+    const [cpEmailBody, setCpEmailBody] = useState('');
+    // cpEmailTemplates removed — loaded via useEmailTemplates SDK hook inside CheckpointFormInline
+    const [cpSelectedEmailTemplateId, setCpSelectedEmailTemplateId] = useState('');
+    const [cpSaveTemplateMode, setCpSaveTemplateMode] = useState(false);
+    const [cpSaveTemplateName, setCpSaveTemplateName] = useState('');
+    const [cpEmailGenLoading, setCpEmailGenLoading] = useState(false);
+    const [cpEmailFromAddress, setCpEmailFromAddress] = useState(''); // selected sender email
+    const [cpEmailProvider, setCpEmailProvider] = useState('');       // 'google' | 'microsoft'
+
+    // Targeting form state (inline in chat)
+    const [tgStep, setTgStep] = useState(-1); // -1 = not started, 0-6 = steps
+    const [tgNationality, setTgNationality] = useState<string[]>([]);
+    const [tgExperienceLevel, setTgExperienceLevel] = useState<string[]>([]);
+    const [tgCompanySize, setTgCompanySize] = useState<string[]>([]);
+    const [tgCompanyAge, setTgCompanyAge] = useState<string[]>([]);
+    const [tgEducation, setTgEducation] = useState<string[]>([]);
+    const [tgSkills, setTgSkills] = useState<string[]>([]);
+
     const [convId, setConvId] = useState<string | null>(null);
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+    // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
+    const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
 
     // Inbound CSV upload state
     const [inboundMode, setInboundMode] = useState(false);
@@ -234,7 +392,7 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_search_history');
             if (stored) setSearchHistory(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const addToHistory = (query: string) => {
         const trimmed = query.trim();
@@ -242,7 +400,7 @@ export default function AdvancedSearchAIPage() {
         setSearchHistory(prev => {
             const filtered = prev.filter(h => h.toLowerCase() !== trimmed.toLowerCase());
             const updated = [trimmed, ...filtered].slice(0, 10);
-            try { localStorage.setItem('lad_search_history', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_search_history', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -253,13 +411,13 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_lead_feedback');
             if (stored) setLeadFeedback(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const toggleFeedback = (leadId: string, rating: 'good' | 'bad') => {
         setLeadFeedback(prev => {
             const updated = { ...prev };
             if (updated[leadId] === rating) { delete updated[leadId]; } else { updated[leadId] = rating; }
-            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -270,13 +428,13 @@ export default function AdvancedSearchAIPage() {
         try {
             const stored = localStorage.getItem('lad_search_sessions');
             if (stored) setSearchSessions(JSON.parse(stored));
-        } catch {}
+        } catch { }
     }, []);
     const addSearchSession = (query: string, tgt: LeadTargeting | null, icpDesc: string) => {
         setSearchSessions(prev => {
             const entry = { query, targeting: tgt, icp_description: icpDesc, timestamp: new Date().toISOString() };
             const updated = [entry, ...prev].slice(0, 20);
-            try { localStorage.setItem('lad_search_sessions', JSON.stringify(updated)); } catch {}
+            try { localStorage.setItem('lad_search_sessions', JSON.stringify(updated)); } catch { }
             return updated;
         });
     };
@@ -521,71 +679,146 @@ export default function AdvancedSearchAIPage() {
             }
         }
 
+        // ── SEARCH CONFIRMATION ──
+        // If the user replied to a search preview (confirming or correcting it), capture that intent.
+        let confirmedForSearch: { intent: LeadTargeting; originalQuery: string } | null = null;
+        if (pendingSearchConfirmation) {
+            if (isConfirmation(text)) {
+                // User confirmed the parsed intent — carry it into the search execution below
+                confirmedForSearch = pendingSearchConfirmation;
+                setPendingSearchConfirmation(null);
+            } else {
+                // User is refining/correcting — clear the preview state and re-parse from scratch
+                setPendingSearchConfirmation(null);
+            }
+        }
+
         try {
             // Build history array for context (last 6 messages)
             const historySnapshot = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
 
-            // ── CASE 1: Detect Intent (Always call /lead-chat first) ──
+            // ── CASE 1: Detect Intent (Always call /lead-chat first, unless user just confirmed a preview) ──
             const isFirstMessage = messages.filter(m => m.role === 'user').length === 0;
             let shouldRunSearch = false;
             let aiResponseText = '';
             let aiOpts: { label: string; value: string }[] | undefined;
-            let updatedTargetState = targeting;
+            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting
+            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : targeting;
 
-            // Always call lead-chat for AI conversation
-            try {
-                const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
-                    method: 'POST',
-                    headers: headers(),
-                    body: JSON.stringify({
-                        message: text,
-                        history: historySnapshot,
-                        currentTargeting: targeting,
-                        pendingIntent: (pendingIntent as string | null),
-                    }),
-                });
-                const chatD = await chatR.json();
-                if (chatD.success) {
-                    aiResponseText = chatD.response || '';
-                    shouldRunSearch = !!chatD.newSearch;
-                    if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
-                    setPendingIntent(chatD.pendingIntent || null);
-                    if (Array.isArray(chatD.options) && chatD.options.length > 0) {
-                        aiOpts = chatD.options;
+            if (confirmedForSearch) {
+                // User confirmed the search preview — skip lead-chat and go straight to search
+                shouldRunSearch = true;
+            } else {
+                // Normal flow: call lead-chat for AI conversation
+                try {
+                    const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
+                        method: 'POST',
+                        headers: headers(),
+                        body: JSON.stringify({
+                            message: text,
+                            history: historySnapshot,
+                            currentTargeting: targeting,
+                            pendingIntent: (pendingIntent as string | null),
+                        }),
+                    });
+                    const chatD = await chatR.json();
+                    if (chatD.success) {
+                        aiResponseText = chatD.response || '';
+                        shouldRunSearch = !!chatD.newSearch;
+                        if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
+                        setPendingIntent(chatD.pendingIntent || null);
+                        if (Array.isArray(chatD.options) && chatD.options.length > 0) {
+                            aiOpts = chatD.options;
+                        }
+                    }
+                } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
+
+                // If it's the first message and lead-chat didn't respond or failed, fallback to searching
+                if (isFirstMessage && !aiResponseText && !shouldRunSearch) {
+                    shouldRunSearch = true;
+                }
+
+                // Smart search detection: if the user explicitly asks to find/search someone or something
+                // AND the query contains a specific entity (company, person name, location — not just vague intent)
+                if (!shouldRunSearch && !isFirstMessage) {
+                    const lowerText = text.toLowerCase();
+                    const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
+                    // Check if there's a specific entity (not just generic words like 'a specific company')
+                    const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
+                    // Must have search intent AND NOT be vague to force search
+                    if (hasSearchIntent && !hasVagueTarget) {
+                        shouldRunSearch = true;
+                        // Clear old targeting so Gemini parses this fresh query from scratch
+                        // e.g. previous search was "founders at X", now user says "find all people at X"
+                        updatedTargetState = null;
+                        // Clear the AI response so we show search results, not the chat response
+                        aiResponseText = '';
                     }
                 }
-            } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
 
-            // If it's the first message and lead-chat didn't respond or failed, fallback to searching
-            if (isFirstMessage && !aiResponseText && !shouldRunSearch) {
-                shouldRunSearch = true;
-            }
-
-            // Smart search detection: if the user explicitly asks to find/search someone or something
-            // AND the query contains a specific entity (company, person name, location — not just vague intent)
-            if (!shouldRunSearch && !isFirstMessage) {
-                const lowerText = text.toLowerCase();
-                const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
-                // Check if there's a specific entity (not just generic words like 'a specific company')
-                const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
-                // Must have search intent AND NOT be vague to force search
-                if (hasSearchIntent && !hasVagueTarget) {
-                    shouldRunSearch = true;
-                    // Clear old targeting so Gemini parses this fresh query from scratch
-                    // e.g. previous search was "founders at X", now user says "find all people at X"
-                    updatedTargetState = null;
-                    // Clear the AI response so we show search results, not the chat response
-                    aiResponseText = '';
+                if (!shouldRunSearch && aiResponseText) {
+                    // Just show the AI answer — no search needed
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
+                    }));
+                    setBusy(false);
+                    return;
                 }
-            }
 
-            if (!shouldRunSearch && aiResponseText) {
-                // Just show the AI answer — no search needed
-                setMessages(p => p.filter(m => m.id !== lid).concat({
-                    id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
-                }));
-                setBusy(false);
-                return;
+                // ── CONFIRMATION GATE ──
+                // Before running the search, show the parsed intent back to the user for confirmation.
+                if (shouldRunSearch) {
+                    // Use the intent already parsed by lead-chat; if none, call extract-intent for a quick parse
+                    let previewIntent: LeadTargeting | null = updatedTargetState;
+                    const hasUsableIntent = (previewIntent?.job_titles?.length ?? 0) > 0
+                        || (previewIntent?.locations?.length ?? 0) > 0
+                        || (previewIntent?.keywords?.length ?? 0) > 0
+                        || (previewIntent?.company_names?.length ?? 0) > 0
+                        || (previewIntent?.industries?.length ?? 0) > 0;
+
+                    if (!hasUsableIntent) {
+                        try {
+                            const intentR = await fetch(`${API_BASE}/api/campaigns/linkedin/search/extract-intent`, {
+                                method: 'POST', headers: headers(), body: JSON.stringify({ query: text }),
+                            });
+                            const intentD = await intentR.json();
+                            if (intentD.success && intentD.intent) {
+                                previewIntent = {
+                                    job_titles: toArr(intentD.intent.job_titles),
+                                    industries: toArr(intentD.intent.industries),
+                                    locations: toArr(intentD.intent.locations),
+                                    keywords: toArr(intentD.intent.keywords),
+                                    profile_language: toArr(intentD.intent.profile_language),
+                                    company_names: toArr(intentD.intent.company_names),
+                                    seniority: toArr(intentD.intent.seniority),
+                                    functions: toArr(intentD.intent.functions),
+                                };
+                            }
+                        } catch (e) { console.warn('[Search] extract-intent for preview failed', e); }
+                    }
+
+                    const hasPreviewData = (previewIntent?.job_titles?.length ?? 0) > 0
+                        || (previewIntent?.locations?.length ?? 0) > 0
+                        || (previewIntent?.keywords?.length ?? 0) > 0
+                        || (previewIntent?.company_names?.length ?? 0) > 0
+                        || (previewIntent?.industries?.length ?? 0) > 0;
+
+                    if (previewIntent && hasPreviewData) {
+                        // Show the confirmation preview and pause — the search runs only after the user confirms
+                        const confirmMsg = buildConfirmationMessage(previewIntent, text);
+                        setPendingSearchConfirmation({ intent: previewIntent, originalQuery: text });
+                        setMessages(p => p.filter(m => m.id !== lid).concat({
+                            id: `a-${Date.now()}`, role: 'ai', text: confirmMsg, ts: new Date(),
+                            options: [
+                                { label: '✅ Yes, search this', value: 'yes' },
+                                { label: '✏️ Let me refine this', value: 'I want to change what I\'m looking for' },
+                            ],
+                        }));
+                        setBusy(false);
+                        return;
+                    }
+                    // If intent could not be determined, fall through and run the search immediately
+                }
             }
 
             // ── CASE 2: Run LinkedIn search ──
@@ -594,18 +827,29 @@ export default function AdvancedSearchAIPage() {
             let searchTotal = 0;
             let icpWasApplied = false;
 
-            // If we have updated targeting from lead-chat or custom flows, use that for search query
-            const searchQuery = shouldRunSearch && ext && !isFirstMessage
-                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
-                : text;
+            // When the user confirmed a search preview, always send the ORIGINAL query to the backend
+            // and let the server's Gemini re-parse it with the improved prompt (fixes "from Company" parsing).
+            // The pre-parsed preview intent shown to the user is only for display — do not use it as the search input.
+            let searchQuery: string;
+            if (confirmedForSearch) {
+                searchQuery = confirmedForSearch.originalQuery;
+                ext = null; // Clear the preview intent — let the backend parse the original query fresh
+            } else {
+                // If we have updated targeting from lead-chat or custom flows, use that for search query
+                searchQuery = shouldRunSearch && ext && !isFirstMessage
+                    ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
+                    : text;
+            }
 
             try {
                 // Enhance ICP description with user feedback on previous leads
-                let icpDesc = text;
+                // When running from a confirmed preview, use the original query, not "yes"
+                const icpBase = confirmedForSearch ? confirmedForSearch.originalQuery : text;
+                let icpDesc = icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
-                    const parts = [text];
+                    const parts = [icpBase];
                     if (goodLeads.length > 0) {
                         parts.push(`\n\nUser marked these leads as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
                     }
@@ -615,10 +859,21 @@ export default function AdvancedSearchAIPage() {
                     icpDesc = parts.join('');
                 }
 
+                setIsSearching(true);
+                setActivities([]);
+
                 const r = await fetch(`${API_BASE}/api/campaigns/linkedin/search/advanced`, {
                     method: 'POST', headers: headers(), body: JSON.stringify({ query: searchQuery, count: leadCount, targeting: ext || undefined, icp_description: icpDesc }),
                 });
                 const d = await r.json();
+
+                // Extract and set activities from response
+                if (d.activities && Array.isArray(d.activities)) {
+                    setActivities(d.activities);
+                }
+
+                setIsSearching(false);
+
                 if (d.success) {
                     if (d.intent) {
                         const newExt: LeadTargeting = {
@@ -636,9 +891,9 @@ export default function AdvancedSearchAIPage() {
                     }
                     // Store search context for pagination + localStorage
                     setLastSearchQuery(searchQuery);
-                    setLastIcpDescription(text);
+                    setLastIcpDescription(icpBase);
                     setLastTargeting(ext);
-                    addSearchSession(searchQuery, ext, text);
+                    addSearchSession(searchQuery, ext, icpBase);
                     setSearchPage(1);
                     setTotalResults(d.total || 0);
                     const nextCursor = d.cursor || null;
@@ -728,7 +983,7 @@ export default function AdvancedSearchAIPage() {
                 id: `a-${Date.now()}`, role: 'ai', text: '⚠️ Something went wrong. Please try again.', ts: new Date(),
             }));
         } finally { setBusy(false); }
-    }, [busy, messages, convId, targeting, pendingIntent]);
+    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation]);
 
     const onChatSend = useCallback(() => {
         if (!input.trim() || busy) return;
@@ -738,11 +993,71 @@ export default function AdvancedSearchAIPage() {
 
     const onOptClick = useCallback((v: string) => { doSend(v); }, [doSend]);
 
+    const handleTargetingConfirm = useCallback(async () => {
+        // Build the updated targeting object with new filter values
+        const updatedTargeting: LeadTargeting = {
+            ...targeting,
+            decision_maker_nationality: tgNationality.length > 0 ? tgNationality : undefined,
+            decision_maker_experience_level: tgExperienceLevel.length > 0 ? tgExperienceLevel : undefined,
+            company_size: tgCompanySize.length > 0 ? tgCompanySize : undefined,
+            company_age: tgCompanyAge.length > 0 ? tgCompanyAge : undefined,
+            decision_maker_education: tgEducation.length > 0 ? tgEducation : undefined,
+            decision_maker_skills: tgSkills.length > 0 ? tgSkills : undefined,
+        } as LeadTargeting;
+
+        // Update targeting state
+        setTargeting(updatedTargeting);
+
+        // Build a message for the AI to interpret these filters
+        const filterParts: string[] = [];
+        if (tgNationality.length > 0) filterParts.push(`Nationality: ${tgNationality.join(', ')}`);
+        if (tgExperienceLevel.length > 0) filterParts.push(`Experience Level: ${tgExperienceLevel.join(', ')}`);
+        if (tgCompanySize.length > 0) filterParts.push(`Company Size: ${tgCompanySize.join(', ')}`);
+        if (tgCompanyAge.length > 0) filterParts.push(`Company Age: ${tgCompanyAge.join(', ')}`);
+        if (tgEducation.length > 0) filterParts.push(`Education: ${tgEducation.join(', ')}`);
+        if (tgSkills.length > 0) filterParts.push(`Skills: ${tgSkills.join(', ')}`);
+
+        const refinementMessage = filterParts.length > 0
+            ? `Refine my targeting with these additional criteria:\n${filterParts.join('\n')}`
+            : 'Confirm my current targeting criteria';
+
+        // Close the targeting form
+        setTgStep(-1);
+
+        // Send to AI for refinement - this will trigger the search
+        doSend(refinementMessage);
+    }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
+
     const onKey = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
     };
 
-    const reset = () => { setScreen('landing'); setMessages([]); setTargeting(null); setLeads([]); setShowPanel(false); setConvId(null); setMsgCount(0); setPendingIntent(null); setSearchPage(1); setTotalResults(0); setSearchCursor(null); setCursorHistory([null]); setLastSearchQuery(''); setLastIcpDescription(''); setLastTargeting(null); };
+    const reset = () => {
+        setScreen('landing');
+        setMessages([]);
+        setTargeting(null);
+        setLeads([]);
+        setShowPanel(false);
+        setConvId(null);
+        setMsgCount(0);
+        setPendingIntent(null);
+        setPendingSearchConfirmation(null);
+        setSearchPage(1);
+        setTotalResults(0);
+        setSearchCursor(null);
+        setCursorHistory([null]);
+        setLastSearchQuery('');
+        setLastIcpDescription('');
+        setLastTargeting(null);
+        setCpStep(-1);
+        setTgStep(-1);
+        setTgNationality([]);
+        setTgExperienceLevel([]);
+        setTgCompanySize([]);
+        setTgCompanyAge([]);
+        setTgEducation([]);
+        setTgSkills([]);
+    };
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
@@ -769,10 +1084,21 @@ export default function AdvancedSearchAIPage() {
                 filters: { cursor: searchCursor },
             };
 
+            setIsSearching(true);
+            setActivities([]);
+
             const r = await fetch(`${API_BASE}/api/campaigns/linkedin/search/advanced`, {
                 method: 'POST', headers: headers(), body: JSON.stringify(body),
             });
             const d = await r.json();
+
+            // Extract and set activities from response
+            if (d.activities && Array.isArray(d.activities)) {
+                setActivities(d.activities);
+            }
+
+            setIsSearching(false);
+
             if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                 const existingCount = leads.length;
                 const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
@@ -855,9 +1181,9 @@ export default function AdvancedSearchAIPage() {
                                     onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.borderColor = '#172560'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                 >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q}</span>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
                                 </button>
                             ))}
                         </div>
@@ -882,7 +1208,18 @@ export default function AdvancedSearchAIPage() {
                     </button>
 
                     <div className="adv-chat-msgs">
-                        {messages.map(m => <Bubble key={m.id} msg={m} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} />)}
+                        {messages.map((m, idx) => {
+                            // Show real activities in the AI's thinking indicator (replace "Thinking...")
+                            const displayMsg = isSearching && idx === messages.length - 1 && messages[idx].role === 'ai'
+                                ? {
+                                    ...m,
+                                    content: activities.length > 0
+                                        ? activities[activities.length - 1].message
+                                        : 'Qualifying...'
+                                }
+                                : m;
+                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} onUploadClick={() => fileInputRef.current?.click()} />;
+                        })}
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
                         {cpStep >= 0 && (
@@ -919,11 +1256,51 @@ export default function AdvancedSearchAIPage() {
                                 setSelectedVoiceId={setCpSelectedVoiceId}
                                 selectedFromNumber={cpSelectedFromNumber}
                                 setSelectedFromNumber={setCpSelectedFromNumber}
+                                emailSubject={cpEmailSubject}
+                                setEmailSubject={setCpEmailSubject}
+                                emailBody={cpEmailBody}
+                                setEmailBody={setCpEmailBody}
+                                selectedEmailTemplateId={cpSelectedEmailTemplateId}
+                                setSelectedEmailTemplateId={setCpSelectedEmailTemplateId}
+                                saveTemplateMode={cpSaveTemplateMode}
+                                setSaveTemplateMode={setCpSaveTemplateMode}
+                                saveTemplateName={cpSaveTemplateName}
+                                setSaveTemplateName={setCpSaveTemplateName}
+                                emailGenLoading={cpEmailGenLoading}
+                                setEmailGenLoading={setCpEmailGenLoading}
+                                emailFromAddress={cpEmailFromAddress}
+                                setEmailFromAddress={setCpEmailFromAddress}
+                                emailProvider={cpEmailProvider}
+                                setEmailProvider={setCpEmailProvider}
                                 targeting={targeting}
                                 leads={leads}
                                 leadFeedback={leadFeedback}
                                 searchSessions={searchSessions}
                                 chatMessages={messages}
+                            />
+                        )}
+
+                        {/* ── Inline Targeting Form (typeform-style) ── */}
+                        {tgStep >= 0 && (
+                            <TargetingFormInline
+                                step={tgStep}
+                                setStep={setTgStep}
+                                nationality={tgNationality}
+                                setNationality={setTgNationality}
+                                experienceLevel={tgExperienceLevel}
+                                setExperienceLevel={setTgExperienceLevel}
+                                companySize={tgCompanySize}
+                                setCompanySize={setTgCompanySize}
+                                companyAge={tgCompanyAge}
+                                setCompanyAge={setTgCompanyAge}
+                                education={tgEducation}
+                                setEducation={setTgEducation}
+                                skills={tgSkills}
+                                setSkills={setTgSkills}
+                                currentTargeting={targeting}
+                                onConfirm={handleTargetingConfirm}
+                                loading={busy}
+                                setLoading={setBusy}
                             />
                         )}
 
@@ -948,17 +1325,19 @@ export default function AdvancedSearchAIPage() {
                 </div>
 
                 {/* RIGHT: PANELS */}
-                {showPanel === 'leads' && targeting && !inboundMode && (
+                {(showPanel === 'leads' || showPanel === 'workflow') && targeting && !inboundMode && (
                     <div className="adv-leads-panel">
                         <div className="adv-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', gap: '16px', flex: 1 }}>
+                                <button onClick={() => setShowPanel('leads')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: showPanel === 'leads' ? 700 : 500, color: showPanel === 'leads' ? '#172560' : '#6b7280', borderBottom: showPanel === 'leads' ? '2px solid #172560' : '2px solid transparent', paddingBottom: '4px', cursor: 'pointer' }}>Leads</button>
+                                <button onClick={() => setShowPanel('workflow')} style={{ background: 'none', border: 'none', fontSize: '15px', fontWeight: showPanel === 'workflow' ? 700 : 500, color: showPanel === 'workflow' ? '#172560' : '#6b7280', borderBottom: showPanel === 'workflow' ? '2px solid #172560' : '2px solid transparent', paddingBottom: '4px', cursor: 'pointer' }}>Workflow</button>
+                            </div>
                             <button className="adv-close-panel" onClick={() => setShowPanel(false)}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                                {leads.length} lead{leads.length !== 1 ? 's' : ''}{totalResults > 0 && <span style={{ color: '#9ca3af', fontWeight: 400 }}> of {totalResults}</span>}
-                            </span>
                         </div>
 
+                        {showPanel === 'leads' ? (
                         <div className="adv-panel-body">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="adv-panel-title" style={{ margin: 0 }}>Start connecting with your potential customers</h2>
@@ -1138,6 +1517,11 @@ export default function AdvancedSearchAIPage() {
                                 </div>
                             )}
                         </div>
+                        ) : (
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <WorkflowPreviewPanel />
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1236,11 +1620,30 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCount }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads') => void; onStartCheckpoints: () => void; hasPanel: boolean; leadsCount: number }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; onUploadClick?: () => void }) {
+    const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
+    const [thinkIdx, setThinkIdx] = React.useState(0);
+    const [thinkVisible, setThinkVisible] = React.useState(true);
+    React.useEffect(() => {
+        if (!msg.loading) return;
+        const iv = setInterval(() => {
+            setThinkVisible(false);
+            setTimeout(() => { setThinkIdx(p => (p + 1) % THINKING_WORDS.length); setThinkVisible(true); }, 300);
+        }, 1400);
+        return () => clearInterval(iv);
+    }, [msg.loading]);
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
             <div className="adv-ai-avatar"><span>✦</span></div>
-            <div><div className="adv-ai-name">AI Lead Finder</div><div className="adv-thinking">Thinking...</div></div>
+            <div>
+                <div className="adv-ai-name">AI Lead Finder</div>
+                <div className="adv-thinking-wrap">
+                    <span className={`adv-thinking-word${thinkVisible ? ' adv-tw-in' : ' adv-tw-out'}`}>
+                        {THINKING_WORDS[thinkIdx]}...
+                    </span>
+                    <span className="adv-thinking-dots"><span /><span /><span /></span>
+                </div>
+            </div>
         </div>
     );
     if (msg.role === 'user') return (
@@ -1311,7 +1714,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCo
                 {msg.targeting && (
                     <div className="adv-result-cards" style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
                         {/* Targeting card */}
-                        <div className="adv-rc" onClick={() => onOpt('Refine my targeting criteria')} style={{
+                        <div className="adv-rc" onClick={onStartTargeting} style={{
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</div>
@@ -1332,6 +1735,18 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCo
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Leads</div>
                                 <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>{leadsCount} Leads found</div>
+                            </div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                        </div>
+                        <div className="adv-rc adv-rc-leads" onClick={() => onShowPanel('workflow')} style={{
+                            flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
+                        }}>
+                            <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                ⚡
+                            </div>
+                            <div className="adv-rc-body" style={{ flex: 1 }}>
+                                <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
+                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>Live preview</div>
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
@@ -1359,7 +1774,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, hasPanel, leadsCo
                             border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
                             boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s',
                         }}><Download size={16} /> Download Template</button>
-                        <button onClick={() => onFileUpload?.()} style={{
+                        <button onClick={() => onUploadClick?.()} style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
                             background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
                             fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
@@ -1416,6 +1831,13 @@ function CheckpointFormInline({
     voiceAgents, setVoiceAgents, voiceNumbers, setVoiceNumbers,
     selectedAgentId, setSelectedAgentId, selectedVoiceId, setSelectedVoiceId,
     selectedFromNumber, setSelectedFromNumber,
+    emailSubject, setEmailSubject, emailBody, setEmailBody,
+    selectedEmailTemplateId, setSelectedEmailTemplateId,
+    saveTemplateMode, setSaveTemplateMode,
+    saveTemplateName, setSaveTemplateName,
+    emailGenLoading, setEmailGenLoading,
+    emailFromAddress, setEmailFromAddress,
+    emailProvider, setEmailProvider,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -1438,9 +1860,36 @@ function CheckpointFormInline({
     selectedAgentId: string; setSelectedAgentId: (v: string) => void;
     selectedVoiceId: string; setSelectedVoiceId: (v: string) => void;
     selectedFromNumber: string; setSelectedFromNumber: (v: string) => void;
+    emailSubject: string; setEmailSubject: (v: string) => void;
+    emailBody: string; setEmailBody: (v: string) => void;
+    selectedEmailTemplateId: string; setSelectedEmailTemplateId: (v: string) => void;
+    saveTemplateMode: boolean; setSaveTemplateMode: (v: boolean) => void;
+    saveTemplateName: string; setSaveTemplateName: (v: string) => void;
+    emailGenLoading: boolean; setEmailGenLoading: (v: boolean) => void;
+    emailFromAddress: string; setEmailFromAddress: (v: string) => void;
+    emailProvider: string; setEmailProvider: (v: string) => void;
 }) {
     const totalSteps = CP_QUESTIONS.length;
     const q = CP_QUESTIONS[step];
+
+    // SDK hooks — email templates fetched from communication_templates table
+    const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
+    const createEmailTemplate = useCreateEmailTemplate();
+
+    // SDK hook — connected Gmail / Outlook accounts from integration tab
+    const { data: connectedSenders = [] } = useConnectedEmailSenders();
+
+    // Auto-select default template when templates load for the first time
+    useEffect(() => {
+        if (emailTemplates.length > 0 && !selectedEmailTemplateId) {
+            const def = emailTemplates.find(t => t.is_default);
+            if (def && !emailSubject) {
+                setEmailSubject(def.subject || '');
+                setEmailBody(def.body || '');
+                setSelectedEmailTemplateId(def.id);
+            }
+        }
+    }, [emailTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // LinkedIn safe limits
     const LINKEDIN_DAILY_LIMIT = 25; // safe daily connection request limit
@@ -1463,6 +1912,7 @@ function CheckpointFormInline({
     const toggleNextChannel = (ch: string) => {
         if (ch === 'skip') { setNextChannels([]); return; }
         setNextChannels((p: string[]) => p.includes(ch) ? p.filter(x => x !== ch) : [...p, ch]);
+        // Email templates are loaded by useEmailTemplates SDK hook (no manual fetch needed)
         // Fetch voice agents and numbers when voice_call is first selected
         if (ch === 'voice_call' && voiceAgents.length === 0) {
             (async () => {
@@ -1518,6 +1968,41 @@ function CheckpointFormInline({
         setGenLoading(false);
     };
 
+    const generateEmail = async () => {
+        setEmailGenLoading(true);
+        try {
+            const jobDesc = targeting?.job_titles?.length ? targeting.job_titles.join(' / ') : 'professionals';
+            const indDesc = targeting?.industries?.length ? ` in the ${targeting.industries[0]} industry` : '';
+            const locDesc = targeting?.locations?.length ? ` in ${targeting.locations[0]}` : '';
+            const subjectPrompt = `System Settings:\n- You are an automated script that outputs raw string data.\n- NEVER talk to the user.\n- OUTPUT THE SUBJECT LINE ONLY (max 80 chars).\n\nTask: Write a compelling email subject line for a follow-up email to ${jobDesc}${indDesc}${locDesc}.`;
+            const bodyPrompt = `System Settings:\n- You are an automated script that outputs raw string data.\n- NEVER talk to the user.\n- OUTPUT THE EMAIL BODY ONLY.\n\nTask: Write a professional, concise outreach email body (150-200 words) for ${jobDesc}${indDesc}${locDesc}. Start with "Hi {{first_name}}," and end with a soft call-to-action. Use placeholders: {{first_name}}, {{company}}, {{title}}. No subject line, just the body.`;
+            const [subjectRes, bodyRes] = await Promise.all([
+                fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: subjectPrompt }) }),
+                fetch(`${API_BASE}/api/ai-icp-assistant/chat`, { method: 'POST', headers: headers(), body: JSON.stringify({ message: bodyPrompt }) }),
+            ]);
+            const [subjectData, bodyData] = await Promise.all([subjectRes.json(), bodyRes.json()]);
+            if (subjectData.success) setEmailSubject(subjectData.response || subjectData.text || '');
+            if (bodyData.success) setEmailBody(bodyData.response || bodyData.text || '');
+        } catch { }
+        setEmailGenLoading(false);
+    };
+
+    const saveEmailTemplate = async () => {
+        if (!saveTemplateName.trim() || !emailSubject.trim() || !emailBody.trim()) return;
+        try {
+            const saved = await createEmailTemplate.mutateAsync({
+                name: saveTemplateName.trim(),
+                subject: emailSubject,
+                body: emailBody,
+                category: 'email_send',
+            });
+            setSelectedEmailTemplateId(saved.id);
+            setSaveTemplateName('');
+            setSaveTemplateMode(false);
+            // React Query cache is auto-invalidated by the mutation — list refreshes
+        } catch { }
+    };
+
     const suggestName = () => {
         const titlePart = targeting?.job_titles?.length ? targeting.job_titles[0] + 's' : 'Leads';
         const locPart = targeting?.locations?.length ? ` in ${targeting.locations[0].split(',')[0]}` : '';
@@ -1559,7 +2044,7 @@ function CheckpointFormInline({
                     },
                 });
                 for (const ch of nextChannels) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: '', body: '' } });
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
                     if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: '' } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
                 }
@@ -1596,7 +2081,7 @@ function CheckpointFormInline({
                 localStorage.setItem('lad_campaign_checkpoints', JSON.stringify(checkpointSelections));
                 localStorage.setItem('lad_campaign_icp_input', initialIcpInput);
                 localStorage.setItem('lad_campaign_user_messages', JSON.stringify(userMessages));
-            } catch {}
+            } catch { }
 
             // Collect leads marked as "good match" by the user during setup
             const goodMatchLeads = leads
@@ -1635,19 +2120,21 @@ function CheckpointFormInline({
                     conversation_history: chatMessages.map(m => ({ role: m.role, text: m.text, ts: m.ts })).slice(0, 50),
                 },
                 steps: [
-                    { type: 'lead_generation', title: 'LinkedIn Lead Search', channel: 'linkedin', order_index: 0, config: {
-                        source: 'linkedin_search',
-                        leadGenerationFilters: {
-                            keywords: t.keywords?.join(' ') || '',
-                            industries: t.industries || [],
-                            locations: t.locations || [],
-                            job_titles: t.job_titles || [],
-                            profile_language: t.profile_language || [],
-                        },
-                        leadGenerationLimit: safeLeadsPerDay,
-                        icp_input: initialIcpInput,
-                        icp_threshold: icpMin,
-                    } },
+                    {
+                        type: 'lead_generation', title: 'LinkedIn Lead Search', channel: 'linkedin', order_index: 0, config: {
+                            source: 'linkedin_search',
+                            leadGenerationFilters: {
+                                keywords: t.keywords?.join(' ') || '',
+                                industries: t.industries || [],
+                                locations: t.locations || [],
+                                job_titles: t.job_titles || [],
+                                profile_language: t.profile_language || [],
+                            },
+                            leadGenerationLimit: safeLeadsPerDay,
+                            icp_input: initialIcpInput,
+                            icp_threshold: icpMin,
+                        }
+                    },
                     ...actionSteps,
                 ],
             };
@@ -1838,6 +2325,117 @@ function CheckpointFormInline({
                                 </div>
                             </div>
 
+                            {/* Email Config (inline when email selected) */}
+                            {nextChannels.includes('email') && (
+                                <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560' }}>✉️ Email Settings</div>
+                                        <button disabled={emailGenLoading} onClick={generateEmail}
+                                            style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: 700, color: emailGenLoading ? '#9ca3af' : '#172560', cursor: emailGenLoading ? 'default' : 'pointer' }}>
+                                            {emailGenLoading ? 'Generating...' : '✨ AI Generate'}
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {/* From account selector */}
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>
+                                                Send From <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            {connectedSenders.length > 0 ? (
+                                                <select
+                                                    value={emailFromAddress}
+                                                    onChange={e => {
+                                                        const sender = connectedSenders.find(s => s.email === e.target.value);
+                                                        setEmailFromAddress(e.target.value);
+                                                        setEmailProvider(sender?.provider || '');
+                                                    }}
+                                                    style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none' }}>
+                                                    <option value="">— Select sender account —</option>
+                                                    {connectedSenders.map(s => (
+                                                        <option key={s.email} value={s.email}>
+                                                            {s.provider === 'google' ? '📧 Gmail' : '📨 Outlook'} — {s.email}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div style={{ fontSize: '12px', color: '#ef4444', padding: '8px 10px', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                                                    No email account connected.{' '}
+                                                    <a href="/settings?tab=integrations" style={{ color: '#172560', fontWeight: 600 }}>Connect Gmail or Outlook →</a>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Template picker */}
+                                        {emailTemplates.length > 0 && (
+                                            <div>
+                                                <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Use Saved Template</label>
+                                                <select
+                                                    value={selectedEmailTemplateId}
+                                                    onChange={e => {
+                                                        const tpl = emailTemplates.find(t => t.id === e.target.value);
+                                                        if (tpl) { setEmailSubject(tpl.subject); setEmailBody(tpl.body); }
+                                                        setSelectedEmailTemplateId(e.target.value);
+                                                    }}
+                                                    style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none' }}>
+                                                    <option value="">— Select a template —</option>
+                                                    {emailTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
+                                        {/* Subject */}
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Subject <span style={{ color: '#ef4444' }}>*</span></label>
+                                            <input
+                                                type="text"
+                                                value={emailSubject}
+                                                onChange={e => setEmailSubject(e.target.value)}
+                                                placeholder="e.g. Quick question for {{first_name}}"
+                                                style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
+                                            />
+                                        </div>
+                                        {/* Body */}
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Email Body <span style={{ color: '#ef4444' }}>*</span></label>
+                                            <textarea
+                                                value={emailBody}
+                                                onChange={e => setEmailBody(e.target.value)}
+                                                placeholder={'Hi {{first_name}},\n\nI came across your profile at {{company}} and wanted to reach out...\n\nBest,\n[Your name]'}
+                                                rows={6}
+                                                style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                                            />
+                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                                                Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} {'{{industry}}'}
+                                            </div>
+                                        </div>
+                                        {/* Save as Template */}
+                                        {!saveTemplateMode ? (
+                                            <button onClick={() => setSaveTemplateMode(true)}
+                                                style={{ background: 'none', border: '1px dashed #d1d5db', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: '#6b7280', cursor: 'pointer', textAlign: 'left' }}>
+                                                + Save as template
+                                            </button>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={saveTemplateName}
+                                                    onChange={e => setSaveTemplateName(e.target.value)}
+                                                    placeholder="Template name..."
+                                                    style={{ flex: 1, border: '1px solid #e0eaf5', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
+                                                />
+                                                <button onClick={saveEmailTemplate}
+                                                    style={{ padding: '8px 14px', background: '#172560', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                                    Save
+                                                </button>
+                                                <button onClick={() => { setSaveTemplateMode(false); setSaveTemplateName(''); }}
+                                                    style={{ padding: '8px 10px', background: '#f3f4f6', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Voice Agent Config (inline when voice_call selected) */}
                             {nextChannels.includes('voice_call') && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
@@ -2014,6 +2612,274 @@ function CheckpointFormInline({
     );
 }
 
+/* ═══════════════════════════════════════════════
+   TARGETING FORM INLINE (typeform-style in chat)
+   ═══════════════════════════════════════════════ */
+const TG_QUESTIONS = [
+    { id: 'nationality', question: 'What nationalities are your target decision makers from?', type: 'multi-select' },
+    { id: 'experience', question: 'What experience level should they have?', type: 'multi-select' },
+    { id: 'company_size', question: 'What company sizes are you targeting?', type: 'multi-select' },
+    { id: 'company_age', question: 'What company age ranges interest you?', type: 'multi-select' },
+    { id: 'education', question: 'What educational backgrounds are ideal?', type: 'multi-select' },
+    { id: 'skills', question: 'Any specific skills you\'re looking for? (e.g., "AI/ML, Cloud Architecture")', type: 'text' },
+    { id: 'review', question: 'Review your targeting criteria', type: 'review' },
+];
+
+function TargetingFormInline({
+    step, setStep, nationality, setNationality, experienceLevel, setExperienceLevel,
+    companySize, setCompanySize, companyAge, setCompanyAge, education, setEducation,
+    skills, setSkills, currentTargeting, onConfirm, loading, setLoading
+}: {
+    step: number; setStep: (s: number) => void;
+    nationality: string[]; setNationality: React.Dispatch<React.SetStateAction<string[]>>;
+    experienceLevel: string[]; setExperienceLevel: React.Dispatch<React.SetStateAction<string[]>>;
+    companySize: string[]; setCompanySize: React.Dispatch<React.SetStateAction<string[]>>;
+    companyAge: string[]; setCompanyAge: React.Dispatch<React.SetStateAction<string[]>>;
+    education: string[]; setEducation: React.Dispatch<React.SetStateAction<string[]>>;
+    skills: string[]; setSkills: React.Dispatch<React.SetStateAction<string[]>>;
+    currentTargeting: LeadTargeting | null;
+    onConfirm: () => void;
+    loading?: boolean;
+    setLoading?: (v: boolean) => void;
+}) {
+    const totalSteps = TG_QUESTIONS.length;
+    const q = TG_QUESTIONS[step];
+    const [searchQuery, setSearchQuery] = React.useState('');
+
+    const baseBox: React.CSSProperties = {
+        background: '#fff', border: '1px solid #e0eaf5', borderRadius: '16px', padding: '24px',
+        maxWidth: '520px', boxShadow: '0 4px 20px rgba(23,37,96,0.06)', animation: 'fadeUp 0.3s ease both',
+    };
+
+    const optStyle = (selected: boolean): React.CSSProperties => ({
+        display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+        border: `2px solid ${selected ? '#172560' : '#e5e7eb'}`, background: selected ? '#eef2ff' : '#fff',
+        borderRadius: '12px', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+        fontSize: '14px', fontWeight: 500, color: selected ? '#172560' : '#374151',
+    });
+
+    const numBadge = (n: number, selected: boolean): React.CSSProperties => ({
+        width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '12px', fontWeight: 700, flexShrink: 0, border: `2px solid ${selected ? '#172560' : '#d1d5db'}`,
+        background: selected ? '#172560' : 'transparent', color: selected ? '#fff' : '#6b7280',
+    });
+
+    const toggleSelection = (arr: string[], item: string, setter: any) => {
+        if (arr.includes(item)) {
+            setter(arr.filter(x => x !== item));
+        } else {
+            setter([...arr, item]);
+        }
+    };
+
+    const filteredNationalities = NATIONALITIES.filter(n =>
+        n.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
+            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div style={{ flex: 1, maxWidth: '540px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div className="adv-ai-name">Targeting Filters</div>
+                    <button onClick={() => setStep(-1)}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer', padding: '0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af'
+                        }}>
+                        <X size={20} />
+                    </button>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
+                    {q.question}
+                </div>
+
+                <div style={baseBox}>
+                    {/* Step 0: Nationality */}
+                    {step === 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <input
+                                type="text" placeholder="Search nationalities..." value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px',
+                                    fontSize: '14px', marginBottom: '8px'
+                                }}
+                            />
+                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                {filteredNationalities.slice(0, 10).map((nat) => {
+                                    const selected = nationality.includes(nat);
+                                    return (
+                                        <div key={nat} onClick={() => toggleSelection(nationality, nat, setNationality)}
+                                            style={optStyle(selected)}>
+                                            <div style={numBadge(nationality.indexOf(nat) + 1 || 0, selected)}>
+                                                {selected ? '✓' : '○'}
+                                            </div>
+                                            <div>{nat}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 1: Experience Level */}
+                    {step === 1 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {EXPERIENCE_LEVELS.map((level) => {
+                                const selected = experienceLevel.includes(level);
+                                return (
+                                    <div key={level} onClick={() => toggleSelection(experienceLevel, level, setExperienceLevel)}
+                                        style={optStyle(selected)}>
+                                        <div style={numBadge(experienceLevel.indexOf(level) + 1 || 0, selected)}>
+                                            {selected ? '✓' : '○'}
+                                        </div>
+                                        <div>{level}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Step 2: Company Size */}
+                    {step === 2 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {COMPANY_SIZES.map((size) => {
+                                const selected = companySize.includes(size);
+                                return (
+                                    <div key={size} onClick={() => toggleSelection(companySize, size, setCompanySize)}
+                                        style={optStyle(selected)}>
+                                        <div style={numBadge(companySize.indexOf(size) + 1 || 0, selected)}>
+                                            {selected ? '✓' : '○'}
+                                        </div>
+                                        <div>{size}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Step 3: Company Age */}
+                    {step === 3 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {COMPANY_AGES.map((age) => {
+                                const selected = companyAge.includes(age);
+                                return (
+                                    <div key={age} onClick={() => toggleSelection(companyAge, age, setCompanyAge)}
+                                        style={optStyle(selected)}>
+                                        <div style={numBadge(companyAge.indexOf(age) + 1 || 0, selected)}>
+                                            {selected ? '✓' : '○'}
+                                        </div>
+                                        <div>{age}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Step 4: Education */}
+                    {step === 4 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {EDUCATION_OPTIONS.map((edu) => {
+                                const selected = education.includes(edu);
+                                return (
+                                    <div key={edu} onClick={() => toggleSelection(education, edu, setEducation)}
+                                        style={optStyle(selected)}>
+                                        <div style={numBadge(education.indexOf(edu) + 1 || 0, selected)}>
+                                            {selected ? '✓' : '○'}
+                                        </div>
+                                        <div>{edu}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Step 5: Skills (text input) */}
+                    {step === 5 && (
+                        <div>
+                            <textarea
+                                placeholder="Enter skills separated by commas (e.g., AI/ML, Cloud Architecture, DevOps)"
+                                value={skills.join(', ')} onChange={e => setSkills(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                style={{
+                                    width: '100%', minHeight: '100px', padding: '12px', border: '1px solid #e5e7eb',
+                                    borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical'
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Step 6: Review */}
+                    {step === 6 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {nationality.length > 0 && <div><strong>Nationalities:</strong> {nationality.join(', ')}</div>}
+                            {experienceLevel.length > 0 && <div><strong>Experience Level:</strong> {experienceLevel.join(', ')}</div>}
+                            {companySize.length > 0 && <div><strong>Company Size:</strong> {companySize.join(', ')}</div>}
+                            {companyAge.length > 0 && <div><strong>Company Age:</strong> {companyAge.join(', ')}</div>}
+                            {education.length > 0 && <div><strong>Education:</strong> {education.join(', ')}</div>}
+                            {skills.length > 0 && <div><strong>Skills:</strong> {skills.join(', ')}</div>}
+                            {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && (
+                                <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>No additional filters selected</div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Skip Button - Inside the box */}
+                    {step < totalSteps - 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                            <button onClick={() => setStep(step + 1)}
+                                style={{
+                                    padding: '8px 14px', background: '#f9fafb', border: '1px solid #e5e7eb',
+                                    borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#6b7280', cursor: 'pointer'
+                                }}>
+                                Skip this
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Navigation Buttons */}
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        Step {step + 1} of {totalSteps}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {step > 0 && (
+                            <button onClick={() => setStep(step - 1)}
+                                style={{
+                                    padding: '10px 14px', background: '#f3f4f6', border: '1px solid #e5e7eb',
+                                    borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                <ChevronLeft size={18} />
+                            </button>
+                        )}
+                        {step < totalSteps - 1 && (
+                            <button onClick={() => setStep(step + 1)}
+                                style={{
+                                    padding: '10px 14px', background: '#172560', color: '#fff', border: 'none',
+                                    borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                <ChevronRight size={18} />
+                            </button>
+                        )}
+                        {step === totalSteps - 1 && (
+                            <button onClick={onConfirm} disabled={loading}
+                                style={{
+                                    padding: '8px 16px', background: loading ? '#d1d5db' : '#10b981', color: '#fff', border: 'none',
+                                    borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer'
+                                }}>
+                                {loading ? 'Refining...' : 'Confirm & Refine'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function TagRow({ label, items }: { label: string; items: string[] }) {
     const safe = Array.isArray(items) ? items : [];
     return (
@@ -2038,6 +2904,23 @@ function buildSummary(t: LeadTargeting): string {
     if (t.company_headcount?.length) p.push(`👥 **Company Size:** ${t.company_headcount.join(', ')}`);
     if (t.company_names?.length) p.push(`🏢 **Company:** ${t.company_names.join(', ')}`);
     p.push('\n✅ Your leads are shown in the panel. You can refine or start connecting.');
+    return p.join('\n');
+}
+
+/**
+ * Builds a structured search-preview message so the user can confirm or correct
+ * the parsed intent before the actual LinkedIn search runs.
+ */
+function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string): string {
+    const p: string[] = ['🤔 **Here\'s what I understood from your request:**\n'];
+    if (intent.keywords?.length) p.push(`👤 **Person / Keywords:** ${intent.keywords.join(', ')}`);
+    if (intent.job_titles?.length) p.push(`🎯 **Job Titles:** ${intent.job_titles.join(', ')}`);
+    if (intent.company_names?.length) p.push(`🏢 **Company:** ${intent.company_names.join(', ')}`);
+    if (intent.locations?.length) p.push(`📍 **Location:** ${intent.locations.join(', ')}`);
+    if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
+    if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
+    if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
+    p.push('\n**Does this look right?** Tap ✅ to search, or tell me what to change.');
     return p.join('\n');
 }
 
@@ -2104,7 +2987,15 @@ const css = `
             .adv-ai-text {font - size:14.5px; line-height:1.7; color:#374151; }
             .adv-ai-text p {margin:0 0 4px; }
             .adv-ai-text strong {color:#111827; }
-            .adv-thinking {font - size:14px; color:#9ca3af; font-style:italic; animation:pulse 1.5s ease infinite; }
+            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:20px;overflow:hidden}
+            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
+            .adv-tw-in{opacity:1;transform:translateY(0)}
+            .adv-tw-out{opacity:0;transform:translateY(-7px)}
+            .adv-thinking-dots{display:inline-flex;gap:3px;align-items:center}
+            .adv-thinking-dots span{width:4px;height:4px;border-radius:50%;background:#9ca3af;display:inline-block;animation:adv-db 1.1s ease-in-out infinite}
+            .adv-thinking-dots span:nth-child(2){animation-delay:.18s}
+            .adv-thinking-dots span:nth-child(3){animation-delay:.36s}
+            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-4px);opacity:1}}
 
             /* ── TARGETING CARD ── */
             .adv-targeting-card {margin - top:12px; background:linear-gradient(135deg,#f2f6fa,#e0eaf5); border:1px solid #c2d6eb; border-radius:16px; padding:14px 16px; }

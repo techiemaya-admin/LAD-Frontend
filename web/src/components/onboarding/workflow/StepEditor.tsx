@@ -2,6 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
 import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle } from 'lucide-react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const headers = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}`,
+});
 interface StepEditorProps {
   step: WorkflowPreviewStep;
   onClose: () => void;
@@ -9,6 +15,25 @@ interface StepEditorProps {
 }
 export default function StepEditor({ step, onClose, campaignId }: StepEditorProps) {
   const { updateWorkflowStep } = useOnboardingStore();
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null);
+
+  // Fetch LinkedIn daily limit so we can cap leads per day
+  useEffect(() => {
+    fetch(`${API_BASE}/api/campaigns/linkedin/limits`, { headers: headers() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          const limit = d.remainingDailyLimit !== undefined ? d.remainingDailyLimit : (d.totalDailyLimit || null);
+          setDailyLimit(limit);
+          // Also clamp current formData.leadLimit if above limit
+          if (limit !== null && formData.leadLimit > limit) {
+            setFormData(prev => ({ ...prev, leadLimit: limit }));
+          }
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Parse delay values from step title/description if not set
   const parseDelayFromTitle = () => {
     const title = step.title?.toLowerCase() || '';
@@ -215,18 +240,28 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Leads per Day
+                {dailyLimit !== null && (
+                  <span className="ml-2 text-xs text-gray-500 font-normal">
+                    (LinkedIn daily limit: <strong className="text-[#172560]">{dailyLimit}</strong>)
+                  </span>
+                )}
               </label>
               <input
                 type="number"
                 value={formData.leadLimit}
-                onChange={(e) => setFormData({ ...formData, leadLimit: parseInt(e.target.value) || 10 })}
+                onChange={(e) => {
+                  let val = parseInt(e.target.value) || 1;
+                  if (dailyLimit !== null && val > dailyLimit) val = dailyLimit;
+                  if (val < 1) val = 1;
+                  setFormData({ ...formData, leadLimit: val });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="1"
-                max="100"
+                {...(dailyLimit !== null ? { max: dailyLimit } : {})}
                 placeholder="10"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Number of leads to generate per day (1-100)
+                Number of leads to generate per day {dailyLimit !== null ? `(1–${dailyLimit})` : '(minimum 1)'}
               </p>
             </div>
           </div>
