@@ -747,10 +747,19 @@ export default function AdvancedSearchAIPage() {
             let searchTotal = 0;
             let icpWasApplied = false;
 
-            // If we have updated targeting from lead-chat or custom flows, use that for search query
-            const searchQuery = shouldRunSearch && ext && !isFirstMessage
-                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
-                : text;
+            // When the user confirmed a search preview, always send the ORIGINAL query to the backend
+            // and let the server's Gemini re-parse it with the improved prompt (fixes "from Company" parsing).
+            // The pre-parsed preview intent shown to the user is only for display — do not use it as the search input.
+            let searchQuery: string;
+            if (confirmedForSearch) {
+                searchQuery = confirmedForSearch.originalQuery;
+                ext = null; // Clear the preview intent — let the backend parse the original query fresh
+            } else {
+                // If we have updated targeting from lead-chat or custom flows, use that for search query
+                searchQuery = shouldRunSearch && ext && !isFirstMessage
+                    ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
+                    : text;
+            }
 
             try {
                 // Enhance ICP description with user feedback on previous leads
