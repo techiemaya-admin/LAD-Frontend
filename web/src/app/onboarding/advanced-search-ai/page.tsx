@@ -199,6 +199,11 @@ function isInboundIntent(text: string): boolean {
     return /\b(i have leads|i have .* data|upload.*leads|inbound|import.*leads|have.*csv|have.*excel|already have.*leads|my leads|upload.*file|have.*spreadsheet|bulk.*upload)\b/i.test(lower);
 }
 
+/** Returns true when the user's reply is a confirmation of a search preview. */
+function isConfirmation(text: string): boolean {
+    return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
+}
+
 /* ═══════════════════════════════════════════════
    TARGETING FILTER OPTIONS (CONSTANTS)
    ═══════════════════════════════════════════════ */
@@ -373,6 +378,8 @@ export default function AdvancedSearchAIPage() {
     const [convId, setConvId] = useState<string | null>(null);
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+    // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
+    const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
 
     // Inbound CSV upload state
     const [inboundMode, setInboundMode] = useState(false);
@@ -672,71 +679,146 @@ export default function AdvancedSearchAIPage() {
             }
         }
 
+        // ── SEARCH CONFIRMATION ──
+        // If the user replied to a search preview (confirming or correcting it), capture that intent.
+        let confirmedForSearch: { intent: LeadTargeting; originalQuery: string } | null = null;
+        if (pendingSearchConfirmation) {
+            if (isConfirmation(text)) {
+                // User confirmed the parsed intent — carry it into the search execution below
+                confirmedForSearch = pendingSearchConfirmation;
+                setPendingSearchConfirmation(null);
+            } else {
+                // User is refining/correcting — clear the preview state and re-parse from scratch
+                setPendingSearchConfirmation(null);
+            }
+        }
+
         try {
             // Build history array for context (last 6 messages)
             const historySnapshot = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
 
-            // ── CASE 1: Detect Intent (Always call /lead-chat first) ──
+            // ── CASE 1: Detect Intent (Always call /lead-chat first, unless user just confirmed a preview) ──
             const isFirstMessage = messages.filter(m => m.role === 'user').length === 0;
             let shouldRunSearch = false;
             let aiResponseText = '';
             let aiOpts: { label: string; value: string }[] | undefined;
-            let updatedTargetState = targeting;
+            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting
+            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : targeting;
 
-            // Always call lead-chat for AI conversation
-            try {
-                const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
-                    method: 'POST',
-                    headers: headers(),
-                    body: JSON.stringify({
-                        message: text,
-                        history: historySnapshot,
-                        currentTargeting: targeting,
-                        pendingIntent: (pendingIntent as string | null),
-                    }),
-                });
-                const chatD = await chatR.json();
-                if (chatD.success) {
-                    aiResponseText = chatD.response || '';
-                    shouldRunSearch = !!chatD.newSearch;
-                    if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
-                    setPendingIntent(chatD.pendingIntent || null);
-                    if (Array.isArray(chatD.options) && chatD.options.length > 0) {
-                        aiOpts = chatD.options;
+            if (confirmedForSearch) {
+                // User confirmed the search preview — skip lead-chat and go straight to search
+                shouldRunSearch = true;
+            } else {
+                // Normal flow: call lead-chat for AI conversation
+                try {
+                    const chatR = await fetch(`${API_BASE}/api/ai-icp-assistant/lead-chat`, {
+                        method: 'POST',
+                        headers: headers(),
+                        body: JSON.stringify({
+                            message: text,
+                            history: historySnapshot,
+                            currentTargeting: targeting,
+                            pendingIntent: (pendingIntent as string | null),
+                        }),
+                    });
+                    const chatD = await chatR.json();
+                    if (chatD.success) {
+                        aiResponseText = chatD.response || '';
+                        shouldRunSearch = !!chatD.newSearch;
+                        if (chatD.updatedTargeting) updatedTargetState = chatD.updatedTargeting;
+                        setPendingIntent(chatD.pendingIntent || null);
+                        if (Array.isArray(chatD.options) && chatD.options.length > 0) {
+                            aiOpts = chatD.options;
+                        }
+                    }
+                } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
+
+                // If it's the first message and lead-chat didn't respond or failed, fallback to searching
+                if (isFirstMessage && !aiResponseText && !shouldRunSearch) {
+                    shouldRunSearch = true;
+                }
+
+                // Smart search detection: if the user explicitly asks to find/search someone or something
+                // AND the query contains a specific entity (company, person name, location — not just vague intent)
+                if (!shouldRunSearch && !isFirstMessage) {
+                    const lowerText = text.toLowerCase();
+                    const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
+                    // Check if there's a specific entity (not just generic words like 'a specific company')
+                    const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
+                    // Must have search intent AND NOT be vague to force search
+                    if (hasSearchIntent && !hasVagueTarget) {
+                        shouldRunSearch = true;
+                        // Clear old targeting so Gemini parses this fresh query from scratch
+                        // e.g. previous search was "founders at X", now user says "find all people at X"
+                        updatedTargetState = null;
+                        // Clear the AI response so we show search results, not the chat response
+                        aiResponseText = '';
                     }
                 }
-            } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
 
-            // If it's the first message and lead-chat didn't respond or failed, fallback to searching
-            if (isFirstMessage && !aiResponseText && !shouldRunSearch) {
-                shouldRunSearch = true;
-            }
-
-            // Smart search detection: if the user explicitly asks to find/search someone or something
-            // AND the query contains a specific entity (company, person name, location — not just vague intent)
-            if (!shouldRunSearch && !isFirstMessage) {
-                const lowerText = text.toLowerCase();
-                const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
-                // Check if there's a specific entity (not just generic words like 'a specific company')
-                const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
-                // Must have search intent AND NOT be vague to force search
-                if (hasSearchIntent && !hasVagueTarget) {
-                    shouldRunSearch = true;
-                    // Clear old targeting so Gemini parses this fresh query from scratch
-                    // e.g. previous search was "founders at X", now user says "find all people at X"
-                    updatedTargetState = null;
-                    // Clear the AI response so we show search results, not the chat response
-                    aiResponseText = '';
+                if (!shouldRunSearch && aiResponseText) {
+                    // Just show the AI answer — no search needed
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
+                    }));
+                    setBusy(false);
+                    return;
                 }
-            }
 
-            if (!shouldRunSearch && aiResponseText) {
-                // Just show the AI answer — no search needed
-                setMessages(p => p.filter(m => m.id !== lid).concat({
-                    id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(), options: aiOpts,
-                }));
-                setBusy(false);
-                return;
+                // ── CONFIRMATION GATE ──
+                // Before running the search, show the parsed intent back to the user for confirmation.
+                if (shouldRunSearch) {
+                    // Use the intent already parsed by lead-chat; if none, call extract-intent for a quick parse
+                    let previewIntent: LeadTargeting | null = updatedTargetState;
+                    const hasUsableIntent = (previewIntent?.job_titles?.length ?? 0) > 0
+                        || (previewIntent?.locations?.length ?? 0) > 0
+                        || (previewIntent?.keywords?.length ?? 0) > 0
+                        || (previewIntent?.company_names?.length ?? 0) > 0
+                        || (previewIntent?.industries?.length ?? 0) > 0;
+
+                    if (!hasUsableIntent) {
+                        try {
+                            const intentR = await fetch(`${API_BASE}/api/campaigns/linkedin/search/extract-intent`, {
+                                method: 'POST', headers: headers(), body: JSON.stringify({ query: text }),
+                            });
+                            const intentD = await intentR.json();
+                            if (intentD.success && intentD.intent) {
+                                previewIntent = {
+                                    job_titles: toArr(intentD.intent.job_titles),
+                                    industries: toArr(intentD.intent.industries),
+                                    locations: toArr(intentD.intent.locations),
+                                    keywords: toArr(intentD.intent.keywords),
+                                    profile_language: toArr(intentD.intent.profile_language),
+                                    company_names: toArr(intentD.intent.company_names),
+                                    seniority: toArr(intentD.intent.seniority),
+                                    functions: toArr(intentD.intent.functions),
+                                };
+                            }
+                        } catch (e) { console.warn('[Search] extract-intent for preview failed', e); }
+                    }
+
+                    const hasPreviewData = (previewIntent?.job_titles?.length ?? 0) > 0
+                        || (previewIntent?.locations?.length ?? 0) > 0
+                        || (previewIntent?.keywords?.length ?? 0) > 0
+                        || (previewIntent?.company_names?.length ?? 0) > 0
+                        || (previewIntent?.industries?.length ?? 0) > 0;
+
+                    if (previewIntent && hasPreviewData) {
+                        // Show the confirmation preview and pause — the search runs only after the user confirms
+                        const confirmMsg = buildConfirmationMessage(previewIntent, text);
+                        setPendingSearchConfirmation({ intent: previewIntent, originalQuery: text });
+                        setMessages(p => p.filter(m => m.id !== lid).concat({
+                            id: `a-${Date.now()}`, role: 'ai', text: confirmMsg, ts: new Date(),
+                            options: [
+                                { label: '✅ Yes, search this', value: 'yes' },
+                                { label: '✏️ Let me refine this', value: 'I want to change what I\'m looking for' },
+                            ],
+                        }));
+                        setBusy(false);
+                        return;
+                    }
+                    // If intent could not be determined, fall through and run the search immediately
+                }
             }
 
             // ── CASE 2: Run LinkedIn search ──
@@ -745,18 +827,29 @@ export default function AdvancedSearchAIPage() {
             let searchTotal = 0;
             let icpWasApplied = false;
 
-            // If we have updated targeting from lead-chat or custom flows, use that for search query
-            const searchQuery = shouldRunSearch && ext && !isFirstMessage
-                ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
-                : text;
+            // When the user confirmed a search preview, always send the ORIGINAL query to the backend
+            // and let the server's Gemini re-parse it with the improved prompt (fixes "from Company" parsing).
+            // The pre-parsed preview intent shown to the user is only for display — do not use it as the search input.
+            let searchQuery: string;
+            if (confirmedForSearch) {
+                searchQuery = confirmedForSearch.originalQuery;
+                ext = null; // Clear the preview intent — let the backend parse the original query fresh
+            } else {
+                // If we have updated targeting from lead-chat or custom flows, use that for search query
+                searchQuery = shouldRunSearch && ext && !isFirstMessage
+                    ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
+                    : text;
+            }
 
             try {
                 // Enhance ICP description with user feedback on previous leads
-                let icpDesc = text;
+                // When running from a confirmed preview, use the original query, not "yes"
+                const icpBase = confirmedForSearch ? confirmedForSearch.originalQuery : text;
+                let icpDesc = icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
-                    const parts = [text];
+                    const parts = [icpBase];
                     if (goodLeads.length > 0) {
                         parts.push(`\n\nUser marked these leads as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
                     }
@@ -798,9 +891,9 @@ export default function AdvancedSearchAIPage() {
                     }
                     // Store search context for pagination + localStorage
                     setLastSearchQuery(searchQuery);
-                    setLastIcpDescription(text);
+                    setLastIcpDescription(icpBase);
                     setLastTargeting(ext);
-                    addSearchSession(searchQuery, ext, text);
+                    addSearchSession(searchQuery, ext, icpBase);
                     setSearchPage(1);
                     setTotalResults(d.total || 0);
                     const nextCursor = d.cursor || null;
@@ -890,7 +983,7 @@ export default function AdvancedSearchAIPage() {
                 id: `a-${Date.now()}`, role: 'ai', text: '⚠️ Something went wrong. Please try again.', ts: new Date(),
             }));
         } finally { setBusy(false); }
-    }, [busy, messages, convId, targeting, pendingIntent]);
+    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation]);
 
     const onChatSend = useCallback(() => {
         if (!input.trim() || busy) return;
@@ -948,6 +1041,7 @@ export default function AdvancedSearchAIPage() {
         setConvId(null);
         setMsgCount(0);
         setPendingIntent(null);
+        setPendingSearchConfirmation(null);
         setSearchPage(1);
         setTotalResults(0);
         setSearchCursor(null);
@@ -1116,7 +1210,7 @@ export default function AdvancedSearchAIPage() {
                     <div className="adv-chat-msgs">
                         {messages.map((m, idx) => {
                             // Show real activities in the AI's thinking indicator (replace "Thinking...")
-                            const displayMsg = isSearching && idx === messages.length - 1 && messages[idx].role === 'assistant'
+                            const displayMsg = isSearching && idx === messages.length - 1 && messages[idx].role === 'ai'
                                 ? {
                                     ...m,
                                     content: activities.length > 0
@@ -1124,7 +1218,7 @@ export default function AdvancedSearchAIPage() {
                                         : 'Qualifying...'
                                 }
                                 : m;
-                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} />;
+                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} onUploadClick={() => fileInputRef.current?.click()} />;
                         })}
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
@@ -1526,7 +1620,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; onUploadClick?: () => void }) {
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -1680,7 +1774,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
                             boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s',
                         }}><Download size={16} /> Download Template</button>
-                        <button onClick={() => onFileUpload?.()} style={{
+                        <button onClick={() => onUploadClick?.()} style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
                             background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
                             fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
@@ -2810,6 +2904,23 @@ function buildSummary(t: LeadTargeting): string {
     if (t.company_headcount?.length) p.push(`👥 **Company Size:** ${t.company_headcount.join(', ')}`);
     if (t.company_names?.length) p.push(`🏢 **Company:** ${t.company_names.join(', ')}`);
     p.push('\n✅ Your leads are shown in the panel. You can refine or start connecting.');
+    return p.join('\n');
+}
+
+/**
+ * Builds a structured search-preview message so the user can confirm or correct
+ * the parsed intent before the actual LinkedIn search runs.
+ */
+function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string): string {
+    const p: string[] = ['🤔 **Here\'s what I understood from your request:**\n'];
+    if (intent.keywords?.length) p.push(`👤 **Person / Keywords:** ${intent.keywords.join(', ')}`);
+    if (intent.job_titles?.length) p.push(`🎯 **Job Titles:** ${intent.job_titles.join(', ')}`);
+    if (intent.company_names?.length) p.push(`🏢 **Company:** ${intent.company_names.join(', ')}`);
+    if (intent.locations?.length) p.push(`📍 **Location:** ${intent.locations.join(', ')}`);
+    if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
+    if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
+    if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
+    p.push('\n**Does this look right?** Tap ✅ to search, or tell me what to change.');
     return p.join('\n');
 }
 
