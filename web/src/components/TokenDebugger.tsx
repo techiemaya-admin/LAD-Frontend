@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 
 export function TokenDebugger() {
   const [debugInfo, setDebugInfo] = useState<any>({});

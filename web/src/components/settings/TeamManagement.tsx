@@ -10,7 +10,7 @@ import {
   Eye, EyeOff 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { safeStorage } from '../../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { TeamManagementSkeleton } from '../skeletons';
 import { getApiBaseUrl } from '@/lib/api-utils';
 interface User {

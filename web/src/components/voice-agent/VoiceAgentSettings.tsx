@@ -3,7 +3,7 @@ import { Agent, AgentFormData, AgentGender, DEFAULT_AGENT_FORM, Voice } from '@/
 import { useAgentForm } from '@/hooks/useAgentForm';
 import { useToast } from '../../hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { AgentSelector } from './AgentSelector';
 import { AgentForm } from './AgentForm';
 import { FormSkeleton } from './FormSkeleton';

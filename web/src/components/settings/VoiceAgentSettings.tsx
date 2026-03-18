@@ -11,7 +11,7 @@
 // import { Input } from '@/components/ui/input';
 // import { Textarea } from '@/components/ui/textarea';
 // import { Slider } from '@/components/ui/slider';
-// import { safeStorage } from '@/utils/storage';
+// import { safeStorage } from '@lad/shared/storage';  
 
 // interface VoiceAgentSettings {
 //   llm: {
@@ -464,5 +464,6 @@ import { VoiceAgentSettings } from '@/components/voice-agent/VoiceAgentSettings'
 
 const Index = () => {
   return <VoiceAgentSettings />;
-};
+};
+
 export default Index;

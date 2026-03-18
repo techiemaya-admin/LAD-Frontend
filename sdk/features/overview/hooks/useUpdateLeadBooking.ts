@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { dashboardApiService } from '../services/api';
+import { updateLeadBooking as updateLeadBookingApi } from '../api';
 import { UpdateLeadBookingParams } from '../types';
 
 export function useUpdateLeadBooking() {
@@ -10,7 +10,7 @@ export function useUpdateLeadBooking() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.updateLeadBooking(bookingId, data);
+            const response = await updateLeadBookingApi(bookingId, data);
             if (!response.success) {
                 throw new Error(response.error || 'Failed to update booking');
             }

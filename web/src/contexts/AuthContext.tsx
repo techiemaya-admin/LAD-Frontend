@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { safeStorage } from '../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { logger } from '@/lib/logger';
 interface UserTenant {
   id: string;
@@ -39,52 +39,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  // Load token and user from localStorage on mount
+  // Load user data from storage on mount; token lives in httpOnly cookie only.
   useEffect(() => {
-    logger.debug('[AuthContext] Loading auth data from localStorage...');
-    const storedToken = safeStorage.getItem('token');
+    logger.debug('[AuthContext] Loading auth data...');
     const storedAuth = safeStorage.getItem('auth');
-    
-    if (storedToken) {
-      logger.debug('[AuthContext] Stored token found');
-      setToken(storedToken);
-    }
-    
+
     if (storedAuth) {
       try {
         logger.debug('[AuthContext] Stored auth data found');
         const parsedAuth = JSON.parse(storedAuth);
-        // Handle Redux format { user: ..., isAuthenticated: true } or direct user object
         const user = parsedAuth.user || parsedAuth;
         setUser(user);
       } catch (e) {
         logger.error('[AuthContext] Failed to parse stored auth', { error: e });
       }
     }
-    
-    if (storedToken) {
-      fetchCurrentUser(storedToken);
-    } else {
-      logger.debug('[AuthContext] No stored token found');
-      setIsLoading(false);
-    }
+
+    // Always try to fetch current user — the httpOnly cookie is sent automatically.
+    fetchCurrentUser();
   }, []);
-  const fetchCurrentUser = async (authToken: string) => {
+  const fetchCurrentUser = async () => {
     try {
-      if (!authToken) {
-        logger.error('[AuthContext] No auth token provided to fetchCurrentUser');
-        setIsLoading(false);
-        return;
-      }
       logger.debug('[AuthContext] Fetching current user');
-      // Call the Next.js API route instead of directly calling the backend
-      // This avoids CORS issues with Safari stripping Authorization headers
+      // Token is sent automatically via httpOnly cookie (credentials: 'include')
       const response = await fetch('/api/auth/me', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       logger.debug('[AuthContext] Auth response received', { status: response.status });
       if (response.ok) {
@@ -92,17 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.debug('[AuthContext] User data received');
         const user = userData.user || userData;
         setUser(user);
-        // Store user data in localStorage for persistence (keep Redux in sync)
-        safeStorage.setItem('auth', JSON.stringify({ 
-          user, 
+        // Store user profile data for quick rehydration
+        safeStorage.setItem('auth', JSON.stringify({
+          user,
           isAuthenticated: true,
-          theme: 'light' // Default or preserve if read
+          theme: 'light'
         }));
-        // Also store as 'user' for direct access if needed
         safeStorage.setItem('user', JSON.stringify(user));
       } else {
-        // Token is invalid, clear it
-        safeStorage.removeItem('token');
         safeStorage.removeItem('auth');
         safeStorage.removeItem('user');
         setToken(null);
@@ -110,9 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
-      // Only clear if strictly necessary or certain errors?
-      // For now, keep behavior but be safer
-      safeStorage.removeItem('token');
       safeStorage.removeItem('auth');
       safeStorage.removeItem('user');
       setToken(null);
@@ -138,13 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const error = await response.json();
         throw new Error(error.message || 'Login failed');
       }
-      const data = await response.json();
-      const authToken = data.token;
-      // Store token
-      safeStorage.setItem('token', authToken);
-      setToken(authToken);
-      // Fetch user data
-      await fetchCurrentUser(authToken);
+      await response.json();
+      // Token is set as httpOnly cookie by the API route — fetch user data
+      await fetchCurrentUser();
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error) {
@@ -153,7 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   const logout = () => {
-    safeStorage.removeItem('token');
+    // httpOnly cookie is cleared by the /api/auth/logout route
+    safeStorage.removeItem('auth');
     safeStorage.removeItem('user');
     setToken(null);
     setUser(null);

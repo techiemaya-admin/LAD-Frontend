@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ────────────────────────────────────────────────────────

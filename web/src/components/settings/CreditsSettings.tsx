@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, X, Loader2 } from 'lucide-react';
 import { useCreditsBalance, useStripeCheckout } from '@lad/frontend-features/billing';
 import { logger } from '@/lib/logger';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 export const CreditsSettings: React.FC = () => {
   const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);

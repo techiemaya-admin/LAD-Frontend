@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, useLeadsSummaries, type CampaignLead, useCampaign } from '@lad/frontend-features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
 import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;

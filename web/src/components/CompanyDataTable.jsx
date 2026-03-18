@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apolloLeadsService, getDecisionMakerPhone } from '@/features/apollo-leads';
 import { Phone as PhoneIcon } from 'lucide-react';
-import { safeStorage } from '../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 // Get API base URL from environment variable
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api`;
 // Helper function to get userId from auth token

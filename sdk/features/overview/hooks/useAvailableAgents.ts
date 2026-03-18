@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getAvailableAgents as fetchAvailableAgentsApi } from '../api';
 import { VoiceAgent } from '../types';
 
 export function useAvailableAgents() {
@@ -11,7 +11,7 @@ export function useAvailableAgents() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getAvailableAgents();
+            const response = await fetchAvailableAgentsApi();
             if (response.success && response.data) {
                 setAgents(response.data);
             } else {

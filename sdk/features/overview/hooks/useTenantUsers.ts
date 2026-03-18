@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getTenantUsers as fetchTenantUsersApi } from '../api';
 import { User } from '../types';
 
 export function useTenantUsers() {
@@ -11,7 +11,7 @@ export function useTenantUsers() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getTenantUsers();
+            const response = await fetchTenantUsersApi();
             if (response.success && response.data) {
                 setUsers(response.data);
             } else {

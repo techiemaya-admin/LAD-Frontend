@@ -27,7 +27,7 @@ export function getBackendUrl(): string {
     return 'https://lad-backend-develop-160078175457.us-central1.run.app';
   }
 
-  // In local development, only allow explicit localhost overrides.
+  // In local development, prefer explicit localhost overrides first.
   if (isLocalUrl(internalBackendUrl)) {
     return internalBackendUrl as string;
   }
@@ -37,6 +37,11 @@ export function getBackendUrl(): string {
   if (isLocalUrl(publicBackendUrl)) {
     return publicBackendUrl as string;
   }
+
+  // Allow explicit remote URLs in dev if explicitly configured.
+  if (internalBackendUrl) return internalBackendUrl;
+  if (backendUrl) return backendUrl;
+  if (publicBackendUrl) return publicBackendUrl;
 
   // Safe local default to prevent accidental remote calls during dev.
   return 'http://localhost:3004';

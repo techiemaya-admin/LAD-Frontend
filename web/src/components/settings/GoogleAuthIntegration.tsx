@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 
 // Calls our Next.js proxy routes — never hits the backend directly
 async function calendarFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {

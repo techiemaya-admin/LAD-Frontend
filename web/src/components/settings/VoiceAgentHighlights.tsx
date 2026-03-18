@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getApiBaseUrl } from "@/lib/api-utils";
-import { safeStorage } from "@/utils/storage";
+import { safeStorage } from '@lad/shared/storage';  
 import { getCurrentUser } from "@/lib/auth";
 import { Brain, Volume2, Mic, Sparkles } from "lucide-react";
 export function VoiceAgentHighlights() {
