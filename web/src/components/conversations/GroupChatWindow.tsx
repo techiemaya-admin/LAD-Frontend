@@ -544,11 +544,11 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
       const [googleStatus, metaStatus] = await Promise.all([
         postJson<any>('/api/social-integration/ads/google/status', {
           user_id: userId,
-          frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+          frontend_id: 'group-info',
         }),
         postJson<any>('/api/social-integration/ads/meta/status', {
           user_id: userId,
-          frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+          frontend_id: 'group-info',
         }),
       ]);
 
@@ -574,7 +574,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
       const result = await postJson<any>('/api/social-integration/ads/google/start', {
         user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+        frontend_id: 'group-info',
       });
 
       if (result?.url) {
@@ -595,7 +595,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
       const result = await postJson<any>('/api/social-integration/ads/meta/start', {
         user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+        frontend_id: 'group-info',
       });
 
       if (result?.url) {
@@ -616,7 +616,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
       await postJson('/api/social-integration/ads/google/disconnect', {
         user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+        frontend_id: 'group-info',
       });
       await loadAdsStatus();
     } catch (error) {
@@ -634,7 +634,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
       await postJson('/api/social-integration/ads/meta/disconnect', {
         user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_ADS_FRONTEND_ID || 'group-info',
+        frontend_id: 'group-info',
       });
       await loadAdsStatus();
     } catch (error) {

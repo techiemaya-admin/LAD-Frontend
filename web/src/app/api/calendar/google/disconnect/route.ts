@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackendUrl, getVoagHeaders } from '../../../utils/backend';
+function getBackendBase() {
+  const backendInternal = process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
+  return backendInternal.replace(/\/$/, '');
+}
 export async function POST(req: NextRequest) {
   try {
-    const backend = getBackendUrl();
-    const headers = getVoagHeaders(req);
-    const body = await req.json().catch(() => ({}));
-    const resp = await fetch(`${backend}/api/social-integration/calendar/google/disconnect`, {
+    const backend = getBackendBase();
+    const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Frontend-ID': 'settings',
+      'X-API-Key': '_L5cf6UXDkGTcWRaHka9Q13Kmu4k5dxaKEPRH165U8U',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const resp = await fetch(`${backend}/api/calendar/google/disconnect`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body),
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {

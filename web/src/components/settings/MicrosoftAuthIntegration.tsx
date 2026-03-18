@@ -3,26 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiPost } from '@/lib/api';
+import { getApiBaseUrl } from '@/lib/api-utils';
 import { safeStorage } from '@/utils/storage';
-
-/** Calls the Next.js proxy routes for Microsoft calendar integration */
-async function calendarFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const token = safeStorage.getItem('token');
-  const res = await fetch(path, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).error || (err as any).message || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 export const MicrosoftAuthIntegration: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +40,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
         const userId = meData?.user?.id || meData?.id;
         if (userId) {
           // Check calendar connection status from our database with timeout
-          const statusPromise = calendarFetch<any>('/api/calendar/microsoft/status', { user_id: userId });
+          const statusPromise = apiPost<any>('/api/social-integration/calendar/microsoft/status', { user_id: userId });
           const statusData = await Promise.race([statusPromise, timeoutPromise]);
           if (statusData.connected && statusData.email) {
             setIsConnected(true);
@@ -92,7 +75,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
       const userId = meData?.user?.id || meData?.id;
       if (userId) {
         // Check if connection was successful
-        const statusData = await calendarFetch<any>('/api/calendar/microsoft/status', { user_id: userId });
+        const statusData = await apiPost<any>('/api/social-integration/calendar/microsoft/status', { user_id: userId });
         if (statusData.connected && statusData.email) {
           // Connection is already recorded in database from callback
           setIsConnected(true);
@@ -127,10 +110,10 @@ export const MicrosoftAuthIntegration: React.FC = () => {
         setIsLoading(false);
         return;
       }
-      // Start Microsoft Calendar OAuth flow - use Next.js proxy to avoid CORS
-      const result = await calendarFetch<any>('/api/calendar/microsoft/start', {
-        user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_FRONTEND_ID || 'settings',
+      // Start Microsoft Calendar OAuth flow - use backend proxy to avoid CORS
+      const result = await apiPost<any>('/api/social-integration/calendar/microsoft/start', { 
+        user_id: userId, 
+        frontend_id: 'settings' 
       });
       if (!result?.url) {
         console.error('[Microsoft Integration] No OAuth URL in response:', result);
@@ -169,7 +152,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
         return;
       }
       // Disconnect Microsoft Calendar
-      await calendarFetch('/api/calendar/microsoft/disconnect', { user_id: userId });
+      await apiPost('/api/social-integration/calendar/microsoft/disconnect', { user_id: userId });
       setIsConnected(false);
       setUserEmail(null);
     } catch (error) {
