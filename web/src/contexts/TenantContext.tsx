@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { safeStorage } from '../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 
 export interface Tenant {
   id: string;

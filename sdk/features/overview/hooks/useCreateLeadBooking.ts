@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { dashboardApiService } from '../services/api';
+import { createLeadBooking as createLeadBookingApi } from '../api';
 import { CreateLeadBookingParams } from '../types';
 
 export function useCreateLeadBooking() {
@@ -10,7 +10,7 @@ export function useCreateLeadBooking() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.createLeadBooking(data);
+            const response = await createLeadBookingApi(data);
             if (!response.success) {
                 throw new Error(response.error || 'Failed to create booking');
             }

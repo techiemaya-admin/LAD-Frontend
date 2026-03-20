@@ -16,6 +16,7 @@ import type {
   LeadsValidation,
   ParsedLead,
   PlatformDetection,
+  LinkedInLimitsResponse,
 } from './types';
 
 // Re-export types that are used by hooks
@@ -534,6 +535,30 @@ export async function validateLeadsForExecution(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to validate leads: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
+// LinkedIn Limits API
+// ============================================================================
+
+/**
+ * Fetch LinkedIn daily limits (remaining and total)
+ */
+export async function fetchLinkedInLimits(): Promise<LinkedInLimitsResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/campaigns/linkedin/limits`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch LinkedIn limits: ${response.statusText}`);
   }
   return response.json();
 }

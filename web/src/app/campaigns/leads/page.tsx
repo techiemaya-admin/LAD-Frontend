@@ -18,7 +18,7 @@ import {
 } from "@lad/frontend-features/campaigns";
 import { useApolloLeads } from "@lad/frontend-features/apollo-leads";
 import { EmployeeCard, ProfileSummaryDialog } from "@/components/campaigns";
-import { safeStorage } from "@/utils/storage";
+import { safeStorage } from '@lad/shared/storage';  
 import { motion } from "framer-motion";
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {

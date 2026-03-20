@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getLeadBookingById } from '../api';
 import { LeadBooking } from '../types';
 
 export function useLeadBooking(bookingId: string | null) {
@@ -14,7 +14,7 @@ export function useLeadBooking(bookingId: string | null) {
             setLoading(true);
             setError(null);
             try {
-                const response = await dashboardApiService.getLeadBookingById(bookingId);
+                const response = await getLeadBookingById(bookingId);
                 if (response.success && response.data) {
                     setBooking(response.data);
                 } else {

@@ -435,7 +435,12 @@ export default function CampaignAnalyticsPage() {
 
       {/* Live Activity Feed */}
       <div className="mb-8">
-        <LiveActivityTable campaignId={campaignId} maxHeight={500} pageSize={50} />
+        <LiveActivityTable
+          campaignId={campaignId}
+          maxHeight={500}
+          pageSize={50}
+          campaignSteps={analytics?.step_analytics}
+        />
       </div>
 
       {/* Analytics Charts Section */}

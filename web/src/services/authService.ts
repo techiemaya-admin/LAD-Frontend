@@ -1,5 +1,5 @@
 // Using UI proxy routes that set/read httpOnly cookies
-import { safeStorage } from '../utils/storage';
+// Token is stored ONLY in httpOnly cookies — never in localStorage.
 
 export type Credentials = {
   email: string;
@@ -35,37 +35,27 @@ const authService = {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || 'Invalid credentials');
     }
-    // Frontend API sets httpOnly cookie and returns token + user data
-    const data: LoginResponse = await response.json();
-    if (typeof window !== 'undefined' && data.token) {
-      safeStorage.setItem('token', data.token);
-    }
-    return data;
+    // httpOnly cookie is set by the API route — no localStorage needed
+    return await response.json();
   },
-  
+
   logout: async (): Promise<unknown> => {
     // Call frontend API route to clear cookie
-    const response = await fetch('/api/auth/logout', { 
+    const response = await fetch('/api/auth/logout', {
       method: 'POST',
-      credentials: 'include' 
+      credentials: 'include'
     });
     if (!response.ok) {
       throw new Error('Logout failed');
     }
-    if (typeof window !== 'undefined') {
-      safeStorage.removeItem('token');
-    }
     return await response.json();
   },
-  
+
   getCurrentUser: async (): Promise<AuthUser> => {
-    const token = safeStorage.getItem('token');
-    const response = await fetch('/api/auth/me', { 
+    // Token is sent automatically via httpOnly cookie (credentials: 'include')
+    const response = await fetch('/api/auth/me', {
       cache: 'no-store',
       credentials: 'include',
-      headers: token ? {
-        'Authorization': `Bearer ${token}`
-      } : {}
     });
     if (response.status === 401) {
       throw new Error('Not authenticated');

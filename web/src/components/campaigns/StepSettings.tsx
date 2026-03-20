@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCampaignStore } from '@/store/campaignStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { StepType } from '@/types/campaign';
@@ -13,7 +13,33 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { Info, CheckCircle, AlertCircle, Loader2, ChevronDown, ChevronUp, Smartphone, Wifi } from 'lucide-react';
+import { apiGet } from '@/lib/api';
+
+// ─── WhatsApp types ────────────────────────────────────────────────────────
+interface WhatsAppAccount {
+  id: string;
+  status: 'connected' | 'connecting' | 'disconnected' | string;
+  phone_number?: string;
+  connected_at?: string;
+  gateway_account_id?: string;
+}
+interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  content: string;
+  content_format: string;
+  tags?: string[];
+  is_default: boolean;
+  metadata?: {
+    template_name?: string;
+    language_code?: string;
+    header_text?: string;
+    footer_text?: string;
+  };
+}
 // Helper function to get required fields for each step type
 const getRequiredFields = (stepType: StepType): string[] => {
   const required: Record<StepType, string[]> = {
@@ -21,7 +47,7 @@ const getRequiredFields = (stepType: StepType): string[] => {
     linkedin_message: ['message'],
     email_send: ['subject', 'body'],
     email_followup: ['subject', 'body'],
-    whatsapp_send: ['whatsappMessage'],
+    whatsapp_send: ['whatsappAccountId', 'whatsappMessage'],
     voice_agent_call: ['voiceAgentId'],
     instagram_dm: ['instagramUsername', 'instagramDmMessage'],
     delay: [], // At least one time unit must be > 0 (validated separately with isDelayValid)
@@ -111,6 +137,28 @@ export default function StepSettings({
     // Ensure we have the latest values by prioritizing nested data over direct
     ...(stepData || {}), // Use prop stepData if provided
   };
+
+  // ─── WhatsApp data fetching ────────────────────────────────────────────
+  const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
+  const [whatsappTemplates, setWhatsappTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [loadingWa, setLoadingWa] = useState(false);
+  const [showAgentPrompt, setShowAgentPrompt] = useState(false);
+
+  useEffect(() => {
+    if (resolvedStepType !== 'whatsapp_send') return;
+    setLoadingWa(true);
+    Promise.all([
+      apiGet<{ success: boolean; accounts: WhatsAppAccount[] }>('/api/whatsapp-conversations/accounts')
+        .catch(() => ({ success: false as const, accounts: [] })),
+      apiGet<{ success: boolean; data: WhatsAppTemplate[] }>('/api/campaigns/whatsapp-templates')
+        .catch(() => ({ success: false as const, data: [] })),
+    ]).then(([accountsRes, templatesRes]) => {
+      setWhatsappAccounts((accountsRes.accounts || []).filter((a) => a.status === 'connected'));
+      setWhatsappTemplates(templatesRes.data || []);
+    }).finally(() => setLoadingWa(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedStepType]);
+
   const requiredFields = getRequiredFields(resolvedStepType);
   // Special validation for delay step
   const isValid = resolvedStepType === 'delay' 
@@ -469,51 +517,150 @@ export default function StepSettings({
       {/* WhatsApp Steps */}
       {resolvedStepType === 'whatsapp_send' && (
         <>
+          {/* ── Header ── */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#25D366] mb-2 flex items-center">
               <span className="w-1 h-1 bg-[#25D366] rounded-full mr-2" />
               WhatsApp Configuration
+              {loadingWa && <Loader2 className="w-3.5 h-3.5 ml-2 animate-spin text-slate-400" />}
             </h4>
           </div>
+
+          {/* ── 1. Account Selector ── */}
           <div className="mb-4">
-            <Label htmlFor="whatsapp-template">WhatsApp Template</Label>
-            <Select value={data.whatsappTemplate || ''} onValueChange={(val) => handleUpdate('whatsappTemplate', val)}>
-              <SelectTrigger id="whatsapp-template" className="mt-1">
-                <SelectValue placeholder="None (Free Text)" />
+            <Label htmlFor="whatsapp-account">
+              WhatsApp Account *
+              {renderRequiredIndicator('whatsappAccountId')}
+            </Label>
+            {loadingWa ? (
+              <div className="mt-1 h-9 flex items-center px-3 rounded-md border border-slate-200 bg-slate-50 text-sm text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> Loading accounts…
+              </div>
+            ) : whatsappAccounts.length === 0 ? (
+              <div className="mt-1 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                <p className="text-xs text-amber-800 font-medium">No connected WhatsApp accounts found.</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Go to <strong>Settings → WhatsApp</strong> to connect a personal number or API account.
+                </p>
+              </div>
+            ) : (
+              <Select
+                value={data.whatsappAccountId || ''}
+                onValueChange={(val) => {
+                  const acc = whatsappAccounts.find((a) => a.id === val);
+                  handleUpdate('whatsappAccountId', val);
+                  handleUpdate('whatsappAccountPhone', acc?.phone_number || '');
+                }}
+              >
+                <SelectTrigger
+                  id="whatsapp-account"
+                  className={`mt-1 ${
+                    requiredFields.includes('whatsappAccountId') && !isFieldValid('whatsappAccountId', data.whatsappAccountId)
+                      ? 'border-red-500'
+                      : ''
+                  }`}
+                >
+                  <SelectValue placeholder="Select WhatsApp account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {whatsappAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      <span className="flex items-center gap-2">
+                        <Wifi className="w-3.5 h-3.5 text-[#25D366]" />
+                        {acc.phone_number ? acc.phone_number : `Account ${acc.id.slice(0, 8)}`}
+                        <span className="text-[10px] text-slate-400 ml-1">
+                          ({acc.gateway_account_id ? 'API' : 'Personal'})
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-slate-500 mt-1">
+              Choose which connected WhatsApp number to send from
+            </p>
+          </div>
+
+          {/* ── 2. Template Selector ── */}
+          <div className="mb-4">
+            <Label htmlFor="whatsapp-template-select">Message Template (Optional)</Label>
+            <Select
+              value={data.whatsappTemplateId || ''}
+              onValueChange={(val) => {
+                if (!val) {
+                  handleUpdate('whatsappTemplateId', '');
+                  handleUpdate('whatsappTemplateName', '');
+                  return;
+                }
+                const tpl = whatsappTemplates.find((t) => t.id === val);
+                if (tpl) {
+                  handleUpdate('whatsappTemplateId', tpl.id);
+                  handleUpdate('whatsappTemplateName', tpl.name);
+                  // Auto-populate message from template content
+                  handleUpdate('whatsappMessage', tpl.content);
+                }
+              }}
+            >
+              <SelectTrigger id="whatsapp-template-select" className="mt-1">
+                <SelectValue placeholder="None — write custom message below" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None (Free Text)</SelectItem>
-                <SelectItem value="greeting">Greeting Template</SelectItem>
-                <SelectItem value="followup">Follow-up Template</SelectItem>
-                <SelectItem value="reminder">Reminder Template</SelectItem>
-                <SelectItem value="custom">Custom Template</SelectItem>
+                <SelectItem value="">None — custom message</SelectItem>
+                {whatsappTemplates.length === 0 && !loadingWa && (
+                  <SelectItem value="__no_templates__" disabled>
+                    No saved templates yet
+                  </SelectItem>
+                )}
+                {whatsappTemplates.map((tpl) => (
+                  <SelectItem key={tpl.id} value={tpl.id}>
+                    <span className="flex items-center gap-2">
+                      <Smartphone className="w-3.5 h-3.5 text-[#25D366]" />
+                      {tpl.name}
+                      {tpl.is_default && (
+                        <Badge variant="secondary" className="text-[9px] h-4 ml-1">Default</Badge>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-slate-500 mt-1">
+              Selecting a template auto-fills the message below. You can still edit it.
+            </p>
           </div>
+
+          {/* ── 3. Message Textarea ── */}
           <div className="mb-4">
-            <Label htmlFor="whatsapp-message">Message</Label>
+            <Label htmlFor="whatsapp-message">
+              Message *
+              {renderRequiredIndicator('whatsappMessage')}
+            </Label>
             <div className="flex items-start gap-2">
               <Textarea
                 id="whatsapp-message"
                 rows={4}
                 value={data.whatsappMessage || ''}
                 onChange={(e) => handleUpdate('whatsappMessage', e.target.value)}
-                placeholder="Hi {{first_name}}, ..."
-                className={requiredFields.includes('whatsappMessage') && !isFieldValid('whatsappMessage', data.whatsappMessage) ? 'border-red-500' : ''}
+                placeholder="Hi {{first_name}}, I came across your profile and wanted to reach out…"
+                className={`${
+                  requiredFields.includes('whatsappMessage') && !isFieldValid('whatsappMessage', data.whatsappMessage)
+                    ? 'border-red-500'
+                    : ''
+                }`}
               />
               {renderRequiredIndicator('whatsappMessage')}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {requiredFields.includes('whatsappMessage') && !isFieldValid('whatsappMessage', data.whatsappMessage)
                 ? 'Message is required'
-                : 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{phone}} for personalization'
-              }
+                : 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{phone}} for personalisation'}
             </p>
           </div>
+
+          {/* Variable chips */}
           <div className="mb-4 p-3 bg-white rounded-lg border border-slate-200">
-            <span className="text-xs text-slate-600 font-semibold mb-2 block">
-              Available Variables:
-            </span>
+            <span className="text-xs text-slate-600 font-semibold mb-2 block">Available Variables:</span>
             <div className="flex flex-row gap-2 flex-wrap">
               {['first_name', 'last_name', 'company_name', 'title', 'email', 'phone'].map((varName) => (
                 <span
@@ -528,6 +675,39 @@ export default function StepSettings({
                 </span>
               ))}
             </div>
+          </div>
+
+          {/* ── 4. Agent Prompt (collapsible) ── */}
+          <div className="mb-4">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between text-xs font-semibold text-slate-600 py-2 px-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              onClick={() => setShowAgentPrompt((v) => !v)}
+            >
+              <span>🤖 AI Reply Agent Prompt (Optional)</span>
+              {showAgentPrompt
+                ? <ChevronUp className="w-4 h-4 text-slate-500" />
+                : <ChevronDown className="w-4 h-4 text-slate-500" />}
+            </button>
+            {showAgentPrompt && (
+              <div className="mt-2 p-3 border border-slate-200 rounded-lg bg-white">
+                <p className="text-xs text-slate-500 mb-2">
+                  When a lead replies to your WhatsApp message, the AI will use this system prompt to
+                  handle the conversation automatically.
+                </p>
+                <Textarea
+                  id="whatsapp-agent-prompt"
+                  rows={5}
+                  value={data.whatsappAgentPrompt || ''}
+                  onChange={(e) => handleUpdate('whatsappAgentPrompt', e.target.value)}
+                  placeholder={`You are a helpful sales assistant representing [Company]. Your goal is to qualify leads and schedule a call.\n\nWhen responding:\n- Be professional and concise\n- Answer questions about our product\n- Try to book a discovery call`}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Leave blank to disable AI auto-replies for this step.
+                </p>
+              </div>
+            )}
           </div>
         </>
       )}

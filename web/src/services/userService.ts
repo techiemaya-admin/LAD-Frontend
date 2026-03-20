@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { User } from '../store/slices/usersSlice';
 import { logger } from '@/lib/logger';

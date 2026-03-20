@@ -1,5 +1,4 @@
 import { loadingFetch } from "@/lib/loading-fetch";
-import { safeStorage } from "@/utils/storage";
 export type LoginPayload = { email: string; password: string };
 export type User = { id: string | number; email: string; name?: string; [k: string]: unknown };
 // Use proxy routes when NEXT_PUBLIC_USE_API_PROXY is enabled, otherwise use direct backend URL
@@ -26,16 +25,9 @@ export async function login(payload: LoginPayload): Promise<void> {
     const msg = await safeError(res);
     throw new Error(msg || "Login failed");
   }
-  // Expect token cookie (via httpOnly) or token in body
-  try {
-    const data = await res.json().catch(() => null);
-    const token = data?.token as string | undefined;
-    if (token) {
-      safeStorage.setItem("token", token);
-    }
-  } catch {
-    // ignore
-  }
+  // Token is set as httpOnly cookie by the API route — no client-side storage needed.
+  // Still parse the response body (callers may need user data).
+  await res.json().catch(() => null);
 }
 let currentUserPromise: Promise<User> | null = null;
 

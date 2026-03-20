@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/app-toaster';
 import { useCampaignLeads, useLeadsSummaries, type CampaignLead, useCampaign } from '@lad/frontend-features/campaigns';
 import { apiGet, apiPost } from '@/lib/api';
 import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;
@@ -113,9 +113,19 @@ export default function CampaignLeadsPage() {
         // Store the revealed phone value
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: response.phone } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
-        push({ title: 'Success', description: 'Phone number revealed' });
+
+        // Show credit savings if found in DB (0 credits) vs Apollo API (10 credits)
+        push({
+          title: 'Success',
+          description: response.from_cache
+            ? 'Phone retrieved from database (no credits used)'
+            : `Phone revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)`
+        });
+
+        // Trigger re-render to update UI
+        refetch();
       } else {
-        push({ title: 'Error', description: 'Failed to reveal phone number' });
+        push({ title: 'Error', description: response.error || 'Failed to reveal phone number' });
       }
     } catch (error) {
       push({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to reveal phone' });

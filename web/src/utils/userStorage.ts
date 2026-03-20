@@ -9,7 +9,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 
 export class UserStorage {
   private userId: string | number;

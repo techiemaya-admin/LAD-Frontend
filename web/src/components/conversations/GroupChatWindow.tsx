@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { DateSeparator } from './DateSeparator';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ──────────────────────────────────────────────────────────

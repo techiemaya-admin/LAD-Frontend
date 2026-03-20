@@ -66,7 +66,7 @@ function WalletSuccessContent() {
                   View Wallet
                 </a>
                 <a
-                  href="/dashboard"
+                  href="/overview"
                   className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center"
                 >
                   Go to Dashboard

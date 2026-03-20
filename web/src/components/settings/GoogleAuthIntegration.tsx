@@ -1,178 +1,56 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Calendar } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mail, CheckCircle, AlertCircle, Loader2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { safeStorage } from '@/utils/storage';
+import {
+  useGoogleEmailStatus,
+  startGoogleOAuth,
+} from '@lad/frontend-features/email-accounts';
 
-// Calls our Next.js proxy routes — never hits the backend directly
-async function calendarFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const token = safeStorage.getItem('token');
-  const res = await fetch(path, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || err.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 export const GoogleAuthIntegration: React.FC = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { isConnected, email, isLoading, refetch, disconnect } = useGoogleEmailStatus();
+  const [isActing, setIsActing] = useState(false);
+
   useEffect(() => {
-    checkGoogleConnection();
-    // Check if we're returning from OAuth flow
+    // If returning from Google OAuth flow, refresh status + clean up URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('google') === 'connected') {
-      // OAuth flow completed, update database
-      handleOAuthCallback();
-    }
-  }, []);
-  const checkGoogleConnection = async () => {
-    try {
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject({ timeout: true }), 15000) // Increased to 15s
-      );
-      // Check if user has Google Calendar connected
-      const mePromise = fetch('/api/auth/me', {
-        method: 'GET',
-      });
-      const meRes = await Promise.race([mePromise, timeoutPromise]) as Response;
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        // Use user.id from the response (architecture-compliant: core platform returns user.id)
-        const userId = meData?.user?.id || meData?.id;
-        if (userId) {
-          // Check calendar connection status from our database with timeout
-          const statusPromise = calendarFetch<any>('/api/calendar/google/status', { user_id: userId });
-          const statusData = await Promise.race([statusPromise, timeoutPromise]);
-          setIsConnected(statusData.connected || false);
-          setUserEmail(statusData.email || null);
-        }
-      }
-    } catch (error: any) {
-      // Silently handle timeout - don't log as error since it's expected when backend is slow/unavailable
-      if (error?.timeout) {
-        console.warn('[Google Integration] Request timed out - Google Calendar service may be unavailable');
-      } else {
-        console.error('[Google Integration] Error checking connection:', error);
-      }
-      // Set default values on error to prevent stuck loading state
-      setIsConnected(false);
-      setUserEmail(null);
-    }
-  };
-  const handleOAuthCallback = async () => {
-    try {
-      const meRes = await fetch('/api/auth/me', {
-        method: 'GET',
-      });
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        // Use user.id from the response (architecture-compliant: core platform returns user.id)
-        const userId = meData?.user?.id || meData?.id;
-        if (userId) {
-          // Check status from our backend (which already has the data from VOAG callback)
-          const statusData = await calendarFetch<any>('/api/calendar/google/status', { user_id: userId });
-          if (statusData.connected && statusData.email) {
-            // Connection is already recorded in database from callback
-            setIsConnected(true);
-            setUserEmail(statusData.email);
-          }
-        }
-      }
-      // Clean up URL
+      refetch();
       window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
-    } catch (error) {
-      console.error('Error handling OAuth callback:', error);
     }
-  };
+  }, [refetch]);
+
   const connectGoogle = async () => {
-    setIsLoading(true);
+    setIsActing(true);
     try {
-      // Get the logged-in user's id
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
-      const meRes = await fetch('/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!meRes.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      const meData = await meRes.json();
-      // Use user.id from the response (architecture-compliant: core platform returns user.id)
-      const userId = meData?.user?.id || meData?.id;
-      if (!userId) {
-        alert('User ID not available');
-        setIsLoading(false);
-        return;
-      }
-      // Start Google Calendar OAuth flow - use backend proxy to avoid CORS
-      const result = await calendarFetch<any>('/api/calendar/google/start', {
-        user_id: userId,
-        frontend_id: process.env.NEXT_PUBLIC_VOAG_FRONTEND_ID || 'settings',
-      });
+      const result = await startGoogleOAuth('settings');
       if (!result?.url) {
-        console.error('[Google Integration] No OAuth URL in response:', result);
         alert('Failed to get Google authorization URL. Please try again.');
-        setIsLoading(false);
         return;
       }
-      // Redirect to Google OAuth URL
       window.location.href = result.url;
     } catch (error) {
-      console.error('Error connecting to Google:', error);
+      console.error('[GoogleAuthIntegration] Error starting OAuth:', error);
       alert('Failed to connect Google account');
     } finally {
-      setIsLoading(false);
+      setIsActing(false);
     }
   };
-  const disconnectGoogle = async () => {
-    setIsLoading(true);
+
+  const handleDisconnect = async () => {
+    setIsActing(true);
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
-      const meRes = await fetch('/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!meRes.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      const meData = await meRes.json();
-      // Use user.id from the response (architecture-compliant: core platform returns user.id)
-      const userId = meData?.user?.id || meData?.id;
-      if (userId) {
-        // Call our backend to disconnect (it will update voag and database)
-        const response = await calendarFetch<any>('/api/calendar/google/disconnect', { user_id: userId });
-        if (response.success) {
-          setIsConnected(false);
-          setUserEmail(null);
-        } else {
-          console.error('Failed to disconnect Google:', response);
-          alert(`Failed to disconnect: ${response.error || 'Unknown error'}`);
-        }
-      }
+      await disconnect();
     } catch (error) {
-      console.error('Error disconnecting Google:', error);
+      console.error('[GoogleAuthIntegration] Error disconnecting:', error);
     } finally {
-      setIsLoading(false);
+      setIsActing(false);
     }
   };
+
+  const busy = isLoading || isActing;
+
   return (
     <Card>
       <CardHeader>
@@ -193,8 +71,8 @@ export const GoogleAuthIntegration: React.FC = () => {
             <Mail className="h-5 w-5 text-gray-600" />
             <div>
               <p className="font-medium text-sm">Connection Status</p>
-              {isConnected && userEmail ? (
-                <p className="text-xs text-gray-500 mt-1">Connected as {userEmail}</p>
+              {isConnected && email ? (
+                <p className="text-xs text-gray-500 mt-1">Connected as {email}</p>
               ) : (
                 <p className="text-xs text-gray-500 mt-1">Google account is not connected</p>
               )}
@@ -208,6 +86,7 @@ export const GoogleAuthIntegration: React.FC = () => {
             )}
           </div>
         </div>
+
         {/* Permissions */}
         {isConnected && (
           <div className="space-y-2">
@@ -224,15 +103,16 @@ export const GoogleAuthIntegration: React.FC = () => {
             </div>
           </div>
         )}
+
         {/* Action Buttons */}
         <div className="flex gap-3">
           {!isConnected ? (
             <Button
               onClick={connectGoogle}
-              disabled={isLoading}
+              disabled={busy}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {isLoading ? (
+              {busy ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Connecting...
@@ -258,12 +138,12 @@ export const GoogleAuthIntegration: React.FC = () => {
             </Button>
           ) : (
             <Button
-              onClick={disconnectGoogle}
-              disabled={isLoading}
+              onClick={handleDisconnect}
+              disabled={busy}
               variant="destructive"
               className="flex-1"
             >
-              {isLoading ? (
+              {busy ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Disconnecting...
@@ -274,6 +154,7 @@ export const GoogleAuthIntegration: React.FC = () => {
             </Button>
           )}
         </div>
+
         {/* Info */}
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800">

@@ -33,6 +33,11 @@ export type {
   ICPAnswerRequest,
   ICPAnswerResponse,
 } from './types';
+// LinkedIn Limits Types
+export type {
+  LinkedInLimitsResponse,
+  LinkedInLimits,
+} from './types';
 // Leads Types
 export type {
   LeadsTemplateColumn,
@@ -59,6 +64,8 @@ export {
 // Leads Upload Hook
 export { useLeadsUpload } from './hooks/useLeadsUpload';
 export type { LeadsUploadState } from './hooks/useLeadsUpload';
+// LinkedIn Limits Hook
+export { useLinkedInLimits } from './hooks/useLinkedInLimits';
 // Legacy service (if exists)
 export { 
   AIICPAssistantService,

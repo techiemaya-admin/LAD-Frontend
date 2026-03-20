@@ -61,7 +61,7 @@ function PaymentSuccessContent() {
           </h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/overview')}
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center"
           >
             <Home className="h-5 w-5 mr-2" />
@@ -127,7 +127,7 @@ function PaymentSuccessContent() {
         </div>
         <div className="flex space-x-4">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/overview')}
             className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center"
           >
             <Home className="h-5 w-5 mr-2" />

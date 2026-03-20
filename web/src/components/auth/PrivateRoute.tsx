@@ -17,7 +17,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   useEffect(() => {
     if (!mounted) return;
     if (!isAuthenticated && pathname !== '/login') {
-      const redirect = encodeURIComponent(pathname || '/dashboard');
+      const redirect = encodeURIComponent(pathname || '/overview');
       router.replace(`/login?from=${redirect}`);
     }
   }, [isAuthenticated, pathname, router, mounted]);

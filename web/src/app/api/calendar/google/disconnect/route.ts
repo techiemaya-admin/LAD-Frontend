@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
     const backend = getBackendUrl();
     const headers = getVoagHeaders(req);
     const body = await req.json().catch(() => ({}));
-    const resp = await fetch(`${backend}/api/social-integration/calendar/google/disconnect`, {
+    const resp = await fetch(`${backend}/api/social-integration/email/google/disconnect`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { safeStorage } from '../../utils/storage';
+import { safeStorage } from '@lad/shared/storage';   // Use the robust safeStorage utility
 
 export type AuthUser = {
   id?: string;

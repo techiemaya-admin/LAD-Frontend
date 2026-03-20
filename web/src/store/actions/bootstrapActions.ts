@@ -7,7 +7,7 @@ import { setLeads, setLeadsLoading, setLeadsError } from '../../features/deals-p
 import { setStatuses, setSources, setPriorities } from '../slices/masterDataSlice';
 import { logger } from '@/lib/logger';
 import { AppDispatch, RootState } from '../store';
-import { safeStorage } from '../../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import chatService from '../../services/chatService';
 import * as pipelineService from '@lad/frontend-features/deals-pipeline';
 // Thunk type

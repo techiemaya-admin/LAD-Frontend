@@ -6,8 +6,18 @@
 // Types
 export * from './types';
 
-// Services
-export { dashboardApiService } from './services/api';
+// API functions
+export {
+  getLeadBookings,
+  getLeadBookingById,
+  createLeadBooking,
+  updateLeadBooking,
+  getTenantUsers,
+  getDashboardCalls,
+  getWalletStats,
+  getAvailableNumbers,
+  getAvailableAgents,
+} from './api';
 
 // Hooks
 export { useLeadBookings } from './hooks/useLeadBookings';

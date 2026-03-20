@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl, getVoagHeaders } from '../../../utils/backend';
 
-const BACKEND_PATH = '/api/social-integration/calendar/google/status';
+const BACKEND_PATH = '/api/social-integration/email/google/status';
 
 export async function POST(req: NextRequest) {
   try {
