@@ -1,5 +1,5 @@
 import { loadingFetch } from "@/lib/loading-fetch";
-import { safeStorage } from '@lad/shared/storage';  
+import { safeStorage } from '@lad/shared/storage';
 import { logger } from "@/lib/logger";
 // Use backend URL directly
 const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-160078175457.us-central1.run.app").replace(/\/+$/, "");
