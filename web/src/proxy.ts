@@ -28,7 +28,7 @@ export async function proxy(req: NextRequest) {
       if(userId){
         const redirectParam = req.nextUrl.searchParams.get('redirect_url');
         // Prevent redirect loops if redirect_url is also login
-        const targetPath = (redirectParam && !redirectParam.includes('/login')) ? redirectParam : '/dashboard';
+        const targetPath = (redirectParam && !redirectParam.includes('/login')) ? redirectParam : '/overview';
         
         logger.debug('[Middleware] Authenticated user on auth page - Redirecting', { pathname, targetPath });
         return NextResponse.redirect(new URL(targetPath, req.url));

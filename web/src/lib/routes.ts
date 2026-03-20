@@ -26,7 +26,7 @@ export const OPEN_ROUTES = {
  * These paths require a valid access token
  */
 export const AUTH_ROUTES = [
-  '/dashboard',
+  '/overview',
   '/campaigns',
   '/call-logs',
   '/conversations',

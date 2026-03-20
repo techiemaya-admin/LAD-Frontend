@@ -43,6 +43,7 @@
       "@lad/frontend-features/settings": ["../sdk/features/settings"],
       "@lad/frontend-features/email-templates": ["../sdk/features/email-templates"],
       "@lad/frontend-features/email-senders": ["../sdk/features/email-senders"],
+      "@lad/frontend-features/email-accounts": ["../sdk/features/email-accounts"],
       "@lad/shared/*": ["../sdk/shared/*"]
     }
   },

@@ -17,15 +17,64 @@ import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 import { apiGet } from '@/lib/api';
 import { MiniStepper } from './MiniStepper';
-import { StatusStepper } from './StatusStepper';
+import { StatusStepper, type WorkflowStep } from './StatusStepper';
+import { LeadStepperRow } from './LeadStepperRow';
 import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
 import { LiveBadge } from '@/components/LiveBadge';
 import { exportCampaignLeads } from '../../../../sdk/features/campaigns/api';
+
+/** Mapping from backend step_type to a short display label */
+const STEP_TYPE_LABEL: Record<string, string> = {
+  lead_generation:   'Lead Gen',
+  linkedin_visit:    'Visit',
+  linkedin_connect:  'Connect',
+  linkedin_message:  'Message',
+  linkedin_follow:   'Follow',
+  wait_for_condition:'Accepted',
+  delay:             'Delay',
+  voice_agent_call:  'Voice Call',
+  voice_call:        'Voice Call',
+  call:              'Call',
+  email_send:        'Email',
+  email:             'Email',
+  whatsapp_send:     'WhatsApp',
+  whatsapp:          'WhatsApp',
+  sms:               'SMS',
+};
+
+/**
+ * Step types that we skip when building the visible progress stepper.
+ * Only pure flow-control / source nodes are hidden; real milestones
+ * (including wait_for_condition = "connection accepted") are shown.
+ */
+const SKIP_STEP_TYPES = new Set(['delay', 'lead_generation', 'start', 'end']);
+
+/**
+ * Convert step_analytics (or campaign.steps) from the backend into
+ * the WorkflowStep[] format consumed by <StatusStepper>.
+ */
+function buildWorkflowSteps(
+  rawSteps: Array<{ type: string; title?: string; order?: number }>
+): WorkflowStep[] {
+  return rawSteps
+    .filter((s) => s.type && !SKIP_STEP_TYPES.has(s.type.toLowerCase()))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((s, idx) => ({
+      id: idx + 1,
+      type: s.type.toLowerCase(),
+      label:
+        s.title ||
+        STEP_TYPE_LABEL[s.type.toLowerCase()] ||
+        s.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    }));
+}
 
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;
   pageSize?: number;
+  /** step_analytics from useCampaignAnalytics or campaign.steps from useCampaign */
+  campaignSteps?: Array<{ type: string; title?: string; order?: number }>;
 }
 
 interface ActivityItem {
@@ -45,11 +94,20 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   campaignId,
   maxHeight = 500,
   pageSize = 50,
+  campaignSteps,
 }) => {
+  // Build the dynamic workflow steps once (memoised below)
+
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentPageSize, setCurrentPageSize] = useState<number>(pageSize);
+
+  /** Resolved dynamic workflow steps for the stepper */
+  const workflowSteps = useMemo<WorkflowStep[]>(
+    () => (campaignSteps && campaignSteps.length > 0 ? buildWorkflowSteps(campaignSteps) : []),
+    [campaignSteps]
+  );
 
   const handleExportLeads = async (filter: string) => {
     try {
@@ -178,6 +236,8 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           connectionAccepted: false,
           contacted: false,
           contactedStatus: undefined,
+          callMade: false,          // tracks VOICE_CALL_MADE / VOICE_CALL_INITIATED
+          whatsappSent: false,      // tracks WHATSAPP_SENT / WHATSAPP_DELIVERED
           leadReplied: false,
           pauseReason: undefined,
           errorMessage: undefined,
@@ -257,6 +317,23 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         }
       }
 
+      // Detect voice / call activity (VOICE_CALL_MADE, VOICE_CALL_INITIATED, CALL_*)
+      if (
+        actionType.includes('VOICE_CALL') ||
+        actionType.includes('CALL_MADE') ||
+        actionType.includes('CALL_INITIATED') ||
+        actionType === 'CALL'
+      ) {
+        if (status === 'success' || status === 'sent' || status === 'delivered') {
+          lead.callMade = true;
+        }
+      }
+
+      // WhatsApp tracking
+      if (actionType.includes('WHATSAPP') || actionType === 'WHATSAPP_SENT' || actionType === 'WHATSAPP_DELIVERED' || actionType === 'WHATSAPP_SEND') {
+        if (status === 'success' || status === 'sent' || status === 'delivered' || status === 'completed') lead.whatsappSent = true;
+      }
+
       if (actionType.includes('REPLY')) {
         lead.leadReplied = true;
         lead.connectionAccepted = true;
@@ -288,27 +365,53 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     }
   };
 
+  /**
+   * Returns the 1-based index of the ACTIVE step for a given lead.
+   * When dynamic workflowSteps are available, the step list is driven by
+   * the campaign configuration.  Falls back to the original 5-step logic
+   * when no steps are passed.
+   */
   const calculateCurrentStep = (lead: any): number => {
-    // Determine which step the lead is currently at (1-5)
-    // Returns the active step (steps before are completed, steps after are upcoming)
-    // Steps: 1=Visit, 2=Connect, 3=Accept, 4=Contact, 5=Lead Contact Back
+    // ── Dynamic mode ──────────────────────────────────────────────────────
+    if (workflowSteps.length > 0) {
+      // Walk backwards through the steps; the first one whose "done"
+      // condition is satisfied tells us the NEXT step is the active one.
+      const STEP_DONE: Record<string, (l: any) => boolean> = {
+        linkedin_visit:    (l) => l.profileVisited,
+        linkedin_connect:  (l) => l.connectionStatus === 'SENT',
+        wait_for_condition:(l) => l.connectionAccepted,
+        linkedin_message:  (l) => l.contacted,
+        voice_agent_call:  (l) => l.callMade,
+        voice_call:        (l) => l.callMade,
+        call:              (l) => l.callMade,
+        email_send:        (l) => l.contacted,
+        email:             (l) => l.contacted,
+        whatsapp_send:     (l) => l.whatsappSent,
+        whatsapp:          (l) => l.whatsappSent,
+        sms:               (l) => l.contacted,
+        reply:             (l) => l.leadReplied,
+      };
 
-    // If lead replied, all steps completed - show on final step
+      let lastDoneIdx = -1; // index (0-based) of the last completed step
+      workflowSteps.forEach((step, idx) => {
+        const isDone = STEP_DONE[step.type]?.(lead) ?? false;
+        if (isDone) lastDoneIdx = idx;
+      });
+
+      // If all steps are done, return one beyond the last (all completed)
+      const activeIdx = lastDoneIdx + 1;
+      if (activeIdx >= workflowSteps.length) return workflowSteps.length + 1;
+
+      // 1-based: step ids start at 1
+      return workflowSteps[activeIdx].id;
+    }
+
+    // ── Static fallback (original 5-step LinkedIn logic) ──────────────────
     if (lead.leadReplied) return 6;
-
-    // If contacted but no reply yet, on step 5 waiting for reply  
-    if (lead.contacted) return 5;
-
-    // If connection accepted but not contacted yet, on step 4
+    if (lead.contacted)   return 5;
     if (lead.connectionAccepted) return 4;
-
-    // If connection sent but not accepted yet, on step 3
     if (lead.connectionStatus === 'SENT') return 3;
-
-    // If profile visited but connection not sent yet, on step 2
     if (lead.profileVisited) return 2;
-
-    // Default: On step 1 (visiting profile)
     return 1;
   };
   const getPlatformIcon = (platform: string) => {
@@ -405,6 +508,17 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </TooltipProvider>
         </div>
       </div>
+
+      {/* Campaign Workflow Stepper - Display if steps are configured */}
+      {workflowSteps.length > 0 && (
+        <div className="px-4 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+          <p className="text-xs font-semibold text-[#64748B] mb-3 uppercase tracking-wide">Campaign Workflow</p>
+          <div className="bg-white rounded-lg p-4 border border-[#E2E8F0]">
+            <StatusStepper currentStep={1} steps={workflowSteps} />
+          </div>
+        </div>
+      )}
+
       {/* Activity Table */}
       <div>
         <Table>
@@ -502,7 +616,58 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                     </TooltipProvider>
                   </TableCell>
                   <TableCell className="w-[240px]">
-                    <StatusStepper currentStep={calculateCurrentStep(lead)} />
+                    {workflowSteps.length > 0 ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {workflowSteps.map((step, stepIdx) => {
+                          // Determine state for this step
+                          const STEP_DONE: Record<string, (l: any) => boolean> = {
+                            linkedin_visit:    (l) => l.profileVisited,
+                            linkedin_connect:  (l) => l.connectionStatus === 'SENT',
+                            wait_for_condition:(l) => l.connectionAccepted,
+                            linkedin_message:  (l) => l.contacted,
+                            voice_agent_call:  (l) => l.callMade,
+                            voice_call:        (l) => l.callMade,
+                            call:              (l) => l.callMade,
+                            email_send:        (l) => l.contacted,
+                            email:             (l) => l.contacted,
+                            whatsapp_send:     (l) => l.whatsappSent,
+                            whatsapp:          (l) => l.whatsappSent,
+                            sms:               (l) => l.contacted,
+                            reply:             (l) => l.leadReplied,
+                          };
+
+                          const isDone = STEP_DONE[step.type]?.(lead) ?? false;
+                          const isActive = calculateCurrentStep(lead) === step.id;
+
+                          return (
+                            <TooltipProvider key={step.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all ${
+                                    isDone
+                                      ? 'bg-green-100 text-green-700 border border-green-300'
+                                      : isActive
+                                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-400'
+                                      : 'bg-gray-100 text-gray-500 border border-gray-300'
+                                  }`}>
+                                    {isDone ? '✓' : step.id}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <p>{step.label}</p>
+                                  <p className="text-gray-400">{isDone ? '✓ Completed' : isActive ? '◆ In Progress' : 'Pending'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <StatusStepper
+                        currentStep={calculateCurrentStep(lead)}
+                        steps={undefined}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))

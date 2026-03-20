@@ -103,7 +103,7 @@ export function Sidebar() {
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
     {
-      href: "/dashboard",
+      href: "/overview",
       label: "Overview",
       icon: Home,
       details: "See your overall dashboard and metrics.",

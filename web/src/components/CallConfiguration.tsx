@@ -112,15 +112,6 @@ export function CallConfiguration({
   const [signedSampleUrl, setSignedSampleUrl] = useState<string | null>(null);
   const signedSampleUrlCache = useRef<Map<string, string>>(new Map());
 
-  // Helper to get auth token
-  const getAuthToken = () => {
-    try {
-      return localStorage.getItem('token') || '';
-    } catch {
-      return '';
-    }
-  };
-
   const getAgentSampleUrl = (agent: Agent | undefined): string | null => {
     if (!agent?.voice_sample_url) return null;
     if (signedSampleUrl) return signedSampleUrl;
@@ -128,12 +119,14 @@ export function CallConfiguration({
     // Fallback for non-gs URLs when signing isn't available.
     if (!agent.voice_sample_url.startsWith('gs://')) return agent.voice_sample_url;
 
-    // Last resort fallback for gs:// (will sign via server route). Keep token param
-    // because <audio>/<Audio()> requests may not include auth headers.
-    const token = getAuthToken();
+    // For gs:// URLs, route through the recording proxy.
+    // The token is an HTTP-only cookie — JavaScript cannot read it, but the browser
+    // automatically sends it with same-origin <audio> requests.
+    // The proxy reads the cookie server-side (via Next.js cookies()), so no token
+    // param is needed in the URL.
     return `/api/recording-proxy?url=${encodeURIComponent(
       agent.voice_sample_url
-    )}&agentId=${encodeURIComponent(String(agent.id))}&token=${encodeURIComponent(token)}`;
+    )}&agentId=${encodeURIComponent(String(agent.id))}`;
   };
 
   // When agent changes, fetch a signed sample URL once (cached by agent id)
@@ -520,25 +513,28 @@ export function CallConfiguration({
               </SelectTrigger>
               <SelectContent className="w-full">
                 {Array.from(
-                  new Set(agents.map((a) => a.language).filter(Boolean))
-                )
-                  .map((language) => {
-                    const lang = languages.find((l) => {
-                      const langLabel = l.label?.toLowerCase();
-                      const langValue = l.value?.toLowerCase();
-                      const agentLang = String(language).toLowerCase();
-                      return langLabel === agentLang || langValue === agentLang;
-                    });
-                    const value = (lang?.id || String(language)).trim();
-                    if (!value) return null;
-                    const label = lang?.label || String(language);
-                    return (
-                      <SelectItem key={value} value={value}>
-                        <span>{label}</span>
-                      </SelectItem>
-                    );
-                  })
-                  .filter(Boolean)}
+                  new Map(
+                    agents
+                      .map((a) => a.language)
+                      .filter(Boolean)
+                      .map((language) => {
+                        const lang = languages.find((l) => {
+                          const langLabel = l.label?.toLowerCase();
+                          const langValue = l.value?.toLowerCase();
+                          const agentLang = String(language).toLowerCase();
+                          return langLabel === agentLang || langValue === agentLang;
+                        });
+                        const value = (lang?.id || String(language)).trim();
+                        const label = lang?.label || String(language);
+                        return [value, label] as [string, string];
+                      })
+                      .filter(([value]) => !!value)
+                  ).entries()
+                ).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    <span>{label}</span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

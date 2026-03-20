@@ -20,7 +20,7 @@ export type AnalyticsResponse = {
 };
 export async function fetchAnalytics(params: Record<string, string | number> = { period: 'month' }): Promise<AnalyticsResponse> {
   const query = buildQuery(params);
-  const url = getApiUrl(`/api/dashboard/analytics?${query}`);
+  const url = getApiUrl(`/api/overview/analytics?${query}`);
   const response = await fetch(url, defaultFetchOptions());
   if (!response.ok) {
     throw new Error(`Failed to fetch analytics: ${response.status}`);
@@ -51,7 +51,7 @@ export async function fetchAnalytics(params: Record<string, string | number> = {
   };
 }
 export async function fetchLeadConversionStats(): Promise<unknown> {
-  const url = getApiUrl('/api/dashboard/lead-conversion-stats');
+  const url = getApiUrl('/api/overview/lead-conversion-stats');
   const response = await fetch(url, defaultFetchOptions());
   if (!response.ok) {
     throw new Error(`Failed to fetch lead conversion stats: ${response.status}`);
@@ -60,7 +60,7 @@ export async function fetchLeadConversionStats(): Promise<unknown> {
 }
 export async function fetchLeadStats(params: Record<string, string | number> = { period: 'month' }): Promise<unknown> {
   const query = buildQuery(params);
-  const url = getApiUrl(`/api/dashboard/leads/stats?${query}`);
+  const url = getApiUrl(`/api/overview/leads/stats?${query}`);
   const response = await fetch(url, defaultFetchOptions());
   if (!response.ok) {
     throw new Error(`Failed to fetch lead stats: ${response.status}`);
