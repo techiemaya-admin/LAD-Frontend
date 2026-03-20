@@ -408,7 +408,7 @@ export const contributionApi = {
    * Get network statistics and KPIs from analytics endpoint
    */
   async getNetworkStats(): Promise<DashboardKPIs['data']> {
-    const response = await communityROIApiClient.get<{ data: DashboardKPIs['data'] }>(`${API_PREFIX}/analytics/dashboard`);
+    const response = await communityROIApiClient.get<{ data: DashboardKPIs['data'] }>(`${API_PREFIX}/analytics/overview`);
     
     console.log('%c[contributionApi] getNetworkStats - Raw Response:', 'color: #FF6B6B; font-weight: bold;', {
       fullResponse: response,

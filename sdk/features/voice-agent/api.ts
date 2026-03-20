@@ -23,7 +23,7 @@ export async function getUserAvailableAgents(): Promise<UserAvailableAgent[]> {
 
 export async function getUserAvailableNumbers(): Promise<UserAvailableNumber[]> {
   const response = await apiGet<{ success: boolean; data: UserAvailableNumber[]; count: number }>(
-    "/api/voice-agent/user/available-numbers",
+    "/api/voice-agent/available-numbers",
   );
   return response.data.data || [];
 }

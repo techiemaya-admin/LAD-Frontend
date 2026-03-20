@@ -19,7 +19,8 @@
     "paths": {
       "@maya/*": ["./features/*"],
       "@/*": ["../web/src/*"],
-      "@sdk/*": ["./"]
+      "@sdk/*": ["./"],
+      "@lad/shared/*": ["./shared/*"]
     }
   },
   "include": ["features/**/*"],

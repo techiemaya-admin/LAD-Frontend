@@ -57,7 +57,7 @@ export const fetchDashboardUsers = async (): Promise<User[]> => {
     throw new Error('Backend URL not configured');
   }
 
-  const response = await fetch(`${backendUrl}/api/dashboard/users`, getFetchOptions());
+  const response = await fetch(`${backendUrl}/api/overview/users`, getFetchOptions());
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -78,7 +78,7 @@ export const fetchOwnerBookings = async (): Promise<Booking[]> => {
     throw new Error('Backend URL not configured');
   }
 
-  const response = await fetch(`${backendUrl}/api/dashboard/bookings`, getFetchOptions());
+  const response = await fetch(`${backendUrl}/api/overview/bookings`, getFetchOptions());
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -105,7 +105,7 @@ export const fetchUserBookings = async (userId: string): Promise<Booking[]> => {
   }
 
   const response = await fetch(
-    `${backendUrl}/api/dashboard/bookings?user_id=${userId}`,
+    `${backendUrl}/api/overview/bookings?user_id=${userId}`,
     getFetchOptions()
   );
 
@@ -139,7 +139,7 @@ export const fetchDashboardCalls = async (): Promise<CallLog[]> => {
     throw new Error('Backend URL not configured');
   }
 
-  const response = await fetch(`${backendUrl}/api/dashboard/calls`, getFetchOptions());
+  const response = await fetch(`${backendUrl}/api/overview/calls`, getFetchOptions());
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -166,7 +166,7 @@ export const fetchUserCalls = async (userId: string): Promise<CallLog[]> => {
   }
 
   const response = await fetch(
-    `${backendUrl}/api/dashboard/calls?user_id=${userId}`,
+    `${backendUrl}/api/overview/calls?user_id=${userId}`,
     getFetchOptions()
   );
 
@@ -203,7 +203,7 @@ export const fetchCallsWithPagination = async (
   });
 
   const response = await fetch(
-    `${backendUrl}/api/dashboard/calls?${params.toString()}`,
+    `${backendUrl}/api/overview/calls?${params.toString()}`,
     getFetchOptions()
   );
 
