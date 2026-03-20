@@ -35,7 +35,7 @@ export async function getLeadBookings(
   if (params?.limit) query.append("limit", params.limit.toString());
 
   const queryString = query.toString();
-  const url = `/api/dashboard/bookings${queryString ? `?${queryString}` : ""}`;
+  const url = `/api/overview/bookings${queryString ? `?${queryString}` : ""}`;
 
   const response = await apiGet<any>(url);
   const bookings = response.data?.data || response.data?.bookings || [];
@@ -49,7 +49,7 @@ export async function getLeadBookingById(
   bookingId: string
 ): Promise<LeadBookingResponse> {
   const response = await apiGet<LeadBookingResponse>(
-    `/api/dashboard/bookings/${bookingId}`
+    `/api/overview/bookings/${bookingId}`
   );
   return response.data;
 }
@@ -61,7 +61,7 @@ export async function createLeadBooking(
   data: CreateLeadBookingParams
 ): Promise<LeadBookingResponse> {
   const response = await apiPost<LeadBookingResponse>(
-    "/api/dashboard/bookings",
+    "/api/overview/bookings",
     data
   );
   return response.data;
@@ -75,7 +75,7 @@ export async function updateLeadBooking(
   data: UpdateLeadBookingParams
 ): Promise<LeadBookingResponse> {
   const response = await apiPut<LeadBookingResponse>(
-    `/api/dashboard/bookings/${bookingId}`,
+    `/api/overview/bookings/${bookingId}`,
     data
   );
   return response.data;
@@ -85,7 +85,7 @@ export async function updateLeadBooking(
  * Get tenant users
  */
 export async function getTenantUsers(): Promise<UsersListResponse> {
-  const response = await apiGet<any>("/api/dashboard/users");
+  const response = await apiGet<any>("/api/overview/users");
   const users = response.data?.data || response.data?.users || [];
   return { success: true, data: users };
 }
@@ -103,7 +103,7 @@ export async function getDashboardCalls(
   if (params?.user_id) query.append("user_id", params.user_id);
 
   const queryString = query.toString();
-  const url = `/api/dashboard/calls${queryString ? `?${queryString}` : ""}`;
+  const url = `/api/overview/calls${queryString ? `?${queryString}` : ""}`;
 
   const res = await apiGet<any>(url);
 
@@ -203,7 +203,7 @@ export async function getWalletStats(): Promise<WalletStatsResponse> {
  * Get available phone numbers
  */
 export async function getAvailableNumbers(): Promise<PhoneNumberListResponse> {
-  const response = await apiGet<any>("/api/dashboard/available-numbers");
+  const response = await apiGet<any>("/api/voice-agent/available-numbers");
   const numbers = response.data?.numbers || response.data?.items || [];
   return { success: true, data: numbers };
 }
@@ -212,7 +212,7 @@ export async function getAvailableNumbers(): Promise<PhoneNumberListResponse> {
  * Get available voice agents
  */
 export async function getAvailableAgents(): Promise<VoiceAgentListResponse> {
-  const response = await apiGet<any>("/api/dashboard/user/available-agents");
+  const response = await apiGet<any>("/api/voice-agent/available-agents");
   const agents = response.data?.data || response.data?.agents || response.data?.items || [];
   return { success: true, data: agents };
 }
