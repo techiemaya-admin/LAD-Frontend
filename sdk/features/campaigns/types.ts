@@ -116,10 +116,12 @@ export interface CampaignAnalytics {
 export interface CampaignLead {
   id: string;
   campaign_id: string;
+  lead_id?: string;
   name: string;
   first_name?: string;
   last_name?: string;
   title?: string;
+  company?: string;
   email?: string;
   phone?: string;
   linkedin_url?: string;
@@ -130,6 +132,10 @@ export interface CampaignLead {
   connected: boolean;
   replied: boolean;
   is_inbound?: boolean;
+  apollo_person_id?: string;
+  has_sent?: boolean;
+  has_connected?: boolean;
+  has_replied?: boolean;
   lead_data?: any;
   profile_summary?: string;
   created_at: string;

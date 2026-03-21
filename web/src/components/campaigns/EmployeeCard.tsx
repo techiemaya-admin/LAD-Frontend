@@ -68,17 +68,18 @@ export default function EmployeeCard({
   const employeeName = employee.name || 
     `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 
     'Unknown';
-  const phoneRevealed = revealedContacts[idKey]?.phone;
-  const emailRevealed = revealedContacts[idKey]?.email || Boolean(employee.enriched_email);
+  // If phone/email is already known from the DB, treat it as already revealed
+  const phoneRevealed = revealedContacts[idKey]?.phone || Boolean(employee.phone);
+  const emailRevealed = revealedContacts[idKey]?.email || Boolean(employee.enriched_email) || Boolean(employee.email);
   const linkedinRevealed = revealedContacts[idKey]?.linkedin || Boolean(employee.enriched_linkedin_url || employee.linkedin_url);
   const phoneLoading = revealingContacts[idKey]?.phone;
   const emailLoading = revealingContacts[idKey]?.email;
   const linkedinLoading = revealingContacts[idKey]?.linkedin;
-  
+
   // Get actual values to display (prioritize enriched data)
   const displayEmail = employee.enriched_email || employee.email;
   const displayLinkedIn = employee.enriched_linkedin_url || employee.linkedin_url;
-  
+
   // Determine if unlock features should be shown
   // Hide if: hideUnlockFeatures is true OR employee is marked as inbound
   const shouldHideUnlock = hideUnlockFeatures || employee.is_inbound === true;

@@ -439,13 +439,14 @@ export default function CampaignLeadsPage() {
                         first_name: lead.first_name,
                         last_name: lead.last_name,
                         title: lead.title,
-                        email: lead.email,
-                        phone: lead.phone,
-                        linkedin_url: lead.linkedin_url,
+                        company: lead.company || lead.lead_data?.company_name,
+                        email: revealedValues[lead.id]?.email || lead.email,
+                        phone: revealedValues[lead.id]?.phone || lead.phone,
+                        linkedin_url: revealedValues[lead.id]?.linkedin_url || lead.linkedin_url,
                         enriched_email: lead.enriched_email,
                         enriched_linkedin_url: lead.enriched_linkedin_url,
-                        photo_url: lead.photo_url, // Backend already extracts this from lead_data.photo_url
-                        is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
+                        photo_url: lead.photo_url,
+                        is_inbound: lead.is_inbound,
                       }}
                       employeeViewMode="grid"
                       revealedContacts={revealedContacts}

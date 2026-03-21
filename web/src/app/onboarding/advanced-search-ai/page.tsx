@@ -149,48 +149,109 @@ function fixPhone(v: string): string {
     return c;
 }
 
-function parseInboundCSV(file: File): Promise<ParsedInboundLead[]> {
+async function parseInboundCSV(file: File): Promise<ParsedInboundLead[]> {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const text = e.target?.result as string;
-                const rows = parseCSVText(text);
-                if (rows.length <= 1) { reject(new Error('File is empty or only has headers.')); return; }
-                const h = rows[0];
-                const ci = {
-                    firstName: h.findIndex(x => x.toLowerCase().includes('first') && x.toLowerCase().includes('name')),
-                    lastName: h.findIndex(x => x.toLowerCase().includes('last') && x.toLowerCase().includes('name')),
-                    company: h.findIndex(x => x.toLowerCase().includes('company')),
-                    linkedin: h.findIndex(x => x.toLowerCase().includes('linkedin')),
-                    email: h.findIndex(x => x.toLowerCase().includes('email')),
-                    whatsapp: h.findIndex(x => x.toLowerCase().includes('whatsapp')),
-                    phone: h.findIndex(x => x.toLowerCase().includes('phone')),
-                    website: h.findIndex(x => x.toLowerCase().includes('website')),
-                    notes: h.findIndex(x => x.toLowerCase().includes('notes')),
-                };
-                const leads = rows.slice(1).map(r => ({
-                    firstName: (ci.firstName >= 0 ? r[ci.firstName] : '') || '',
-                    lastName: (ci.lastName >= 0 ? r[ci.lastName] : '') || '',
-                    companyName: (ci.company >= 0 ? r[ci.company] : '') || '',
-                    linkedinProfile: (ci.linkedin >= 0 ? r[ci.linkedin] : '') || '',
-                    email: (ci.email >= 0 ? r[ci.email] : '') || '',
-                    whatsapp: fixPhone((ci.whatsapp >= 0 ? r[ci.whatsapp] : '') || ''),
-                    phone: fixPhone((ci.phone >= 0 ? r[ci.phone] : '') || ''),
-                    website: (ci.website >= 0 ? r[ci.website] : '') || '',
-                    notes: (ci.notes >= 0 ? r[ci.notes] : '') || '',
-                })).filter(l => {
-                    const isExample = l.companyName.toLowerCase().includes('delete this') || l.notes.toLowerCase().includes('delete this') || l.email.toLowerCase().includes('example.com');
-                    const hasData = (l.companyName && l.companyName.trim().length > 1) || (l.email && l.email.includes('@')) || (l.linkedinProfile && l.linkedinProfile.includes('linkedin.com'));
-                    return !isExample && hasData;
-                });
-                if (leads.length === 0) { reject(new Error('No valid leads found. Please add your lead data.')); return; }
-                resolve(leads);
-            } catch (err: any) { reject(err); }
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
+        const isExcel = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+
+        if (isExcel) {
+            // Handle Excel files with ExcelJS
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const { Workbook } = await import('exceljs');
+                    const arrayBuffer = e.target?.result as ArrayBuffer;
+                    const workbook = new Workbook();
+                    await workbook.xlsx.load(arrayBuffer);
+
+                    // Get first worksheet
+                    const worksheet = workbook.worksheets[0];
+                    if (!worksheet) {
+                        reject(new Error('No worksheets found in Excel file'));
+                        return;
+                    }
+
+                    // Convert Excel rows to string array format
+                    const rows: string[][] = [];
+                    worksheet.eachRow((row, rowNum) => {
+                        const rowData = row.values as any[];
+                        // Skip the first element (row index) and convert to strings
+                        const strRow = rowData.slice(1).map(v => (v === null || v === undefined) ? '' : String(v).trim());
+                        rows.push(strRow);
+                    });
+
+                    if (rows.length <= 1) {
+                        reject(new Error('File is empty or only has headers.'));
+                        return;
+                    }
+
+                    // Parse using the same logic as CSV
+                    parseRows(rows, resolve, reject);
+                } catch (err: any) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsArrayBuffer(file);
+        } else {
+            // Handle CSV files with text parsing
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target?.result as string;
+                    const rows = parseCSVText(text);
+                    if (rows.length <= 1) {
+                        reject(new Error('File is empty or only has headers.'));
+                        return;
+                    }
+                    parseRows(rows, resolve, reject);
+                } catch (err: any) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        }
     });
+}
+
+// Helper function to parse rows with column mapping
+function parseRows(rows: string[][], resolve: (leads: ParsedInboundLead[]) => void, reject: (err: Error) => void) {
+    try {
+        const h = rows[0];
+        const ci = {
+            firstName: h.findIndex(x => x.toLowerCase().includes('first') && x.toLowerCase().includes('name')),
+            lastName: h.findIndex(x => x.toLowerCase().includes('last') && x.toLowerCase().includes('name')),
+            company: h.findIndex(x => x.toLowerCase().includes('company')),
+            linkedin: h.findIndex(x => x.toLowerCase().includes('linkedin')),
+            email: h.findIndex(x => x.toLowerCase().includes('email')),
+            whatsapp: h.findIndex(x => x.toLowerCase().includes('whatsapp')),
+            phone: h.findIndex(x => x.toLowerCase().includes('phone')),
+            website: h.findIndex(x => x.toLowerCase().includes('website')),
+            notes: h.findIndex(x => x.toLowerCase().includes('notes')),
+        };
+        const leads = rows.slice(1).map(r => ({
+            firstName: (ci.firstName >= 0 ? r[ci.firstName] : '') || '',
+            lastName: (ci.lastName >= 0 ? r[ci.lastName] : '') || '',
+            companyName: (ci.company >= 0 ? r[ci.company] : '') || '',
+            linkedinProfile: (ci.linkedin >= 0 ? r[ci.linkedin] : '') || '',
+            email: (ci.email >= 0 ? r[ci.email] : '') || '',
+            whatsapp: fixPhone((ci.whatsapp >= 0 ? r[ci.whatsapp] : '') || ''),
+            phone: fixPhone((ci.phone >= 0 ? r[ci.phone] : '') || ''),
+            website: (ci.website >= 0 ? r[ci.website] : '') || '',
+            notes: (ci.notes >= 0 ? r[ci.notes] : '') || '',
+        })).filter(l => {
+            const isExample = l.companyName.toLowerCase().includes('delete this') || l.notes.toLowerCase().includes('delete this') || l.email.toLowerCase().includes('example.com');
+            const hasData = (l.companyName && l.companyName.trim().length > 1) || (l.email && l.email.includes('@')) || (l.linkedinProfile && l.linkedinProfile.includes('linkedin.com'));
+            return !isExample && hasData;
+        });
+        if (leads.length === 0) {
+            reject(new Error('No valid leads found. Please add your lead data.'));
+            return;
+        }
+        resolve(leads);
+    } catch (err: any) {
+        reject(err);
+    }
 }
 
 function isInboundIntent(text: string): boolean {
@@ -397,6 +458,8 @@ export default function AdvancedSearchAIPage() {
     // Inbound CSV upload state
     const [inboundMode, setInboundMode] = useState(false);
     const [inboundLeads, setInboundLeads] = useState<ParsedInboundLead[]>([]);
+    const [inboundLeadIds, setInboundLeadIds] = useState<string[]>([]); // Real UUIDs from leads table (CSV/image)
+    const [directContactLeadIds, setDirectContactLeadIds] = useState<string[]>([]); // Real UUIDs for chat-entered direct contacts
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Landing attach menu & web search state
@@ -497,6 +560,15 @@ export default function AdvancedSearchAIPage() {
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
 
+    // Edit inbound lead state
+    const [editingLeadIndex, setEditingLeadIndex] = useState<number | null>(null);
+    const [editFormData, setEditFormData] = useState<ParsedInboundLead | null>(null);
+    const [savingLead, setSavingLead] = useState(false);
+
+    // Delete confirmation state
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{ index: number; name: string } | null>(null);
+    const [deletingLead, setDeletingLead] = useState(false);
+
     // ── Clear / Restart campaign setup ──────────────────────────────────────
     const clearChat = useCallback(() => {
         // Core chat
@@ -520,7 +592,7 @@ export default function AdvancedSearchAIPage() {
         setConvId(null); setMsgCount(0); setPendingIntent(null);
         setPendingSearchConfirmation(null); setPendingContact(null);
         // Inbound / upload
-        setInboundMode(false); setInboundLeads([]);
+        setInboundMode(false); setInboundLeads([]); setInboundLeadIds([]); setDirectContactLeadIds([]);
         // Search / leads state
         setLeadFeedback({}); setSearchSessions([]); setSearchHistory([]);
         setLeadCount(10); setSearchPage(1); setTotalResults(0);
@@ -609,6 +681,167 @@ export default function AdvancedSearchAIPage() {
         setSelectedEmployee(null);
         setProfileSummary(null);
         setSummaryError(null);
+    };
+
+    // Edit inbound lead handlers
+    const openEditLead = (index: number) => {
+        setEditingLeadIndex(index);
+        setEditFormData({ ...inboundLeads[index] });
+    };
+
+    const closeEditLead = () => {
+        setEditingLeadIndex(null);
+        setEditFormData(null);
+    };
+
+    const updateEditField = (field: keyof ParsedInboundLead, value: string) => {
+        if (editFormData) {
+            setEditFormData({ ...editFormData, [field]: value });
+        }
+    };
+
+    const saveEditedLead = async () => {
+        if (editingLeadIndex === null || !editFormData) return;
+
+        setSavingLead(true);
+        try {
+            // Update the inbound leads in state
+            const updatedLeads = [...inboundLeads];
+            updatedLeads[editingLeadIndex] = editFormData;
+            setInboundLeads(updatedLeads);
+
+            // Save to database via API
+            const response = await fetch('/api/campaigns/leads/import/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    leads: [editFormData],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save lead');
+            }
+
+            // Update the leads panel display
+            const updatedPanelLeads: LeadProfile[] = updatedLeads.map((l, i) => ({
+                id: `inbound-${i}`,
+                name: `${l.firstName} ${l.lastName}`.trim() || `Lead ${i + 1}`,
+                first_name: l.firstName,
+                last_name: l.lastName,
+                headline: l.companyName ? `at ${l.companyName}` : '',
+                location: '',
+                current_company: l.companyName,
+                profile_url: l.linkedinProfile,
+                profile_picture: '',
+                industry: '',
+                network_distance: '',
+                locked: false,
+            }));
+            setLeads(updatedPanelLeads);
+
+            closeEditLead();
+            setMessages(p => [...p, {
+                id: `a-${Date.now()}`,
+                role: 'ai',
+                text: `✅ Lead updated successfully!`,
+                ts: new Date()
+            }]);
+        } catch (error: any) {
+            setMessages(p => [...p, {
+                id: `a-${Date.now()}`,
+                role: 'ai',
+                text: `❌ Error saving lead: ${error.message}`,
+                ts: new Date()
+            }]);
+        } finally {
+            setSavingLead(false);
+        }
+    };
+
+    // Delete inbound lead handlers
+    const openDeleteConfirmation = (index: number) => {
+        const name = `${inboundLeads[index].firstName} ${inboundLeads[index].lastName}`.trim() || `Lead ${index + 1}`;
+        setDeleteConfirmation({ index, name });
+    };
+
+    const closeDeleteConfirmation = () => {
+        setDeleteConfirmation(null);
+    };
+
+    const confirmDeleteLead = async () => {
+        if (deleteConfirmation === null) return;
+
+        setDeletingLead(true);
+        try {
+            const { index } = deleteConfirmation;
+            const leadToDelete = inboundLeads[index];
+
+            // Remove from inbound leads state
+            const updatedLeads = inboundLeads.filter((_, i) => i !== index);
+            setInboundLeads(updatedLeads);
+
+            // Update the leads panel display
+            const updatedPanelLeads: LeadProfile[] = updatedLeads.map((l, i) => ({
+                id: `inbound-${i}`,
+                name: `${l.firstName} ${l.lastName}`.trim() || `Lead ${i + 1}`,
+                first_name: l.firstName,
+                last_name: l.lastName,
+                headline: l.companyName ? `at ${l.companyName}` : '',
+                location: '',
+                current_company: l.companyName,
+                profile_url: l.linkedinProfile,
+                profile_picture: '',
+                industry: '',
+                network_distance: '',
+                locked: false,
+            }));
+            setLeads(updatedPanelLeads);
+
+            // Update targeting count
+            if (updatedLeads.length > 0) {
+                const inboundTargeting: LeadTargeting = {
+                    job_titles: [], industries: [], locations: [],
+                    keywords: [`${updatedLeads.length} Inbound Lead${updatedLeads.length > 1 ? 's' : ''}`],
+                };
+                setTargeting(inboundTargeting);
+            }
+
+            // Optionally delete from database
+            if (leadToDelete.email || leadToDelete.phone) {
+                try {
+                    await fetch('/api/campaigns/leads/import/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: leadToDelete.email,
+                            phone: leadToDelete.phone,
+                        }),
+                    });
+                } catch (err) {
+                    console.warn('Failed to delete lead from database:', err);
+                    // Don't show error to user since UI was already updated
+                }
+            }
+
+            closeDeleteConfirmation();
+            setMessages(p => [...p, {
+                id: `a-${Date.now()}`,
+                role: 'ai',
+                text: `🗑️ Lead removed successfully!`,
+                ts: new Date()
+            }]);
+        } catch (error: any) {
+            setMessages(p => [...p, {
+                id: `a-${Date.now()}`,
+                role: 'ai',
+                text: `❌ Error removing lead: ${error.message}`,
+                ts: new Date()
+            }]);
+        } finally {
+            setDeletingLead(false);
+        }
     };
 
     /* ── Landing submit ── */
@@ -735,7 +968,13 @@ export default function AdvancedSearchAIPage() {
                     }),
                 });
 
-                if (!saveResponse.ok) {
+                if (saveResponse.ok) {
+                    const saveData = await saveResponse.json();
+                    // Store real lead UUIDs so campaign creation can link to leads table
+                    if (saveData.leadIds && saveData.leadIds.length > 0) {
+                        setInboundLeadIds(saveData.leadIds);
+                    }
+                } else {
                     console.warn('Failed to save leads to database');
                 }
             } catch (saveErr) {
@@ -1227,7 +1466,16 @@ export default function AdvancedSearchAIPage() {
                         searchTotal = d.total || realLeads.length;
                     }
                 }
-            } catch (e) { console.warn('[Search] advanced search err', e); }
+            } catch (e) {
+                const errMsg = e instanceof Error ? e.message : String(e);
+                console.warn('[Search] advanced search err', e);
+                // Store the error message to show to the user instead of silent fail
+                if (errMsg.includes('No LinkedIn account') || errMsg.includes('not connected')) {
+                    searchErrorMessage = `❌ **LinkedIn Account Required**\n\nTo search for leads, please connect your LinkedIn account first:\n\n1. Go to **Settings**\n2. Click **Connect LinkedIn**\n3. Complete the verification\n4. Then try your search again!`;
+                } else {
+                    searchErrorMessage = `⚠️ **Search Error**\n\n${errMsg}\n\nPlease try again or check your LinkedIn connection in Settings.`;
+                }
+            }
 
             // Fallback: If advanced search didn't extract targeting, try extract-intent
             if (!ext && isFirstMessage) {
@@ -1248,10 +1496,14 @@ export default function AdvancedSearchAIPage() {
 
             // ── Build final AI response text ──
             let finalText = aiResponseText; // May be set by lead-chat above
+            let searchErrorMessage: string | null = null;
 
             if (!finalText) {
-                // First message: build summary
-                if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length || (ext.keywords && ext.keywords.length > 0) || (ext.company_names && ext.company_names.length > 0))) {
+                // If search failed, show the error
+                if (searchErrorMessage) {
+                    finalText = searchErrorMessage;
+                } else if (ext && (ext.job_titles.length || ext.industries.length || ext.locations.length || (ext.keywords && ext.keywords.length > 0) || (ext.company_names && ext.company_names.length > 0))) {
+                    // First message: build summary
                     finalText = buildSummary(ext);
                     if (realLeads.length > 0) {
                         finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
@@ -1292,7 +1544,7 @@ export default function AdvancedSearchAIPage() {
         if (taRef.current) taRef.current.style.height = 'auto';
     }, [input, busy, doSend]);
 
-    const onOptClick = useCallback((v: string) => {
+    const onOptClick = useCallback(async (v: string) => {
         // Special action: submit lead detail form data
         if (v.startsWith('__submit_lead_details__:')) {
             try {
@@ -1344,6 +1596,40 @@ export default function AdvancedSearchAIPage() {
                     industry: pendingContact.industry || '',
                 };
                 setLeads(p => [...p, newLead]);
+
+                // Save direct contact to the leads table so it gets a real DB UUID
+                // and can be linked via inbound_lead_ids (same path as CSV imports)
+                try {
+                    const saveRes = await fetch('/api/campaigns/leads/import/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            leads: [{
+                                first_name: pendingContact.first_name || '',
+                                last_name: pendingContact.last_name || '',
+                                email: pendingContact.email || null,
+                                phone: pendingContact.phone || null,
+                                company: pendingContact.company || null,
+                                linkedin_url: pendingContact.linkedin_url || null,
+                            }],
+                            detectedChannels: {
+                                phone: !!pendingContact.phone,
+                                email: !!pendingContact.email,
+                                linkedin: !!pendingContact.linkedin_url,
+                                whatsapp: false,
+                                website: false,
+                            },
+                        }),
+                    });
+                    if (saveRes.ok) {
+                        const saveData = await saveRes.json();
+                        if (saveData.leadIds && saveData.leadIds.length > 0) {
+                            setDirectContactLeadIds(saveData.leadIds);
+                        }
+                    }
+                } catch (saveErr) {
+                    console.warn('[DirectContact] Failed to save contact to leads table:', saveErr);
+                }
                 // Ensure targeting is set so campaign overview bubble renders
                 if (!targeting) {
                     setTargeting({ keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] });
@@ -1977,6 +2263,56 @@ export default function AdvancedSearchAIPage() {
                                                 {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
                                                 {lead.linkedinProfile && <div style={{ fontSize: '12px', color: '#0a66c2' }}>💼 LinkedIn</div>}
                                             </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => openEditLead(i)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: '#f3f4f6',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        color: '#4b5563',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#e5e7eb';
+                                                        e.currentTarget.style.borderColor = '#d1d5db';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#f3f4f6';
+                                                        e.currentTarget.style.borderColor = '#e5e7eb';
+                                                    }}
+                                                >
+                                                    ✏️ Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => openDeleteConfirmation(i)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: '#fee2e2',
+                                                        border: '1px solid #fecaca',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        color: '#dc2626',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#fecaca';
+                                                        e.currentTarget.style.borderColor = '#fca5a5';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#fee2e2';
+                                                        e.currentTarget.style.borderColor = '#fecaca';
+                                                    }}
+                                                >
+                                                    🗑️ Delete
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -2254,6 +2590,241 @@ export default function AdvancedSearchAIPage() {
                 loading={summaryLoading}
                 error={summaryError}
             />
+
+            {/* Edit Inbound Lead Modal */}
+            {editingLeadIndex !== null && editFormData && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 9999
+                }} onClick={closeEditLead}>
+                    <div style={{
+                        background: 'white', borderRadius: '12px', padding: '24px',
+                        width: '90%', maxWidth: '500px', maxHeight: '80vh', overflow: 'auto',
+                        boxShadow: '0 20px 25px rgba(0,0,0,0.15)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600' }}>
+                            Edit Lead #{editingLeadIndex + 1}
+                        </h2>
+
+                        <div style={{ display: 'grid', gap: '16px' }}>
+                            {/* First Name */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    First Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.firstName}
+                                    onChange={(e) => updateEditField('firstName', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="First name"
+                                />
+                            </div>
+
+                            {/* Last Name */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Last Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.lastName}
+                                    onChange={(e) => updateEditField('lastName', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="Last name"
+                                />
+                            </div>
+
+                            {/* Email */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={editFormData.email}
+                                    onChange={(e) => updateEditField('email', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="Email address"
+                                />
+                            </div>
+
+                            {/* Phone */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Phone
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={editFormData.phone}
+                                    onChange={(e) => updateEditField('phone', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="Phone number"
+                                />
+                            </div>
+
+                            {/* Company */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Company
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.companyName}
+                                    onChange={(e) => updateEditField('companyName', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="Company name"
+                                />
+                            </div>
+
+                            {/* LinkedIn Profile */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    LinkedIn URL
+                                </label>
+                                <input
+                                    type="url"
+                                    value={editFormData.linkedinProfile}
+                                    onChange={(e) => updateEditField('linkedinProfile', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="https://linkedin.com/in/..."
+                                />
+                            </div>
+
+                            {/* Website */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Website
+                                </label>
+                                <input
+                                    type="url"
+                                    value={editFormData.website}
+                                    onChange={(e) => updateEditField('website', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box'
+                                    }}
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            {/* Notes */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
+                                    Notes
+                                </label>
+                                <textarea
+                                    value={editFormData.notes}
+                                    onChange={(e) => updateEditField('notes', e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                                        borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box',
+                                        minHeight: '80px', fontFamily: 'inherit', resize: 'vertical'
+                                    }}
+                                    placeholder="Any additional notes"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeEditLead}
+                                disabled={savingLead}
+                                style={{
+                                    padding: '8px 16px', border: '1px solid #d1d5db', borderRadius: '6px',
+                                    background: 'white', color: '#374151', cursor: savingLead ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px', fontWeight: '500', opacity: savingLead ? 0.6 : 1
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveEditedLead}
+                                disabled={savingLead}
+                                style={{
+                                    padding: '8px 16px', border: 'none', borderRadius: '6px',
+                                    background: savingLead ? '#d1d5db' : '#3b82f6', color: 'white',
+                                    cursor: savingLead ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px', fontWeight: '500'
+                                }}
+                            >
+                                {savingLead ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Dialog */}
+            {deleteConfirmation && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 9999
+                }} onClick={closeDeleteConfirmation}>
+                    <div style={{
+                        background: 'white', borderRadius: '12px', padding: '24px',
+                        width: '90%', maxWidth: '400px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ marginBottom: '16px' }}>
+                            <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+                                Remove Lead?
+                            </h3>
+                            <p style={{ margin: 0, fontSize: '14px', color: '#6b7280', lineHeight: '1.5' }}>
+                                Are you sure you want to remove <strong>{deleteConfirmation.name}</strong> from your imported leads?
+                                This action cannot be undone.
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                            <button
+                                onClick={closeDeleteConfirmation}
+                                disabled={deletingLead}
+                                style={{
+                                    padding: '8px 16px', border: '1px solid #d1d5db', borderRadius: '6px',
+                                    background: 'white', color: '#374151', cursor: deletingLead ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px', fontWeight: '500', opacity: deletingLead ? 0.6 : 1
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteLead}
+                                disabled={deletingLead}
+                                style={{
+                                    padding: '8px 16px', border: 'none', borderRadius: '6px',
+                                    background: deletingLead ? '#d1d5db' : '#dc2626', color: 'white',
+                                    cursor: deletingLead ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px', fontWeight: '500'
+                                }}
+                            >
+                                {deletingLead ? 'Removing...' : 'Remove Lead'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{css}</style>
         </div>
     );
@@ -2591,11 +3162,36 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
 /* ═══════════════════════════════════════════════
    CHECKPOINT FORM INLINE (typeform-style in chat)
    ═══════════════════════════════════════════════ */
+
+// Trigger condition options keyed by the primary channel
+const TRIGGER_OPTIONS_MAP: Record<string, Array<{ id: string; label: string; desc: string }>> = {
+    linkedin: [
+        { id: 'connection_accepted', label: 'After connection accepted', desc: 'Trigger when the lead accepts your LinkedIn connection' },
+        { id: 'message_replied',     label: 'After responding to message', desc: 'Trigger when the lead replies to your LinkedIn message' },
+        { id: 'profile_visited',     label: 'After profile visit', desc: 'Trigger for all visited profiles with ICP score above your threshold' },
+    ],
+    email: [
+        { id: 'email_read',    label: 'After Email Read', desc: 'Trigger when the lead opens your email' },
+        { id: 'email_replied', label: 'After Responded to Email', desc: 'Trigger when the lead replies to your email' },
+        { id: 'no_dependency', label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
+    ],
+    whatsapp: [
+        { id: 'wa_read',       label: 'After Message Read', desc: 'Trigger when the lead reads your WhatsApp message' },
+        { id: 'wa_replied',    label: 'After Responded to WhatsApp', desc: 'Trigger when the lead replies to your WhatsApp message' },
+        { id: 'no_dependency', label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
+    ],
+    voice_call: [
+        { id: 'call_completed', label: 'After Call Completed', desc: 'Trigger after the AI voice call finishes' },
+        { id: 'call_answered',  label: 'After Call Answered', desc: 'Trigger only when the lead answers the call' },
+        { id: 'no_dependency',  label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
+    ],
+};
+
+const CHANNEL_PRIORITY = ['linkedin', 'email', 'whatsapp', 'voice_call'];
+
 const CP_QUESTIONS = [
     { id: 'icp_threshold', question: 'What minimum ICP score should leads have?', type: 'select' },
-    { id: 'actions', question: 'What LinkedIn actions should this campaign perform?', type: 'multi' },
-    { id: 'messages', question: 'Customize your outreach messages', type: 'text' },
-    { id: 'next_channels', question: 'Add follow-up channels after LinkedIn outreach?', type: 'multi' },
+    { id: 'next_channels', question: 'Configure your campaign channels', type: 'multi' },
     { id: 'trigger_condition', question: 'When should the next channel step trigger?', type: 'select' },
     { id: 'duration', question: 'How many days should this campaign run?', type: 'select' },
     { id: 'name', question: 'Give your campaign a name', type: 'input' },
@@ -2680,17 +3276,30 @@ function CheckpointFormInline({
     };
     const q = getQuestion(step);
 
-    // Auto-skip LinkedIn steps for direct contacts (step 0→3 on mount)
-    // Also skip step 4 (trigger condition) for direct contacts — LinkedIn-only concept
+    // True when no lead has a meaningful ICP score (e.g. imported/inbound leads without scoring)
+    const hasNoIcpScores = leads.length === 0 || leads.every(l => !l.icp_score || l.icp_score === 0);
+
+    // Primary channel for trigger-condition purposes (first selected channel in priority order)
+    const primaryTriggerChannel = CHANNEL_PRIORITY.find(ch => nextChannels.includes(ch)) ?? null;
+    // Trigger step only makes sense when 2+ channels are selected (channel A triggers channel B)
+    const hasMultipleChannels = nextChannels.length > 1;
+    // Dynamic trigger options based on the primary channel
+    const triggerOptions = primaryTriggerChannel ? (TRIGGER_OPTIONS_MAP[primaryTriggerChannel] ?? []) : [];
+
+    // Auto-skip ICP threshold step for:
+    //   • direct contacts (single lead, no scoring needed)
+    //   • inbound/imported leads that have no ICP scores generated
+    // Auto-skip trigger condition step (step 2) when:
+    //   • direct contact, OR fewer than 2 channels selected (no cross-channel trigger needed)
     useEffect(() => {
-        if (isDirectContact && step >= 0 && step < 3) {
-            setIcpThreshold('0'); // all leads (only 1 contact)
-            setStep(3);
+        if ((isDirectContact || hasNoIcpScores) && step === 0) {
+            setIcpThreshold('0'); // include all leads
+            setStep(1);
         }
-        if (isDirectContact && step === 4) {
-            setStep(5); // jump over trigger condition
+        if (step === 2 && (!hasMultipleChannels || isDirectContact)) {
+            setStep(3); // jump over trigger condition to duration
         }
-    }, [isDirectContact, step]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isDirectContact, hasNoIcpScores, hasMultipleChannels, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // SDK hooks — email templates fetched from communication_templates table
     const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
@@ -2752,12 +3361,89 @@ function CheckpointFormInline({
             .catch(() => {});
     }, [nextChannels, waTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // LinkedIn follow-up config (when linkedin selected as next channel in step 3)
+    // Multi-select: 'profile_view' | 'connect' | 'message'
+    const [liChannelActions, setLiChannelActions] = useState<string[]>([]);
+    const [liFollowGenLoading, setLiFollowGenLoading] = useState(false);
+
+    // LinkedIn message templates (communication_templates table, channel='linkedin')
+    const [liTemplates, setLiTemplates] = useState<any[]>([]);
+    const [liTemplatesLoaded, setLiTemplatesLoaded] = useState(false);
+    const [selectedLiConnTmplId, setSelectedLiConnTmplId] = useState('');
+    const [selectedLiFollowTmplId, setSelectedLiFollowTmplId] = useState('');
+    const [showLiConnTmplPanel, setShowLiConnTmplPanel] = useState(false);
+    const [showLiFollowTmplPanel, setShowLiFollowTmplPanel] = useState(false);
+    // Create-new template form state
+    const [showLiNewTmplForm, setShowLiNewTmplForm] = useState(false);
+    const [liNewTmplCategory, setLiNewTmplCategory] = useState<'linkedin_connection' | 'linkedin_followup'>('linkedin_connection');
+    const [liNewTmplName, setLiNewTmplName] = useState('');
+    const [liNewTmplBody, setLiNewTmplBody] = useState('');
+    const [liNewTmplSaving, setLiNewTmplSaving] = useState(false);
+
     // Sync waNewTmplChannelType with selected account type
     useEffect(() => {
         if (!waAccountId || !whatsAppAccounts.length) return;
         const acc = whatsAppAccounts.find((a: any) => a.id === waAccountId);
         if (acc) setWaNewTmplChannelType(acc.account_type === 'business_api' ? 'business_api' : 'personal_whatsapp');
     }, [waAccountId, whatsAppAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Fetch LinkedIn message templates once when LinkedIn channel is first enabled
+    useEffect(() => {
+        if (!nextChannels.includes('linkedin') || liTemplatesLoaded) return;
+        setLiTemplatesLoaded(true);
+        fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => { if (d.success) setLiTemplates(d.data || []); })
+            .catch(() => {});
+    }, [nextChannels, liTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Toggle a LinkedIn channel action (multi-select)
+    const toggleLiChannelAction = (id: string) => {
+        setLiChannelActions(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    };
+
+    // Save a new LinkedIn message template
+    const saveLiTemplate = async () => {
+        if (!liNewTmplName.trim() || !liNewTmplBody.trim()) return;
+        setLiNewTmplSaving(true);
+        try {
+            const resp = await fetch('/api/campaigns/linkedin-message-templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ name: liNewTmplName.trim(), content: liNewTmplBody.trim(), category: liNewTmplCategory }),
+            });
+            const d = await resp.json();
+            if (d.success && d.data) {
+                setLiTemplates(prev => [d.data, ...prev]);
+                // Auto-apply the new template
+                if (liNewTmplCategory === 'linkedin_connection') {
+                    setSelectedLiConnTmplId(d.data.id);
+                    setConnMsg(d.data.content);
+                    setShowLiConnTmplPanel(false);
+                } else {
+                    setSelectedLiFollowTmplId(d.data.id);
+                    setFollowMsg(d.data.content);
+                    setShowLiFollowTmplPanel(false);
+                }
+                setLiNewTmplName('');
+                setLiNewTmplBody('');
+                setShowLiNewTmplForm(false);
+            }
+        } catch { }
+        setLiNewTmplSaving(false);
+    };
+
+    // Delete a LinkedIn template (soft delete)
+    const deleteLiTemplate = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await fetch(`/api/campaigns/linkedin-message-templates/${id}`, { method: 'DELETE', credentials: 'include' });
+            setLiTemplates(prev => prev.filter(t => t.id !== id));
+            if (selectedLiConnTmplId === id) setSelectedLiConnTmplId('');
+            if (selectedLiFollowTmplId === id) setSelectedLiFollowTmplId('');
+        } catch { }
+    };
 
     // Apply a saved WA template: compose header + body + footer into waBody
     const applyWaTemplate = (tmpl: any) => {
@@ -2878,8 +3564,15 @@ function CheckpointFormInline({
         setActions(newActions);
     };
     const toggleNextChannel = (ch: string) => {
-        if (ch === 'skip') { setNextChannels([]); return; }
-        setNextChannels((p: string[]) => p.includes(ch) ? p.filter(x => x !== ch) : [...p, ch]);
+        if (ch === 'skip') { setNextChannels([]); setTriggerCondition(''); return; }
+        setNextChannels((p: string[]) => {
+            const next = p.includes(ch) ? p.filter(x => x !== ch) : [...p, ch];
+            // Reset trigger condition when the primary channel changes (options differ per channel)
+            const oldPrimary = CHANNEL_PRIORITY.find(c => p.includes(c));
+            const newPrimary = CHANNEL_PRIORITY.find(c => next.includes(c));
+            if (oldPrimary !== newPrimary) setTriggerCondition('');
+            return next;
+        });
         // Email templates are loaded by useEmailTemplates SDK hook (no manual fetch needed)
         // Fetch voice agents and numbers when voice_call is first selected
         if (ch === 'voice_call' && voiceAgents.length === 0) {
@@ -2982,6 +3675,32 @@ function CheckpointFormInline({
         setName(`${titlePart}${locPart}${indPart} - ${datePart}`);
     };
 
+    // AI-generate a LinkedIn message for the step-3 LinkedIn channel
+    const generateLinkedInFollowup = async (type: 'connect' | 'followup') => {
+        setLiFollowGenLoading(true);
+        try {
+            const resp = await fetch('/api/campaigns/generate-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
+                    targeting,
+                    context: {
+                        connection_message: connMsg || '',
+                        follow_type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
+                    },
+                }),
+            });
+            const d = await resp.json();
+            if (d.message) {
+                if (type === 'connect') setConnMsg(d.message);
+                else setFollowMsg(d.message);
+            }
+        } catch { }
+        setLiFollowGenLoading(false);
+    };
+
     const launchCampaign = async () => {
         setLaunching(true);
         try {
@@ -2991,18 +3710,16 @@ function CheckpointFormInline({
             endDate.setDate(endDate.getDate() + campaignDays);
             const actionSteps: any[] = [];
             let orderIdx = 1;
-            console.log('🔍 Building actionSteps:', { inboundMode, isDirectContact, actions });
-            if (!isDirectContact) {
-                // LinkedIn flow: connect / message steps (not relevant for direct phone/email contacts)
-                if (actions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                if (actions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
-                // For inbound campaigns: add linkedin_visit if selected (view profile only)
-                if (inboundMode && actions.includes('profile_view')) {
-                    console.log('✅ Adding linkedin_visit step for inbound campaign');
-                    actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                }
+            console.log('🔍 Building actionSteps:', { inboundMode, isDirectContact, liChannelActions, nextChannels });
+            if (!isDirectContact && nextChannels.includes('linkedin')) {
+                // Primary LinkedIn steps — configured in channels step via liChannelActions
+                if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
+                if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                // Default to profile visit if no specific action selected
+                if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
             }
-            console.log('📋 Final actionSteps:', actionSteps);
+            console.log('📋 Primary LinkedIn actionSteps:', actionSteps);
 
             if (isDirectContact && nextChannels.length > 0) {
                 // Direct contact (phone/email only): add channel steps immediately — no LinkedIn trigger needed
@@ -3010,30 +3727,70 @@ function CheckpointFormInline({
                     if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
                     if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
-                    if (ch === 'linkedin') actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                    if (ch === 'linkedin') {
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                        // Default to profile visit if no specific action selected
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                    }
                 }
-            } else if (!isDirectContact && nextChannels.length > 0 && triggerCondition) {
-                // LinkedIn flow: wait for LinkedIn condition, then trigger follow-up channels
+            } else if (!isDirectContact && hasMultipleChannels && triggerCondition && triggerCondition !== 'no_dependency') {
+                // Multi-channel flow: wait for primary channel trigger, then execute follow-up channels
                 const conditionTitleMap: Record<string, string> = {
+                    // LinkedIn triggers
                     connection_accepted: 'Wait for Connection Accepted',
-                    message_replied: 'Wait for Message Reply',
-                    profile_visited: 'Wait for Profile Visit',
+                    message_replied:     'Wait for Message Reply',
+                    profile_visited:     'Wait for Profile Visit',
+                    // Email triggers
+                    email_read:    'Wait for Email Read',
+                    email_replied: 'Wait for Email Reply',
+                    // WhatsApp triggers
+                    wa_read:    'Wait for WhatsApp Read',
+                    wa_replied: 'Wait for WhatsApp Reply',
+                    // Voice triggers
+                    call_completed: 'Wait for Call Completed',
+                    call_answered:  'Wait for Call Answered',
                 };
                 const conditionActionMap: Record<string, string> = {
                     connection_accepted: 'CONNECTION_ACCEPTED',
-                    message_replied: 'REPLY_RECEIVED',
-                    profile_visited: 'PROFILE_VISITED',
+                    message_replied:     'REPLY_RECEIVED',
+                    profile_visited:     'PROFILE_VISITED',
+                    email_read:          'EMAIL_READ',
+                    email_replied:       'EMAIL_REPLIED',
+                    wa_read:             'WA_READ',
+                    wa_replied:          'WA_REPLIED',
+                    call_completed:      'CALL_COMPLETED',
+                    call_answered:       'CALL_ANSWERED',
                 };
+                // Determine which channel this trigger belongs to (primary channel)
+                const triggerChannel = primaryTriggerChannel ?? 'linkedin';
                 actionSteps.push({
-                    type: 'wait_for_condition', title: conditionTitleMap[triggerCondition] || 'Wait for Condition',
-                    channel: 'linkedin', order_index: orderIdx++,
+                    type: 'wait_for_condition',
+                    title: conditionTitleMap[triggerCondition] || 'Wait for Condition',
+                    channel: triggerChannel,
+                    order_index: orderIdx++,
                     config: {
                         condition: triggerCondition,
                         action_type: conditionActionMap[triggerCondition] || 'PROFILE_VISITED',
                         ...(triggerCondition === 'profile_visited' ? { icp_threshold: parseInt(icpThreshold) || 0 } : {}),
                     },
                 });
-                for (const ch of nextChannels) {
+                // Follow-up channels: all channels except the primary trigger channel
+                for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    if (ch === 'linkedin') {
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                    }
+                }
+            } else if (!isDirectContact && hasMultipleChannels) {
+                // no_dependency or no trigger condition selected — execute all channels sequentially without waiting
+                for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
                     if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
                     if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
@@ -3051,7 +3808,7 @@ function CheckpointFormInline({
             // Build checkpoint selections object
             const checkpointSelections = {
                 icp_threshold: icpMin,
-                linkedin_actions: actions,
+                linkedin_actions: liChannelActions,
                 connection_message: connMsg || '',
                 followup_message: followMsg || '',
                 next_channels: nextChannels,
@@ -3112,7 +3869,10 @@ function CheckpointFormInline({
                     profile_picture: '',
                     industry: '',
                     network_distance: '',
-                }, 'inbound_lead'))
+                    // Crucial: pass phone and email so they are stored in lead_data
+                    phone: il.phone || il.whatsapp || '',
+                    email: il.email || '',
+                } as any, 'inbound_lead'))
                 : [];
 
             const payload = {
@@ -3126,6 +3886,12 @@ function CheckpointFormInline({
                     : (isDirectContact && directContactLeads.length > 0
                         ? directContactLeads
                         : (goodMatchLeads.length > 0 ? goodMatchLeads : undefined)),
+                // Pass real DB UUIDs so CampaignModel links leads via lead_id (with snapshot + phone)
+                // Covers both CSV/image imports (inboundLeadIds) and chat-entered direct contacts (directContactLeadIds)
+                inbound_lead_ids: (() => {
+                    const ids = [...inboundLeadIds, ...directContactLeadIds];
+                    return ids.length > 0 ? ids : undefined;
+                })(),
                 config: {
                     data_source: inboundMode ? 'csv_import' : (isDirectContact ? 'direct_contact' : 'linkedin_search'),
                     search_intent: (inboundMode || isDirectContact) ? null : t, search_query: (inboundMode || isDirectContact) ? '' : (t.keywords?.join(' ') || ''),
@@ -3181,31 +3947,26 @@ function CheckpointFormInline({
 
     const canNext = () => {
         if (step === 0) return !!icpThreshold;
-        if (step === 1) return isDirectContact ? true : actions.length > 0; // LinkedIn actions not needed for direct contacts
-        if (step === 2) return true; // messages
-        if (step === 3) return true; // outreach/follow-up channels (skip is valid)
-        if (step === 4) return nextChannels.length === 0 || !!triggerCondition; // trigger condition (skip if no channels)
-        if (step === 5) return !!days;
-        if (step === 6) return !!name.trim();
+        if (step === 1) return true; // channels (skip is valid)
+        if (step === 2) return !hasMultipleChannels || !!triggerCondition; // trigger condition required only for 2+ channels
+        if (step === 3) return !!days;
+        if (step === 4) return !!name.trim();
         return true;
     };
 
-    // handleNext/handleBack: skip LinkedIn steps (0–2) AND trigger condition (4) for direct contacts
+    // handleNext/handleBack: skip ICP (step 0) via auto-skip, AND trigger condition (step 2) when not applicable
     const handleNext = () => {
         let next = step + 1;
-        // Skip step 4 (trigger condition) if: no next channels selected, OR this is a direct contact
-        // (trigger condition is only meaningful after LinkedIn actions, which direct contacts don't have)
-        if (next === 4 && (nextChannels.length === 0 || isDirectContact)) next = 5;
-        // For direct contacts (phone/email only), skip LinkedIn steps 0–2
-        if (isDirectContact && next < 3) next = 3;
+        // Skip step 2 (trigger condition) if: only 0–1 channels selected (nothing to trigger between), OR direct contact
+        if (next === 2 && (!hasMultipleChannels || isDirectContact)) next = 3;
         setStep(next);
     };
     const handleBack = () => {
         let prev = step - 1;
-        // Skip step 4 (trigger condition) going back if: no next channels, OR direct contact
-        if (prev === 4 && (nextChannels.length === 0 || isDirectContact)) prev = 3;
-        // For direct contacts, don't go back into LinkedIn steps
-        if (isDirectContact && prev < 3) { setStep(-1); return; }
+        // Skip step 2 (trigger condition) going back if: only 0-1 channels selected, OR direct contact
+        if (prev === 2 && (!hasMultipleChannels || isDirectContact)) prev = 1;
+        // Don't go back before channels step when ICP step was auto-skipped
+        if ((isDirectContact || hasNoIcpScores) && prev < 1) { setStep(-1); return; }
         setStep(Math.max(0, prev));
     };
 
@@ -3274,77 +4035,8 @@ function CheckpointFormInline({
                         </div>
                     )}
 
-                    {/* Step 1: LinkedIn Actions */}
+                    {/* Step 1: Campaign Channels */}
                     {step === 1 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {/* LinkedIn limits info banner */}
-                            <div style={{
-                                padding: '10px 14px', borderRadius: '10px', fontSize: '12px', lineHeight: 1.5,
-                                background: exceedsLinkedInLimits ? '#fef3c7' : '#f0fdf4',
-                                border: `1px solid ${exceedsLinkedInLimits ? '#f59e0b' : '#86efac'}`,
-                                color: exceedsLinkedInLimits ? '#92400e' : '#166534',
-                            }}>
-                                <div style={{ fontWeight: 700, marginBottom: '2px' }}>
-                                    {qualifiedLeadCount} qualified lead{qualifiedLeadCount !== 1 ? 's' : ''} (ICP &ge; {icpThreshold}%)
-                                </div>
-                                <div>
-                                    LinkedIn safe limits: <strong>{LINKEDIN_DAILY_LIMIT}/day</strong>, <strong>{LINKEDIN_WEEKLY_LIMIT}/week</strong>.
-                                    {exceedsLinkedInLimits ? (
-                                        <span> Over {campaignDays} days, LinkedIn actions will be limited to <strong>{totalLinkedInCapacity} leads</strong> ({safeLeadsPerDay}/day). Remaining leads will be queued beyond the campaign period.</span>
-                                    ) : (
-                                        <span> Your {qualifiedLeadCount} leads fit within the {campaignDays}-day campaign window.</span>
-                                    )}
-                                </div>
-                            </div>
-                            {[
-                                { id: 'connect', label: 'Send connection request', desc: 'Auto-connect with leads on LinkedIn' },
-                                { id: 'message', label: 'Send follow-up message', desc: 'Message after connection accepted' },
-                                { id: 'profile_view', label: 'View profile only', desc: 'Just visit their profile (no action)' },
-                            ].map((a, i) => (
-                                <div key={a.id} onClick={() => toggleAction(a.id)} style={optStyle(actions.includes(a.id))}>
-                                    <div style={numBadge(i + 1, actions.includes(a.id))}>{actions.includes(a.id) ? '✓' : i + 1}</div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600 }}>{a.label}</div>
-                                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{a.desc}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Step 2: Messages */}
-                    {step === 2 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {actions.includes('connect') && (
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                        <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Connection Request</label>
-                                        <button disabled={genLoading} onClick={() => generateMsg('connect')} style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: 700, color: genLoading ? '#9ca3af' : '#172560', cursor: genLoading ? 'default' : 'pointer' }}>
-                                            {genLoading ? 'Generating...' : '✨ AI Generate'}
-                                        </button>
-                                    </div>
-                                    <textarea style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '10px', padding: '12px', fontSize: '13px', height: '80px', background: '#fafbff', outline: 'none', resize: 'none', fontFamily: 'inherit' }} value={connMsg} onChange={e => setConnMsg(e.target.value)} placeholder='Hi {first_name}, I noticed we share interests in...' />
-                                </div>
-                            )}
-                            {actions.includes('message') && (
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                        <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Follow-up Message</label>
-                                        <button disabled={genLoading} onClick={() => generateMsg('follow')} style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: 700, color: genLoading ? '#9ca3af' : '#172560', cursor: genLoading ? 'default' : 'pointer' }}>
-                                            {genLoading ? 'Generating...' : '✨ AI Generate'}
-                                        </button>
-                                    </div>
-                                    <textarea style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '10px', padding: '12px', fontSize: '13px', height: '80px', background: '#fafbff', outline: 'none', resize: 'none', fontFamily: 'inherit' }} value={followMsg} onChange={e => setFollowMsg(e.target.value)} placeholder='Thanks for connecting! ...' />
-                                </div>
-                            )}
-                            {!actions.includes('connect') && !actions.includes('message') && (
-                                <div style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic', padding: '12px 0' }}>No messaging actions selected. You can proceed to the next step.</div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Step 3: Next Channel Sequence */}
-                    {step === 3 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {/* Context badge for direct contacts */}
                             {isDirectContact && (
@@ -3357,17 +4049,17 @@ function CheckpointFormInline({
                                 </div>
                             )}
                             {[
-                                { id: 'email', label: 'Email', desc: isDirectContact ? 'Send an email to this contact' : 'Send a follow-up email to the lead', icon: '✉️', disabled: isDirectContact && !hasEmail },
-                                { id: 'whatsapp', label: 'WhatsApp', desc: isDirectContact ? 'Send a WhatsApp message to this contact' : 'Send a WhatsApp message', icon: '💬', disabled: isDirectContact && !hasPhone },
-                                { id: 'voice_call', label: 'Voice Call', desc: isDirectContact ? 'Trigger an AI voice call to this contact' : 'Trigger an AI voice call', icon: '📞', disabled: isDirectContact && !hasPhone },
-                                // LinkedIn: shown for non-direct contacts always; for direct contacts only if name+company detected
+                                // LinkedIn first — always shown (for non-direct; for direct contacts only if name+company detected)
                                 ...(hasLinkedInInfo ? [{
                                     id: 'linkedin', icon: '💼', label: 'LinkedIn',
                                     desc: isDirectContact
-                                        ? 'Visit & connect on LinkedIn (name + company detected)'
-                                        : 'Additional LinkedIn touchpoint',
+                                        ? 'LinkedIn touchpoint (name + company detected)'
+                                        : 'Additional LinkedIn touchpoints',
                                     disabled: false,
                                 }] : []),
+                                { id: 'email', label: 'Email', desc: isDirectContact ? 'Send an email to this contact' : 'Send a follow-up email to the lead', icon: '✉️', disabled: isDirectContact && !hasEmail },
+                                { id: 'whatsapp', label: 'WhatsApp', desc: isDirectContact ? 'Send a WhatsApp message to this contact' : 'Send a WhatsApp message', icon: '💬', disabled: isDirectContact && !hasPhone },
+                                { id: 'voice_call', label: 'Voice Call', desc: isDirectContact ? 'Trigger an AI voice call to this contact' : 'Trigger an AI voice call', icon: '📞', disabled: isDirectContact && !hasPhone },
                             ].filter(ch => !ch.disabled).map((ch, i) => (
                                 <div key={ch.id} onClick={() => toggleNextChannel(ch.id)} style={optStyle(nextChannels.includes(ch.id))}>
                                     <div style={numBadge(i + 1, nextChannels.includes(ch.id))}>{nextChannels.includes(ch.id) ? '✓' : i + 1}</div>
@@ -3908,22 +4600,241 @@ function CheckpointFormInline({
                                     </div>
                                 </div>
                             )}
+
+                            {/* LinkedIn Activity Config (inline when linkedin selected as follow-up channel in step 3) */}
+                            {nextChannels.includes('linkedin') && (
+                                <div style={{ marginTop: '12px', padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e40af', marginBottom: '10px' }}>💼 LinkedIn Activity Settings</div>
+                                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select LinkedIn actions (multi-select):</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                                        {/* ── Option 1: Visit Profile ── */}
+                                        {[
+                                            { id: 'profile_view', label: 'Visit profile', desc: 'Visit their LinkedIn profile to warm up the connection', icon: '👁️' },
+                                            { id: 'connect', label: 'Send connection request', desc: 'Send a personalised connection request', icon: '🤝' },
+                                            { id: 'message', label: 'Send follow-up message', desc: 'Send a LinkedIn message after connection is accepted', icon: '💬' },
+                                        ].map((opt) => {
+                                            const isSelected = liChannelActions.includes(opt.id);
+                                            return (
+                                                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                                    {/* Checkbox row */}
+                                                    <div
+                                                        onClick={() => toggleLiChannelAction(opt.id)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                                            padding: '10px 12px',
+                                                            border: `1.5px solid ${isSelected ? '#3b82f6' : '#bfdbfe'}`,
+                                                            borderRadius: isSelected && (opt.id === 'connect' || opt.id === 'message') ? '10px 10px 0 0' : '10px',
+                                                            cursor: 'pointer',
+                                                            background: isSelected ? '#dbeafe' : '#fff',
+                                                            transition: 'all 0.15s',
+                                                        }}>
+                                                        <div style={{
+                                                            width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0, marginTop: '1px',
+                                                            border: `2px solid ${isSelected ? '#3b82f6' : '#bfdbfe'}`,
+                                                            background: isSelected ? '#3b82f6' : 'transparent',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        }}>
+                                                            {isSelected && <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>✓</span>}
+                                                        </div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e3a8a' }}>{opt.icon} {opt.label}</div>
+                                                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{opt.desc}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* ── Expanded config for 'connect' ── */}
+                                                    {opt.id === 'connect' && isSelected && (
+                                                        <div style={{ border: '1.5px solid #3b82f6', borderTop: 'none', borderRadius: '0 0 10px 10px', background: '#f0f6ff', padding: '12px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                                <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>Connection Message</label>
+                                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => { setLiNewTmplCategory('linkedin_connection'); setShowLiConnTmplPanel(p => !p); setShowLiFollowTmplPanel(false); setShowLiNewTmplForm(false); }}
+                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
+                                                                        {showLiConnTmplPanel ? '✕ Close' : '📋 Templates'}
+                                                                    </button>
+                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('connect')}
+                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
+                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {/* Connection template browser */}
+                                                            {showLiConnTmplPanel && (
+                                                                <div style={{ border: '1px solid #bfdbfe', borderRadius: '8px', background: '#fff', marginBottom: '8px', overflow: 'hidden' }}>
+                                                                    {liTemplates.filter(t => t.category === 'linkedin_connection').length > 0 && !showLiNewTmplForm ? (
+                                                                        <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                                                                            {liTemplates.filter(t => t.category === 'linkedin_connection').map(tmpl => (
+                                                                                <div key={tmpl.id}
+                                                                                    onClick={() => { setSelectedLiConnTmplId(tmpl.id); setConnMsg(tmpl.content); setShowLiConnTmplPanel(false); }}
+                                                                                    style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #eff6ff', background: selectedLiConnTmplId === tmpl.id ? '#dbeafe' : 'transparent' }}>
+                                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#1e40af', marginBottom: '2px' }}>{tmpl.name}</div>
+                                                                                        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.content}</div>
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                                                                        <button onClick={e => { e.stopPropagation(); setSelectedLiConnTmplId(tmpl.id); setConnMsg(tmpl.content); setShowLiConnTmplPanel(false); }}
+                                                                                            style={{ background: '#1e40af', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Use</button>
+                                                                                        <button onClick={e => deleteLiTemplate(tmpl.id, e)}
+                                                                                            style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '3px 6px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : !showLiNewTmplForm ? (
+                                                                        <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>No saved templates.</div>
+                                                                    ) : null}
+                                                                    {/* Create new template form */}
+                                                                    {showLiNewTmplForm && liNewTmplCategory === 'linkedin_connection' ? (
+                                                                        <div style={{ padding: '10px', borderTop: liTemplates.filter(t => t.category === 'linkedin_connection').length > 0 ? '1px solid #bfdbfe' : 'none' }}>
+                                                                            <input value={liNewTmplName} onChange={e => setLiNewTmplName(e.target.value)} placeholder="Template name..." style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none', marginBottom: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                                                            <textarea value={liNewTmplBody} onChange={e => setLiNewTmplBody(e.target.value)} placeholder="Hi {{first_name}}, I would love to connect..." rows={3} style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '6px' }} />
+                                                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                                                <button onClick={saveLiTemplate} disabled={liNewTmplSaving} style={{ flex: 1, background: '#1e40af', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{liNewTmplSaving ? 'Saving...' : '💾 Save'}</button>
+                                                                                <button onClick={() => setShowLiNewTmplForm(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>Cancel</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ padding: '6px 10px', borderTop: liTemplates.filter(t => t.category === 'linkedin_connection').length > 0 ? '1px solid #bfdbfe' : 'none' }}>
+                                                                            <button onClick={() => { setLiNewTmplCategory('linkedin_connection'); setShowLiNewTmplForm(true); }}
+                                                                                style={{ width: '100%', background: 'none', border: '1px dashed #93c5fd', borderRadius: '6px', padding: '5px', fontSize: '12px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', textAlign: 'center' }}>
+                                                                                + Create New Template
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {/* Selected template badge */}
+                                                            {selectedLiConnTmplId && !showLiConnTmplPanel && (() => {
+                                                                const tmpl = liTemplates.find(t => t.id === selectedLiConnTmplId);
+                                                                return tmpl ? (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: '6px', fontSize: '12px', marginBottom: '6px' }}>
+                                                                        <span style={{ fontWeight: 600, color: '#1e40af', flex: 1 }}>✓ {tmpl.name}</span>
+                                                                        <button onClick={() => { setSelectedLiConnTmplId(''); }} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '12px', padding: 0 }}>✕</button>
+                                                                    </div>
+                                                                ) : null;
+                                                            })()}
+                                                            <textarea
+                                                                value={connMsg}
+                                                                onChange={e => setConnMsg(e.target.value)}
+                                                                placeholder={'Hi {{first_name}}, I noticed your work at {{company}} and would love to connect...'}
+                                                                rows={3}
+                                                                style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                            />
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* ── Expanded config for 'message' ── */}
+                                                    {opt.id === 'message' && isSelected && (
+                                                        <div style={{ border: '1.5px solid #3b82f6', borderTop: 'none', borderRadius: '0 0 10px 10px', background: '#f0f6ff', padding: '12px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                                <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>Follow-up Message</label>
+                                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => { setLiNewTmplCategory('linkedin_followup'); setShowLiFollowTmplPanel(p => !p); setShowLiConnTmplPanel(false); setShowLiNewTmplForm(false); }}
+                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
+                                                                        {showLiFollowTmplPanel ? '✕ Close' : '📋 Templates'}
+                                                                    </button>
+                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('followup')}
+                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
+                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {/* Followup template browser */}
+                                                            {showLiFollowTmplPanel && (
+                                                                <div style={{ border: '1px solid #bfdbfe', borderRadius: '8px', background: '#fff', marginBottom: '8px', overflow: 'hidden' }}>
+                                                                    {liTemplates.filter(t => t.category === 'linkedin_followup').length > 0 && !showLiNewTmplForm ? (
+                                                                        <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                                                                            {liTemplates.filter(t => t.category === 'linkedin_followup').map(tmpl => (
+                                                                                <div key={tmpl.id}
+                                                                                    onClick={() => { setSelectedLiFollowTmplId(tmpl.id); setFollowMsg(tmpl.content); setShowLiFollowTmplPanel(false); }}
+                                                                                    style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #eff6ff', background: selectedLiFollowTmplId === tmpl.id ? '#dbeafe' : 'transparent' }}>
+                                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#1e40af', marginBottom: '2px' }}>{tmpl.name}</div>
+                                                                                        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.content}</div>
+                                                                                    </div>
+                                                                                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                                                                        <button onClick={e => { e.stopPropagation(); setSelectedLiFollowTmplId(tmpl.id); setFollowMsg(tmpl.content); setShowLiFollowTmplPanel(false); }}
+                                                                                            style={{ background: '#1e40af', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Use</button>
+                                                                                        <button onClick={e => deleteLiTemplate(tmpl.id, e)}
+                                                                                            style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '3px 6px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : !showLiNewTmplForm ? (
+                                                                        <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>No saved templates.</div>
+                                                                    ) : null}
+                                                                    {/* Create new template form */}
+                                                                    {showLiNewTmplForm && liNewTmplCategory === 'linkedin_followup' ? (
+                                                                        <div style={{ padding: '10px', borderTop: liTemplates.filter(t => t.category === 'linkedin_followup').length > 0 ? '1px solid #bfdbfe' : 'none' }}>
+                                                                            <input value={liNewTmplName} onChange={e => setLiNewTmplName(e.target.value)} placeholder="Template name..." style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none', marginBottom: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                                                            <textarea value={liNewTmplBody} onChange={e => setLiNewTmplBody(e.target.value)} placeholder={'Hi {{first_name}}, great connecting! I wanted to share...'} rows={3} style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '6px' }} />
+                                                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                                                <button onClick={saveLiTemplate} disabled={liNewTmplSaving} style={{ flex: 1, background: '#1e40af', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{liNewTmplSaving ? 'Saving...' : '💾 Save'}</button>
+                                                                                <button onClick={() => setShowLiNewTmplForm(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>Cancel</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ padding: '6px 10px', borderTop: liTemplates.filter(t => t.category === 'linkedin_followup').length > 0 ? '1px solid #bfdbfe' : 'none' }}>
+                                                                            <button onClick={() => { setLiNewTmplCategory('linkedin_followup'); setShowLiNewTmplForm(true); }}
+                                                                                style={{ width: '100%', background: 'none', border: '1px dashed #93c5fd', borderRadius: '6px', padding: '5px', fontSize: '12px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', textAlign: 'center' }}>
+                                                                                + Create New Template
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {/* Selected template badge */}
+                                                            {selectedLiFollowTmplId && !showLiFollowTmplPanel && (() => {
+                                                                const tmpl = liTemplates.find(t => t.id === selectedLiFollowTmplId);
+                                                                return tmpl ? (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: '6px', fontSize: '12px', marginBottom: '6px' }}>
+                                                                        <span style={{ fontWeight: 600, color: '#1e40af', flex: 1 }}>✓ {tmpl.name}</span>
+                                                                        <button onClick={() => { setSelectedLiFollowTmplId(''); }} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '12px', padding: 0 }}>✕</button>
+                                                                    </div>
+                                                                ) : null;
+                                                            })()}
+                                                            <textarea
+                                                                value={followMsg}
+                                                                onChange={e => setFollowMsg(e.target.value)}
+                                                                placeholder={'Hi {{first_name}}, great connecting! I wanted to reach out about how we help companies like {{company}}...'}
+                                                                rows={3}
+                                                                style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                            />
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Step 4: Trigger Condition (only if next channels selected) */}
-                    {step === 4 && (
+                    {/* Step 2: Trigger Condition — options are dynamic based on primary channel */}
+                    {step === 2 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-                                Selected channels: {nextChannels.map(ch => ch === 'voice_call' ? 'Voice Call' : ch.charAt(0).toUpperCase() + ch.slice(1)).join(', ')}
+                            {/* Channel sequence badge */}
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {nextChannels.map((ch, idx) => {
+                                    const label = ch === 'voice_call' ? 'Voice Call' : ch === 'linkedin' ? 'LinkedIn' : ch.charAt(0).toUpperCase() + ch.slice(1);
+                                    return (
+                                        <span key={ch} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span style={{ background: '#eef2ff', color: '#172560', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, fontSize: '11px' }}>{label}</span>
+                                            {idx < nextChannels.length - 1 && <span style={{ color: '#9ca3af' }}>→</span>}
+                                        </span>
+                                    );
+                                })}
                             </div>
-                            {[
-                                { id: 'connection_accepted', label: 'After connection accepted', desc: 'Trigger when the lead accepts your LinkedIn connection' },
-                                { id: 'message_replied', label: 'After responding to message', desc: 'Trigger when the lead replies to your LinkedIn message' },
-                                { id: 'profile_visited', label: 'After profile visit', desc: 'Trigger for all visited profiles with ICP score above your threshold' },
-                            ].map((opt, i) => (
+                            {triggerOptions.map((opt, i) => (
                                 <div key={opt.id} onClick={() => setTriggerCondition(opt.id)} style={optStyle(triggerCondition === opt.id)}>
-                                    <div style={numBadge(i + 1, triggerCondition === opt.id)}>{triggerCondition === opt.id ? '\u2713' : i + 1}</div>
+                                    <div style={numBadge(i + 1, triggerCondition === opt.id)}>{triggerCondition === opt.id ? '✓' : i + 1}</div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: 600 }}>{opt.label}</div>
                                         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{opt.desc}</div>
@@ -3933,8 +4844,8 @@ function CheckpointFormInline({
                         </div>
                     )}
 
-                    {/* Step 5: Duration */}
-                    {step === 5 && (
+                    {/* Step 3: Duration */}
+                    {step === 3 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {['7', '14', '30', '60', '90'].map((d, i) => {
                                 const dNum = parseInt(d);
@@ -3975,8 +4886,8 @@ function CheckpointFormInline({
                         </div>
                     )}
 
-                    {/* Step 6: Campaign Name */}
-                    {step === 6 && (
+                    {/* Step 4: Campaign Name */}
+                    {step === 4 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input type="text" value={name} onChange={e => setName(e.target.value)}
@@ -3995,11 +4906,12 @@ function CheckpointFormInline({
 
                 {/* Navigation footer */}
                 {(() => {
-                    // Direct contacts skip steps 0,1,2,4 → only steps 3,5,6 remain (3 steps total)
-                    // Map: step 3→1, step 5→2, step 6→3
-                    const dispStep = isDirectContact ? (step <= 3 ? 1 : step - 3) : step + 1;
-                    const dispTotal = isDirectContact ? 3 : totalSteps;
-                    const isFirstStep = isDirectContact ? step <= 3 : step <= 0;
+                    // Direct contacts AND no-ICP-score campaigns skip step 0 (ICP) and step 2 (trigger)
+                    // → only steps 1,3,4 remain (3 visible steps)
+                    const skipsIcp = isDirectContact || hasNoIcpScores;
+                    const dispStep = skipsIcp ? (step <= 1 ? 1 : step - 1) : step + 1;
+                    const dispTotal = skipsIcp ? 3 : totalSteps;
+                    const isFirstStep = skipsIcp ? step <= 1 : step <= 0;
                     return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
                     <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
