@@ -31,10 +31,36 @@ interface InboundDataFormProps {
   onCancel: () => void;
   isSubmitting?: boolean;
 }
-type UploadStep = 'download' | 'upload' | 'preview';
+type UploadStep = 'download' | 'upload' | 'mapping' | 'preview';
+
+interface ColumnMapping {
+  firstName: number;
+  lastName: number;
+  companyName: number;
+  linkedin: number;
+  email: number;
+  whatsapp: number;
+  phone: number;
+  website: number;
+  notes: number;
+}
+
 export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = false }: InboundDataFormProps) {
   const [step, setStep] = useState<UploadStep>('download');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
+    firstName: -1,
+    lastName: -1,
+    companyName: -1,
+    linkedin: -1,
+    email: -1,
+    whatsapp: -1,
+    phone: -1,
+    website: -1,
+    notes: -1,
+  });
   const [parsedLeads, setParsedLeads] = useState<ParsedLead[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -150,8 +176,9 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       // First row is headers
       const headers = rows[0];
       const dataRows = rows.slice(1);
-      // Find column indices
-      const colIndex = {
+
+      // Auto-detect column indices
+      const detectedMapping: ColumnMapping = {
         firstName: headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name')),
         lastName: headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name')),
         companyName: headers.findIndex(h => h.toLowerCase().includes('company')),
@@ -162,85 +189,13 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         website: headers.findIndex(h => h.toLowerCase().includes('website')),
         notes: headers.findIndex(h => h.toLowerCase().includes('notes')),
       };
-      // Helper function to fix phone numbers in scientific notation
-      const fixPhoneNumber = (value: string): string => {
-        if (!value) return '';
-        // Remove all spaces, dashes, and parentheses
-        let cleaned = value.replace(/[\s\-\(\)]/g, '');
-        // Check if it's in scientific notation (e.g., 9.19059E+11)
-        if (/^\d+\.?\d*e\+?\d+$/i.test(cleaned)) {
-          // Convert scientific notation to regular number
-          const num = parseFloat(cleaned);
-          cleaned = num.toFixed(0); // Convert to integer string
-        }
-        // Ensure it starts with + if it's an international number
-        if (cleaned && !cleaned.startsWith('+') && cleaned.length > 10) {
-          cleaned = '+' + cleaned;
-        }
-        return cleaned;
-      };
-      // Helper function to separate company name from LinkedIn URL if combined
-      const separateCompanyAndLinkedIn = (companyValue: string, linkedinValue: string): { company: string, linkedin: string } => {
-        // If LinkedIn column is empty but company column contains a URL
-        if (!linkedinValue && companyValue.includes('linkedin.com')) {
-          // Split by http to find where URL starts
-          const httpIndex = companyValue.indexOf('http');
-          if (httpIndex > 0) {
-            return {
-              company: companyValue.substring(0, httpIndex).trim(),
-              linkedin: companyValue.substring(httpIndex).trim()
-            };
-          }
-        }
-        return { company: companyValue, linkedin: linkedinValue };
-      };
-      // Parse leads
-      const leads: ParsedLead[] = dataRows
-        .map(row => {
-          const rawFirstName = (colIndex.firstName >= 0 ? row[colIndex.firstName] : '') || '';
-          const rawLastName = (colIndex.lastName >= 0 ? row[colIndex.lastName] : '') || '';
-          const rawCompany = (colIndex.companyName >= 0 ? row[colIndex.companyName] : '') || '';
-          const rawLinkedin = (colIndex.linkedin >= 0 ? row[colIndex.linkedin] : '') || '';
-          const rawWhatsapp = (colIndex.whatsapp >= 0 ? row[colIndex.whatsapp] : '') || '';
-          const rawPhone = (colIndex.phone >= 0 ? row[colIndex.phone] : '') || '';
-          const rawNotes = (colIndex.notes >= 0 ? row[colIndex.notes] : '') || '';
-          const rawEmail = (colIndex.email >= 0 ? row[colIndex.email] : '') || '';
-          // Separate company and LinkedIn if combined
-          const { company, linkedin } = separateCompanyAndLinkedIn(rawCompany, rawLinkedin);
-          return {
-            firstName: rawFirstName.trim(),
-            lastName: rawLastName.trim(),
-            companyName: company,
-            linkedinProfile: linkedin,
-            email: rawEmail,
-            whatsapp: fixPhoneNumber(rawWhatsapp),
-            phone: fixPhoneNumber(rawPhone),
-            website: (colIndex.website >= 0 ? row[colIndex.website] : '') || '',
-            notes: rawNotes,
-          };
-        })
-        .filter(lead => {
-          // Check if it's an example/template row
-          const isExample = 
-            lead.companyName.toLowerCase().includes('example') ||
-            lead.companyName.toLowerCase().includes('delete this') ||
-            lead.notes.toLowerCase().includes('delete this row') ||
-            lead.notes.toLowerCase().includes('sample lead') ||
-            lead.email.toLowerCase().includes('example.com') ||
-            lead.email.toLowerCase().includes('johndoe');
-          // Check if row has meaningful data (at least company name or email or linkedin)
-          const hasMeaningfulData = 
-            (lead.companyName && lead.companyName.trim().length > 1) ||
-            (lead.email && lead.email.includes('@')) ||
-            (lead.linkedinProfile && lead.linkedinProfile.includes('linkedin.com'));
-          return !isExample && hasMeaningfulData;
-        });
-      if (leads.length === 0) {
-        throw new Error('No valid leads found. Please fill in your lead data (delete the example row and add your own data).');
-      }
-      logger.debug('Parsed leads from CSV', { count: leads.length });
-      setParsedLeads(leads);
-      setStep('preview');
+
+      // Store for mapping UI
+      setCsvHeaders(headers);
+      setCsvData(dataRows);
+      setColumnMapping(detectedMapping);
+      setStep('mapping');
+      logger.debug('File parsed, ready for column mapping', { headerCount: headers.length, dataRowCount: dataRows.length });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process file';
       logger.error('File processing error', { error: message });
@@ -250,6 +205,79 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       setIsProcessing(false);
     }
   };
+
+  // Helper function to fix phone numbers in scientific notation
+  const fixPhoneNumber = (value: string): string => {
+    if (!value) return '';
+    let cleaned = value.replace(/[\s\-\(\)]/g, '');
+    if (/^\d+\.?\d*e\+?\d+$/i.test(cleaned)) {
+      const num = parseFloat(cleaned);
+      cleaned = num.toFixed(0);
+    }
+    if (cleaned && !cleaned.startsWith('+') && cleaned.length > 10) {
+      cleaned = '+' + cleaned;
+    }
+    return cleaned;
+  };
+
+  // Parse leads using column mapping
+  const parseLeadsWithMapping = () => {
+    setError(null);
+    setIsProcessing(true);
+    try {
+      if (csvData.length === 0) {
+        throw new Error('No data to parse');
+      }
+
+      const leads: ParsedLead[] = csvData
+        .map(row => ({
+          firstName: (columnMapping.firstName >= 0 ? row[columnMapping.firstName] : '') || '',
+          lastName: (columnMapping.lastName >= 0 ? row[columnMapping.lastName] : '') || '',
+          companyName: (columnMapping.companyName >= 0 ? row[columnMapping.companyName] : '') || '',
+          linkedinProfile: (columnMapping.linkedin >= 0 ? row[columnMapping.linkedin] : '') || '',
+          email: (columnMapping.email >= 0 ? row[columnMapping.email] : '') || '',
+          whatsapp: fixPhoneNumber(columnMapping.whatsapp >= 0 ? row[columnMapping.whatsapp] : ''),
+          phone: fixPhoneNumber(columnMapping.phone >= 0 ? row[columnMapping.phone] : ''),
+          website: (columnMapping.website >= 0 ? row[columnMapping.website] : '') || '',
+          notes: (columnMapping.notes >= 0 ? row[columnMapping.notes] : '') || '',
+        }))
+        .filter(lead => {
+          // Filter out example/template rows
+          const isExample =
+            lead.companyName.toLowerCase().includes('example') ||
+            lead.companyName.toLowerCase().includes('delete this') ||
+            lead.notes.toLowerCase().includes('delete this row') ||
+            lead.email.toLowerCase().includes('example.com');
+
+          // Accept rows with any meaningful data (don't be too strict)
+          const hasData =
+            (lead.firstName && lead.firstName.trim()) ||
+            (lead.lastName && lead.lastName.trim()) ||
+            (lead.companyName && lead.companyName.trim()) ||
+            (lead.email && lead.email.trim()) ||
+            (lead.linkedinProfile && lead.linkedinProfile.trim()) ||
+            (lead.phone && lead.phone.trim()) ||
+            (lead.whatsapp && lead.whatsapp.trim());
+
+          return !isExample && hasData;
+        });
+
+      if (leads.length === 0) {
+        throw new Error('No valid leads found. Please check your column mapping and ensure your data is correct.');
+      }
+
+      logger.debug('Parsed leads from CSV with mapping', { count: leads.length });
+      setParsedLeads(leads);
+      setStep('preview');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to parse leads';
+      logger.error('Error parsing leads', { error: message });
+      setError(message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Remove a lead from preview
   const removeLead = (index: number) => {
     setParsedLeads(prev => prev.filter((_, i) => i !== index));
@@ -262,6 +290,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
   const resetUpload = () => {
     setUploadedFile(null);
     setParsedLeads([]);
+    setCsvHeaders([]);
+    setCsvData([]);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -337,13 +367,15 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           {[
             { key: 'download', label: 'Download Template', icon: Download },
             { key: 'upload', label: 'Upload File', icon: Upload },
+            { key: 'mapping', label: 'Map Columns', icon: FileSpreadsheet },
             { key: 'preview', label: 'Review & Submit', icon: Eye },
           ].map((s, index) => {
             const Icon = s.icon;
             const isActive = step === s.key;
-            const isComplete = 
-              (s.key === 'download' && (step === 'upload' || step === 'preview')) ||
-              (s.key === 'upload' && step === 'preview');
+            const isComplete =
+              (s.key === 'download' && (step === 'upload' || step === 'mapping' || step === 'preview')) ||
+              (s.key === 'upload' && (step === 'mapping' || step === 'preview')) ||
+              (s.key === 'mapping' && step === 'preview');
             return (
               <React.Fragment key={s.key}>
                 <div className="flex items-center gap-2">
@@ -360,7 +392,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                     {s.label}
                   </span>
                 </div>
-                {index < 2 && (
+                {index < 3 && (
                   <div className={`flex-1 h-0.5 mx-3 rounded ${
                     isComplete ? 'bg-green-500' : 'bg-gray-200'
                   }`} />
@@ -470,7 +502,98 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
-        {/* Step 3: Preview & Review */}
+        {/* Step 3: Map Columns */}
+        {step === 'mapping' && (
+          <div className="py-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Map Your Columns</h3>
+            <p className="text-gray-600 mb-6">
+              We found {csvHeaders.length} column(s) in your file. Please map them to the correct fields below:
+            </p>
+
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Mapping Error</p>
+                  <p className="text-sm text-red-600 mt-0.5">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {[
+                { key: 'firstName', label: 'First Name' },
+                { key: 'lastName', label: 'Last Name' },
+                { key: 'companyName', label: 'Company Name' },
+                { key: 'linkedin', label: 'LinkedIn URL' },
+                { key: 'email', label: 'Email' },
+                { key: 'phone', label: 'Phone Number' },
+                { key: 'whatsapp', label: 'WhatsApp Number' },
+                { key: 'website', label: 'Website' },
+                { key: 'notes', label: 'Notes' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {field.label}
+                  </label>
+                  <select
+                    value={columnMapping[field.key as keyof ColumnMapping]}
+                    onChange={(e) => {
+                      setColumnMapping(prev => ({
+                        ...prev,
+                        [field.key]: parseInt(e.target.value),
+                      }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="-1">-- Not Used --</option>
+                    {csvHeaders.map((header, idx) => (
+                      <option key={idx} value={idx}>
+                        {header} {idx === 0 ? '(Column A)' : idx === 1 ? '(Column B)' : idx === 2 ? '(Column C)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            {csvData.length > 0 && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-700">
+                  <strong>Preview:</strong> {csvData.length} rows of data will be parsed using your mapping.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <button
+                onClick={() => { setStep('upload'); resetUpload(); }}
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to upload
+              </button>
+              <button
+                onClick={parseLeadsWithMapping}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-2.5 px-8 py-3.5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-400 transition-all font-medium shadow-lg shadow-green-200 hover:shadow-green-300 hover:-translate-y-0.5"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    Confirm Mapping & Continue
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Step 4: Preview & Review */}
         {step === 'preview' && (
           <div>
             {/* File Info */}
