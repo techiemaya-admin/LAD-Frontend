@@ -11,10 +11,8 @@
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  // Try localStorage first (primary store)
-  const stored = localStorage.getItem('token');
-  if (stored) return stored;
-  // Fallback: cookie
+
+  // Try cookie first (primary store — LAD uses httpOnly: false cookies)
   const cookies = document.cookie ? document.cookie.split(';') : [];
   for (const cookie of cookies) {
     const [rawName, ...rawValueParts] = cookie.trim().split('=');
@@ -22,6 +20,11 @@ function getAuthToken(): string | null {
     const value = rawValueParts.join('=');
     if (name === 'token') return decodeURIComponent(value || '');
   }
+
+  // Fallback: localStorage (for backwards compatibility)
+  const stored = localStorage.getItem('token');
+  if (stored) return stored;
+
   return null;
 }
 

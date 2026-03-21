@@ -38,6 +38,7 @@ interface CreateAccountForm {
   display_name: string;
   slug: string;
   database_url: string;
+  tenant_id: string;         // Optional — leave blank to auto-create a new tenant
   phone_number_id: string;
   access_token: string;
   business_account_id: string;
@@ -60,8 +61,8 @@ async function fetchAccounts(): Promise<WhatsAppAccount[]> {
 
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {
   const body: Record<string, any> = { ...form };
-  // Remove empty optional fields
-  for (const key of ['phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'ai_api_key']) {
+  // Remove empty optional fields (including tenant_id — blank = auto-create new tenant)
+  for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'ai_api_key']) {
     if (!body[key]) delete body[key];
   }
 
@@ -115,6 +116,7 @@ const INITIAL_FORM: CreateAccountForm = {
   display_name: '',
   slug: '',
   database_url: '',
+  tenant_id: '',
   phone_number_id: '',
   access_token: '',
   business_account_id: '',
@@ -299,6 +301,20 @@ export function TenantOnboarding() {
                 value={form.database_url}
                 onChange={(e) => setForm((prev) => ({ ...prev, database_url: e.target.value }))}
                 placeholder="postgresql://user:pass@host:5432/dbname"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+              />
+            </div>
+
+            {/* Tenant ID (optional — link to existing LAD tenant) */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Tenant ID <span className="text-gray-400 font-normal">(optional — leave blank to create a new tenant, or paste an existing LAD tenant UUID to link this account)</span>
+              </label>
+              <input
+                type="text"
+                value={form.tenant_id}
+                onChange={(e) => setForm((prev) => ({ ...prev, tenant_id: e.target.value.trim() }))}
+                placeholder="e.g. e0a3e9ca-3f46-4bb0-ac10-a91b5c1d20b5"
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
               />
             </div>

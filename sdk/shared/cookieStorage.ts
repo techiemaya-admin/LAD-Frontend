@@ -6,12 +6,18 @@ export const cookieStorage = {
     return Cookies.get(key) || null;
   },
   setItem(key: string, value: string): void {
-    // Use sameSite: 'none' for cross-site requests (frontend -> backend on different domains)
-    // secure: true is required when using sameSite: 'none'
-    // Set path to '/' to ensure cookie is available across all routes
+    // Cookie settings depend on environment
+    // For localhost (http): use sameSite: 'lax', secure: false
+    // For production (https): use sameSite: 'none', secure: true (for cross-origin requests)
+    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    );
+
     Cookies.set(key, value, {
-      sameSite: 'none',
-      secure: true,
+      sameSite: isProduction ? 'none' : (isLocalhost ? 'lax' : 'strict'),
+      secure: isProduction,
       path: '/'
     });
   },
