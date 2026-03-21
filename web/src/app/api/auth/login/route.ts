@@ -59,13 +59,13 @@ export async function POST(req: NextRequest) {
     // Set cookie with production-safe settings
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookies.set('token', token, {
-      httpOnly: true,
+      httpOnly: false, // Allow JavaScript to read token for cross-domain API requests
       secure: isProduction, // Only require HTTPS in production
       sameSite: isProduction ? 'none' : 'lax', // Use 'none' in production to allow cross-site redirects
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
-    logger.debug('Cookie set with production-safe settings', { httpOnly: true, secure: isProduction, sameSite: 'lax', path: '/', maxAge: '7days', tokenLength: token.length });
+    logger.debug('Cookie set with production-safe settings', { httpOnly: false, secure: isProduction, sameSite: isProduction ? 'none' : 'lax', path: '/', maxAge: '7days', tokenLength: token.length });
     return res;
   } catch (e: any) {
     logger.error('Login endpoint error', e);
