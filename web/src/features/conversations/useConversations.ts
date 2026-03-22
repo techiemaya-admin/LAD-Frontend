@@ -59,16 +59,41 @@ export function useConversations(): UseConversationsReturn {
   const filteredConversations = useMemo(() => {
     return conversationsFromRedux
       .filter((conv) => {
-        const matchesChannel = channelFilter === 'all' || String(conv.id).includes(channelFilter);
-        const matchesSearch = 
+        // Match by conv.channel field (set from API response)
+        // Normalize: 'whatsapp', 'business_whatsapp', 'personal_whatsapp' → 'whatsapp'
+        const rawChannel = String((conv as Record<string, unknown>).channel || 'whatsapp');
+        const normalizedChannel =
+          rawChannel === 'business_whatsapp' || rawChannel === 'personal_whatsapp'
+            ? 'whatsapp'
+            : rawChannel;
+        const matchesChannel =
+          channelFilter === 'all' || normalizedChannel === channelFilter;
+
+        // Search by contact name, lead name, or last message content
+        const searchLower = searchQuery.toLowerCase();
+        const contactName = String(
+          (conv as Record<string, unknown>).contactName ||
+          (conv as Record<string, unknown>).contact_name ||
+          (conv as Record<string, unknown>).leadName ||
+          (conv as Record<string, unknown>).lead_name ||
+          ''
+        ).toLowerCase();
+        const lastMsgContent = String(
+          (conv as Record<string, unknown>).lastMessageContent ||
+          (conv as Record<string, unknown>).last_message ||
+          ''
+        ).toLowerCase();
+        const matchesSearch =
           searchQuery === '' ||
-          String(conv.id).toLowerCase().includes(searchQuery.toLowerCase());
-        
+          contactName.includes(searchLower) ||
+          lastMsgContent.includes(searchLower) ||
+          String(conv.id).toLowerCase().includes(searchLower);
+
         return matchesChannel && matchesSearch;
       })
       .sort((a, b) => {
-        const aTime = new Date(a.updatedAt || 0).getTime();
-        const bTime = new Date(b.updatedAt || 0).getTime();
+        const aTime = new Date((a.updatedAt || a.lastMessageTime || 0) as string | number).getTime();
+        const bTime = new Date((b.updatedAt || b.lastMessageTime || 0) as string | number).getTime();
         return bTime - aTime;
       });
   }, [conversationsFromRedux, channelFilter, searchQuery]);

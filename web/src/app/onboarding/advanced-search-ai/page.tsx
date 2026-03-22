@@ -455,6 +455,9 @@ export default function AdvancedSearchAIPage() {
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
 
+    // Premium (Sales Navigator) search toggle
+    const [useSalesNav, setUseSalesNav] = useState(false);
+
     // Inbound CSV upload state
     const [inboundMode, setInboundMode] = useState(false);
     const [inboundLeads, setInboundLeads] = useState<ParsedInboundLead[]>([]);
@@ -1407,7 +1410,21 @@ export default function AdvancedSearchAIPage() {
                     query: searchQuery,
                     count: leadCount,
                     targeting: ext || undefined,
-                    icp_description: icpDesc
+                    targeting_filters: targeting && (
+                        targeting.decision_maker_nationality?.length ||
+                        targeting.decision_maker_experience_level?.length ||
+                        targeting.decision_maker_skills?.length ||
+                        targeting.decision_maker_education?.length ||
+                        targeting.company_size?.length
+                    ) ? {
+                        nationality: targeting.decision_maker_nationality,
+                        experience_level: targeting.decision_maker_experience_level,
+                        skills: targeting.decision_maker_skills,
+                        education: targeting.decision_maker_education,
+                        company_size: targeting.company_size,
+                    } : undefined,
+                    icp_description: icpDesc,
+                    useSalesNav,
                 });
 
                 // Extract and set activities from response
@@ -1748,8 +1765,22 @@ export default function AdvancedSearchAIPage() {
                 query: lastSearchQuery,
                 count: leadCount,
                 targeting: lastTargeting || undefined,
+                targeting_filters: targeting && (
+                    targeting.decision_maker_nationality?.length ||
+                    targeting.decision_maker_experience_level?.length ||
+                    targeting.decision_maker_skills?.length ||
+                    targeting.decision_maker_education?.length ||
+                    targeting.company_size?.length
+                ) ? {
+                    nationality: targeting.decision_maker_nationality,
+                    experience_level: targeting.decision_maker_experience_level,
+                    skills: targeting.decision_maker_skills,
+                    education: targeting.decision_maker_education,
+                    company_size: targeting.company_size,
+                } : undefined,
                 icp_description: icpDesc,
                 filters: { cursor: searchCursor },
+                useSalesNav,
             };
 
             setIsSearching(true);
@@ -2085,6 +2116,8 @@ export default function AdvancedSearchAIPage() {
                                 pendingContact={pendingContact}
                                 inboundMode={inboundMode}
                                 inboundLeads={inboundLeads}
+                                inboundLeadIds={inboundLeadIds}
+                                directContactLeadIds={directContactLeadIds}
                             />
                         </div>
                         )}
@@ -2154,10 +2187,26 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                     )}
                                 </div>
-                                <span className="adv-model-label">
-                                    AI Lead Finder
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
-                                </span>
+                                {/* Premium Search toggle — uses Serper X-Ray + Sales Navigator */}
+                                <button
+                                    onClick={() => setUseSalesNav(v => !v)}
+                                    title={useSalesNav ? 'Premium Search ON — Google X-Ray + Sales Navigator (1 credit/search)' : 'Enable Premium Search: Google X-Ray + Sales Navigator (1 credit/search)'}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '4px',
+                                        padding: '3px 8px', borderRadius: '12px', border: 'none',
+                                        cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                                        transition: 'all 0.15s',
+                                        background: useSalesNav ? '#0a66c2' : '#f1f5f9',
+                                        color: useSalesNav ? '#fff' : '#64748b',
+                                        boxShadow: useSalesNav ? '0 1px 4px rgba(10,102,194,.35)' : 'none',
+                                    }}
+                                >
+                                    {/* Star icon for Premium */}
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    </svg>
+                                    {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
+                                </button>
                                 <button className="adv-send-circle adv-send-sm" disabled={!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)} onClick={onChatSend}
                                     style={{ background: !input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) ? '#e5e7eb' : '#172560', boxShadow: !input.trim() || busy ? 'none' : '0 2px 8px rgba(23,37,96,.3)' }}>
                                     {busy ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
@@ -3213,7 +3262,7 @@ function CheckpointFormInline({
     emailFromAddress, setEmailFromAddress,
     emailProvider, setEmailProvider,
     waBody, setWaBody, waFromNumber, setWaFromNumber, waGenLoading, setWaGenLoading,
-    pendingContact, inboundMode, inboundLeads,
+    pendingContact, inboundMode, inboundLeads, inboundLeadIds, directContactLeadIds,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -3250,6 +3299,8 @@ function CheckpointFormInline({
     pendingContact?: any; // directly-added contact (phone/email, not LinkedIn search)
     inboundMode: boolean;
     inboundLeads: ParsedInboundLead[];
+    inboundLeadIds: string[];       // Real UUIDs from leads table (CSV/image uploads)
+    directContactLeadIds: string[]; // Real UUIDs for chat-entered direct contacts
 }) {
     const totalSteps = CP_QUESTIONS.length;
 
@@ -5277,6 +5328,18 @@ function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string)
     if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
     if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
     if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
+
+    // Warn when only a first name is detected alongside a company — single-word names
+    // give poor results because Apollo/Unipile can't uniquely identify the person.
+    const isFirstNameOnly =
+        intent.keywords?.length === 1 &&
+        !intent.keywords[0].includes(' ') &&
+        (intent.company_names?.length ?? 0) > 0 &&
+        !intent.job_titles?.length;
+    if (isFirstNameOnly) {
+        p.push(`\n⚠️ **Tip:** Only a first name was detected ("${intent.keywords![0]}"). Providing the **full name** (e.g. "${intent.keywords![0]} LastName") will significantly improve results when searching for a specific person.`);
+    }
+
     p.push('\n**Does this look right?** Tap ✅ to search, or tell me what to change.');
     return p.join('\n');
 }
