@@ -147,6 +147,23 @@ export async function pauseCampaign(campaignId: string): Promise<void> {
 export async function stopCampaign(campaignId: string): Promise<void> {
   await apiClient.post(`/api/campaigns/${campaignId}/stop`, {});
 }
+
+/**
+ * Resume a paused or stopped campaign from the last completed step.
+ * Keeps campaign_analytics intact so already-finished steps are not re-executed.
+ * Resets any stopped leads back to pending and re-triggers processing.
+ */
+export async function resumeCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/resume`, {});
+}
+
+/**
+ * Restart a campaign from scratch.
+ * Resets all leads to pending, clears analytics/activity history, and re-runs.
+ */
+export async function restartCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/restart`, {});
+}
 // ====================
 // Analytics & Leads Functions
 // ====================

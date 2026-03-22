@@ -4,7 +4,7 @@ import { Plus, RadioTower, Gauge, Zap, Trophy, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/app-toaster';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { deleteCampaign, pauseCampaign, stopCampaign, useCampaigns, useCampaignStats, type Campaign } from '@lad/frontend-features/campaigns';
+import { deleteCampaign, pauseCampaign, stopCampaign, resumeCampaign, restartCampaign, useCampaigns, useCampaignStats, type Campaign } from '@lad/frontend-features/campaigns';
 import CampaignStatsCards from '@/components/campaigns/CampaignStatsCards';
 import CampaignsTable from '@/components/campaigns/CampaignsTable';
 import CampaignActionsMenu from '@/components/campaigns/CampaignActionsMenu';
@@ -97,6 +97,27 @@ export default function CampaignsListPage() {
       refetchCampaigns();
     } catch (error: any) {
       push({ variant: 'error', title: 'Error', description: error.message || 'Failed to stop campaign' });
+    }
+    handleMenuClose();
+  };
+  const handleResumeCampaign = async (campaignId: string) => {
+    try {
+      await resumeCampaign(campaignId);
+      push({ variant: 'success', title: 'Success', description: 'Campaign resumed from last step' });
+      refetchCampaigns();
+    } catch (error: any) {
+      push({ variant: 'error', title: 'Error', description: error.message || 'Failed to resume campaign' });
+    }
+    handleMenuClose();
+  };
+  const handleRestartCampaign = async (campaignId: string) => {
+    if (!window.confirm('Restart this campaign? All execution history will be cleared and every lead will be re-processed from step 1.')) return;
+    try {
+      await restartCampaign(campaignId);
+      push({ variant: 'success', title: 'Success', description: 'Campaign restarted successfully' });
+      refetchCampaigns();
+    } catch (error: any) {
+      push({ variant: 'error', title: 'Error', description: error.message || 'Failed to restart campaign' });
     }
     handleMenuClose();
   };
@@ -331,6 +352,8 @@ export default function CampaignsListPage() {
         onStart={handleStartCampaign}
         onPause={handlePauseCampaign}
         onStop={handleStopCampaign}
+        onResume={handleResumeCampaign}
+        onRestart={handleRestartCampaign}
         onDelete={handleDeleteCampaign}
       />
       {/* Create Campaign Dialog */}

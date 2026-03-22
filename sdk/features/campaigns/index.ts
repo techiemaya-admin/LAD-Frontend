@@ -30,6 +30,8 @@ export {
   startCampaign,
   pauseCampaign,
   stopCampaign,
+  resumeCampaign,
+  restartCampaign,
   getCampaignAnalytics,
   getCampaignLeads,
   getLeadProfileSummary,

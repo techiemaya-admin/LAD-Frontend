@@ -514,7 +514,14 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         <div className="px-4 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
           <p className="text-xs font-semibold text-[#64748B] mb-3 uppercase tracking-wide">Campaign Workflow</p>
           <div className="bg-white rounded-lg p-4 border border-[#E2E8F0]">
-            <StatusStepper currentStep={1} steps={workflowSteps} />
+            <StatusStepper
+              currentStep={
+                groupedLeads.length > 0
+                  ? Math.max(...groupedLeads.map((lead) => calculateCurrentStep(lead)))
+                  : 1
+              }
+              steps={workflowSteps}
+            />
           </div>
         </div>
       )}
@@ -653,9 +660,34 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                                     {isDone ? '✓' : step.id}
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs">
-                                  <p>{step.label}</p>
-                                  <p className="text-gray-400">{isDone ? '✓ Completed' : isActive ? '◆ In Progress' : 'Pending'}</p>
+                                <TooltipContent side="top" className="text-xs max-w-[220px]">
+                                  <p className="font-medium mb-0.5">{step.label}</p>
+                                  {step.type === 'linkedin_connect' ? (
+                                    isDone ? (
+                                      lead.connectionSentWithMessage
+                                        ? <p className="text-green-500">✓ Sent with message</p>
+                                        : <p className="text-amber-500">✓ Sent without message — LinkedIn daily connection limit reached</p>
+                                    ) : lead.connectionStatus === 'PAUSED' ? (
+                                      <p className="text-amber-500">
+                                        ⏸ Paused —{' '}
+                                        {lead.pauseReason === 'DAILY_LIMIT'
+                                          ? 'Daily limit reached'
+                                          : lead.pauseReason === 'WEEKLY_LIMIT'
+                                          ? 'Weekly limit reached'
+                                          : 'Rate limit reached'}
+                                      </p>
+                                    ) : lead.connectionStatus === 'FAILED' ? (
+                                      <p className="text-red-400">
+                                        ✗ Failed{lead.errorMessage ? ` — ${lead.errorMessage.slice(0, 80)}` : ''}
+                                      </p>
+                                    ) : isActive ? (
+                                      <p className="text-blue-400">◆ Sending connection request…</p>
+                                    ) : (
+                                      <p className="text-gray-400">Pending</p>
+                                    )
+                                  ) : (
+                                    <p className="text-gray-400">{isDone ? '✓ Completed' : isActive ? '◆ In Progress' : 'Pending'}</p>
+                                  )}
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
