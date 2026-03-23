@@ -4029,9 +4029,11 @@ function CheckpointFormInline({
             });
 
             // For direct contacts (phone/email only): include ALL leads (not just thumbs-up)
-            // For LinkedIn search campaigns: only include user-approved "good match" leads
+            // For LinkedIn search campaigns: include all leads except explicitly thumbs-down'd ones.
+            // Previously required explicit thumbs-up (=== 'good') which meant zero leads if user
+            // never clicked thumbs-up — leads were lost. Now we only exclude rejected leads.
             const goodMatchLeads = leads
-                .filter(l => leadFeedback[l.id] === 'good')
+                .filter(l => leadFeedback[l.id] !== 'bad')
                 .map(l => mapLead(l, 'user_good_match'));
 
             const directContactLeads = isDirectContact
