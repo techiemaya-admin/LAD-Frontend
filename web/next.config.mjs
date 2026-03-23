@@ -61,6 +61,33 @@ const nextConfig = {
     },
   },
 
+  /**
+   * Proxy OAuth callback routes to the backend.
+   *
+   * Google / Microsoft redirect the browser back to the frontend domain
+   * (web.mrlads.com/api/social-integration/email/*/callback) because that
+   * URL is registered as the authorized redirect URI in Google Cloud Console /
+   * Azure Portal.  The actual handler lives on the backend, so we transparently
+   * forward the request — including all query params (code, state, etc.) —
+   * to the backend.  The backend then redirects the user back to the frontend
+   * settings page upon success.
+   */
+  async rewrites() {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      'https://lad-backend-develop-160078175457.us-central1.run.app';
+    return [
+      {
+        source: '/api/social-integration/email/google/callback',
+        destination: `${backendUrl}/api/social-integration/email/google/callback`,
+      },
+      {
+        source: '/api/social-integration/email/microsoft/callback',
+        destination: `${backendUrl}/api/social-integration/email/microsoft/callback`,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

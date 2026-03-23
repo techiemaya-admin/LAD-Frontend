@@ -324,6 +324,8 @@ export default function AdvancedSearchAIPage() {
     const [busy, setBusy] = useState(false);
     const [targeting, setTargeting] = useState<LeadTargeting | null>(null);
     const [leads, setLeads] = useState<LeadProfile[]>([]);
+    const [filteredLeads, setFilteredLeads] = useState<LeadProfile[]>([]);   // below ICP threshold
+    const [showFilteredLeads, setShowFilteredLeads] = useState(false);        // toggle "Show all"
     const [showPanel, setShowPanel] = useState<false | 'leads' | 'workflow'>(false);
     const setWorkflowPreview = useOnboardingStore(s => s.setWorkflowPreview);
     // Activity tracking for SearchingThinker
@@ -601,6 +603,7 @@ export default function AdvancedSearchAIPage() {
         setLeadCount(10); setSearchPage(1); setTotalResults(0);
         setSearchCursor(null); setLastSearchQuery(''); setLastIcpDescription('');
         setLastTargeting(null); setLoadingMore(false);
+        setFilteredLeads([]); setShowFilteredLeads(false);
         setWebSearchEnabled(false);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1481,6 +1484,32 @@ export default function AdvancedSearchAIPage() {
                         }));
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
+                    }
+                    // Capture below-threshold leads returned from ICP filtering
+                    if (Array.isArray(d.filtered_leads) && d.filtered_leads.length > 0) {
+                        const fl = d.filtered_leads.map((item: any, idx: number) => ({
+                            id: item.id || item.provider_id || `fl-${idx}`,
+                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (item.profile_url ? 'LinkedIn User' : 'Contact'),
+                            first_name: item.first_name || '',
+                            last_name: item.last_name || '',
+                            headline: item.headline || '',
+                            location: item.location || '',
+                            current_company: item.current_company || '',
+                            profile_url: item.profile_url || '',
+                            profile_picture: item.profile_picture || '',
+                            industry: item.industry || '',
+                            network_distance: item.network_distance || '',
+                            locked: false,
+                            icp_score: item.icp_score != null ? item.icp_score : undefined,
+                            match_level: item.match_level || undefined,
+                            icp_reasoning: item.icp_reasoning || undefined,
+                            enriched_profile: item.enriched_profile || undefined,
+                        }));
+                        setFilteredLeads(fl);
+                        setShowFilteredLeads(false); // always collapse on new search
+                    } else {
+                        setFilteredLeads([]);
+                        setShowFilteredLeads(false);
                     }
                 }
             } catch (e) {
@@ -2471,6 +2500,109 @@ export default function AdvancedSearchAIPage() {
                                 ))}
                             </div>
                             )} {/* end !inboundMode leads list */}
+
+                            {/* ── Filtered-out leads (below ICP threshold) ── */}
+                            {!inboundMode && filteredLeads.length > 0 && (
+                                <div style={{ marginTop: '12px' }}>
+                                    {/* Banner */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '8px 12px', borderRadius: '8px',
+                                        background: '#fefce8', border: '1px solid #fde68a',
+                                    }}>
+                                        <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                            Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+                                        </span>
+                                        <button
+                                            onClick={() => setShowFilteredLeads(v => !v)}
+                                            style={{
+                                                fontSize: '12px', fontWeight: 600, color: '#b45309',
+                                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px',
+                                                borderRadius: '4px',
+                                            }}
+                                        >
+                                            {showFilteredLeads ? 'Hide' : 'Show all'}
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transform: showFilteredLeads ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {/* Collapsible lead cards */}
+                                    {showFilteredLeads && (
+                                        <div className="adv-leads-list" style={{ marginTop: '6px', opacity: 0.85 }}>
+                                            {filteredLeads.map((lead, i) => (
+                                                <div key={i} className="adv-lead-card" style={{ background: '#fafafa', border: '1px solid #f3f4f6' }}>
+                                                    {/* Avatar */}
+                                                    {lead.profile_picture ? (
+                                                        <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" style={{ filter: 'grayscale(30%)' }} />
+                                                    ) : (
+                                                        <div className="adv-lead-avatar" style={{ background: '#d1d5db', color: '#6b7280' }}>
+                                                            {(lead.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Info */}
+                                                    <div className="adv-lead-info">
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer"
+                                                               className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }}>
+                                                                {lead.name}
+                                                            </a>
+                                                            {lead.icp_score !== undefined && (
+                                                                <span style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                                    padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                                                                    background: '#fee2e2', color: '#991b1b',
+                                                                }}>
+                                                                    🔴 {lead.icp_score}%
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="adv-lead-title" style={{ color: '#9ca3af' }}>
+                                                            {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : 'Contact')}
+                                                        </div>
+                                                        {lead.location && <div className="adv-lead-location" style={{ color: '#9ca3af' }}>📍 {lead.location}</div>}
+                                                        {lead.icp_reasoning && (
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
+                                                                {lead.icp_reasoning}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Feedback buttons */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                                        <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>Good fit?</div>
+                                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                                            <button
+                                                                title="Actually a good fit"
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
+                                                                style={{
+                                                                    border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : '#f3f4f6',
+                                                                    borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >👍</button>
+                                                            <button
+                                                                title="Confirmed bad fit"
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                                style={{
+                                                                    border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
+                                                                    borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >👎</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {/* ── end filtered-out leads ── */}
 
                             {!inboundMode && leads.some(l => l.locked) && (
                                 <div className="adv-panel-footer" style={{ display: 'flex', justifyContent: 'center', padding: '16px 0', borderTop: '0px solid #e5e7eb', marginTop: '8px' }}>
@@ -5054,6 +5186,12 @@ function TargetingFormInline({
     const q = TG_QUESTIONS[step];
     const [searchQuery, setSearchQuery] = React.useState('');
 
+    // Local raw text for the skills textarea — avoids trim-on-every-keystroke bug
+    // that prevented typing multi-word skills like "Gas Detector" or "Cloud Architecture"
+    const [skillsRaw, setSkillsRaw] = React.useState(() => skills.join(', '));
+    // Sync skillsRaw when the component re-opens with pre-existing skills
+    React.useEffect(() => { setSkillsRaw(skills.join(', ')); }, [step === 5]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const baseBox: React.CSSProperties = {
         background: '#fff', border: '1px solid #e0eaf5', borderRadius: '16px', padding: '24px',
         maxWidth: '520px', boxShadow: '0 4px 20px rgba(23,37,96,0.06)', animation: 'fadeUp 0.3s ease both',
@@ -5207,13 +5345,18 @@ function TargetingFormInline({
                     {step === 5 && (
                         <div>
                             <textarea
-                                placeholder="Enter skills separated by commas (e.g., AI/ML, Cloud Architecture, DevOps)"
-                                value={skills.join(', ')} onChange={e => setSkills(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                placeholder="Enter skills separated by commas (e.g., Gas Detector, Cloud Architecture, DevOps)"
+                                value={skillsRaw}
+                                onChange={e => setSkillsRaw(e.target.value)}
+                                onBlur={e => setSkills(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                                 style={{
                                     width: '100%', minHeight: '100px', padding: '12px', border: '1px solid #e5e7eb',
                                     borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical'
                                 }}
                             />
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+                                Separate multiple skills with commas — e.g. <em>Gas Detector, HVAC Controls, BMS</em>
+                            </div>
                         </div>
                     )}
 
