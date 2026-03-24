@@ -58,13 +58,13 @@ export const DashboardHeader: React.FC = () => {
     setEditMode(false);
   };
   return (
-    <div className="flex items-center justify-between mb-5 mt-10">
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 mt-6 sm:mt-10">
 
-      <div className="flex items-center gap-3">
-        <TvMinimalPlay className="w-8 h-8 text-[#1E293B] " color="#0b1957" />
-        <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">Smart Overview</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <TvMinimalPlay className="w-6 h-6 sm:w-8 sm:h-8 text-[#1E293B] shrink-0" color="#0b1957" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-4xl font-bold text-[#1E293B] truncate">Smart Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {currentLayout ? currentLayout.name : 'Default Layout'}
             {isEditMode && (
               <span className="ml-2 text-accent">• Editing</span>
@@ -72,7 +72,7 @@ export const DashboardHeader: React.FC = () => {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {isEditMode ? (
           <>
             {/* Add Widget Button */}
