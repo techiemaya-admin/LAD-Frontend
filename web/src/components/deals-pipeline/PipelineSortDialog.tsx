@@ -28,7 +28,7 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
   };
   return (
     <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogTitle className="flex justify-between items-center">
           <span className="text-lg font-semibold text-primary">Sort Leads</span>
           <button
