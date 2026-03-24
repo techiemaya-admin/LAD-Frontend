@@ -1,6 +1,18 @@
 
 "use client";
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
+
+// Hook to detect window width client-side
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 import {
   DndContext,
   closestCenter,
@@ -82,6 +94,7 @@ const DAYS_RANGE = 30;
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadingChange }) => {
   const { layout, setLayout, isEditMode } = useDashboardStore();
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Data states
   // SDK Data
@@ -474,12 +487,12 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadi
     };
   };
 
-  // Get responsive grid style for mobile
+  // Get responsive grid style: on mobile stack as single column, on desktop use span
   const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
-    // On mobile (< 768px), ignore gridColumn span. On desktop, use it.
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobile) {
+      // Mobile: let Tailwind grid-cols-1 handle it, only set a reasonable min-height
       return {
-        minHeight: `${item.h * 80}px`,
+        minHeight: `${Math.min(item.h, 4) * 80}px`,
       };
     }
     return getGridStyle(item);
