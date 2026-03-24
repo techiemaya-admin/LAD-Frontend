@@ -115,6 +115,17 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'CRM',
   },
   {
+    id: 'mindbody',
+    name: 'MindBody',
+    description: 'Connect MindBody to automate trial class booking via WhatsApp AI.',
+    icon: (
+      <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
+    ),
+    iconBg: 'bg-teal-50',
+    category: 'CRM',
+    comingSoon: false,
+  },
+  {
     id: 'slack',
     name: 'Slack',
     description: 'Receive real-time business updates and notifications in your workspace.',
@@ -229,6 +240,24 @@ export const IntegrationsSettings: React.FC = () => {
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
 
+  // MindBody modal state
+  const [showMindBodyModal, setShowMindBodyModal] = useState(false);
+  const [mindBodyForm, setMindBodyForm] = useState({
+    site_id: '',
+    display_name: '',
+    username: '',
+    api_key: '',
+    password: '',
+    target_classes_str: '',
+  });
+  const [mindBodyConnecting, setMindBodyConnecting] = useState(false);
+  const [mindBodyError, setMindBodyError] = useState<string | null>(null);
+  const [mindBodyStatusData, setMindBodyStatusData] = useState<{
+    site_id: string | null;
+    display_name: string | null;
+    target_classes: string[];
+  } | null>(null);
+
   // Helper to update a single integration's status
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
@@ -262,22 +291,22 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
     };
 
-    // Google
+    // Google — checks email OAuth status (same flow as Connect with Google button)
     const checkGoogle = async () => {
       setStatus('google', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
         if (!res.ok) { setStatus('google', 'disconnected'); return; }
         const data = await res.json();
         setStatus('google', data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('google', 'disconnected'); }
     };
 
-    // Microsoft
+    // Microsoft — checks email OAuth status (same flow as Connect with Microsoft button)
     const checkMicrosoft = async () => {
       setStatus('microsoft', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
         if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
         const data = await res.json();
         setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
@@ -310,13 +339,60 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('gohighlevel', 'disconnected'); }
     };
 
+    // MindBody
+    const checkMindBody = async () => {
+      try {
+        setStatus('mindbody', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
+        const data = await r.json();
+        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setMindBodyStatusData({
+            site_id: data.site_id ?? null,
+            display_name: data.display_name ?? null,
+            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+          });
+        }
+      } catch {
+        setStatus('mindbody', 'disconnected');
+      }
+    };
+
     checkWaPersonal();
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
     checkLinkedIn();
     checkGHL();
+    checkMindBody();
   }, [tenantId, setStatus]);
+
+  // Detect OAuth redirect-back (?google=connected or ?microsoft=connected)
+  // When the OAuth flow completes, the backend redirects to /settings?google=connected.
+  // At that point activeView is reset to 'grid' so GoogleAuthIntegration is not mounted —
+  // we must refresh the grid status here instead.
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleDone = urlParams.get('google');
+    const microsoftDone = urlParams.get('microsoft');
+
+    if (googleDone === 'connected' || googleDone === 'error') {
+      // Re-check Google status and clean up URL
+      fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => setStatus('google', data?.connected ? 'connected' : 'disconnected'))
+        .catch(() => setStatus('google', 'disconnected'));
+      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
+    }
+
+    if (microsoftDone === 'connected' || microsoftDone === 'error') {
+      fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => setStatus('microsoft', data?.connected ? 'connected' : 'disconnected'))
+        .catch(() => setStatus('microsoft', 'disconnected'));
+      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
+    }
+  }, [setStatus]);
 
   // Re-check all statuses
   const refreshStatuses = useCallback(() => {
@@ -347,7 +423,7 @@ export const IntegrationsSettings: React.FC = () => {
       // Google
       setStatus('google', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
         if (!res.ok) { setStatus('google', 'disconnected'); return; }
         const data = await res.json();
         setStatus('google', data?.connected ? 'connected' : 'disconnected');
@@ -356,7 +432,7 @@ export const IntegrationsSettings: React.FC = () => {
       // Microsoft
       setStatus('microsoft', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
         if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
         const data = await res.json();
         setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
@@ -383,6 +459,23 @@ export const IntegrationsSettings: React.FC = () => {
         const data = await res.json();
         setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('gohighlevel', 'disconnected'); }
+
+      // MindBody
+      try {
+        setStatus('mindbody', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
+        const data = await r.json();
+        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setMindBodyStatusData({
+            site_id: data.site_id ?? null,
+            display_name: data.display_name ?? null,
+            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+          });
+        }
+      } catch {
+        setStatus('mindbody', 'disconnected');
+      }
     };
     checkAll();
   }, [setStatus]);
@@ -418,6 +511,76 @@ export const IntegrationsSettings: React.FC = () => {
         {activeView === 'slack' && (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
             Slack integration coming soon.
+          </div>
+        )}
+        {activeView === 'mindbody' && (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+                <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-base text-foreground">MindBody</h3>
+                <p className="text-xs text-muted-foreground">Automate trial class booking via WhatsApp AI</p>
+              </div>
+            </div>
+
+            {statusMap['mindbody'] === 'connected' ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                  {mindBodyStatusData?.display_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Display Name</span>
+                      <span className="font-medium text-foreground">{mindBodyStatusData.display_name}</span>
+                    </div>
+                  )}
+                  {mindBodyStatusData?.site_id && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Site ID</span>
+                      <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
+                    </div>
+                  )}
+                  {mindBodyStatusData?.target_classes && mindBodyStatusData.target_classes.length > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
+                      <span className="font-medium text-foreground text-right">
+                        {mindBodyStatusData.target_classes.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetchWithTenant('/api/social-integration/mindbody/disconnect', { method: 'POST' });
+                      setStatus('mindbody', 'disconnected');
+                      setMindBodyStatusData(null);
+                    } catch {
+                      // silently ignore; user can retry
+                    }
+                  }}
+                  className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
+                >
+                  Disconnect MindBody
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Connect your MindBody account to enable automated trial class booking workflows through the WhatsApp AI agent.
+                </p>
+                <button
+                  onClick={() => {
+                    setMindBodyError(null);
+                    setShowMindBodyModal(true);
+                  }}
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Connect to MindBody
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -523,6 +686,166 @@ export const IntegrationsSettings: React.FC = () => {
       {filtered.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">
           No integrations found matching &ldquo;{searchQuery}&rdquo;
+        </div>
+      )}
+
+      {/* MindBody Connect Modal */}
+      {showMindBodyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-xl p-6 space-y-5 mx-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center">
+                <span className="text-xl leading-none select-none" aria-label="MindBody">🧘</span>
+              </div>
+              <h3 className="font-semibold text-base text-foreground">Connect MindBody</h3>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setMindBodyConnecting(true);
+                setMindBodyError(null);
+                try {
+                  const payload = {
+                    site_id: mindBodyForm.site_id,
+                    display_name: mindBodyForm.display_name,
+                    username: mindBodyForm.username,
+                    api_key: mindBodyForm.api_key,
+                    password: mindBodyForm.password,
+                    target_classes: mindBodyForm.target_classes_str
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  };
+                  const r = await fetchWithTenant('/api/social-integration/mindbody/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  const data = await r.json();
+                  if (data?.connected) {
+                    setStatus('mindbody', 'connected');
+                    setMindBodyStatusData({
+                      site_id: data.site_id ?? null,
+                      display_name: data.display_name ?? null,
+                      target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+                    });
+                    setShowMindBodyModal(false);
+                    setMindBodyForm({
+                      site_id: '',
+                      display_name: '',
+                      username: '',
+                      api_key: '',
+                      password: '',
+                      target_classes_str: '',
+                    });
+                  } else {
+                    setMindBodyError(data?.error || 'Connection failed. Please check your credentials.');
+                  }
+                } catch {
+                  setMindBodyError('Failed to connect. Please check your credentials and try again.');
+                } finally {
+                  setMindBodyConnecting(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Site ID <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. -99"
+                  value={mindBodyForm.site_id}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, site_id: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Display Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Yoga Studio"
+                  value={mindBodyForm.display_name}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, display_name: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Username <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="MindBody username"
+                  value={mindBodyForm.username}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, username: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">API Key <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="MindBody API key"
+                  value={mindBodyForm.api_key}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, api_key: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Password <span className="text-destructive">*</span></label>
+                <input
+                  type="password"
+                  required
+                  placeholder="MindBody password"
+                  value={mindBodyForm.password}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, password: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Target Classes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Yoga, Pilates, Spin (comma-separated)"
+                  value={mindBodyForm.target_classes_str}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, target_classes_str: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <p className="text-[11px] text-muted-foreground">Comma-separated list of class names to offer for trial bookings.</p>
+              </div>
+
+              {mindBodyError && (
+                <p className="text-sm text-destructive">{mindBodyError}</p>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={mindBodyConnecting}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {mindBodyConnecting ? 'Connecting...' : 'Connect'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMindBodyModal(false);
+                    setMindBodyError(null);
+                  }}
+                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

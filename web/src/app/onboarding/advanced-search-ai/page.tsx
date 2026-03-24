@@ -1408,9 +1408,12 @@ export default function AdvancedSearchAIPage() {
                 if (isTriggerOriginal && confirmedForSearch.intent) {
                     // Trigger word confirmed — use the pre-parsed intent targeting directly.
                     // Build a readable search query from the intent so the backend can score it properly.
+                    // Include company_names and keywords so person+company searches are not lost.
                     ext = confirmedForSearch.intent;
                     searchQuery = [
+                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
                         ...(ext.job_titles || []),
+                        ...(ext.company_names || []),
                         ...(ext.industries || []),
                         ...(ext.locations || []),
                     ].filter(Boolean).join(' ') || 'leads';
@@ -1422,7 +1425,13 @@ export default function AdvancedSearchAIPage() {
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
-                    ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
+                    ? [
+                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
+                        ...(ext.job_titles || []),
+                        ...(ext.company_names || []),
+                        ...(ext.industries || []),
+                        ...(ext.locations || []),
+                      ].filter(Boolean).join(' ')
                     : text;
             }
 
