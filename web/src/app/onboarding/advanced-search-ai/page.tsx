@@ -456,6 +456,9 @@ export default function AdvancedSearchAIPage() {
     const [convId, setConvId] = useState<string>(() => crypto.randomUUID());
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+    // Rolling conversation summary — WhatsApp-style bullet list of what was discussed.
+    // Sent to the backend each turn so the AI retains context beyond the short history window.
+    const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
 
@@ -598,6 +601,7 @@ export default function AdvancedSearchAIPage() {
         // Conversation meta
         setConvId(crypto.randomUUID()); setMsgCount(0); setPendingIntent(null);
         setPendingSearchConfirmation(null); setPendingContact(null);
+        setConversationSummary('');
         // Inbound / upload
         setInboundMode(false); setInboundLeads([]); setInboundLeadIds([]); setDirectContactLeadIds([]);
         // Search / leads state
@@ -1276,6 +1280,7 @@ export default function AdvancedSearchAIPage() {
                         history: historySnapshot,
                         currentTargeting: targeting,
                         pendingIntent: (pendingIntent as string | null),
+                        conversationSummary,
                     });
                     if (chatD) {
                         aiResponseText = chatD.response || '';
@@ -1284,6 +1289,10 @@ export default function AdvancedSearchAIPage() {
                         setPendingIntent(chatD.pendingIntent || null);
                         if (Array.isArray(chatD.options) && chatD.options.length > 0) {
                             aiOpts = chatD.options;
+                        }
+                        // Append summary bullet to the rolling conversation summary
+                        if (chatD.summaryUpdate) {
+                            setConversationSummary(prev => prev ? `${prev}\n${chatD.summaryUpdate}` : chatD.summaryUpdate);
                         }
                     }
                 } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
@@ -1295,13 +1304,19 @@ export default function AdvancedSearchAIPage() {
 
                 // Smart search detection: if the user explicitly asks to find/search someone or something
                 // AND the query contains a specific entity (company, person name, location — not just vague intent)
+                // BUT NOT if the message is a meta-instruction about how to search
+                // e.g. "search for only 1 industry at a time" is a preference, not a search query
                 if (!shouldRunSearch && !isFirstMessage) {
                     const lowerText = text.toLowerCase();
                     const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
                     // Check if there's a specific entity (not just generic words like 'a specific company')
                     const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
-                    // Must have search intent AND NOT be vague to force search
-                    if (hasSearchIntent && !hasVagueTarget) {
+                    // Detect meta-instructions: user is giving a preference about HOW to search, not WHAT to search for
+                    // e.g. "search for only 1 industry at a time", "only show 5 results", "limit to Financial Services"
+                    const isMetaInstruction = /\b(only \d+|\d+ at a time|at a time|per (search|query|request)|from now on|limit (to|the)|max(imum)? \d+|no more than|don'?t (include|show|use)|please (don'?t|only|just)|how (do|should|can)|just (show|use|one|1)|one (industry|title|location|at))\b/i.test(lowerText)
+                        || /\b(refine|change|switch|update|modify|only|just|can you)\b.*(search|looking|criteria|results|industry|industries|title|location)/i.test(lowerText);
+                    // Must have search intent AND NOT be vague AND NOT be a meta-instruction to force search
+                    if (hasSearchIntent && !hasVagueTarget && !isMetaInstruction) {
                         shouldRunSearch = true;
                         // Clear old targeting so Gemini parses this fresh query from scratch
                         // e.g. previous search was "founders at X", now user says "find all people at X"
@@ -1379,13 +1394,31 @@ export default function AdvancedSearchAIPage() {
             let searchTotal = 0;
             let icpWasApplied = false;
 
-            // When the user confirmed a search preview, always send the ORIGINAL query to the backend
-            // and let the server's Gemini re-parse it with the improved prompt (fixes "from Company" parsing).
-            // The pre-parsed preview intent shown to the user is only for display — do not use it as the search input.
+            // Determine effective search query for confirmed searches.
+            // If the confirmed originalQuery was a trigger word ("yes", "ok", etc.) we must NOT
+            // send it to the backend — Gemini will parse "yes" as keywords: ["yes"] and corrupt
+            // the targeting state. Instead, use the pre-parsed intent targeting directly.
+            // For real query strings ("Find CTOs at SaaS startups in Dubai") we still re-parse
+            // via the backend for best accuracy (e.g. "from Company" parsing).
+            const CONFIRM_TRIGGER_RE = /^(yes|yeah|yep|sure|ok|okay|go|proceed|perfect|great|sounds good|find them?|find leads?|search|start|do it|go ahead)[\s.,!]*$/i;
             let searchQuery: string;
             if (confirmedForSearch) {
-                searchQuery = confirmedForSearch.originalQuery;
-                ext = null; // Clear the preview intent — let the backend parse the original query fresh
+                const isTriggerOriginal = CONFIRM_TRIGGER_RE.test(confirmedForSearch.originalQuery.trim())
+                    || confirmedForSearch.originalQuery.trim().length <= 12;
+                if (isTriggerOriginal && confirmedForSearch.intent) {
+                    // Trigger word confirmed — use the pre-parsed intent targeting directly.
+                    // Build a readable search query from the intent so the backend can score it properly.
+                    ext = confirmedForSearch.intent;
+                    searchQuery = [
+                        ...(ext.job_titles || []),
+                        ...(ext.industries || []),
+                        ...(ext.locations || []),
+                    ].filter(Boolean).join(' ') || 'leads';
+                } else {
+                    // Real query — send to backend for fresh re-parsing (fixes "from Company" parsing).
+                    searchQuery = confirmedForSearch.originalQuery;
+                    ext = null;
+                }
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
@@ -1395,8 +1428,8 @@ export default function AdvancedSearchAIPage() {
 
             try {
                 // Enhance ICP description with user feedback on previous leads
-                // When running from a confirmed preview, use the original query, not "yes"
-                const icpBase = confirmedForSearch ? confirmedForSearch.originalQuery : text;
+                // Use the effective searchQuery (never "yes") as the ICP base description
+                const icpBase = confirmedForSearch ? searchQuery : text;
                 let icpDesc = icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
@@ -1762,6 +1795,7 @@ export default function AdvancedSearchAIPage() {
         setMsgCount(0);
         setPendingIntent(null);
         setPendingSearchConfirmation(null);
+        setConversationSummary('');
         setSearchPage(1);
         setTotalResults(0);
         setSearchCursor(null);
