@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Agent, AgentFormData, AgentGender, DEFAULT_AGENT_FORM, Voice } from '@/types/agent';
 import { useAgentForm } from '@/hooks/useAgentForm';
 import { useToast } from '../../hooks/use-toast';
@@ -19,6 +19,7 @@ export function VoiceAgentSettings() {
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isLoadingAgent, setIsLoadingAgent] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
 
   const {
     formData,
@@ -204,6 +205,13 @@ export function VoiceAgentSettings() {
       if (!confirmed) return;
     }
     setSelectedAgentId(agentId);
+
+    // Scroll to form on mobile when an agent is selected or "Create New" is clicked
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   }, [isDirty]);
 
   // Handle save
@@ -381,7 +389,7 @@ export function VoiceAgentSettings() {
           </aside>
 
           {/* Main Content - Agent Form */}
-          <main>
+          <main ref={formRef}>
             {isLoadingAgent ? (
               <FormSkeleton />
             ) : (
