@@ -831,7 +831,7 @@ export default function CallLogsPage() {
           </p>
         </div>
         {selected.size > 0 && (
-          <div className="flex gap-2 items-center">
+          <div className="hidden sm:flex gap-2 items-center">
             {selectAllMode === 'all' && (
               <span className="text-sm text-primary font-medium mr-2">
                 All {totalRecords} calls selected
@@ -916,6 +916,9 @@ export default function CallLogsPage() {
         }}
         isLoading={isTableLoading}
         batchStats={batchStatsQuery.data}
+        onRetrySelected={retrySelectedCalls}
+        onEndSelected={endSelectedCalls}
+        failedCount={failedCallIds.length}
         // Backend pagination props
         currentPage={page}
         perPage={perPage}
