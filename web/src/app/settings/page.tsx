@@ -84,7 +84,7 @@ const SettingsPage: React.FC = () => {
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
   ];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Combined Header with Logo, Company Name, Renewal Date, and Tabs */}
       <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Top Section: Logo, Company Name, and Renewal */}
