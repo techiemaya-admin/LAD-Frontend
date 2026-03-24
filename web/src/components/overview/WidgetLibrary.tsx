@@ -3,7 +3,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -32,16 +32,16 @@ export const WidgetLibrary: React.FC = () => {
   };
   return (
     <Sheet open={isWidgetLibraryOpen} onOpenChange={setWidgetLibraryOpen}>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-hidden flex flex-col">
+      <SheetContent className="p-4 sm:p-6 overflow-hidden flex flex-col">
         <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle className="text-xl font-display">Widget Library</SheetTitle>
-          <p className="text-sm text-muted-foreground">
+          <SheetTitle className="text-lg sm:text-xl font-display">Widget Library</SheetTitle>
+          <SheetDescription>
             Add widgets to customize your dashboard
-          </p>
+          </SheetDescription>
         </SheetHeader>
         {/* Category Filter */}
-        <div className="py-4 border-b border-border">
-          <div className="flex flex-wrap gap-2">
+        <div className="py-3 sm:py-4 border-b border-border">
+          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
             <Button
               size="sm"
               variant={selectedCategory === 'all' ? 'default' : 'outline'}

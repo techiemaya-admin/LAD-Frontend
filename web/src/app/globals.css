@@ -508,9 +508,15 @@ body {
 }
 
 /* Dashboard Grid Responsive */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .dashboard-grid {
     @apply px-0;
+  }
+
+  /* Force all grid children to single column on mobile,
+     overriding any inline gridColumn span styles */
+  .dashboard-grid > div > div > div {
+    grid-column: span 1 !important;
   }
 }
 
