@@ -124,6 +124,7 @@ export default function PipelineStatsCards({
         renderValue={() => <AnimatedNumber value={totalLeads || 0} />}
         icon={<BookUser className="w-6 h-6 text-blue-700" />}
         bgColor="bg-blue-100"
+        onClick={onCardClick ? () => onCardClick('total') : undefined}
         isSelected={selectedCard === 'total'}
       />
 

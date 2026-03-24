@@ -147,7 +147,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogTitle>Edit Lead</DialogTitle>
-      <DialogContent className="p-6 pt-2">
+      <DialogContent className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
