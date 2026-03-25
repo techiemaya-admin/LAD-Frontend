@@ -248,8 +248,44 @@ export const IntegrationsSettings: React.FC = () => {
     username: '',
     api_key: '',
     password: '',
-    target_classes_str: '',
   });
+  // Target class selection
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [fetchingClasses, setFetchingClasses] = useState(false);
+  const [classFetchError, setClassFetchError] = useState<string | null>(null);
+
+  const fetchAvailableClasses = async () => {
+    setFetchingClasses(true);
+    setClassFetchError(null);
+    try {
+      const r = await fetchWithTenant('/api/social-integration/mindbody/preview-classes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site_id: mindBodyForm.site_id, api_key: mindBodyForm.api_key }),
+      });
+      const data = await r.json();
+      if (Array.isArray(data?.uniqueNames) && data.uniqueNames.length > 0) {
+        setAvailableClasses(data.uniqueNames);
+      } else {
+        setAvailableClasses([]);
+        setClassFetchError('No classes found in the next 7 days. Verify your Site ID and API Key.');
+      }
+    } catch {
+      setClassFetchError('Failed to fetch classes. Please verify your credentials.');
+    } finally {
+      setFetchingClasses(false);
+    }
+  };
+
+  const mindBodyFormReset = () => {
+    setMindBodyForm({ site_id: '', display_name: '', username: '', api_key: '', password: '' });
+    setAvailableClasses([]);
+    setSelectedClasses([]);
+    setClassFetchError(null);
+    setMindBodyError(null);
+  };
+
   const [mindBodyConnecting, setMindBodyConnecting] = useState(false);
   const [mindBodyError, setMindBodyError] = useState<string | null>(null);
   const [mindBodyStatusData, setMindBodyStatusData] = useState<{
@@ -257,6 +293,14 @@ export const IntegrationsSettings: React.FC = () => {
     display_name: string | null;
     target_classes: string[];
   } | null>(null);
+
+  // Edit target classes on the connected account (no re-entry of credentials needed)
+  const [editingClasses, setEditingClasses] = useState(false);
+  const [connectedAvailableClasses, setConnectedAvailableClasses] = useState<string[]>([]);
+  const [connectedSelectedClasses, setConnectedSelectedClasses] = useState<string[]>([]);
+  const [connectedFetchingClasses, setConnectedFetchingClasses] = useState(false);
+  const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
+  const [updatingClasses, setUpdatingClasses] = useState(false);
 
   // Helper to update a single integration's status
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
@@ -488,9 +532,10 @@ export const IntegrationsSettings: React.FC = () => {
     );
   }, [searchQuery]);
 
-  // Detail view for a specific integration
-  if (activeView !== 'grid') {
-    return (
+  // Single return — modal must be accessible from both detail and grid views
+  return (
+    <>
+    {activeView !== 'grid' ? (
       <div className="space-y-4">
         <button
           onClick={() => {
@@ -527,6 +572,7 @@ export const IntegrationsSettings: React.FC = () => {
 
             {statusMap['mindbody'] === 'connected' ? (
               <div className="space-y-4">
+                {/* Account info */}
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
                   {mindBodyStatusData?.display_name && (
                     <div className="flex justify-between">
@@ -540,21 +586,148 @@ export const IntegrationsSettings: React.FC = () => {
                       <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
                     </div>
                   )}
-                  {mindBodyStatusData?.target_classes && mindBodyStatusData.target_classes.length > 0 && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
-                      <span className="font-medium text-foreground text-right">
-                        {mindBodyStatusData.target_classes.join(', ')}
+                  {/* Target Classes row — always visible with Edit button */}
+                  <div className="flex justify-between items-start gap-4">
+                    <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="font-medium text-foreground text-right break-words">
+                        {mindBodyStatusData?.target_classes?.length
+                          ? mindBodyStatusData.target_classes.join(', ')
+                          : <span className="text-muted-foreground italic">None selected</span>}
                       </span>
+                      {!editingClasses && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setEditingClasses(true);
+                            setConnectedFetchingClasses(true);
+                            setConnectedClassFetchError(null);
+                            setConnectedSelectedClasses(mindBodyStatusData?.target_classes ?? []);
+                            try {
+                              const r = await fetchWithTenant('/api/social-integration/mindbody/classes');
+                              const data = await r.json();
+                              const names: string[] = Array.isArray(data?.classes)
+                                ? [...new Set((data.classes as { name: string }[]).map(c => c.name).filter(Boolean))].sort() as string[]
+                                : [];
+                              setConnectedAvailableClasses(names);
+                              if (!names.length) setConnectedClassFetchError('No classes found in the next 7 days.');
+                            } catch {
+                              setConnectedClassFetchError('Failed to load classes from MindBody.');
+                            } finally {
+                              setConnectedFetchingClasses(false);
+                            }
+                          }}
+                          className="text-[11px] font-medium text-primary hover:underline flex-shrink-0 mt-0.5"
+                        >
+                          Edit
+                        </button>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
+
+                {/* Inline class editor */}
+                {editingClasses && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">Select Target Classes</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingClasses(false);
+                          setConnectedAvailableClasses([]);
+                          setConnectedClassFetchError(null);
+                        }}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </div>
+
+                    {connectedFetchingClasses && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        Loading available classes…
+                      </div>
+                    )}
+
+                    {connectedClassFetchError && (
+                      <p className="text-xs text-destructive">{connectedClassFetchError}</p>
+                    )}
+
+                    {!connectedFetchingClasses && connectedAvailableClasses.length > 0 && (
+                      <div className="rounded-lg border border-border bg-background divide-y divide-border max-h-44 overflow-y-auto">
+                        {connectedAvailableClasses.map((cls) => (
+                          <label
+                            key={cls}
+                            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={connectedSelectedClasses.includes(cls)}
+                              onChange={(e) => {
+                                setConnectedSelectedClasses((prev) =>
+                                  e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
+                                );
+                              }}
+                              className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                            />
+                            <span className="text-sm text-foreground">{cls}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {connectedSelectedClasses.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        <span className="font-medium text-foreground">{connectedSelectedClasses.length}</span>{' '}
+                        class{connectedSelectedClasses.length !== 1 ? 'es' : ''} selected
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={updatingClasses || connectedFetchingClasses}
+                      onClick={async () => {
+                        setUpdatingClasses(true);
+                        setConnectedClassFetchError(null);
+                        try {
+                          const r = await fetchWithTenant('/api/social-integration/mindbody/target-classes', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ target_classes: connectedSelectedClasses }),
+                          });
+                          const data = await r.json();
+                          if (r.ok) {
+                            setMindBodyStatusData((prev) =>
+                              prev ? { ...prev, target_classes: connectedSelectedClasses } : prev
+                            );
+                            setEditingClasses(false);
+                            setConnectedAvailableClasses([]);
+                          } else {
+                            setConnectedClassFetchError(data?.error || 'Failed to update target classes.');
+                          }
+                        } catch {
+                          setConnectedClassFetchError('Failed to save changes. Please try again.');
+                        } finally {
+                          setUpdatingClasses(false);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {updatingClasses ? 'Saving…' : 'Save Target Classes'}
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={async () => {
                     try {
                       await fetchWithTenant('/api/social-integration/mindbody/disconnect', { method: 'POST' });
                       setStatus('mindbody', 'disconnected');
                       setMindBodyStatusData(null);
+                      setEditingClasses(false);
+                      setConnectedAvailableClasses([]);
                     } catch {
                       // silently ignore; user can retry
                     }
@@ -571,7 +744,7 @@ export const IntegrationsSettings: React.FC = () => {
                 </p>
                 <button
                   onClick={() => {
-                    setMindBodyError(null);
+                    mindBodyFormReset();
                     setShowMindBodyModal(true);
                   }}
                   className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
@@ -584,11 +757,8 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
+    ) : (
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -689,7 +859,10 @@ export const IntegrationsSettings: React.FC = () => {
         </div>
       )}
 
-      {/* MindBody Connect Modal */}
+      </div>
+    )}
+
+      {/* MindBody Connect Modal — rendered at fragment level so it works from both detail and grid views */}
       {showMindBodyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-xl p-6 space-y-5 mx-4">
@@ -712,10 +885,7 @@ export const IntegrationsSettings: React.FC = () => {
                     username: mindBodyForm.username,
                     api_key: mindBodyForm.api_key,
                     password: mindBodyForm.password,
-                    target_classes: mindBodyForm.target_classes_str
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean),
+                    target_classes: selectedClasses,
                   };
                   const r = await fetchWithTenant('/api/social-integration/mindbody/connect', {
                     method: 'POST',
@@ -731,19 +901,17 @@ export const IntegrationsSettings: React.FC = () => {
                       target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
                     });
                     setShowMindBodyModal(false);
-                    setMindBodyForm({
-                      site_id: '',
-                      display_name: '',
-                      username: '',
-                      api_key: '',
-                      password: '',
-                      target_classes_str: '',
-                    });
+                    mindBodyFormReset();
                   } else {
-                    setMindBodyError(data?.error || 'Connection failed. Please check your credentials.');
+                    // Show specific MindBody API error if available, otherwise generic message
+                    const errorMsg = data?.detail
+                      ? `${data.error}: ${data.detail}`
+                      : (data?.error || data?.message || 'Connection failed. Please check your credentials.');
+                    setMindBodyError(errorMsg);
                   }
-                } catch {
-                  setMindBodyError('Failed to connect. Please check your credentials and try again.');
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : 'Unknown error';
+                  setMindBodyError(`Failed to connect: ${msg}`);
                 } finally {
                   setMindBodyConnecting(false);
                 }
@@ -809,16 +977,79 @@ export const IntegrationsSettings: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Target Classes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Yoga, Pilates, Spin (comma-separated)"
-                  value={mindBodyForm.target_classes_str}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, target_classes_str: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <p className="text-[11px] text-muted-foreground">Comma-separated list of class names to offer for trial bookings.</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">Target Classes</label>
+                  {mindBodyForm.site_id && mindBodyForm.api_key && (
+                    <button
+                      type="button"
+                      onClick={fetchAvailableClasses}
+                      disabled={fetchingClasses}
+                      className="flex items-center gap-1.5 text-[11px] font-medium text-primary border border-primary/30 rounded-md px-2.5 py-1 hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {fetchingClasses ? (
+                        <>
+                          <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          Loading...
+                        </>
+                      ) : availableClasses.length > 0 ? (
+                        'Refresh Classes'
+                      ) : (
+                        'Fetch Classes from MindBody'
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Hint when credentials not yet entered */}
+                {(!mindBodyForm.site_id || !mindBodyForm.api_key) && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter your Site ID and API Key above, then click &ldquo;Fetch Classes from MindBody&rdquo; to see available classes.
+                  </p>
+                )}
+
+                {/* Credentials entered but no fetch yet */}
+                {mindBodyForm.site_id && mindBodyForm.api_key && availableClasses.length === 0 && !fetchingClasses && !classFetchError && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Click the button above to load your MindBody class schedule.
+                  </p>
+                )}
+
+                {/* Fetch error */}
+                {classFetchError && (
+                  <p className="text-[11px] text-destructive">{classFetchError}</p>
+                )}
+
+                {/* Class checkbox list */}
+                {availableClasses.length > 0 && (
+                  <div className="rounded-lg border border-border bg-muted/20 divide-y divide-border max-h-44 overflow-y-auto">
+                    {availableClasses.map((cls) => (
+                      <label
+                        key={cls}
+                        className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClasses.includes(cls)}
+                          onChange={(e) => {
+                            setSelectedClasses((prev) =>
+                              e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
+                            );
+                          }}
+                          className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                        />
+                        <span className="text-sm text-foreground">{cls}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected summary */}
+                {selectedClasses.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{selectedClasses.length}</span> class{selectedClasses.length !== 1 ? 'es' : ''} selected: {selectedClasses.join(', ')}
+                  </p>
+                )}
               </div>
 
               {mindBodyError && (
@@ -837,7 +1068,7 @@ export const IntegrationsSettings: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setShowMindBodyModal(false);
-                    setMindBodyError(null);
+                    mindBodyFormReset();
                   }}
                   className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
                 >
@@ -848,6 +1079,6 @@ export const IntegrationsSettings: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
