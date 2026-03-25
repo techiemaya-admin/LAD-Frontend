@@ -339,6 +339,66 @@ export const TeamManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Conversation Assignments Section */}
+      <div className="space-y-4 mt-8">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Conversation Assignments</h3>
+          <p className="text-sm text-gray-600 mt-1">View team member workload and active assignments</p>
+        </div>
+
+        {loading ? (
+          <div className="bg-white rounded-lg p-8 text-center">
+            <p className="text-gray-500">Loading workload data...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Team Member</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Active Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Total Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {Array.isArray(users) && users.length > 0 ? (
+                    users
+                      .filter(user => user.role !== 'viewer')
+                      .map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-semibold text-blue-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                              Available
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                        No team members to display. Add a team member first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
