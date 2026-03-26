@@ -20,7 +20,8 @@ import {
   Send,
   GraduationCap,
   MessageSquare,
-   Goal
+  Monitor,
+  Goal,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
@@ -168,32 +169,39 @@ export function Sidebar() {
       details: "Track and manage your follow-up tasks and reminders.",
       requiredCapability: "view_followups",
     },
+    {
+      href: "/lad-monitor",
+      label: "LAD Monitor",
+      icon: Monitor,
+      details: "Platform health, tenant analytics, alerts & system monitoring.",
+      requiredCapability: "view_lad_monitor",
+    },
 
   ];
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated
     ? allNavItems.filter((item) => {
-        // If user is admin or owner, show all items
-        const isAdminOrOwner = user?.role === "admin" || user?.role === "owner";
-        // Admin/owner sees all items
-        if (isAdminOrOwner && !item.requiredCapability) return true;
-        // If the item doesn't require any specific capability, show it
-        if (!item.requiredCapability) return true;
-        // TEMPORARY: If no capabilities are defined or empty array, show all items
-        // TODO: Implement proper RBAC with capabilities from backend
-        if (
-          !user?.capabilities ||
-          user.capabilities.length === 0 ||
-          (user.capabilities.length === 1 && user.capabilities[0] === null)
-        ) {
-          return true; // Show all items when no capabilities are set
-        }
-        // Check if user has the required capability
-        const hasCapability = user.capabilities.includes(
-          item.requiredCapability,
-        );
-        return hasCapability;
-      })
+      // If user is admin or owner, show all items
+      const role = user?.role?.toLowerCase() || (user as any)?.Role?.toLowerCase() || "";
+      const isAdminOrOwner = ["admin", "owner", "member"].includes(role) || (user as any)?.isAdmin;
+      if (isAdminOrOwner) return true;
+
+      // If the item doesn't require any specific capability, show it
+      if (!item.requiredCapability) return true;
+
+      // TEMPORARY: If no capabilities are defined or empty array, show all items
+      // TODO: Implement proper RBAC with capabilities from backend
+      if (
+        !user?.capabilities ||
+        user.capabilities.length === 0 ||
+        (user.capabilities.length === 1 && user.capabilities[0] === null)
+      ) {
+        return true; // Show all items when no capabilities are set
+      }
+
+      // Check if user has the required capability
+      return user.capabilities.includes(item.requiredCapability);
+    })
     : []; // Show empty nav during SSR to prevent hydration mismatch
   return (
     <>
@@ -232,7 +240,7 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <img
-              src="/MrLAD-logo.svg" 
+              src="/MrLAD-logo.svg"
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"

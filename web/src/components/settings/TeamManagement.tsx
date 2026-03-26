@@ -1,13 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { 
-  UserPlus, 
-  Edit2, 
-  Trash2, 
+import {
+  UserPlus,
+  Edit2,
+  Trash2,
   CheckCircle,
   XCircle,
   ChevronDown,
-  Eye, EyeOff 
+  Eye, EyeOff
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '@lad/shared/storage';  
@@ -32,6 +32,7 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pipeline', label: 'View Pipeline' },
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
+  { key: 'view_lad_monitor', label: 'View LAD Monitor' },
 ];
 // Valid tenant_role enum values in database: owner, admin, member, viewer
 const ROLE_OPTIONS = [
@@ -179,7 +180,7 @@ export const TeamManagement: React.FC = () => {
       });
       if (response.ok) {
         // Update local state immediately for better UX
-        setUsers(users.map(u => 
+        setUsers(users.map(u =>
           u.id === userId ? { ...u, capabilities: newCapabilities } : u
         ));
       }
@@ -233,7 +234,7 @@ export const TeamManagement: React.FC = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm">{error}</p>
-          <button 
+          <button
             onClick={fetchUsers}
             className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
           >
