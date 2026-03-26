@@ -40,6 +40,7 @@ export function NavbarDemo() {
   const login = () => {
     router.push('/login');
   };
+  const isLoginPage = pathname === '/login';
   return (
     <div className="relative w-full">
       <Navbar>
@@ -57,10 +58,24 @@ export function NavbarDemo() {
         <MobileNav>
           <MobileNavHeader>
             <NavbarLogo />
-            <MobileNavToggle
-              isOpen={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            />
+            {isLoginPage ? (
+              <div className="flex items-center gap-3 pr-2">
+                {navItems.map((item, idx) => (
+                  <a
+                    key={`header-link-${idx}`}
+                    href={item.link}
+                    className="text-[12px] font-semibold text-[#0b1957] hover:opacity-80 transition-opacity"
+                  >
+                    {item.name}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            )}
           </MobileNavHeader>
 
           <MobileNavMenu
