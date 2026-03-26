@@ -99,24 +99,28 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
   return (
     <div className="space-y-6">
       {/* Header with Time Range Selector */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
           <h2 className="text-2xl font-bold text-gray-900">Credit Usage Analytics</h2>
-          <p className="text-gray-600 mt-1">Track your credit consumption across features</p>
+          <p className="text-gray-600">Track your credit consumption across features</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3 justify-between md:justify-end">
           {['7d', '30d', '90d'].map((range) => (
             <button
               key={range}
               onClick={() => setSelectedRange(range as '7d' | '30d' | '90d')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedRange === range
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`flex-1 md:flex-none p-3 rounded-2xl font-medium transition-all duration-300 border-2 flex flex-col items-center justify-center min-w-[70px] md:min-w-[80px] ${selectedRange === range
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-xl shadow-blue-100 scale-105'
+                  : 'bg-white text-gray-500 border-gray-100 hover:border-blue-200 hover:bg-blue-50'
                 }`}
             >
-              {range === '7d' && 'Last 7 days'}
-              {range === '30d' && 'Last 30 days'}
-              {range === '90d' && 'Last 90 days'}
+              <span className="text-[10px] uppercase tracking-widest opacity-80 mb-0.5">Last</span>
+              <span className="text-xl font-black leading-none">
+                {range === '7d' && '7'}
+                {range === '30d' && '30'}
+                {range === '90d' && '90'}
+              </span>
+              <span className="text-[10px] uppercase tracking-widest opacity-80 mt-0.5">days</span>
             </button>
           ))}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Wallet, TrendingUp, Calendar, Download, ExternalLink } from 'lucide-react';
+import { Wallet, TrendingUp, Calendar, Download, ExternalLink, Plus } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { CreditUsageAnalytics } from './CreditUsageAnalytics';
 import Link from 'next/link';
@@ -110,39 +110,55 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({ customerId }
   return (
     <div className="space-y-6">
       {/* Credit Balance Summary */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-8 rounded-xl shadow-xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <div className="flex items-center mb-2">
-              <Wallet className="h-5 w-5 mr-2 opacity-80" />
-              <span className="text-sm font-medium opacity-80">Current Balance</span>
-            </div>
-            <p className="text-4xl font-bold">{balance.credits.toLocaleString()}</p>
-            <p className="text-sm opacity-80 mt-1">credits available</p>
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 rounded-xl shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Wallet className="h-5 w-5 mr-2" />
+            <h3 className="text-lg font-bold">Billing Summary</h3>
           </div>
-          <div>
-            <div className="flex items-center mb-2">
-              <TrendingUp className="h-5 w-5 mr-2 opacity-80" />
-              <span className="text-sm font-medium opacity-80">Monthly Usage</span>
+          <Link
+            href="/wallet"
+            className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center"
+          >
+            <Plus className="h-3 w-3 mr-1.5" />
+            Add Credits
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-6">
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center mb-1">
+              <Wallet className="h-4 w-4 mr-2 opacity-80" />
+              <span className="text-xs font-medium opacity-80 uppercase tracking-wider">Current Balance</span>
             </div>
-            <p className="text-4xl font-bold">{balance.monthlyUsage.toLocaleString()}</p>
-            <p className="text-sm opacity-80 mt-1">credits this month</p>
+            <p className="text-3xl md:text-3xl font-bold">{balance.credits.toLocaleString()}</p>
+            <p className="text-[10px] md:text-xs opacity-70">credits available</p>
           </div>
+          
           <div>
-            <div className="flex items-center mb-2">
-              <Calendar className="h-5 w-5 mr-2 opacity-80" />
-              <span className="text-sm font-medium opacity-80">Total Spent</span>
+            <div className="flex items-center mb-1">
+              <TrendingUp className="h-4 w-4 mr-2 opacity-80" />
+              <span className="text-xs font-medium opacity-80 uppercase tracking-wider">Usage</span>
             </div>
-            <p className="text-4xl font-bold">{formatCurrency(balance.totalSpent)}</p>
-            <p className="text-sm opacity-80 mt-1">all-time investment</p>
+            <p className="text-xl md:text-2xl font-semibold">{balance.monthlyUsage.toLocaleString()}</p>
+            <p className="text-[10px] opacity-70">this month</p>
+          </div>
+
+          <div className="text-right md:text-left">
+            <div className="flex items-center justify-end md:justify-start mb-1">
+              <Calendar className="h-4 w-4 mr-2 opacity-80" />
+              <span className="text-xs font-medium opacity-80 uppercase tracking-wider">Spent</span>
+            </div>
+            <p className="text-lg md:text-2xl font-semibold">{formatCurrency(balance.totalSpent)}</p>
+            <p className="text-[10px] opacity-70">all-time</p>
           </div>
         </div>
+
         {balance.lastRecharge && (
-          <div className="mt-6 pt-6 border-t border-blue-400">
-            <p className="text-sm opacity-80">
-              Last recharge: <strong>{balance.lastRecharge.credits.toLocaleString()} credits</strong> for{' '}
-              <strong>{formatCurrency(balance.lastRecharge.amount)}</strong> on{' '}
-              {formatDate(balance.lastRecharge.date)}
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <p className="text-[11px] opacity-80 leading-relaxed">
+              Last recharge: <span className="font-semibold text-white">{balance.lastRecharge.credits.toLocaleString()} credits</span> ($
+              {balance.lastRecharge.amount}) on {formatDate(balance.lastRecharge.date)}
             </p>
           </div>
         )}
