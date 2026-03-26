@@ -33,13 +33,20 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
 ];
+// Valid tenant_role enum values in database: owner, admin, member, viewer
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
-  { value: 'co_admin', label: 'Co Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'sales_rep', label: 'Sales Representative' },
+  { value: 'member', label: 'Manager / Sales Rep' },
   { value: 'viewer', label: 'Viewer' },
 ];
+
+// Maps UI labels back to valid DB enum values (for display)
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  member: 'Member',
+  viewer: 'Viewer',
+};
 export const TeamManagement: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -199,12 +206,11 @@ export const TeamManagement: React.FC = () => {
   };
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'co_admin': return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'manager': return 'bg-green-50 text-green-700 border border-green-200';
-      case 'sales_rep': return 'bg-orange-50 text-orange-700 border border-orange-200';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200';
+      case 'member': return 'bg-green-50 text-green-700 border border-green-200';
       case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200';
-      default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+      default:       return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
   };
   return (
