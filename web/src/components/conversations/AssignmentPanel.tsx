@@ -427,52 +427,54 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       <AlertDialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <AlertDialogContent className="max-w-sm">
           <AlertDialogTitle>Assign Conversation</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Team Member</label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.user_id} value={member.user_id}>
-                      <div className="flex items-center gap-2">
-                        <span>{member.name}</span>
-                        {member.active_count !== undefined && (
-                          <span className="text-[11px] text-muted-foreground">
-                            ({member.active_count} active)
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <AlertDialogDescription asChild>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Team Member</label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Select team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.user_id} value={member.user_id}>
+                        <div className="flex items-center gap-2">
+                          <span>{member.name}</span>
+                          {member.active_count !== undefined && (
+                            <span className="text-[11px] text-muted-foreground">
+                              ({member.active_count} active)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Delivery Mode</label>
-              <Select value={selectedDeliveryMode} onValueChange={setSelectedDeliveryMode}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp Direct</SelectItem>
-                  <SelectItem value="inbox">In-app Inbox</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Delivery Mode</label>
+                <Select value={selectedDeliveryMode} onValueChange={setSelectedDeliveryMode}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="whatsapp">WhatsApp Direct</SelectItem>
+                    <SelectItem value="inbox">In-app Inbox</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Reason (optional)</label>
-              <Textarea
-                value={assignmentReason}
-                onChange={(e) => setAssignmentReason(e.target.value)}
-                placeholder="Why are you assigning this conversation?"
-                className="min-h-[70px] text-xs"
-              />
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Reason (optional)</label>
+                <Textarea
+                  value={assignmentReason}
+                  onChange={(e) => setAssignmentReason(e.target.value)}
+                  placeholder="Why are you assigning this conversation?"
+                  className="min-h-[70px] text-xs"
+                />
+              </div>
             </div>
           </AlertDialogDescription>
 
@@ -503,19 +505,21 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       <AlertDialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
         <AlertDialogContent className="max-w-sm">
           <AlertDialogTitle>Release Conversation</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4">
-            <p className="text-sm">
-              This will release the conversation back to the AI. Messages will no longer be routed to the assigned user.
-            </p>
+          <AlertDialogDescription asChild>
+            <div className="space-y-4">
+              <p className="text-sm">
+                This will release the conversation back to the AI. Messages will no longer be routed to the assigned user.
+              </p>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Reason (optional)</label>
-              <Textarea
-                value={assignmentReason}
-                onChange={(e) => setAssignmentReason(e.target.value)}
-                placeholder="Why are you releasing this conversation?"
-                className="min-h-[70px] text-xs"
-              />
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Reason (optional)</label>
+                <Textarea
+                  value={assignmentReason}
+                  onChange={(e) => setAssignmentReason(e.target.value)}
+                  placeholder="Why are you releasing this conversation?"
+                  className="min-h-[70px] text-xs"
+                />
+              </div>
             </div>
           </AlertDialogDescription>
 
