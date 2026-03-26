@@ -1177,8 +1177,7 @@ export function CallOptions(props: CallOptionsProps) {
           </div>
           <DialogActions>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button>
-              <Button onClick={saveEditor} disabled={savingSummary}>{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
+              <Button onClick={saveEditor} disabled={savingSummary} className="w-full">{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
             </div>
           </DialogActions>
         </DialogContent>

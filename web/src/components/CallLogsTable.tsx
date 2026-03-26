@@ -115,6 +115,9 @@ interface CallLogsTableProps {
   onSortChange?: (sort: any) => void;
   totalFilteredCount?: number;
   batchStats?: BatchStats;
+  onRetrySelected?: () => void;
+  onEndSelected?: () => void;
+  failedCount?: number;
 }
 
 export function CallLogsTable({
@@ -152,6 +155,9 @@ export function CallLogsTable({
   onSortChange,
   totalFilteredCount,
   batchStats,
+  onRetrySelected,
+  onEndSelected,
+  failedCount = 0,
 }: CallLogsTableProps) {
   const router = useRouter();
   const { push: toast } = useToast();
@@ -833,56 +839,92 @@ export function CallLogsTable({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
-      {/* Search Bar */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-red">
-        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
-            <input
-              type="text"
-              placeholder="Search Call Logs..."
-              value={globalFilter ?? ''}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
-            />
+    <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Search Bar & Filters Area */}
+      <div className="p-4 border-b border-[#E2E8F0]">
+        <div className="flex flex-col gap-4">
+          {/* Row 1: Search Bar & Selection Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search Call Logs..."
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Selection Actions - ONLY ON MOBILE */}
+            {selectedCalls.size > 0 && (
+              <div className="flex sm:hidden gap-2 items-center w-full">
+                {failedCount > 0 && onRetrySelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetrySelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                  >
+                    Retry ({failedCount})
+                  </button>
+                )}
+                {onEndSelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEndSelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                  >
+                    End ({selectedCalls.size})
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="ended">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="calling">Calling</SelectItem>
-              <SelectItem value="ongoing">Ongoing</SelectItem>
-              <SelectItem value="queue">Queue</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={dateFilter} onValueChange={onDateFilterChange}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Date Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={callFilter} onValueChange={onCallFilterChange}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Call Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Calls</SelectItem>
-              <SelectItem value="current">Current Batch</SelectItem>
-              <SelectItem value="batch">Batch View</SelectItem>
-            </SelectContent>
-          </Select>
+          
+          {/* Row 2: Status, Time, and Call Filters grouped together */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 items-center justify-end">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ended">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="calling">Calling</SelectItem>
+                <SelectItem value="ongoing">Ongoing</SelectItem>
+                <SelectItem value="queue">Queue</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={dateFilter} onValueChange={onDateFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Date Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={callFilter} onValueChange={onCallFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Call Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Calls</SelectItem>
+                <SelectItem value="current">Current Batch</SelectItem>
+                <SelectItem value="batch">Batch View</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        {/* Custom Date Inputs (only show when custom is selected) */}
+        
+        {/* Custom Date Inputs Picker (only show when custom is selected) */}
         {dateFilter === 'custom' && (
           <div className="flex gap-3 px-4 justify-end mt-2">
             <div className="flex items-center gap-2">
@@ -919,7 +961,8 @@ export function CallLogsTable({
           </div>
         )}
       </div>
-      <Table>
+      <div className="overflow-x-auto">
+        <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
@@ -1162,48 +1205,48 @@ export function CallLogsTable({
             ))
           )}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          {/* Left: Show [N] of X calls + batch stats */}
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
-            <span>Show</span>
-            <select
-              value={perPage}
-              onChange={(e) => {
-                const newSize = parseInt(e.target.value, 10);
-                onPageSizeChange?.(newSize);
-                onPageChange?.(1);
-              }}
-              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <span>of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+          {/* Left Side: Records per page */}
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  const newSize = parseInt(e.target.value, 10);
+                  onPageSizeChange?.(newSize);
+                  onPageChange?.(1);
+                }}
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
+              >
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="whitespace-nowrap">of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            </div>
             {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (
               <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
             )}
             {callFilter === 'batch' && batchStats && (
-              <div className="ml-4 flex items-center gap-3 border-l pl-4">
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> completed
+              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0]">
+                <span className="text-[10px] xs:text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> comp
                 </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> running
-                </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.failed_batches}</span> failed
+                <span className="text-[10px] xs:text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> run
                 </span>
               </div>
             )}
           </div>
 
-          {/* Right: Page N of N + nav buttons */}
+          {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
             <div className="flex items-center gap-1">
@@ -1251,7 +1294,7 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar rounded-3xl">
           <DialogTitle className="text-lg font-semibold mb-4">
             Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
           </DialogTitle>

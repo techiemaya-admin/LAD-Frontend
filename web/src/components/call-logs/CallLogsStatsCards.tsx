@@ -124,6 +124,24 @@ export default function CallLogsStatsCards({
     );
   }
 
+  const handleCardClick = (type: 'status' | 'leadTag', value: any) => {
+    if (type === 'status') {
+      onStatusChange?.(selectedStatus === value ? null : value);
+    } else {
+      onLeadTagChange?.(selectedLeadTag === value ? null : value);
+    }
+
+    // Scroll to table on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) { // Using 1024 for tablet/mobile
+      setTimeout(() => {
+        const tableElement = document.getElementById('call-logs-table');
+        if (tableElement) {
+          tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  };
+
   return (
     <div className="flex gap-4 mb-6 flex-wrap items-stretch">
       {/* Total Calls */}
@@ -140,7 +158,7 @@ export default function CallLogsStatsCards({
         value={stats.completed_calls || 0} 
         icon={<Phone className="w-6 h-6 text-green-600" />} 
         bgColor="bg-green-100" 
-        onClick={() => onStatusChange?.(selectedStatus === 'ended' ? null : 'ended')}
+        onClick={() => handleCardClick('status', 'ended')}
         isLeadTag
         isSelected={selectedStatus === 'ended'}
       />
@@ -151,7 +169,7 @@ export default function CallLogsStatsCards({
         value={stats.failed_calls || 0} 
         icon={<PhoneMissed className="w-6 h-6 text-red-600" />} 
         bgColor="bg-red-100" 
-        onClick={() => onStatusChange?.(selectedStatus === 'failed' ? null : 'failed')}
+        onClick={() => handleCardClick('status', 'failed')}
         isLeadTag
         isSelected={selectedStatus === 'failed'}
       />
@@ -162,7 +180,7 @@ export default function CallLogsStatsCards({
         value={stats.ongoing || 0} 
         icon={<PhoneCall className="w-6 h-6 text-purple-600" />} 
         bgColor="bg-purple-100" 
-        onClick={() => onStatusChange?.(selectedStatus === 'ongoing' ? null : 'ongoing')}
+        onClick={() => handleCardClick('status', 'ongoing')}
         isLeadTag
         isSelected={selectedStatus === 'ongoing'}
       />
@@ -173,7 +191,7 @@ export default function CallLogsStatsCards({
         value={stats.queue || 0} 
         icon={<Clock className="w-6 h-6 text-amber-600" />} 
         bgColor="bg-amber-100" 
-        onClick={() => onStatusChange?.(selectedStatus === 'queue' ? null : 'queue')}
+        onClick={() => handleCardClick('status', 'queue')}
         isLeadTag
         isSelected={selectedStatus === 'queue'}
       />
@@ -184,7 +202,7 @@ export default function CallLogsStatsCards({
         value={stats.hot_leads || 0} 
         icon={<Flame className="w-6 h-6 text-orange-600" />} 
         bgColor="bg-orange-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'hot' ? null : 'hot')}
+        onClick={() => handleCardClick('leadTag', 'hot')}
         isLeadTag
         isSelected={selectedLeadTag === 'hot'}
       />
@@ -195,7 +213,7 @@ export default function CallLogsStatsCards({
         value={stats.warm_leads || 0} 
         icon={<Sun className="w-6 h-6 text-yellow-600" />} 
         bgColor="bg-yellow-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'warm' ? null : 'warm')}
+        onClick={() => handleCardClick('leadTag', 'warm')}
         isLeadTag
         isSelected={selectedLeadTag === 'warm'}
       />
@@ -206,7 +224,7 @@ export default function CallLogsStatsCards({
         value={stats.cold_leads || 0} 
         icon={<Snowflake className="w-6 h-6 text-cyan-600" />} 
         bgColor="bg-cyan-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'cold' ? null : 'cold')}
+        onClick={() => handleCardClick('leadTag', 'cold')}
         isLeadTag
         isSelected={selectedLeadTag === 'cold'}
       />

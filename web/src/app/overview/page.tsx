@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f6ff] via-[#f5f9ff] to-[#f0f6ff]">
-      <main className="min-h-screen bg-gray-50 p-3 md:p-3">
+      <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

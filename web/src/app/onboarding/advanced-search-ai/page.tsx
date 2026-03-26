@@ -1408,9 +1408,12 @@ export default function AdvancedSearchAIPage() {
                 if (isTriggerOriginal && confirmedForSearch.intent) {
                     // Trigger word confirmed — use the pre-parsed intent targeting directly.
                     // Build a readable search query from the intent so the backend can score it properly.
+                    // Include company_names and keywords so person+company searches are not lost.
                     ext = confirmedForSearch.intent;
                     searchQuery = [
+                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
                         ...(ext.job_titles || []),
+                        ...(ext.company_names || []),
                         ...(ext.industries || []),
                         ...(ext.locations || []),
                     ].filter(Boolean).join(' ') || 'leads';
@@ -1422,7 +1425,13 @@ export default function AdvancedSearchAIPage() {
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
-                    ? [...(ext.job_titles || []), ...(ext.industries || []), ...(ext.locations || []), ...(ext.keywords || [])].join(' ')
+                    ? [
+                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
+                        ...(ext.job_titles || []),
+                        ...(ext.company_names || []),
+                        ...(ext.industries || []),
+                        ...(ext.locations || []),
+                      ].filter(Boolean).join(' ')
                     : text;
             }
 
@@ -2153,7 +2162,7 @@ export default function AdvancedSearchAIPage() {
             <div className="adv-yellow-bar" />
             <div className="adv-chat-main">
                 {/* LEFT: CHAT */}
-                <div className="adv-chat-left" style={{ width: showPanel ? '50%' : '100%' }}>
+                <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '50%' : '100%' }}>
                     <button className="adv-chat-back" onClick={reset}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                     </button>
@@ -2161,24 +2170,14 @@ export default function AdvancedSearchAIPage() {
                     <div className="adv-chat-msgs">
                         {/* Landing Content - Show when no messages */}
                         {messages.length === 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px 20px', textAlign: 'center' }}>
-                                <div style={{ marginBottom: '30px' }}>
-                                    <img src="/MrLAD-logo.svg" alt="Mr LAD" style={{ width: '64px', height: 'auto', margin: '0 auto', display: 'block' }} />
+                            <div className="adv-gemini-hero">
+                                <div className="adv-gemini-logo-wrap">
+                                    <img src="/logo.svg" alt="LAD" className="adv-gemini-logo" />
                                 </div>
-                                <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 20px', color: '#172560' }}>
+                                <h2 className="adv-gemini-title">
                                     Hey! I am LAD, How can I help you today?
+                                    <Sparkles className="adv-gemini-sparkle" />
                                 </h2>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '30px' }}>
-                                    <button onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }} style={{ padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', background: '#fff', color: '#374151', transition: 'all .15s' }}>
-                                        <span>🔍</span> Find leads in fintech
-                                    </button>
-                                    <button onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }} style={{ padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', background: '#fff', color: '#374151', transition: 'all .15s' }}>
-                                        <span>🏢</span> Target specific company
-                                    </button>
-                                    <button onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }} style={{ padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', background: '#fff', color: '#374151', transition: 'all .15s' }}>
-                                        <span>👤</span> VP of Sales in UAE
-                                    </button>
-                                </div>
                             </div>
                         )}
 
@@ -2362,6 +2361,26 @@ export default function AdvancedSearchAIPage() {
                         </div>
                         <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
                     </div>
+                    {messages.length === 0 && (
+                        <div className="adv-gemini-chips">
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                Find leads in fintech
+                            </button>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                Target specific company
+                            </button>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                                VP of Sales in UAE
+                            </button>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Find decision makers in healthcare startups in Dubai'); taRef.current?.focus(); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                                Healthcare leads in Dubai
+                            </button>
+                        </div>
+                    )}
                     {/* Hidden file input — accepts all supported lead import formats */}
                     <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.pdf" className="hidden" style={{ display: 'none' }}
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
@@ -4066,7 +4085,7 @@ function CheckpointFormInline({
                 // Direct contact (phone/email only): add channel steps immediately — no LinkedIn trigger needed
                 for (const ch of nextChannels) {
                     if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
                     if (ch === 'linkedin') {
                         if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
@@ -4120,7 +4139,7 @@ function CheckpointFormInline({
                 // Follow-up channels: all channels except the primary trigger channel
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
                     if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
                     if (ch === 'linkedin') {
                         if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
@@ -4133,7 +4152,16 @@ function CheckpointFormInline({
                 // no_dependency or no trigger condition selected — execute all channels sequentially without waiting
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
                     if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { message: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                }
+            } else if (!isDirectContact && !hasMultipleChannels && nextChannels.length > 0) {
+                // LinkedIn search source but only a single non-LinkedIn channel selected (e.g. WhatsApp-only).
+                // The first block above already added LinkedIn steps (if linkedin is in nextChannels).
+                // This block handles the gap: add outreach steps for any non-LinkedIn single channel.
+                for (const ch of nextChannels) {
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
                     if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
                 }
             }
@@ -5707,7 +5735,7 @@ const css = `
             .adv-recent-item span {flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
             /* ── CHAT SCREEN ── */
-            .adv-chat-root {height:100vh; display:flex; flex-direction:column; background:#fafafa; }
+            .adv-chat-root {height:100vh; display:flex; flex-direction:column; background:#fff; }
             .adv-yellow-bar {height:4px; background:linear-gradient(90deg,#3b82f6,#2563eb,#172560); flex-shrink:0; }
             .adv-chat-main {flex:1; display:flex; overflow:hidden; }
             /* adv-chat-left defined below with split-screen update */
@@ -5747,12 +5775,14 @@ const css = `
             .adv-thinking-dots span:nth-child(3){animation-delay:.4s}
             @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
             /* ── CHAT INPUT ── */
-            .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:8px 20px 18px; }
+            .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
-            .adv-chat-input-box {display:flex; flex-direction:column; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:18px; padding:12px 16px 10px; max-width:700px; margin:0 auto; transition:border .15s; }
-            .adv-chat-input-box:focus-within {border-color:#172560; }
-            .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:15px; color:#111827; font-family:inherit; line-height:1.5; padding:0; max-height:120px; }
-            .adv-chat-ta::placeholder {color:#9ca3af; }
+            .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid transparent; border-radius:24px; padding:16px 20px 12px; max-width:720px; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(23,37,96,0.06); position:relative; z-index:0; }
+            .adv-chat-input-box::before {content:''; position:absolute; inset:-1.5px; border-radius:25.5px; padding:1.5px; background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#3b82f6); background-size:300% 100%; animation:adv-border-move 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; z-index:-1; pointer-events:none; }
+            .adv-chat-input-box:focus-within::before {animation:adv-border-move 2s linear infinite; opacity:1; }
+            @keyframes adv-border-move {0%{background-position:0% 50%}100%{background-position:300% 50%}}
+            .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
+            .adv-chat-ta::placeholder {color:#9ca3af; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#172560; }
@@ -5804,8 +5834,12 @@ const css = `
             .adv-opt-btn:first-child:hover {background:#0f1842; border-color:#0f1842; box-shadow:0 4px 14px rgba(23,37,96,.35); }
 
             /* ── LEADS PANEL ── */
-            .adv-leads-panel {width:50%; background:#fafafa; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
+            .adv-leads-panel {width:50%; background:#fff; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
             .adv-chat-left {display:flex; flex-direction:column; position:relative; background:#fff; transition:width .35s cubic-bezier(.4,0,.2,1); border-right:none; min-width:0; }
+            .adv-chat-left-empty {justify-content:center; }
+            .adv-chat-left-empty .adv-chat-msgs {flex:none; overflow:visible; padding-top:0; }
+            .adv-chat-left-empty .adv-chat-input-wrap {border-top:none; background:transparent; padding-top:0; }
+            .adv-chat-left-empty .adv-msg-counter {display:none; }
             .adv-panel-header {display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1.5px solid #e5e7eb; background:#fff; flex-shrink:0; }
             .adv-close-panel {width:32px; height:32px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; flex-shrink:0; }
             .adv-close-panel:hover {background:#f3f4f6; }
@@ -5830,4 +5864,122 @@ const css = `
             .adv-lead-avatar-img {width:42px; height:42px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid #e5e7eb; }
             .adv-lead-location {font - size:11px; color:#9ca3af; margin-top:2px; }
             .adv-panel-footer {text - align:center; padding:20px 0 8px; font-size:12px; color:#9ca3af; border-top:1px solid #f3f4f6; margin-top:16px; }
+
+            /* ── GEMINI-STYLE LANDING ── */
+            .adv-gemini-hero {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                flex: 1;
+                padding: 0 24px;
+                text-align: center;
+                animation: fadeUp 0.5s ease both;
+            }
+            .adv-gemini-logo-wrap {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 28px;
+            }
+            .adv-gemini-logo {
+                width: 56px;
+                height: auto;
+                display: block;
+            }
+            .adv-gemini-title {
+                font-size: 36px;
+                font-weight: 400;
+                color: #1f2937;
+                letter-spacing: -0.01em;
+                line-height: 1.3;
+                margin: 0 0 40px;
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .adv-gemini-sparkle {
+                width: 32px;
+                height: 32px;
+                color: #c2d6eb;
+                opacity: 0.7;
+                animation: fadeUp 0.6s ease 0.2s both;
+            }
+            /* ── GEMINI SUGGESTION CHIPS ── */
+            .adv-gemini-chips {
+                display: flex;
+                gap: 10px;
+                padding: 0 20px 20px;
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                animation: fadeUp 0.5s ease 0.15s both;
+                justify-content: center;
+            }
+            .adv-gemini-chips::-webkit-scrollbar {display:none; }
+            .adv-gemini-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border: 1.5px solid transparent;
+                border-radius: 24px;
+                font-size: 13.5px;
+                font-weight: 500;
+                color: #374151;
+                background: #fff;
+                cursor: pointer;
+                transition: all 0.15s;
+                white-space: nowrap;
+                flex: 0 0 auto;
+                position: relative;
+                z-index: 0;
+            }
+            .adv-gemini-chip::before {
+                content: '';
+                position: absolute;
+                inset: -1.5px;
+                border-radius: 25.5px;
+                padding: 1.5px;
+                background: linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#3b82f6);
+                background-size: 300% 100%;
+                animation: adv-border-move 4s linear infinite;
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                z-index: -1;
+                pointer-events: none;
+                opacity: 0.5;
+                transition: opacity 0.2s;
+            }
+            .adv-gemini-chip:hover::before {
+                opacity: 1;
+            }
+            .adv-gemini-chip:hover {
+                background: #fafaff;
+                color: #172560;
+                box-shadow: 0 2px 12px rgba(23,37,96,0.1);
+            }
+            /* ── MOBILE RESPONSIVE ── */
+            @media (max-width: 768px) {
+                .adv-gemini-title {font-size: 22px; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
+                .adv-gemini-sparkle {width: 22px; height: 22px; }
+                .adv-gemini-logo-wrap {width: 56px; height: 56px; margin-bottom: 20px; }
+                .adv-gemini-logo {width: 44px; }
+                .adv-gemini-hero {padding: 0 16px; }
+                .adv-gemini-chips {flex-wrap: wrap; justify-content: center; padding: 0 16px 16px; overflow-x: visible; gap: 8px; }
+                .adv-gemini-chip {padding: 8px 14px; font-size: 12px; flex: 0 0 auto; }
+                .adv-chat-input-box {border-radius: 20px; padding: 12px 14px 10px; }
+                .adv-chat-back {width: 36px; height: 36px; top: 12px; left: 12px; }
+                .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
+                .adv-chat-left {min-width: 100%; }
+            }
+            @media (max-width: 480px) {
+                .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }
+                .adv-gemini-chips {gap: 6px; padding: 0 12px 12px; }
+                .adv-gemini-chip {padding: 7px 12px; font-size: 11.5px; gap: 6px; }
+                .adv-chat-input-box {margin: 0 4px; }
+            }
             `;

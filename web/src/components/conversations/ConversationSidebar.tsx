@@ -401,9 +401,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     size="sm"
                     onClick={() => onChannelFilterChange(id)}
                     className={cn(
-                      'flex-shrink-0 h-8 px-2.5 gap-1.5 text-xs font-medium transition-all relative',
-                      isActive 
-                        ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10' 
+                      'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center gap-1.5 text-xs font-medium transition-all relative',
+                      isActive
+                        ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
                         : channelColorMap[id]
                     )}
                   >
@@ -412,7 +412,6 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     ) : (
                       <MessageSquare className="h-3.5 w-3.5" />
                     )}
-                    {id === 'all' && <span className="hidden sm:inline">{label}</span>}
                     {count > 0 && (
                       <span
                         className={cn(
@@ -513,7 +512,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
       {/* Bulk action bar */}
       {isSelectMode && (
-        <div className="p-2 border-b border-border bg-primary/5 flex items-center gap-2">
+        <TooltipProvider>
+          <div className="p-2 border-b border-border bg-primary/5 flex items-center gap-2">
           <button
             onClick={() =>
               selectedIds.size === filteredConversations.length ? deselectAll() : selectAll()
@@ -549,34 +549,53 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               Remove from Group
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-blue-600"
-            onClick={() => setIsTemplatePickerOpen(true)}
-          >
-            <Send className="h-3.5 w-3.5 mr-1" />
-            Send Template
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-green-600"
-            onClick={() => handleBulkAction('resolve')}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-            Resolve
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-destructive"
-            onClick={() => handleBulkAction('delete')}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1" />
-            Delete
-          </Button>
-        </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 flex items-center justify-center text-blue-600 hover:bg-blue-50"
+                onClick={() => setIsTemplatePickerOpen(true)}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+              Send Template
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 flex items-center justify-center text-green-600 hover:bg-green-50"
+                onClick={() => handleBulkAction('resolve')}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+              Resolve
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 flex items-center justify-center text-destructive hover:bg-red-50"
+                onClick={() => handleBulkAction('delete')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+              Delete
+            </TooltipContent>
+          </Tooltip>
+          </div>
+        </TooltipProvider>
       )}
 
       {/* Conversation List - Virtualized */}

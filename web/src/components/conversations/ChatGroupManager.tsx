@@ -29,8 +29,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { safeStorage } from '@lad/shared/storage';  
+import { safeStorage } from '@lad/shared/storage';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -909,15 +915,21 @@ export function AddToGroupDropdown({ selectedIds, onDone }: AddToGroupDropdownPr
 
   if (!isOpen) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 text-xs text-violet-600"
-        onClick={() => { setIsOpen(true); loadGroups(); }}
-      >
-        <FolderPlus className="h-3.5 w-3.5 mr-1" />
-        Add to Group
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 flex items-center justify-center text-violet-600 hover:bg-violet-50"
+            onClick={() => { setIsOpen(true); loadGroups(); }}
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+          Add to Group
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -952,10 +964,16 @@ export function AddToGroupDropdown({ selectedIds, onDone }: AddToGroupDropdownPr
           ))
         )}
       </div>
-      <Button variant="ghost" size="sm" className="h-7 text-xs text-violet-600">
-        <FolderPlus className="h-3.5 w-3.5 mr-1" />
-        Add to Group
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex items-center justify-center text-violet-600 hover:bg-violet-50">
+            <FolderPlus className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+          Add to Group
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
