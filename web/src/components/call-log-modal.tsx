@@ -861,16 +861,14 @@ export function CallLogModal({
     <>
       <div
         className={cn(
-          "fixed z-[9999] bg-white shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          // Mobile: centered with gaps
-          "inset-4 rounded-3xl",
-          // Desktop: side panel
-          "sm:inset-y-0 sm:right-0 sm:left-auto sm:inset-x-auto sm:w-full sm:max-w-6xl sm:rounded-l-3xl sm:rounded-r-none",
-          open ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 sm:opacity-100"
+          "fixed z-[9999] bg-white shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out rounded-2xl",
+          // Centered modal
+          "inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh]",
+          open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none invisible"
         )}
       >
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
+        {/* <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <PhoneCall className="h-5 w-5 text-orange-500 shrink-0" />
             <h1 className="text-sm xs:text-base sm:text-xl font-bold text-gray-800 leading-tight">
@@ -896,7 +894,7 @@ export function CallLogModal({
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </div> */}
 
         {/* Body */}
         <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
