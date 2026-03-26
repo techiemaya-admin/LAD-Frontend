@@ -451,9 +451,14 @@ export default function AdvancedSearchAIPage() {
     const [tgEducation, setTgEducation] = useState<string[]>([]);
     const [tgSkills, setTgSkills] = useState<string[]>([]);
 
-    const [convId, setConvId] = useState<string | null>(null);
+    // convId — stable UUID that identifies this browser session's conversation.
+    // Initialised once on mount; reset when the user clicks "New search".
+    const [convId, setConvId] = useState<string>(() => crypto.randomUUID());
     const [msgCount, setMsgCount] = useState(0);
     const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+    // Rolling conversation summary — WhatsApp-style bullet list of what was discussed.
+    // Sent to the backend each turn so the AI retains context beyond the short history window.
+    const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
 
@@ -594,8 +599,9 @@ export default function AdvancedSearchAIPage() {
         setTgStep(-1); setTgNationality([]); setTgExperienceLevel([]); setTgCompanySize([]);
         setTgCompanyAge([]); setTgEducation([]); setTgSkills([]);
         // Conversation meta
-        setConvId(null); setMsgCount(0); setPendingIntent(null);
+        setConvId(crypto.randomUUID()); setMsgCount(0); setPendingIntent(null);
         setPendingSearchConfirmation(null); setPendingContact(null);
+        setConversationSummary('');
         // Inbound / upload
         setInboundMode(false); setInboundLeads([]); setInboundLeadIds([]); setDirectContactLeadIds([]);
         // Search / leads state
@@ -1022,7 +1028,10 @@ export default function AdvancedSearchAIPage() {
         // "Hey LAD outreach to +971...", "+971506341191", "reach out to john@x.com", etc.
         const hasPhone = /\+?\d[\d\s\-().]{8,}\d/.test(text);
         const hasEmail = /[\w.-]+@[\w.-]+\.\w+/.test(text);
-        const hasOutreachKeyword = /\b(outreach|reach out)\s+(to\s+)?[\+\d\w]/i.test(text);
+        // Require explicit "outreach to" / "reach out to" followed by a contact identifier
+        // (phone starting with +, email address, or linkedin.com URL).
+        // Must NOT match generic phrases like "outreach by reducing costs" or "outreach to SME owners".
+        const hasOutreachKeyword = /\b(outreach|reach out)\s+to\s+(\+\d|[\w.+-]+@|https?:\/\/(?:www\.)?linkedin\.com)/i.test(text);
         if (hasPhone || hasEmail || hasOutreachKeyword) {
             try {
                 const parseRes = await fetch('/api/campaigns/leads/parse-chat-input', {
@@ -1271,6 +1280,7 @@ export default function AdvancedSearchAIPage() {
                         history: historySnapshot,
                         currentTargeting: targeting,
                         pendingIntent: (pendingIntent as string | null),
+                        conversationSummary,
                     });
                     if (chatD) {
                         aiResponseText = chatD.response || '';
@@ -1279,6 +1289,10 @@ export default function AdvancedSearchAIPage() {
                         setPendingIntent(chatD.pendingIntent || null);
                         if (Array.isArray(chatD.options) && chatD.options.length > 0) {
                             aiOpts = chatD.options;
+                        }
+                        // Append summary bullet to the rolling conversation summary
+                        if (chatD.summaryUpdate) {
+                            setConversationSummary(prev => prev ? `${prev}\n${chatD.summaryUpdate}` : chatD.summaryUpdate);
                         }
                     }
                 } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
@@ -1290,13 +1304,19 @@ export default function AdvancedSearchAIPage() {
 
                 // Smart search detection: if the user explicitly asks to find/search someone or something
                 // AND the query contains a specific entity (company, person name, location — not just vague intent)
+                // BUT NOT if the message is a meta-instruction about how to search
+                // e.g. "search for only 1 industry at a time" is a preference, not a search query
                 if (!shouldRunSearch && !isFirstMessage) {
                     const lowerText = text.toLowerCase();
                     const hasSearchIntent = /\b(find|search|look for|get me|show me|locate|who is|who are|people at|employees at|team at|leads? (in|at|from|for))\b/i.test(lowerText);
                     // Check if there's a specific entity (not just generic words like 'a specific company')
                     const hasVagueTarget = /\b(a specific|any|some|certain)\b/i.test(lowerText);
-                    // Must have search intent AND NOT be vague to force search
-                    if (hasSearchIntent && !hasVagueTarget) {
+                    // Detect meta-instructions: user is giving a preference about HOW to search, not WHAT to search for
+                    // e.g. "search for only 1 industry at a time", "only show 5 results", "limit to Financial Services"
+                    const isMetaInstruction = /\b(only \d+|\d+ at a time|at a time|per (search|query|request)|from now on|limit (to|the)|max(imum)? \d+|no more than|don'?t (include|show|use)|please (don'?t|only|just)|how (do|should|can)|just (show|use|one|1)|one (industry|title|location|at))\b/i.test(lowerText)
+                        || /\b(refine|change|switch|update|modify|only|just|can you)\b.*(search|looking|criteria|results|industry|industries|title|location)/i.test(lowerText);
+                    // Must have search intent AND NOT be vague AND NOT be a meta-instruction to force search
+                    if (hasSearchIntent && !hasVagueTarget && !isMetaInstruction) {
                         shouldRunSearch = true;
                         // Clear old targeting so Gemini parses this fresh query from scratch
                         // e.g. previous search was "founders at X", now user says "find all people at X"
@@ -1374,13 +1394,31 @@ export default function AdvancedSearchAIPage() {
             let searchTotal = 0;
             let icpWasApplied = false;
 
-            // When the user confirmed a search preview, always send the ORIGINAL query to the backend
-            // and let the server's Gemini re-parse it with the improved prompt (fixes "from Company" parsing).
-            // The pre-parsed preview intent shown to the user is only for display — do not use it as the search input.
+            // Determine effective search query for confirmed searches.
+            // If the confirmed originalQuery was a trigger word ("yes", "ok", etc.) we must NOT
+            // send it to the backend — Gemini will parse "yes" as keywords: ["yes"] and corrupt
+            // the targeting state. Instead, use the pre-parsed intent targeting directly.
+            // For real query strings ("Find CTOs at SaaS startups in Dubai") we still re-parse
+            // via the backend for best accuracy (e.g. "from Company" parsing).
+            const CONFIRM_TRIGGER_RE = /^(yes|yeah|yep|sure|ok|okay|go|proceed|perfect|great|sounds good|find them?|find leads?|search|start|do it|go ahead)[\s.,!]*$/i;
             let searchQuery: string;
             if (confirmedForSearch) {
-                searchQuery = confirmedForSearch.originalQuery;
-                ext = null; // Clear the preview intent — let the backend parse the original query fresh
+                const isTriggerOriginal = CONFIRM_TRIGGER_RE.test(confirmedForSearch.originalQuery.trim())
+                    || confirmedForSearch.originalQuery.trim().length <= 12;
+                if (isTriggerOriginal && confirmedForSearch.intent) {
+                    // Trigger word confirmed — use the pre-parsed intent targeting directly.
+                    // Build a readable search query from the intent so the backend can score it properly.
+                    ext = confirmedForSearch.intent;
+                    searchQuery = [
+                        ...(ext.job_titles || []),
+                        ...(ext.industries || []),
+                        ...(ext.locations || []),
+                    ].filter(Boolean).join(' ') || 'leads';
+                } else {
+                    // Real query — send to backend for fresh re-parsing (fixes "from Company" parsing).
+                    searchQuery = confirmedForSearch.originalQuery;
+                    ext = null;
+                }
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
@@ -1390,8 +1428,8 @@ export default function AdvancedSearchAIPage() {
 
             try {
                 // Enhance ICP description with user feedback on previous leads
-                // When running from a confirmed preview, use the original query, not "yes"
-                const icpBase = confirmedForSearch ? confirmedForSearch.originalQuery : text;
+                // Use the effective searchQuery (never "yes") as the ICP base description
+                const icpBase = confirmedForSearch ? searchQuery : text;
                 let icpDesc = icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
@@ -1506,7 +1544,8 @@ export default function AdvancedSearchAIPage() {
                             enriched_profile: item.enriched_profile || undefined,
                         }));
                         setFilteredLeads(fl);
-                        setShowFilteredLeads(false); // always collapse on new search
+                        // Auto-expand when all results were filtered (no qualified leads found)
+                        setShowFilteredLeads(realLeads.length === 0);
                     } else {
                         setFilteredLeads([]);
                         setShowFilteredLeads(false);
@@ -1752,10 +1791,11 @@ export default function AdvancedSearchAIPage() {
         setTargeting(null);
         setLeads([]);
         setShowPanel(false);
-        setConvId(null);
+        setConvId(crypto.randomUUID());
         setMsgCount(0);
         setPendingIntent(null);
         setPendingSearchConfirmation(null);
+        setConversationSummary('');
         setSearchPage(1);
         setTotalResults(0);
         setSearchCursor(null);
@@ -1854,6 +1894,84 @@ export default function AdvancedSearchAIPage() {
         } catch (e) { console.error('[LoadMore] error', e); }
         setLoadingMore(false);
     }, [loadingMore, lastSearchQuery, leadCount, lastTargeting, lastIcpDescription, searchCursor, leads.length]);
+
+    /* ═══════════════════════════════════════════════
+       AI CHAT PERSISTENCE — save conversation + messages
+       ═══════════════════════════════════════════════ */
+    const savedMsgIdsRef = React.useRef<Set<string>>(new Set());
+
+    React.useEffect(() => {
+        // Only sync when there are completed (non-loading) messages
+        const completed = messages.filter(m => !m.loading);
+        const unsaved = completed.filter(m => !savedMsgIdsRef.current.has(m.id));
+        if (!unsaved.length) return;
+
+        const sync = async () => {
+            try {
+                const token = typeof window !== 'undefined'
+                    ? (localStorage.getItem('authToken') || localStorage.getItem('token') || '')
+                    : '';
+                const headers: Record<string, string> = {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                };
+
+                // 1. Upsert conversation (create first time, update context on subsequent calls)
+                const lastSearchMsg = [...completed].reverse().find(m => m.role === 'ai' && m.leads?.length);
+                const convPayload = {
+                    session_id: convId,
+                    search_query: lastSearchQuery || undefined,
+                    targeting: lastTargeting || undefined,
+                    icp_description: lastIcpDescription || undefined,
+                    lead_count: leads.length,
+                    filtered_count: filteredLeads.length,
+                };
+                const convRes = await fetch('/api/ai-chat/conversations', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(convPayload),
+                });
+                if (!convRes.ok) return;
+                const { conversation_id } = await convRes.json();
+
+                // 2. Save unsaved messages
+                const msgPayload = unsaved.map(m => ({
+                    role: m.role,
+                    content: m.text,
+                    search_query: m.targeting ? lastSearchQuery : undefined,
+                    targeting: m.targeting || undefined,
+                    leads_found: m.leads?.length ?? undefined,
+                    icp_applied: !!(m.leads?.some((l: any) => l.icp_score != null)),
+                    sources: m.sources || undefined,
+                    metadata: {
+                        ...(m.inboundAction ? { inboundAction: m.inboundAction } : {}),
+                        ...(m.webSearchResult ? { webSearchResult: true } : {}),
+                    },
+                    created_at: m.ts instanceof Date ? m.ts.toISOString() : m.ts,
+                }));
+
+                await fetch(`/api/ai-chat/conversations/${conversation_id}/messages`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ messages: msgPayload }),
+                });
+
+                // Mark as saved so we don't re-send them
+                unsaved.forEach(m => savedMsgIdsRef.current.add(m.id));
+            } catch (_) {
+                // Non-blocking — persistence failure must not disrupt the UX
+            }
+        };
+
+        // Debounce slightly so rapid state updates are batched
+        const timer = setTimeout(sync, 1200);
+        return () => clearTimeout(timer);
+    }, [messages, convId, lastSearchQuery, lastTargeting, lastIcpDescription, leads.length, filteredLeads.length]);
+
+    // Reset saved-IDs tracker when convId changes (new session)
+    React.useEffect(() => {
+        savedMsgIdsRef.current = new Set();
+    }, [convId]);
 
     /* ═══════════════════════════════════════════════
        SCREEN 1: LANDING (Disabled - Single-screen mode)
@@ -2075,7 +2193,7 @@ export default function AdvancedSearchAIPage() {
                                         : 'Qualifying...'
                                 }
                                 : m;
-                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} onUploadClick={() => fileInputRef.current?.click()} />;
+                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} />;
                         })}
                         </div>
 
@@ -2250,7 +2368,7 @@ export default function AdvancedSearchAIPage() {
                 </div>
 
                 {/* RIGHT: PANELS */}
-                {(showPanel === 'leads' || showPanel === 'workflow') && (leads.length > 0 || inboundLeads.length > 0 || showPanel === 'workflow') && (
+                {(showPanel === 'leads' || showPanel === 'workflow') && (leads.length > 0 || inboundLeads.length > 0 || filteredLeads.length > 0 || showPanel === 'workflow') && (
                     <div className="adv-leads-panel">
                         {/* Split-screen panel header */}
                         <div style={{
@@ -3014,7 +3132,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; onUploadClick?: () => void }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void }) {
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -3059,26 +3177,60 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
             <div className="adv-ai-body">
                 {msg.webSearchResult && (
                     <div className="adv-web-searched">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         Searched the web
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
                     </div>
                 )}
-                <div className="adv-ai-name">AI Lead Finder</div>
+                <div className="adv-ai-name">
+                    AI Lead Finder
+                    <span className="adv-ai-name-dot" />
+                </div>
 
-                {/* ── Dynamic AI text (markdown-aware rendering) ── */}
+                {/* ── Rich markdown-aware renderer ── */}
                 <div className="adv-ai-text" style={{ marginBottom: msg.targeting ? "16px" : "0" }}>
                     {msg.text.split('\n').map((line, i) => {
-                        // Bold: **text**
-                        const parts = line.split(/(\*\*[^*]+\*\*)/g);
-                        const rendered = parts.map((p, j) =>
-                            p.startsWith('**') && p.endsWith('**')
-                                ? <strong key={j}>{p.slice(2, -2)}</strong>
-                                : p
+                        // ── Inline rich text parser: **bold**, *italic*, `code` ──────
+                        const renderInline = (raw: string) => {
+                            const tokens = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+                            return tokens.map((t, j) => {
+                                if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2,-2)}</strong>;
+                                if (t.startsWith('*')  && t.endsWith('*'))  return <em key={j} className="adv-ai-em">{t.slice(1,-1)}</em>;
+                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#4f46e5'}}>{t.slice(1,-1)}</code>;
+                                return t;
+                            });
+                        };
+
+                        const trimmed = line.trim();
+                        if (!trimmed) return <br key={i} />;
+
+                        // ### Heading
+                        if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
+                        if (trimmed.startsWith('## '))  return <div key={i} className="adv-ai-h3" style={{fontSize:'14.5px'}}>{renderInline(trimmed.slice(3))}</div>;
+
+                        // --- Divider
+                        if (/^-{3,}$/.test(trimmed)) return <hr key={i} className="adv-ai-hr" />;
+
+                        // Numbered list  1. Item
+                        const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+                        if (numMatch) return (
+                            <div key={i} className="adv-ai-num-item">
+                                <span className="adv-ai-num-badge">{numMatch[1]}</span>
+                                <span style={{flex:1,lineHeight:'1.65'}}>{renderInline(numMatch[2])}</span>
+                            </div>
                         );
-                        if (!line.trim()) return <br key={i} />;
-                        if (line.startsWith('• ')) return <p key={i} style={{ margin: '2px 0', paddingLeft: '4px' }}>• {rendered.map((r, j) => <span key={j}>{typeof r === 'string' ? r.replace(/^• /, '') : r}</span>)}</p>;
-                        return <p key={i} style={{ margin: '3px 0' }}>{rendered}</p>;
+
+                        // Bullet list  • or - or *
+                        if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || /^\* [^*]/.test(trimmed)) {
+                            const content = trimmed.replace(/^[•\-\*]\s+/, '');
+                            return (
+                                <div key={i} className="adv-ai-bullet">
+                                    <span className="adv-ai-bullet-dot" />
+                                    <span style={{flex:1,lineHeight:'1.65'}}>{renderInline(content)}</span>
+                                </div>
+                            );
+                        }
+
+                        return <p key={i} style={{ margin: '3px 0' }}>{renderInline(trimmed)}</p>;
                     })}
                 </div>
 
@@ -3183,7 +3335,13 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Leads</div>
-                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>{leadsCount} Leads found</div>
+                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>
+                                    {leadsCount > 0
+                                        ? `${leadsCount} Leads found`
+                                        : filteredLeadsCount && filteredLeadsCount > 0
+                                            ? `${filteredLeadsCount} lead${filteredLeadsCount !== 1 ? 's' : ''} (below ICP threshold)`
+                                            : '0 Leads found'}
+                                </div>
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
@@ -4029,9 +4187,11 @@ function CheckpointFormInline({
             });
 
             // For direct contacts (phone/email only): include ALL leads (not just thumbs-up)
-            // For LinkedIn search campaigns: only include user-approved "good match" leads
+            // For LinkedIn search campaigns: include all leads except explicitly thumbs-down'd ones.
+            // Previously required explicit thumbs-up (=== 'good') which meant zero leads if user
+            // never clicked thumbs-up — leads were lost. Now we only exclude rejected leads.
             const goodMatchLeads = leads
-                .filter(l => leadFeedback[l.id] === 'good')
+                .filter(l => leadFeedback[l.id] !== 'bad')
                 .map(l => mapLead(l, 'user_good_match'));
 
             const directContactLeads = isDirectContact
@@ -5557,27 +5717,35 @@ const css = `
             .adv-msgs-inner {max-width:700px; margin:0 auto; padding:0 20px; width:100%; }
             .adv-msgs-inner + .adv-msgs-inner {padding-top:8px; }
             /* ── BUBBLES ── */
-            .adv-bubble {padding:10px 0; }
-            .adv-bubble-user {display:flex; justify-content:flex-end; }
-            .adv-user-msg {background:#e0eaf5; color:#111827; border-radius:18px 18px 4px 18px; padding:14px 20px; max-width:70%; border:1px solid #c2d6eb; font-size:15px; line-height:1.6; }
-            .adv-bubble-ai {display:flex; gap:12px; align-items:flex-start; }
-            .adv-ai-avatar {width:34px; height:34px; border-radius:50%; background:#e0eaf5; border:1.5px solid #c2d6eb; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#172560; font-size:14px; }
-            .adv-ai-body {flex:1; max-width:88%; }
-            .adv-ai-name {font-size:12px; font-weight:700; color:#111827; margin-bottom:6px; letter-spacing:.02em; }
-            .adv-ai-text {font-size:14.5px; line-height:1.7; color:#374151; }
-            .adv-ai-text p {margin:0 0 4px; }
-            .adv-ai-text strong {color:#111827; }
-            .adv-web-searched {display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#9ca3af; margin-bottom:6px; cursor:default; }
+            .adv-bubble {padding:6px 0; }
+            .adv-bubble-user {display:flex; justify-content:flex-end; margin-bottom:4px; }
+            .adv-user-msg {background:linear-gradient(135deg,#172560 0%,#2563eb 100%); color:#fff; border-radius:20px 20px 4px 20px; padding:12px 18px; max-width:72%; font-size:14.5px; line-height:1.65; box-shadow:0 2px 14px rgba(23,37,96,.2); font-weight:450; }
+            .adv-bubble-ai {display:flex; gap:12px; align-items:flex-start; margin-bottom:4px; }
+            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#172560 0%,#4f46e5 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(79,70,229,.28); }
+            .adv-ai-body {flex:1; max-width:90%; }
+            .adv-ai-name {font-size:11px; font-weight:700; color:#4f46e5; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
+            .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
+            .adv-ai-text {font-size:14.5px; line-height:1.78; color:#374151; }
+            .adv-ai-text p {margin:0 0 6px; }
+            .adv-ai-text strong {color:#111827; font-weight:650; }
+            .adv-ai-text em {color:#4f46e5; font-style:normal; font-weight:500; }
+            .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
+            .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
+            .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:4px 0; }
+            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#4f46e5; flex-shrink:0; margin-top:7px; opacity:.7; }
+            .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
+            .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4f46e5; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+            .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
             /* ── THINKING DOTS ── */
-            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:20px;overflow:hidden}
-            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
+            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden}
+            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:normal;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
             .adv-tw-in{opacity:1;transform:translateY(0)}
             .adv-tw-out{opacity:0;transform:translateY(-7px)}
-            .adv-thinking-dots{display:inline-flex;gap:3px;align-items:center}
-            .adv-thinking-dots span{width:4px;height:4px;border-radius:50%;background:#9ca3af;display:inline-block;animation:adv-db 1.1s ease-in-out infinite}
-            .adv-thinking-dots span:nth-child(2){animation-delay:.18s}
-            .adv-thinking-dots span:nth-child(3){animation-delay:.36s}
-            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-4px);opacity:1}}
+            .adv-thinking-dots{display:inline-flex;gap:4px;align-items:center}
+            .adv-thinking-dots span{width:5px;height:5px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#2563eb);display:inline-block;animation:adv-db 1.2s ease-in-out infinite}
+            .adv-thinking-dots span:nth-child(2){animation-delay:.2s}
+            .adv-thinking-dots span:nth-child(3){animation-delay:.4s}
+            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
             /* ── CHAT INPUT ── */
             .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:8px 20px 18px; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
