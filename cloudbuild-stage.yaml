@@ -126,10 +126,10 @@ substitutions:
   _ENV: 'staging'
   # Update these URLs after first deploy once you know the project number
   # Run: gcloud projects describe lad-stage-484806 --format='value(projectNumber)'
-  _API_URL: 'https://lad-backend-stage-REPLACE_WITH_PROJECT_NUMBER.us-central1.run.app'
-  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-stage-REPLACE_WITH_PROJECT_NUMBER.us-central1.run.app'
-  _CONVERSATION_SERVICE_URL: 'https://bni-conversation-service-stage-REPLACE_WITH_PROJECT_NUMBER.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-stage-REPLACE_WITH_PROJECT_NUMBER.us-central1.run.app'
+  _API_URL: 'https://lad-backend-stage-344049867257.us-central1.run.app'
+  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-stage-344049867257.us-central1.run.app'
+  _CONVERSATION_SERVICE_URL: 'https://bni-conversation-service-stage-344049867257.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-stage-344049867257.us-central1.run.app'
 
 # Cloud Build trigger configuration (set in Cloud Console):
 # - Source repository: LAD-Frontend
