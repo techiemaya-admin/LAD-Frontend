@@ -107,7 +107,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogTitle>{labels.createTitle}</DialogTitle>
         <div className="space-y-4">
             <div className="space-y-2">

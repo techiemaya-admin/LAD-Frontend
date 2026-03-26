@@ -1543,6 +1543,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
                 <PipelineListView
                   leads={normalizedLeads}
                   stages={normalizedStages as (Stage & { name?: string; label?: string; key?: string })[]}
+                  labels={labels}
                   teamMembers={[]}
                   visibleColumns={Object.fromEntries(
                     Object.entries((pipelineSettings.visibleColumns as unknown as Record<string, boolean>) || {})

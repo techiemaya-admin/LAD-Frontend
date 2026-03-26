@@ -1,12 +1,12 @@
 "use client";
-import React, { JSX, useCallback, useEffect, useState } from 'react';
+import React, { JSX, useCallback, useEffect, useState, useRef } from 'react';
 import { PipelineBoard } from '@/components/deals-pipeline';
 import { useAuth } from '@/contexts/AuthContext';
 import { GraduationCap, TrendingUp } from 'lucide-react';
 import PipelineStatsCards from '@/components/deals-pipeline/PipelineStatsCards';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePipelineStats } from '@lad/frontend-features/deals-pipeline';
-import { selectPipelineActiveFilters, setPipelineActiveFilters } from '@/store/slices/uiSlice';
+import { selectPipelineActiveFilters, setPipelineActiveFilters, setPipelineSettings } from '@/store/slices/uiSlice';
 
 // Force dynamic rendering for this page due to Redux/Hooks usage
 export const dynamic = 'force-dynamic';
@@ -21,6 +21,7 @@ export default function PipelinePage(): JSX.Element {
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(20);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const handleStatsCardClick = useCallback((cardKey: string) => {
     // Toggle: if clicking the same card, deselect it
@@ -38,10 +39,7 @@ export default function PipelinePage(): JSX.Element {
         })
       );
       setPage(1);
-      return;
-    }
-
-    if (cardKey === 'connection_sent') {
+    } else if (cardKey === 'connection_sent') {
       setStage('connection_sent');
       setStatus(undefined);
       dispatch(
@@ -52,10 +50,7 @@ export default function PipelinePage(): JSX.Element {
         })
       );
       setPage(1);
-      return;
-    }
-
-    if (cardKey === 'message_sent') {
+    } else if (cardKey === 'message_sent') {
       setStage('message');
       setStatus('sent');
       dispatch(
@@ -66,10 +61,7 @@ export default function PipelinePage(): JSX.Element {
         })
       );
       setPage(1);
-      return;
-    }
-
-    if (cardKey === 'followup') {
+    } else if (cardKey === 'followup') {
       setStage('followup');
       setStatus(undefined);
       dispatch(
@@ -80,10 +72,7 @@ export default function PipelinePage(): JSX.Element {
         })
       );
       setPage(1);
-      return;
-    }
-
-    if (cardKey === 'contacted') {
+    } else if (cardKey === 'contacted') {
       setStage('contacted');
       setStatus(undefined);
       dispatch(
@@ -94,6 +83,17 @@ export default function PipelinePage(): JSX.Element {
         })
       );
       setPage(1);
+    }
+
+    // Always scroll to board and set list view on mobile/tablet when clicking any stat card
+    if (window.innerWidth < 1024) {
+      dispatch(setPipelineSettings({ viewMode: 'list' }));
+      
+      setTimeout(() => {
+        if (boardRef.current) {
+          boardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 200);
     }
   }, [activeFilters, dispatch, selectedCard]);
 
@@ -123,7 +123,7 @@ export default function PipelinePage(): JSX.Element {
   const contactedCount = Number(stats?.contacted ?? 0);
 
   return (
-    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-4 sm:p-6 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
       <div className="mb-6 mt-10">
         <div className="flex items-center gap-3 mb-5">
@@ -145,17 +145,19 @@ export default function PipelinePage(): JSX.Element {
         />
       </div>
 
-      <PipelineBoard
-        stage={stage}
-        status={status}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={(nextLimit: number) => {
-          setLimit(nextLimit);
-          setPage(1);
-        }}
-      />
+      <div ref={boardRef}>
+        <PipelineBoard
+          stage={stage}
+          status={status}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(nextLimit: number) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
+      </div>
     </div>
   );
 }
