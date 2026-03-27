@@ -27,6 +27,8 @@ export interface UseConversationsReturn {
   selectConversation: (id: string | number) => void;
   channelFilter: string | 'all';
   setChannelFilter: (channel: string | 'all') => void;
+  contextStatusFilter: string | 'all';
+  setContextStatusFilter: (status: string | 'all') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   unreadCounts: Record<string, number>;
@@ -54,6 +56,7 @@ export function useConversations(): UseConversationsReturn {
     activeConversationId || (conversationsFromRedux[0]?.id ?? null)
   );
   const [channelFilter, setChannelFilter] = useState<string | 'all'>('all');
+  const [contextStatusFilter, setContextStatusFilter] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredConversations = useMemo(() => {
@@ -68,6 +71,15 @@ export function useConversations(): UseConversationsReturn {
             : rawChannel;
         const matchesChannel =
           channelFilter === 'all' || normalizedChannel === channelFilter;
+
+        // Match by context_status field
+        const rawContextStatus = String(
+          (conv as Record<string, unknown>).contextStatus ||
+          (conv as Record<string, unknown>).context_status ||
+          ''
+        );
+        const matchesContextStatus =
+          contextStatusFilter === 'all' || rawContextStatus === contextStatusFilter;
 
         // Search by contact name, lead name, or last message content
         const searchLower = searchQuery.toLowerCase();
@@ -89,14 +101,14 @@ export function useConversations(): UseConversationsReturn {
           lastMsgContent.includes(searchLower) ||
           String(conv.id).toLowerCase().includes(searchLower);
 
-        return matchesChannel && matchesSearch;
+        return matchesChannel && matchesContextStatus && matchesSearch;
       })
       .sort((a, b) => {
         const aTime = new Date((a.updatedAt || a.lastMessageTime || 0) as string | number).getTime();
         const bTime = new Date((b.updatedAt || b.lastMessageTime || 0) as string | number).getTime();
         return bTime - aTime;
       });
-  }, [conversationsFromRedux, channelFilter, searchQuery]);
+  }, [conversationsFromRedux, channelFilter, contextStatusFilter, searchQuery]);
 
   const selectedConversation = useMemo(() => {
     return conversationsFromRedux.find((c) => String(c.id) === String(selectedId)) || null;
@@ -183,6 +195,8 @@ export function useConversations(): UseConversationsReturn {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,
