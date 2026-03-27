@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
+import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
 import { TenantOnboarding } from './TenantOnboarding';
 import { GoHighLevelIntegration } from './GoHighLevelIntegration';
@@ -319,6 +320,7 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
         const connected = accounts.some((a: { status: string }) => a.status === 'connected');
         setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
+        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
       } catch { setStatus('whatsapp-personal', 'disconnected'); }
     };
 
@@ -332,6 +334,7 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
         const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
         setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
+        if (active) try { localStorage.setItem('whatsappChannel', 'waba'); } catch {}
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
     };
 
@@ -451,6 +454,7 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
         const connected = accounts.some((a: { status: string }) => a.status === 'connected');
         setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
+        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
       } catch { setStatus('whatsapp-personal', 'disconnected'); }
 
       // WhatsApp AI
@@ -548,7 +552,14 @@ export const IntegrationsSettings: React.FC = () => {
         </button>
 
         {activeView === 'whatsapp-ai' && <TenantOnboarding />}
-        {activeView === 'whatsapp-personal' && <WhatsAppIntegration />}
+        {activeView === 'whatsapp-personal' && (
+          <div className="space-y-6">
+            <WhatsAppIntegration />
+            <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ minHeight: 400 }}>
+              <PersonalWaTemplateManager />
+            </div>
+          </div>
+        )}
         {activeView === 'google' && <GoogleAuthIntegration />}
         {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
         {activeView === 'linkedin' && <LinkedInIntegration />}

@@ -15,6 +15,7 @@ import {
   sendMessage as sendMessageApi,
   updateConversationStatus,
   conversationKeys,
+  type ConversationQueryOptions,
 } from '../api';
 import type {
   Conversation,
@@ -24,12 +25,22 @@ import type {
   ConversationListFilters,
 } from '../types';
 
+export interface UseConversationsOptions {
+  /**
+   * Lock this hook instance to a specific backend.
+   * 'personal' → LAD_backend (Baileys)
+   * 'waba'     → LAD-WABA-Comms (Meta Business API)
+   * Omit to use the current localStorage.whatsappChannel setting.
+   */
+  channel?: 'personal' | 'waba';
+}
+
 /**
  * Main hook for managing conversations state.
  * Fetches real data from the backend via TanStack Query
  * while maintaining local UI state for selection, filtering, etc.
  */
-export function useConversations(): UseConversationsReturn {
+export function useConversations(hookOptions?: UseConversationsOptions): UseConversationsReturn {
   const queryClient = useQueryClient();
 
   // Local UI state
@@ -38,16 +49,17 @@ export function useConversations(): UseConversationsReturn {
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Build filters from local state
-  const filters: ConversationListFilters = useMemo(() => ({
-    channel: channelFilter !== 'all' ? channelFilter : undefined,
+  // Build filters from local state — include the channel override so both the
+  // query key and the HTTP request carry it, keeping personal/waba caches separate.
+  const filters: ConversationQueryOptions = useMemo(() => ({
+    channel: hookOptions?.channel,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
-  }), [channelFilter, searchQuery, contextStatusFilter]);
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
 
   // Fetch conversations from backend
   const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions());
+  const allConversationsQuery = useQuery(getConversationsOptions({ channel: hookOptions?.channel }));
 
   const conversations = conversationsQuery.data || [];
   const allConversations = allConversationsQuery.data || [];

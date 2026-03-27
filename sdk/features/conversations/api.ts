@@ -113,37 +113,49 @@ function mapConversationFromApi(raw: any): Conversation {
 // ====================
 
 /**
+ * Extended filters type that includes a backend channel override.
+ * channel: 'personal' → always route to LAD_backend (Baileys / personal WA)
+ * channel: 'waba'     → always route to LAD-WABA-Comms (Meta Business API)
+ * When omitted, falls back to proxyClient's localStorage heuristic.
+ */
+export interface ConversationQueryOptions extends ConversationListFilters {
+  channel?: 'personal' | 'waba';
+}
+
+/**
  * Get all conversations with optional filters
  */
-export async function getConversations(filters?: ConversationListFilters): Promise<Conversation[]> {
+export async function getConversations(filters?: ConversationQueryOptions): Promise<Conversation[]> {
+  const { channel, ...rest } = filters ?? {};
   const params: Record<string, string> = {};
-  if (filters?.search) params.search = filters.search;
-  if (filters?.status && filters.status !== 'all') {
-    params.status = filters.status === 'open' ? 'active' : filters.status;
+  if (rest.search) params.search = rest.search;
+  if (rest.status && rest.status !== 'all') {
+    params.status = rest.status === 'open' ? 'active' : rest.status;
   }
-  if (filters?.owner && filters.owner !== 'all') params.owner = filters.owner;
-  if (filters?.context_status) params.context_status = filters.context_status;
-  if (filters?.limit) params.limit = String(filters.limit);
-  if (filters?.offset) params.offset = String(filters.offset);
+  if (rest.owner && rest.owner !== 'all') params.owner = rest.owner;
+  if (rest.context_status) params.context_status = rest.context_status;
+  if (rest.limit) params.limit = String(rest.limit);
+  if (rest.offset) params.offset = String(rest.offset);
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
-    { params }
+    { params, channel }
   );
 
   return (response.data.data || []).map(mapConversationFromApi);
 }
 
 /**
- * TanStack Query options for getting conversations
+ * TanStack Query options for getting conversations.
+ * channel is included in the query key so personal/waba instances never share cache.
  */
-export const getConversationsOptions = (filters?: ConversationListFilters) =>
+export const getConversationsOptions = (filters?: ConversationQueryOptions) =>
   queryOptions({
-    queryKey: conversationKeys.list(filters),
+    queryKey: [...conversationKeys.list(filters), filters?.channel ?? 'personal'],
     queryFn: () => getConversations(filters),
-    staleTime: 30 * 1000, // 30 seconds (conversations change frequently)
+    staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 15000, // Poll every 15 seconds for new messages
+    refetchInterval: 15000,
   });
 
 /**
