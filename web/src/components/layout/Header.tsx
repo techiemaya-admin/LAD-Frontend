@@ -92,6 +92,28 @@ export function NavbarDemo() {
                 <span className="block">{item.name}</span>
               </a>
             ))}
+            <div className="flex w-full flex-col gap-4">
+              <NavbarButton
+                onClick={() => {
+                  setIsMobileMenuOpen(false)
+                  login();
+                }}
+                variant="secondary"
+                className="w-full"
+              >
+                Login
+              </NavbarButton>
+              <NavbarButton
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleGetStarted();
+                }}
+                variant="primary"
+                className="w-full"
+              >
+                Get Started
+              </NavbarButton>
+            </div>
           </MobileNavMenu>
         </MobileNav>
       </Navbar>
