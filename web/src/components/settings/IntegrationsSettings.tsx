@@ -115,6 +115,17 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'CRM',
   },
   {
+    id: 'mindbody',
+    name: 'MindBody',
+    description: 'Connect MindBody to automate trial class booking via WhatsApp AI.',
+    icon: (
+      <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
+    ),
+    iconBg: 'bg-teal-50',
+    category: 'CRM',
+    comingSoon: false,
+  },
+  {
     id: 'slack',
     name: 'Slack',
     description: 'Receive real-time business updates and notifications in your workspace.',
@@ -229,6 +240,68 @@ export const IntegrationsSettings: React.FC = () => {
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
 
+  // MindBody modal state
+  const [showMindBodyModal, setShowMindBodyModal] = useState(false);
+  const [mindBodyForm, setMindBodyForm] = useState({
+    site_id: '',
+    display_name: '',
+    username: '',
+    api_key: '',
+    password: '',
+  });
+  // Target class selection
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [fetchingClasses, setFetchingClasses] = useState(false);
+  const [classFetchError, setClassFetchError] = useState<string | null>(null);
+
+  const fetchAvailableClasses = async () => {
+    setFetchingClasses(true);
+    setClassFetchError(null);
+    try {
+      const r = await fetchWithTenant('/api/social-integration/mindbody/preview-classes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site_id: mindBodyForm.site_id, api_key: mindBodyForm.api_key }),
+      });
+      const data = await r.json();
+      if (Array.isArray(data?.uniqueNames) && data.uniqueNames.length > 0) {
+        setAvailableClasses(data.uniqueNames);
+      } else {
+        setAvailableClasses([]);
+        setClassFetchError('No classes found in the next 7 days. Verify your Site ID and API Key.');
+      }
+    } catch {
+      setClassFetchError('Failed to fetch classes. Please verify your credentials.');
+    } finally {
+      setFetchingClasses(false);
+    }
+  };
+
+  const mindBodyFormReset = () => {
+    setMindBodyForm({ site_id: '', display_name: '', username: '', api_key: '', password: '' });
+    setAvailableClasses([]);
+    setSelectedClasses([]);
+    setClassFetchError(null);
+    setMindBodyError(null);
+  };
+
+  const [mindBodyConnecting, setMindBodyConnecting] = useState(false);
+  const [mindBodyError, setMindBodyError] = useState<string | null>(null);
+  const [mindBodyStatusData, setMindBodyStatusData] = useState<{
+    site_id: string | null;
+    display_name: string | null;
+    target_classes: string[];
+  } | null>(null);
+
+  // Edit target classes on the connected account (no re-entry of credentials needed)
+  const [editingClasses, setEditingClasses] = useState(false);
+  const [connectedAvailableClasses, setConnectedAvailableClasses] = useState<string[]>([]);
+  const [connectedSelectedClasses, setConnectedSelectedClasses] = useState<string[]>([]);
+  const [connectedFetchingClasses, setConnectedFetchingClasses] = useState(false);
+  const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
+  const [updatingClasses, setUpdatingClasses] = useState(false);
+
   // Helper to update a single integration's status
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
@@ -262,22 +335,22 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
     };
 
-    // Google
+    // Google — checks email OAuth status (same flow as Connect with Google button)
     const checkGoogle = async () => {
       setStatus('google', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
         if (!res.ok) { setStatus('google', 'disconnected'); return; }
         const data = await res.json();
         setStatus('google', data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('google', 'disconnected'); }
     };
 
-    // Microsoft
+    // Microsoft — checks email OAuth status (same flow as Connect with Microsoft button)
     const checkMicrosoft = async () => {
       setStatus('microsoft', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
         if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
         const data = await res.json();
         setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
@@ -310,13 +383,60 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('gohighlevel', 'disconnected'); }
     };
 
+    // MindBody
+    const checkMindBody = async () => {
+      try {
+        setStatus('mindbody', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
+        const data = await r.json();
+        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setMindBodyStatusData({
+            site_id: data.site_id ?? null,
+            display_name: data.display_name ?? null,
+            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+          });
+        }
+      } catch {
+        setStatus('mindbody', 'disconnected');
+      }
+    };
+
     checkWaPersonal();
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
     checkLinkedIn();
     checkGHL();
+    checkMindBody();
   }, [tenantId, setStatus]);
+
+  // Detect OAuth redirect-back (?google=connected or ?microsoft=connected)
+  // When the OAuth flow completes, the backend redirects to /settings?google=connected.
+  // At that point activeView is reset to 'grid' so GoogleAuthIntegration is not mounted —
+  // we must refresh the grid status here instead.
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleDone = urlParams.get('google');
+    const microsoftDone = urlParams.get('microsoft');
+
+    if (googleDone === 'connected' || googleDone === 'error') {
+      // Re-check Google status and clean up URL
+      fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => setStatus('google', data?.connected ? 'connected' : 'disconnected'))
+        .catch(() => setStatus('google', 'disconnected'));
+      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
+    }
+
+    if (microsoftDone === 'connected' || microsoftDone === 'error') {
+      fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => setStatus('microsoft', data?.connected ? 'connected' : 'disconnected'))
+        .catch(() => setStatus('microsoft', 'disconnected'));
+      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
+    }
+  }, [setStatus]);
 
   // Re-check all statuses
   const refreshStatuses = useCallback(() => {
@@ -347,7 +467,7 @@ export const IntegrationsSettings: React.FC = () => {
       // Google
       setStatus('google', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/google/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
         if (!res.ok) { setStatus('google', 'disconnected'); return; }
         const data = await res.json();
         setStatus('google', data?.connected ? 'connected' : 'disconnected');
@@ -356,7 +476,7 @@ export const IntegrationsSettings: React.FC = () => {
       // Microsoft
       setStatus('microsoft', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/calendar/microsoft/status', { method: 'POST' });
+        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
         if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
         const data = await res.json();
         setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
@@ -383,6 +503,23 @@ export const IntegrationsSettings: React.FC = () => {
         const data = await res.json();
         setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('gohighlevel', 'disconnected'); }
+
+      // MindBody
+      try {
+        setStatus('mindbody', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
+        const data = await r.json();
+        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setMindBodyStatusData({
+            site_id: data.site_id ?? null,
+            display_name: data.display_name ?? null,
+            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+          });
+        }
+      } catch {
+        setStatus('mindbody', 'disconnected');
+      }
     };
     checkAll();
   }, [setStatus]);
@@ -395,9 +532,10 @@ export const IntegrationsSettings: React.FC = () => {
     );
   }, [searchQuery]);
 
-  // Detail view for a specific integration
-  if (activeView !== 'grid') {
-    return (
+  // Single return — modal must be accessible from both detail and grid views
+  return (
+    <>
+    {activeView !== 'grid' ? (
       <div className="space-y-4">
         <button
           onClick={() => {
@@ -420,12 +558,207 @@ export const IntegrationsSettings: React.FC = () => {
             Slack integration coming soon.
           </div>
         )}
-      </div>
-    );
-  }
+        {activeView === 'mindbody' && (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+                <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-base text-foreground">MindBody</h3>
+                <p className="text-xs text-muted-foreground">Automate trial class booking via WhatsApp AI</p>
+              </div>
+            </div>
 
-  return (
-    <div className="space-y-6">
+            {statusMap['mindbody'] === 'connected' ? (
+              <div className="space-y-4">
+                {/* Account info */}
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                  {mindBodyStatusData?.display_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Display Name</span>
+                      <span className="font-medium text-foreground">{mindBodyStatusData.display_name}</span>
+                    </div>
+                  )}
+                  {mindBodyStatusData?.site_id && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Site ID</span>
+                      <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
+                    </div>
+                  )}
+                  {/* Target Classes row — always visible with Edit button */}
+                  <div className="flex justify-between items-start gap-4">
+                    <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="font-medium text-foreground text-right break-words">
+                        {mindBodyStatusData?.target_classes?.length
+                          ? mindBodyStatusData.target_classes.join(', ')
+                          : <span className="text-muted-foreground italic">None selected</span>}
+                      </span>
+                      {!editingClasses && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setEditingClasses(true);
+                            setConnectedFetchingClasses(true);
+                            setConnectedClassFetchError(null);
+                            setConnectedSelectedClasses(mindBodyStatusData?.target_classes ?? []);
+                            try {
+                              const r = await fetchWithTenant('/api/social-integration/mindbody/classes');
+                              const data = await r.json();
+                              const names: string[] = Array.isArray(data?.classes)
+                                ? [...new Set((data.classes as { name: string }[]).map(c => c.name).filter(Boolean))].sort() as string[]
+                                : [];
+                              setConnectedAvailableClasses(names);
+                              if (!names.length) setConnectedClassFetchError('No classes found in the next 7 days.');
+                            } catch {
+                              setConnectedClassFetchError('Failed to load classes from MindBody.');
+                            } finally {
+                              setConnectedFetchingClasses(false);
+                            }
+                          }}
+                          className="text-[11px] font-medium text-primary hover:underline flex-shrink-0 mt-0.5"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inline class editor */}
+                {editingClasses && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">Select Target Classes</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingClasses(false);
+                          setConnectedAvailableClasses([]);
+                          setConnectedClassFetchError(null);
+                        }}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </div>
+
+                    {connectedFetchingClasses && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        Loading available classes…
+                      </div>
+                    )}
+
+                    {connectedClassFetchError && (
+                      <p className="text-xs text-destructive">{connectedClassFetchError}</p>
+                    )}
+
+                    {!connectedFetchingClasses && connectedAvailableClasses.length > 0 && (
+                      <div className="rounded-lg border border-border bg-background divide-y divide-border max-h-44 overflow-y-auto">
+                        {connectedAvailableClasses.map((cls) => (
+                          <label
+                            key={cls}
+                            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={connectedSelectedClasses.includes(cls)}
+                              onChange={(e) => {
+                                setConnectedSelectedClasses((prev) =>
+                                  e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
+                                );
+                              }}
+                              className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                            />
+                            <span className="text-sm text-foreground">{cls}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {connectedSelectedClasses.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        <span className="font-medium text-foreground">{connectedSelectedClasses.length}</span>{' '}
+                        class{connectedSelectedClasses.length !== 1 ? 'es' : ''} selected
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={updatingClasses || connectedFetchingClasses}
+                      onClick={async () => {
+                        setUpdatingClasses(true);
+                        setConnectedClassFetchError(null);
+                        try {
+                          const r = await fetchWithTenant('/api/social-integration/mindbody/target-classes', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ target_classes: connectedSelectedClasses }),
+                          });
+                          const data = await r.json();
+                          if (r.ok) {
+                            setMindBodyStatusData((prev) =>
+                              prev ? { ...prev, target_classes: connectedSelectedClasses } : prev
+                            );
+                            setEditingClasses(false);
+                            setConnectedAvailableClasses([]);
+                          } else {
+                            setConnectedClassFetchError(data?.error || 'Failed to update target classes.');
+                          }
+                        } catch {
+                          setConnectedClassFetchError('Failed to save changes. Please try again.');
+                        } finally {
+                          setUpdatingClasses(false);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {updatingClasses ? 'Saving…' : 'Save Target Classes'}
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetchWithTenant('/api/social-integration/mindbody/disconnect', { method: 'POST' });
+                      setStatus('mindbody', 'disconnected');
+                      setMindBodyStatusData(null);
+                      setEditingClasses(false);
+                      setConnectedAvailableClasses([]);
+                    } catch {
+                      // silently ignore; user can retry
+                    }
+                  }}
+                  className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
+                >
+                  Disconnect MindBody
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Connect your MindBody account to enable automated trial class booking workflows through the WhatsApp AI agent.
+                </p>
+                <button
+                  onClick={() => {
+                    mindBodyFormReset();
+                    setShowMindBodyModal(true);
+                  }}
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Connect to MindBody
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -525,6 +858,227 @@ export const IntegrationsSettings: React.FC = () => {
           No integrations found matching &ldquo;{searchQuery}&rdquo;
         </div>
       )}
-    </div>
+
+      </div>
+    )}
+
+      {/* MindBody Connect Modal — rendered at fragment level so it works from both detail and grid views */}
+      {showMindBodyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-xl p-6 space-y-5 mx-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center">
+                <span className="text-xl leading-none select-none" aria-label="MindBody">🧘</span>
+              </div>
+              <h3 className="font-semibold text-base text-foreground">Connect MindBody</h3>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setMindBodyConnecting(true);
+                setMindBodyError(null);
+                try {
+                  const payload = {
+                    site_id: mindBodyForm.site_id,
+                    display_name: mindBodyForm.display_name,
+                    username: mindBodyForm.username,
+                    api_key: mindBodyForm.api_key,
+                    password: mindBodyForm.password,
+                    target_classes: selectedClasses,
+                  };
+                  const r = await fetchWithTenant('/api/social-integration/mindbody/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  const data = await r.json();
+                  if (data?.connected) {
+                    setStatus('mindbody', 'connected');
+                    setMindBodyStatusData({
+                      site_id: data.site_id ?? null,
+                      display_name: data.display_name ?? null,
+                      target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+                    });
+                    setShowMindBodyModal(false);
+                    mindBodyFormReset();
+                  } else {
+                    // Show specific MindBody API error if available, otherwise generic message
+                    const errorMsg = data?.detail
+                      ? `${data.error}: ${data.detail}`
+                      : (data?.error || data?.message || 'Connection failed. Please check your credentials.');
+                    setMindBodyError(errorMsg);
+                  }
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : 'Unknown error';
+                  setMindBodyError(`Failed to connect: ${msg}`);
+                } finally {
+                  setMindBodyConnecting(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Site ID <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. -99"
+                  value={mindBodyForm.site_id}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, site_id: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Display Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Yoga Studio"
+                  value={mindBodyForm.display_name}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, display_name: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Username <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="MindBody username"
+                  value={mindBodyForm.username}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, username: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">API Key <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="MindBody API key"
+                  value={mindBodyForm.api_key}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, api_key: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Password <span className="text-destructive">*</span></label>
+                <input
+                  type="password"
+                  required
+                  placeholder="MindBody password"
+                  value={mindBodyForm.password}
+                  onChange={(e) => setMindBodyForm((f) => ({ ...f, password: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">Target Classes</label>
+                  {mindBodyForm.site_id && mindBodyForm.api_key && (
+                    <button
+                      type="button"
+                      onClick={fetchAvailableClasses}
+                      disabled={fetchingClasses}
+                      className="flex items-center gap-1.5 text-[11px] font-medium text-primary border border-primary/30 rounded-md px-2.5 py-1 hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {fetchingClasses ? (
+                        <>
+                          <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          Loading...
+                        </>
+                      ) : availableClasses.length > 0 ? (
+                        'Refresh Classes'
+                      ) : (
+                        'Fetch Classes from MindBody'
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Hint when credentials not yet entered */}
+                {(!mindBodyForm.site_id || !mindBodyForm.api_key) && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter your Site ID and API Key above, then click &ldquo;Fetch Classes from MindBody&rdquo; to see available classes.
+                  </p>
+                )}
+
+                {/* Credentials entered but no fetch yet */}
+                {mindBodyForm.site_id && mindBodyForm.api_key && availableClasses.length === 0 && !fetchingClasses && !classFetchError && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Click the button above to load your MindBody class schedule.
+                  </p>
+                )}
+
+                {/* Fetch error */}
+                {classFetchError && (
+                  <p className="text-[11px] text-destructive">{classFetchError}</p>
+                )}
+
+                {/* Class checkbox list */}
+                {availableClasses.length > 0 && (
+                  <div className="rounded-lg border border-border bg-muted/20 divide-y divide-border max-h-44 overflow-y-auto">
+                    {availableClasses.map((cls) => (
+                      <label
+                        key={cls}
+                        className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClasses.includes(cls)}
+                          onChange={(e) => {
+                            setSelectedClasses((prev) =>
+                              e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
+                            );
+                          }}
+                          className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                        />
+                        <span className="text-sm text-foreground">{cls}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected summary */}
+                {selectedClasses.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{selectedClasses.length}</span> class{selectedClasses.length !== 1 ? 'es' : ''} selected: {selectedClasses.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              {mindBodyError && (
+                <p className="text-sm text-destructive">{mindBodyError}</p>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={mindBodyConnecting}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {mindBodyConnecting ? 'Connecting...' : 'Connect'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMindBodyModal(false);
+                    mindBodyFormReset();
+                  }}
+                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

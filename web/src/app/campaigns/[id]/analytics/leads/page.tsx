@@ -109,21 +109,24 @@ export default function CampaignLeadsPage() {
       const response = await apiPost<any>('/api/apollo-leads/reveal-phone', {
         person_id: employee.id
       });
+
       if (response.success && response.phone) {
-        // Store the revealed phone value
+        // Phone returned immediately (DB cache or direct Apollo API)
         setRevealedValues(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: response.phone } }));
         setRevealedContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
-
-        // Show credit savings if found in DB (0 credits) vs Apollo API (10 credits)
         push({
           title: 'Success',
           description: response.from_cache
             ? 'Phone retrieved from database (no credits used)'
             : `Phone revealed (${response.credits_used} credit${response.credits_used !== 1 ? 's' : ''} used)`
         });
-
-        // Trigger re-render to update UI
         refetch();
+      } else if (response.success && response.status === 'pending') {
+        // Async path — request submitted to Apollo phone service, webhook delivers within 2-5 min
+        push({
+          title: 'Request Submitted',
+          description: response.message || 'Phone reveal submitted. The number will appear within 2–5 minutes — refresh to check.'
+        });
       } else {
         push({ title: 'Error', description: response.error || 'Failed to reveal phone number' });
       }

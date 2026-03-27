@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
 import { apiGet } from '@/lib/api';
@@ -576,32 +577,34 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                   </TableCell>
                   <TableCell className="w-[140px]">
                     <div>
-                      {lead.leadLinkedin ? (
-                        <a
-                          href={lead.leadLinkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <div className="flex items-center gap-1">
+                        <Link
+                          href={`/campaigns/${campaignId}/analytics/leads`}
                           className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                          title={`View ${lead.leadName}'s LinkedIn profile`}
+                          title={`View ${lead.leadName}'s profile`}
                         >
                           {lead.leadName || 'Unknown'}
-                        </a>
-                      ) : (
-                        <p className="text-sm font-medium">
-                          {lead.leadName || 'Unknown'}
-                        </p>
-                      )}
+                        </Link>
+                        {/* LinkedIn external link as a small icon — only shown when URL is a valid absolute URL */}
+                        {lead.leadLinkedin && /^https?:\/\//i.test(lead.leadLinkedin) && (
+                          <a
+                            href={lead.leadLinkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open LinkedIn profile"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#0A66C2] hover:text-[#004182] flex-shrink-0"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                       {lead.leadPhone && (
                         <p className="text-xs text-[#64748B]">
                           {lead.leadPhone}
                         </p>
                       )}
                     </div>
-                    {lead.leadPhone && (
-                      <p className="text-xs text-muted-foreground">
-                        {lead.leadPhone}
-                      </p>
-                    )}
                   </TableCell>
                   <TableCell className="w-[80px]">
                     <LiveActivityStatusBadge status={lead.latestStatus} currentStep={calculateCurrentStep(lead)} />
