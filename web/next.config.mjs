@@ -104,10 +104,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   output: "standalone",
 
   generateBuildId: async () => "production-build",

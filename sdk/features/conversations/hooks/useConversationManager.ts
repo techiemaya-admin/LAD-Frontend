@@ -59,7 +59,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
 
   // Fetch conversations from backend
   const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions({ channel: hookOptions?.channel }));
+  const allConversationsQuery = useQuery(getConversationsOptions({ backendChannel: hookOptions?.channel }));
 
   const conversations = conversationsQuery.data || [];
   const allConversations = allConversationsQuery.data || [];
