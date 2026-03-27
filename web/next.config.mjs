@@ -11,6 +11,12 @@ const nextConfig = {
     externalDir: true,
   },
 
+  // ✅ REQUIRED for monorepo standalone output.
+  // Next.js traces file dependencies starting from this directory.
+  // Without this, the tracer starts from /app/web and cannot reach ../sdk
+  // or root node_modules, so .next/standalone/ is never generated.
+  outputFileTracingRoot: path.resolve(__dirname, '..'),
+
   // ✅ Use webpack instead - it handles monorepo workspace packages correctly
   webpack: (config, { isServer }) => {
     // Force all @tanstack/react-query imports to use root node_modules (monorepo setup)
