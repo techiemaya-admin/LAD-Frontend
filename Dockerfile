@@ -30,10 +30,13 @@ WORKDIR /app/web
 RUN rm -rf node_modules \
   && npm install --include=optional --foreground-scripts --no-audit --fund=false
 
-# Force-install native linux bindings (deterministic)
+# Force-install native linux bindings (deterministic).
+# package-lock.json is generated on macOS so linux-specific optional packages
+# are not in the lockfile. Install them explicitly here.
 RUN npm install --no-save --no-audit --fund=false \
     lightningcss-linux-x64-gnu \
-    @tailwindcss/oxide-linux-x64-gnu || true
+    @tailwindcss/oxide-linux-x64-gnu \
+    @esbuild/linux-x64 || true
 
 # Ensure lightningcss binding exists where lightningcss expects it
 RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then \
@@ -48,7 +51,8 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
 
 # Fail fast checks
 RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
- && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')"
+ && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')" \
+ && node -e "require('esbuild'); console.log('✅ esbuild ok')"
 
 # Copy source code after deps are installed (back to /app root for correct structure)
 WORKDIR /app

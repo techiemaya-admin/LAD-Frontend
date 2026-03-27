@@ -214,9 +214,11 @@ export const LinkedInIntegration: React.FC = () => {
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
       const pollInterval = setInterval(async () => {
         try {
-          const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
+          const accountId    = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
+          const accountEmail = currentCheckpointAccount?.email || email || '';
           if (!accountId) return;
-          const response = await fetch(`${getApiBaseUrl()}/api/campaigns/linkedin/checkpoint-status?account_id=${accountId}`, {
+          const emailParam = accountEmail ? `&email=${encodeURIComponent(accountEmail)}` : '';
+          const response = await fetch(`${getApiBaseUrl()}/api/campaigns/linkedin/checkpoint-status?account_id=${accountId}${emailParam}`, {
             method: 'GET',
             headers: getAuthHeaders(),
           });
@@ -316,8 +318,13 @@ export const LinkedInIntegration: React.FC = () => {
         setConnectionError(errorMessage);
         throw new Error(errorMessage);
       }
-      // Check if checkpoint (OTP or Yes/No) is required
-      if (data.checkpoint && data.checkpoint.required) {
+      // Check if checkpoint (OTP or Yes/No) is required.
+      // Accept either explicit `required: true` OR presence of is_yes_no / is_otp flags
+      // so the UI works even if the backend omits the `required` field.
+      const isCheckpoint =
+        data.checkpoint &&
+        (data.checkpoint.required || data.checkpoint.is_yes_no || data.checkpoint.is_otp);
+      if (isCheckpoint) {
         // Show checkpoint modal instead of closing connection modal
         setShowOtpModal(true);
         setConnectionSuccess(false);
