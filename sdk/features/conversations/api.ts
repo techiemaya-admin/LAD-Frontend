@@ -119,14 +119,14 @@ function mapConversationFromApi(raw: any): Conversation {
  * When omitted, falls back to proxyClient's localStorage heuristic.
  */
 export interface ConversationQueryOptions extends ConversationListFilters {
-  channel?: 'personal' | 'waba';
+  backendChannel?: 'personal' | 'waba';
 }
 
 /**
  * Get all conversations with optional filters
  */
 export async function getConversations(filters?: ConversationQueryOptions): Promise<Conversation[]> {
-  const { channel, ...rest } = filters ?? {};
+  const { backendChannel, ...rest } = filters ?? {};
   const params: Record<string, string> = {};
   if (rest.search) params.search = rest.search;
   if (rest.status && rest.status !== 'all') {
@@ -139,7 +139,7 @@ export async function getConversations(filters?: ConversationQueryOptions): Prom
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
-    { params, channel }
+    { params, channel: backendChannel }
   );
 
   return (response.data.data || []).map(mapConversationFromApi);
@@ -151,7 +151,7 @@ export async function getConversations(filters?: ConversationQueryOptions): Prom
  */
 export const getConversationsOptions = (filters?: ConversationQueryOptions) =>
   queryOptions({
-    queryKey: [...conversationKeys.list(filters), filters?.channel ?? 'personal'],
+    queryKey: [...conversationKeys.list(filters), filters?.backendChannel ?? 'personal'],
     queryFn: () => getConversations(filters),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
