@@ -52,7 +52,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   // Build filters from local state — include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   const filters: ConversationQueryOptions = useMemo(() => ({
-    channel: hookOptions?.channel,
+    backendChannel: hookOptions?.channel,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
   }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
