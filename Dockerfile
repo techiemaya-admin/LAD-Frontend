@@ -100,9 +100,12 @@ RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
 # Build from root using turbo (builds SDK first, then web)
-RUN npm run build && \
-  echo "✅ Build completed successfully" && \
-  test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || echo "⚠️ server.js not found, checking .next structure" && ls -la /app/web/.next/standalone/ 2>/dev/null | head -20 || echo "⚠️ .next/standalone dir may not exist"
+RUN npm run build
+
+# Verify standalone output was generated (fails the build if missing)
+RUN test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || \
+    (echo "❌ .next/standalone/server.js NOT FOUND - next build may have failed or output:standalone is missing" && \
+     ls -la /app/web/.next/ 2>/dev/null && exit 1)
 
 # -------------------------
 # Runner
