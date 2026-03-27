@@ -120,7 +120,7 @@ async function fetchSyncedContacts(
     if (!res.ok) return empty;
     const data = await res.json();
     return {
-      data: data?.data || [],
+      data: data?.contacts || data?.data || [],
       total: data?.total || 0,
       page: data?.page || 1,
       limit: data?.limit || 100,

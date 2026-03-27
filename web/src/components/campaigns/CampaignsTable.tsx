@@ -32,7 +32,7 @@ import {
   type PaginationState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
-import { getStatusColor, renderChannelIcons, renderActionChips, getChannelsUsed, PLATFORM_CONFIG, renderPlatformMetrics } from './campaignUtils';
+import { getStatusColor, renderChannelIcons, renderActionChips, renderActivityBreakdown } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];
   loading: boolean;
@@ -129,20 +129,10 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       header: 'Leads',
       cell: ({ getValue }) => getValue() || 0,
     }),
-    columnHelper.accessor('sent_count', {
-      id: 'sent_count',
-      header: 'Sent',
-      cell: ({ getValue }) => getValue() || 0,
-    }),
     columnHelper.display({
-      id: 'connected',
-      header: 'Connected',
-      cell: ({ row }) => renderPlatformMetrics(row.original, 'connected'),
-    }),
-    columnHelper.display({
-      id: 'replied',
-      header: 'Replied',
-      cell: ({ row }) => renderPlatformMetrics(row.original, 'replied'),
+      id: 'activity',
+      header: 'Activity',
+      cell: ({ row }) => renderActivityBreakdown(row.original),
     }),
     columnHelper.display({
       id: 'credit',
@@ -239,9 +229,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Channels</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Actions</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Leads</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Sent</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Connected</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Replied</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B]">Activity</TableHead>
                   <TableHead className="font-semibold text-[#1E293B]">Created</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] text-right"></TableHead>
                 </TableRow>
@@ -271,13 +259,10 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
                     </TableCell>
                     <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
