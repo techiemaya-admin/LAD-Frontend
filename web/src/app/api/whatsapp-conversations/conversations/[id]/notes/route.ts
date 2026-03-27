@@ -8,7 +8,8 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/pyth
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/conversations/${id}/notes`);
+  // Note: GET /api/notes/conversations/{id} is the correct endpoint
+  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/notes/conversations/${id}`);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
