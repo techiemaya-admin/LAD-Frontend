@@ -490,8 +490,17 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadi
   // Get responsive grid style: on mobile stack as single column, on desktop use span
   const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
     if (isMobile) {
-      // Mobile: let Tailwind grid-cols-1 handle it, only set a reasonable min-height
+      const type = getWidgetTypeFromId(item.i);
+      // Let the first 3 stat cards be in one line on mobile (3 columns)
+      if (type && ['calls-today', 'answer-rate', 'calls-monthly'].includes(type)) {
+        return {
+          gridColumn: 'span 4',
+          minHeight: '120px',
+        };
+      }
+      // Other widgets take full width on mobile
       return {
+        gridColumn: 'span 12',
         minHeight: `${Math.min(item.h, 4) * 80}px`,
       };
     }
@@ -509,7 +518,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadi
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 auto-rows-min">
+          <div className="grid grid-cols-12 gap-3 md:gap-6 auto-rows-min">
             {layout.map((item) => (
               <div
                 key={item.i}
