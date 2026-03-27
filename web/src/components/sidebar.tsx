@@ -110,7 +110,7 @@ export function Sidebar() {
       requiredCapability: "view_overview",
     },
     {
-      href: "/onboarding",
+      href: "/onboarding/advanced-search-ai",
       label: "AI Assistant",
       icon: Search,
       details: "AI-powered ICP assistant and workflow setup",
@@ -224,7 +224,7 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-72 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70]",
+          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70]",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -284,29 +284,44 @@ export function Sidebar() {
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2">
-          <NavLink
-            href="/pricing"
-            className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <DollarSign className="h-4 w-4" />
-            <span>Pricing</span>
-          </NavLink>
-          <NavLink
-            href="/settings"
-            className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2 bg-white/10 hover:bg-white/15 text-sm text-sidebar-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            {isHydrated && user?.avatar ? (
+              <img
+                src={user.avatar}
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                alt="avatar"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-sidebar-foreground truncate">
+                {displayName}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {user?.role || "admin"}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <NavLink
+              href="/settings"
+              className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
         </div>
       </div>
       {/* Mobile Backdrop */}

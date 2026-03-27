@@ -234,7 +234,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
                 onStatusChange={onStatusChange}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                compactMode={compactView}
+                
               />
             ))}
           </div>
@@ -291,7 +291,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="No position change" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom" position="popper" avoidCollisions={false} className="z-[1001] max-h-[300px]">
                   <SelectItem value="__none__">No position change</SelectItem>
                   {allStages
                     .filter(s => (s.key || s.id) !== (stage.key || stage.id))

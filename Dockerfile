@@ -30,10 +30,13 @@ WORKDIR /app/web
 RUN rm -rf node_modules \
   && npm install --include=optional --foreground-scripts --no-audit --fund=false
 
-# Force-install native linux bindings (deterministic)
+# Force-install native linux bindings (deterministic).
+# package-lock.json is generated on macOS so linux-specific optional packages
+# are not in the lockfile. Install them explicitly here.
 RUN npm install --no-save --no-audit --fund=false \
     lightningcss-linux-x64-gnu \
-    @tailwindcss/oxide-linux-x64-gnu || true
+    @tailwindcss/oxide-linux-x64-gnu \
+    @esbuild/linux-x64 || true
 
 # Ensure lightningcss binding exists where lightningcss expects it
 RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then \
@@ -48,7 +51,8 @@ RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then 
 
 # Fail fast checks
 RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
- && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')"
+ && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')" \
+ && node -e "require('esbuild'); console.log('✅ esbuild ok')"
 
 # Copy source code after deps are installed (back to /app root for correct structure)
 WORKDIR /app
@@ -100,9 +104,15 @@ RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
 # Build from root using turbo (builds SDK first, then web)
-RUN npm run build && \
-  echo "✅ Build completed successfully" && \
-  test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || echo "⚠️ server.js not found, checking .next structure" && ls -la /app/web/.next/standalone/ 2>/dev/null | head -20 || echo "⚠️ .next/standalone dir may not exist"
+RUN npm run build
+
+# Verify standalone output was generated (fails the build if missing).
+# With outputFileTracingRoot=.. (monorepo root), Next.js places server.js at
+# standalone/web/server.js (mirroring the relative path from the tracing root).
+RUN test -f /app/web/.next/standalone/web/server.js && echo "✅ server.js found at standalone/web/server.js" || \
+    (echo "❌ standalone/web/server.js NOT FOUND - listing standalone dir:" && \
+     ls -la /app/web/.next/standalone/ 2>/dev/null && \
+     ls -la /app/web/.next/standalone/web/ 2>/dev/null && exit 1)
 
 # -------------------------
 # Runner
@@ -125,8 +135,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/stat
 # Copy public directory
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
-# Verify server.js exists at the correct path
-RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || (echo "❌ server.js not found!" && ls -la /app && ls -la /app/web 2>/dev/null && exit 1)
+# Verify server.js exists at the correct path.
+# With monorepo outputFileTracingRoot=.., standalone/web/server.js is copied to /app/web/server.js.
+RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || \
+    (echo "❌ server.js not found! Listing /app and /app/web:" && \
+     ls -la /app/ && ls -la /app/web/ 2>/dev/null && exit 1)
 
 # Cloud Run-friendly start script
 RUN printf '%s\n' \

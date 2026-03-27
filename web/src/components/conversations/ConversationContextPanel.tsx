@@ -27,6 +27,11 @@ import {
   Target,
   Loader2,
   UserCheck,
+  CreditCard,
+  ShieldCheck,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { ChannelIcon } from './ChannelIcon';
 import { AssignmentPanel } from './AssignmentPanel';
@@ -96,12 +101,86 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteContent, setEditingNoteContent] = useState('');
 
+  // MindBody payment state
+  const [mbPanelOpen, setMbPanelOpen] = useState(false);
+  const [mbLoading, setMbLoading] = useState(false);
+  const [mbSending, setMbSending] = useState(false);
+  const [mbVerifying, setMbVerifying] = useState(false);
+  const [mbPaymentLink, setMbPaymentLink] = useState<{ portal_url: string; options: { id: number; name: string; price: string | null; description: string | null }[] } | null>(null);
+  const [mbVerifyResult, setMbVerifyResult] = useState<{ paid: boolean; purchases: unknown[]; services: unknown[] } | null>(null);
+  const [mbError, setMbError] = useState<string | null>(null);
+
   const initials = contact.name
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
+
+  // ── MindBody actions ──────────────────────────────────────────────
+  const loadPaymentLink = useCallback(async () => {
+    setMbLoading(true);
+    setMbError(null);
+    setMbVerifyResult(null);
+    try {
+      const res = await fetchWithTenant('/api/social-integration/mindbody/payment-link');
+      const data = await res.json();
+      if (data.success) {
+        setMbPaymentLink(data);
+      } else {
+        setMbError(data.error || 'Failed to load payment link');
+      }
+    } catch {
+      setMbError('Could not reach MindBody');
+    } finally {
+      setMbLoading(false);
+    }
+  }, []);
+
+  const sendPaymentLink = useCallback(async (portalUrl: string) => {
+    if (!conversation.id) return;
+    setMbSending(true);
+    try {
+      const message = `Here is your booking and payment link for PAD Pilates & Dance Studio 🎉\n\n👉 ${portalUrl}\n\nPlease complete your booking through the link and let me know once you're done! 😊`;
+      await fetchWithTenant(`${CONV_API}/${conversation.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content: message }),
+      });
+    } catch {
+      setMbError('Failed to send message');
+    } finally {
+      setMbSending(false);
+    }
+  }, [conversation.id]);
+
+  const verifyPayment = useCallback(async () => {
+    const phone = contact.phone;
+    if (!phone) { setMbError('No phone number on this contact'); return; }
+    setMbVerifying(true);
+    setMbError(null);
+    try {
+      const res = await fetchWithTenant(
+        `/api/social-integration/mindbody/verify-payment?phone=${encodeURIComponent(phone)}`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setMbVerifyResult(data);
+      } else {
+        setMbError(data.error || 'Verification failed');
+      }
+    } catch {
+      setMbError('Could not reach MindBody');
+    } finally {
+      setMbVerifying(false);
+    }
+  }, [contact.phone]);
+
+  const toggleMbPanel = useCallback(() => {
+    setMbPanelOpen(prev => {
+      if (!prev && !mbPaymentLink) loadPaymentLink();
+      return !prev;
+    });
+  }, [mbPaymentLink, loadPaymentLink]);
 
   const comments = mockInternalComments.filter(
     (c) => c.conversationId === conversation.id
@@ -561,6 +640,97 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                 <span className="font-medium">{conversation.messageCount || 0}</span>
               </div>
             </div>
+          </div>
+
+          {/* MindBody Payment Panel */}
+          <div className="mb-6 border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={toggleMbPanel}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-semibold">MindBody Payment</span>
+              </div>
+              {mbPanelOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+            </button>
+
+            {mbPanelOpen && (
+              <div className="p-3 space-y-3">
+                {mbError && (
+                  <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    {mbError}
+                  </div>
+                )}
+
+                {mbLoading ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading pricing options…
+                  </div>
+                ) : mbPaymentLink ? (
+                  <>
+                    {/* Pricing options */}
+                    {mbPaymentLink.options.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1.5">Available Plans</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                          {mbPaymentLink.options.map(opt => (
+                            <div key={opt.id} className="flex items-center justify-between py-1 px-2 rounded bg-muted/30 text-xs">
+                              <span className="truncate max-w-[130px]" title={opt.name}>{opt.name}</span>
+                              {opt.price && <span className="font-medium text-primary shrink-0 ml-1">AED {opt.price}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Portal URL */}
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Payment Link</p>
+                      <p className="text-[10px] text-muted-foreground break-all mb-2">{mbPaymentLink.portal_url}</p>
+                      <Button
+                        size="sm"
+                        className="w-full h-7 text-xs"
+                        disabled={mbSending}
+                        onClick={() => sendPaymentLink(mbPaymentLink.portal_url)}
+                      >
+                        {mbSending ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Send className="h-3 w-3 mr-1.5" />}
+                        Send to Chat
+                      </Button>
+                    </div>
+
+                    {/* Verify payment */}
+                    <div className="border-t border-border pt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-7 text-xs"
+                        disabled={mbVerifying}
+                        onClick={verifyPayment}
+                      >
+                        {mbVerifying ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <ShieldCheck className="h-3 w-3 mr-1.5" />}
+                        Verify Payment in MindBody
+                      </Button>
+
+                      {mbVerifyResult && (
+                        <div className={`mt-2 flex items-center gap-1.5 text-xs rounded px-2 py-1.5 ${mbVerifyResult.paid ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>
+                          {mbVerifyResult.paid
+                            ? <><ShieldCheck className="h-3 w-3 shrink-0" /> Payment confirmed ({mbVerifyResult.purchases.length} purchase{mbVerifyResult.purchases.length !== 1 ? 's' : ''}, {mbVerifyResult.services.length} service{mbVerifyResult.services.length !== 1 ? 's' : ''})</>
+                            : <><AlertCircle className="h-3 w-3 shrink-0" /> No payment found in MindBody yet</>}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={loadPaymentLink}>
+                    <CreditCard className="h-3 w-3 mr-1.5" />
+                    Load Payment Options
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Tabs: Assignment, Notes & Internal Comments */}

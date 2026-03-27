@@ -65,19 +65,26 @@ export async function POST(req: NextRequest) {
     parsedBody = await req.json();
   } catch { /* empty body */ }
 
-  // Reconstruct a cloned request with the already-read body for proxyToPythonService
-  const bodyString = parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined;
-  const clonedReq = new Request(req.url, {
-    method: req.method,
-    headers: req.headers,
-    body: bodyString,
-  }) as unknown as NextRequest;
+  try {
+    // Reconstruct a cloned request with the already-read body for proxyToPythonService
+    const bodyString = parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined;
+    const clonedReq = new Request(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: bodyString,
+    }) as unknown as NextRequest;
 
-  const bniResponse = await proxyToPythonService(clonedReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
+    const bniResponse = await proxyToPythonService(clonedReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
 
-  if (bniResponse.status >= 500) {
+    // Fall back to Node backend on server errors or method-not-allowed (Python service
+    // may not have this endpoint on older deployments).
+    if (bniResponse.status >= 400) {
+      return callNodeBackend(req, 'POST', parsedBody);
+    }
+
+    return bniResponse;
+  } catch (err) {
+    console.error('[admin/whatsapp-accounts POST] Python proxy error, falling back to Node:', err);
     return callNodeBackend(req, 'POST', parsedBody);
   }
-
-  return bniResponse;
 }

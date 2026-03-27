@@ -14,6 +14,10 @@ import {
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
+// Contact-field names that are auto-filled from the conversation's contact record
+const CONTACT_NAME_FIELDS = ['name', 'first_name', 'contact_name', 'customer_name', 'member_name', 'client_name'];
+const CONTACT_COMPANY_FIELDS = ['company', 'company_name', 'organization', 'business'];
+
 interface WhatsAppTemplate {
   name: string;
   language: string;
@@ -21,13 +25,22 @@ interface WhatsAppTemplate {
   category: string;
   body: string;
   parameter_count: number;
+  parameters: string[]; // e.g. ['name', '1', 'company']
+}
+
+type NameFormat = 'first' | 'full';
+
+interface BatchOptions {
+  batchSize: number;      // how many messages per batch
+  delayMin: number;       // minimum delay between batches (seconds)
+  delayRandom: number;    // additional random 0–N seconds added to delay
 }
 
 interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSend: (templateName: string, languageCode: string, parameters: string[]) => void;
+  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions) => void;
   sending?: boolean;
 }
 
@@ -51,6 +64,10 @@ export function TemplatePicker({
   const [search, setSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [paramValues, setParamValues] = useState<string[]>([]);
+  const [nameFormat, setNameFormat] = useState<NameFormat>('first');
+  const [batchSize, setBatchSize] = useState(5);
+  const [delayMin, setDelayMin] = useState(120);    // seconds
+  const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
 
   // Fetch templates when dialog opens
   useEffect(() => {
@@ -62,7 +79,31 @@ export function TemplatePicker({
     fetchWithTenant(TEMPLATES_API)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) setTemplates(data.data || []);
+        if (data.success) {
+          // Support both WABA format (data.data) and personal WA format (data.templates)
+          const raw: any[] = data.data || data.templates || [];
+          // Normalize to WhatsAppTemplate shape regardless of source
+          const normalized: WhatsAppTemplate[] = raw
+            .filter((t: any) => t.status !== 'REJECTED' && t.status !== 'DELETED')
+            .map((t: any) => {
+              const body = t.body || t.content || '';
+              // Extract all {{placeholder}} names from body (works for both {{1}} and {{name}})
+              const bodyParams = [...new Set(
+                (body.match(/\{\{([^}]+)\}\}/g) || []).map((p: string) => p.replace(/^\{\{|\}\}$/g, '').trim())
+              )] as string[];
+              const params: string[] = t.parameters || bodyParams;
+              return {
+                name: t.name || '',
+                language: t.language || t.language_code || t.metadata?.language_code || 'en',
+                status: t.status || (t.is_active === false ? 'INACTIVE' : 'APPROVED'),
+                category: t.category || t.metadata?.channel_type || 'MESSAGE',
+                body,
+                parameter_count: params.length || t.parameter_count || 0,
+                parameters: params,
+              };
+            });
+          setTemplates(normalized);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -81,10 +122,16 @@ export function TemplatePicker({
 
   const handleSelectTemplate = useCallback((template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
-    // Auto-fill first parameter with {member_name} placeholder
-    // The backend will substitute it with each contact's actual name
-    const defaults = new Array(template.parameter_count).fill('');
-    if (template.parameter_count > 0) {
+    // Auto-fill known contact fields with sentinels so the backend can personalize per-contact
+    const params = template.parameters || [];
+    const defaults = params.map((p) => {
+      const key = p.toLowerCase();
+      if (CONTACT_NAME_FIELDS.includes(key)) return '{member_name}';
+      if (CONTACT_COMPANY_FIELDS.includes(key)) return '{member_company}';
+      return '';
+    });
+    // Fallback for positional-only templates: prefill {{1}} with {member_name}
+    if (defaults.length > 0 && defaults[0] === '' && !isNaN(Number(params[0]))) {
       defaults[0] = '{member_name}';
     }
     setParamValues(defaults);
@@ -104,23 +151,40 @@ export function TemplatePicker({
       selectedTemplate.name,
       selectedTemplate.language,
       paramValues.length > 0 ? paramValues : [],
+      nameFormat,
+      { batchSize, delayMin, delayRandom },
     );
-  }, [selectedTemplate, paramValues, onSend]);
+  }, [selectedTemplate, paramValues, nameFormat, batchSize, delayMin, delayRandom, onSend]);
 
-  // Preview body with params filled in
+  // Whether any parameter is a name-type field (controls name format picker visibility)
+  const hasNameParam = useMemo(() => {
+    return (selectedTemplate?.parameters || []).some(p =>
+      CONTACT_NAME_FIELDS.includes(p.toLowerCase())
+    ) || paramValues.some(v => v === '{member_name}');
+  }, [selectedTemplate, paramValues]);
+
+  // Preview body with params filled in (lenient: handles {{name}}, {name}}, {name} etc.)
   const previewBody = useMemo(() => {
     if (!selectedTemplate) return '';
     let body = selectedTemplate.body;
+    const params = selectedTemplate.parameters || [];
     paramValues.forEach((val, i) => {
-      body = body.replace(`{{${i + 1}}}`, val || `{{${i + 1}}}`);
+      const placeholder = params[i] || String(i + 1);
+      const sampleName = nameFormat === 'first' ? 'Naveen' : 'Naveen Reddy';
+      const displayVal = val === '{member_name}' ? sampleName
+        : val === '{member_company}' ? '[Company]'
+        : (val || `{{${placeholder}}}`);
+      // Lenient regex: match {+placeholder}+
+      const re = new RegExp(`\\{+${placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}+`, 'gi');
+      body = body.replace(re, displayVal);
     });
     return body;
-  }, [selectedTemplate, paramValues]);
+  }, [selectedTemplate, paramValues, nameFormat]);
 
-  const canSend = selectedTemplate && paramValues.every((v, i) => {
-    // All parameters must be filled
-    return selectedTemplate.parameter_count === 0 || v.trim().length > 0;
-  });
+  const canSend = selectedTemplate && (
+    selectedTemplate.parameter_count === 0 ||
+    paramValues.every((v) => v.trim().length > 0)
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,15 +297,65 @@ export function TemplatePicker({
                   <p className="text-xs font-medium text-muted-foreground">
                     Fill in template parameters:
                   </p>
-                  {Array.from({ length: selectedTemplate.parameter_count }, (_, i) => (
-                    <Input
-                      key={i}
-                      placeholder={`Parameter {{${i + 1}}} — type {member_name} to auto-fill contact name`}
-                      value={paramValues[i] || ''}
-                      onChange={(e) => handleParamChange(i, e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                  ))}
+                  {(selectedTemplate.parameters || []).map((paramName, i) => {
+                    const isAutoFilled = paramValues[i] === '{member_name}' || paramValues[i] === '{member_company}';
+                    const label = isNaN(Number(paramName)) ? `{{${paramName}}}` : `Parameter {{${paramName}}}`;
+                    return (
+                      <div key={i} className="space-y-1">
+                        <p className="text-[10px] text-muted-foreground font-mono">{label}</p>
+                        <Input
+                          placeholder={
+                            isAutoFilled
+                              ? 'Auto-filled per contact'
+                              : `Enter value for ${label}`
+                          }
+                          value={paramValues[i] || ''}
+                          onChange={(e) => handleParamChange(i, e.target.value)}
+                          className={`h-8 text-sm ${isAutoFilled ? 'text-muted-foreground italic' : ''}`}
+                        />
+                        {isAutoFilled && (
+                          <p className="text-[10px] text-green-600">
+                            ✓ Will be replaced with each contact&apos;s name automatically
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Name Format picker — only shown when template has a name variable */}
+              {hasNameParam && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Name format for contacts:</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNameFormat('first')}
+                      className={cn(
+                        'flex-1 h-8 rounded-md border text-xs font-medium transition-colors',
+                        nameFormat === 'first'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background border-border text-muted-foreground hover:bg-muted'
+                      )}
+                    >
+                      First name only
+                      <span className="block text-[10px] font-normal opacity-70">e.g. &quot;Naveen&quot;</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNameFormat('full')}
+                      className={cn(
+                        'flex-1 h-8 rounded-md border text-xs font-medium transition-colors',
+                        nameFormat === 'full'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background border-border text-muted-foreground hover:bg-muted'
+                      )}
+                    >
+                      Full name
+                      <span className="block text-[10px] font-normal opacity-70">e.g. &quot;Naveen Reddy&quot;</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -251,6 +365,51 @@ export function TemplatePicker({
                 <p className="text-sm whitespace-pre-wrap">{previewBody}</p>
               </div>
             </div>
+
+              {/* Batch & Delay settings */}
+              {selectedCount > 1 && (
+                <div className="space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-xs font-semibold text-amber-800">Sending schedule ({selectedCount} contacts)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-amber-700 font-medium">Batch size</label>
+                      <Input
+                        type="number"
+                        min={1} max={50}
+                        value={batchSize}
+                        onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="h-7 text-xs text-center"
+                      />
+                      <p className="text-[9px] text-amber-600 text-center">msgs / batch</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-amber-700 font-medium">Min delay</label>
+                      <Input
+                        type="number"
+                        min={10} max={3600}
+                        value={delayMin}
+                        onChange={e => setDelayMin(Math.max(10, parseInt(e.target.value) || 10))}
+                        className="h-7 text-xs text-center"
+                      />
+                      <p className="text-[9px] text-amber-600 text-center">seconds</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-amber-700 font-medium">+Random</label>
+                      <Input
+                        type="number"
+                        min={0} max={300}
+                        value={delayRandom}
+                        onChange={e => setDelayRandom(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="h-7 text-xs text-center"
+                      />
+                      <p className="text-[9px] text-amber-600 text-center">0–N secs</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-amber-700">
+                    ≈ {batchSize} messages, then wait {delayMin}s + random 0–{delayRandom}s before next batch
+                  </p>
+                </div>
+              )}
 
             <DialogFooter>
               <Button

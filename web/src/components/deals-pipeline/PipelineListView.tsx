@@ -141,6 +141,14 @@ interface PipelineListViewProps {
   pageSize?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  labels?: {
+    entity: string;
+    entityPlural: string;
+    pipeline: string;
+    owner: string;
+    deal: string;
+    value: string;
+  };
 }
 const PipelineListView: React.FC<PipelineListViewProps> = ({
   leads,
@@ -171,7 +179,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   currentPage: controlledCurrentPage,
   pageSize: controlledPageSize,
   onPageChange,
-  onPageSizeChange
+  onPageSizeChange,
+  labels
 }) => {
   // Redux dispatch
   const dispatch = useDispatch<AppDispatch>();
@@ -872,141 +881,131 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Header with Search and Controls */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-        <div className="flex gap-3 flex-col sm:flex-row justify-between sm:items-center">
-          <div className="flex items-center gap-2 justify-start">
-            {/* View mode toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-              <button
-                type="button"
-                onClick={() => onViewModeChange?.('kanban')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'kanban'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Kanban
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange?.('list')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                <List className="h-4 w-4" />
-                List
-              </button>
-            </div>
-
-            {process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true' && (
-              <>
-                <Button
-                  className="h-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddStage?.();
-                  }}
-                  disabled={!onAddStage}
-                >
-                  <Plus />
-                  Add Stage
-                </Button>
-                <Button
-                  className="h-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddLead?.();
-                  }}
-                  disabled={!onAddLead}
-                >
-                  <Plus />
-                  Add Lead
-                </Button>
-              </>
-            )}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+          
+          {/* Row 1: View mode toggle */}
+          <div className="w-full lg:w-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => onViewModeChange?.('kanban')}
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Kanban
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange?.('list')}
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              List
+            </button>
           </div>
-          <div className="flex gap-3 flex-col sm:flex-row justify-end items-center w-full sm:w-auto">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
+          {/* Row 2: Action buttons */}
+          {process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true' && (
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <Button
+                className="flex-1 lg:flex-none bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddStage?.();
+                }}
+                disabled={!onAddStage}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add Stage
+              </Button>
+              <Button
+                className="flex-1 lg:flex-none bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddLead?.();
+                }}
+                disabled={!onAddLead}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add Lead
+              </Button>
+            </div>
+          )}
+
+          {/* Row 3: Search box */}
+          <div className="w-full lg:w-60 lg:ml-auto">
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
+              <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"
                 value={localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search leads..."
-                className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+                className="border-0 outline-none bg-transparent w-full text-sm text-gray-800 dark:text-gray-200 focus:ring-0 focus:outline-none p-0 h-full placeholder:text-gray-400"
               />
             </div>
+          </div>
+
+          {/* Row 4: Control buttons (Filter, Export, Settings) */}
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <Button
               variant="outline"
-              className="h-10"
+              className="flex-1 lg:flex-none rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 dispatch(setFilterDialogOpen(true));
               }}
             >
-              <Filter className="h-4 w-4" />
+              <Filter className="h-4 w-4 mr-1.5" />
               Filter
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10"
+                  className="flex-1 lg:flex-none rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                   disabled={!onExport && !onExportWithDateRange}
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Download className="h-4 w-4 " />
+                  <Download className="h-4 w-4 mr-1.5" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => onExport?.()}
-                  disabled={!onExport}
-                >
+                <DropdownMenuItem onClick={() => onExport?.()} disabled={!onExport}>
                   All Leads
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('today')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('today')} disabled={!onExportWithDateRange}>
                   Today
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('thisMonth')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('thisMonth')} disabled={!onExportWithDateRange}>
                   This Month
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('thisYear')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('thisYear')} disabled={!onExportWithDateRange}>
                   This Year
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('custom')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('custom')} disabled={!onExportWithDateRange}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Custom Range
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10"
+
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 dispatch(setSettingsDialogOpen(true));
               }}
-              title="Settings"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0"
             >
               <Settings className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -1081,8 +1080,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       </Table>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          <div className="flex items-center gap-4 text-sm text-[#64748B]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+          {/* Left Side: Records per page and total count info */}
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B]">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select
@@ -1090,7 +1090,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 onChange={(e) => {
                   handlePageSizeChange(Number(e.target.value));
                 }}
-                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-xs sm:text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>
@@ -1098,19 +1098,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                   </option>
                 ))}
               </select>
+              <span className="whitespace-nowrap">of {displayTotalRecords} {labels?.entityPlural.toLowerCase()}</span>
             </div>
-            <span>
-              {paginatedLeads.length < pageSize
-                ? `of ${paginatedLeads.length} `
-                : `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
-              {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (
-                <span className="text-xs text-[#94A3B8] ml-1">(filtered from {totalLeadsCount} total)</span>
-              )}
-            </span>
+            {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (
+              <span className="hidden md:inline text-xs text-muted-foreground">(filtered from {totalLeadsCount} total)</span>
+            )}
           </div>
 
+          {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
 

@@ -12,3 +12,4 @@ export { useConversationStats } from './hooks/useConversationStats';
 export type { UseConversationMessagesReturn } from './hooks/useConversationMessages';
 export type { UseSendMessageReturn } from './hooks/useSendMessage';
 export type { UseConversationStatsReturn } from './hooks/useConversationStats';
+export type { UseConversationsOptions } from './hooks/useConversationManager';

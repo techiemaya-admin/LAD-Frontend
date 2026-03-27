@@ -11,12 +11,17 @@ import { AIPlayground } from './AIPlayground';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelLeft, FlaskConical } from 'lucide-react';
+import { PanelLeft, FlaskConical } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { ChannelIcon } from './ChannelIcon';
+import { cn } from '@/lib/utils';
 
 const CONV_API = '/api/whatsapp-conversations/conversations';
 
-export function ConversationsPage() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Inner view — one instance per tab, fully independent hook + state
+// ─────────────────────────────────────────────────────────────────────────────
+function ChannelConversationView({ channel }: { channel: 'personal' | 'waba' }) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -33,26 +38,20 @@ export function ConversationsPage() {
     sendMessage,
     markAsResolved,
     muteConversation,
-    allConversations,
-  } = useConversations();
+  } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
-  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
-  // Track whether user explicitly selected a conversation while in group view
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
-  // Whether to auto-open the group info panel
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
 
-  // When selecting a group, show group merged view
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
     setGroupMemberSelected(false);
     setGroupInfoAutoOpen(false);
   }, []);
 
-  // Open group view with info panel pre-opened (from Chat Groups list info button)
   const handleOpenGroupInfo = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
     setGroupMemberSelected(false);
@@ -65,57 +64,49 @@ export function ConversationsPage() {
     setGroupInfoAutoOpen(false);
   }, []);
 
-  // Wrap selectConversation to track explicit member selection in group view
   const handleSelectConversation = useCallback((id: string) => {
     selectConversation(id);
-    if (activeGroup) {
-      setGroupMemberSelected(true); // user clicked a member in group → show their chat
-    }
+    if (activeGroup) setGroupMemberSelected(true);
   }, [selectConversation, activeGroup]);
 
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed((prev) => !prev);
-  }, []);
+  const toggleSidebar = useCallback(() => setIsSidebarCollapsed((p) => !p), []);
+  const toggleContextPanel = useCallback(() => setIsContextPanelOpen((p) => !p), []);
 
-  const toggleContextPanel = useCallback(() => {
-    setIsContextPanelOpen((prev) => !prev);
-  }, []);
+  // ── CRM actions — fetchWithTenant already sends ?channel= from localStorage,
+  //    but we explicitly append it here so actions go to the right backend.
+  const withChannel = useCallback(
+    (url: string) => `${url}${url.includes('?') ? '&' : '?'}channel=${channel}`,
+    [channel]
+  );
 
-  // CRM action handlers (all use fetchWithTenant for correct tenant DB routing)
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+  }, [queryClient]);
+
   const handlePin = useCallback(async (id: string) => {
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${id}/pin`, { method: 'PATCH' });
-      if (res.ok) {
-        // Refetch conversations to update is_pinned status
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/pin`), { method: 'PATCH' });
+      if (res.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
   const handleLock = useCallback(async (id: string) => {
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${id}/lock`, { method: 'PATCH' });
-      if (res.ok) {
-        // Refetch conversations to update is_locked status
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/lock`), { method: 'PATCH' });
+      if (res.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
   const handleFavorite = useCallback(async (id: string) => {
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${id}/favorite`, { method: 'PATCH' });
-      if (res.ok) {
-        // Refetch conversations to update is_favorite status
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/favorite`), { method: 'PATCH' });
+      if (res.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
   const handleExport = useCallback(async (id: string) => {
-    // Client-side export: build text file from messages
     try {
-      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${id}/messages`);
+      const res = await fetchWithTenant(withChannel(`/api/whatsapp-conversations/conversations/${id}/messages`));
       const data = await res.json();
       if (!data.success) return;
       const lines = (data.data || []).map(
@@ -130,112 +121,117 @@ export function ConversationsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {}
-  }, []);
+  }, [withChannel]);
 
   const handleBlock = useCallback(async (id: string) => {
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${id}/status`, {
+      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/status`), {
         method: 'PATCH',
         body: JSON.stringify({ status: 'resolved' }),
       });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      if (res.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}`), { method: 'DELETE' });
+      if (res.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
   const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
     try {
       let res: Response | undefined;
       if (action === 'resolve') {
-        res = await fetchWithTenant(`${CONV_API}/bulk`, {
+        res = await fetchWithTenant(withChannel(`${CONV_API}/bulk`), {
           method: 'POST',
           body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
         });
       } else if (action === 'delete') {
-        res = await fetchWithTenant(`${CONV_API}/bulk`, {
+        res = await fetchWithTenant(withChannel(`${CONV_API}/bulk`), {
           method: 'POST',
           body: JSON.stringify({ action: 'delete', ids }),
         });
       }
-      if (res?.ok) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-      }
+      if (res?.ok) invalidate();
     } catch {}
-  }, [queryClient]);
+  }, [withChannel, invalidate]);
 
-  // Type conversions and data enrichment
-  const typedConversations = useMemo(
-    () => conversations as Conversation[],
-    [conversations]
-  );
-
+  const typedConversations = useMemo(() => conversations as Conversation[], [conversations]);
   const typedSelectedConversation = useMemo(
     () => selectedConversation as Conversation | null,
     [selectedConversation]
   );
 
   const allUnreadCounts = useMemo(() => {
-    const channels: (Channel | 'all')[] = ['all', 'whatsapp', 'linkedin', 'gmail', 'outlook', 'instagram'];
-    const result: Record<Channel | 'all', number> = {
-      all: 0,
-      whatsapp: 0,
-      linkedin: 0,
-      gmail: 0,
-      outlook: 0,
-      instagram: 0,
+    const sdkCounts = unreadCounts as Record<string, number>;
+    return {
+      all: sdkCounts.all ?? 0,
+      whatsapp: sdkCounts.whatsapp ?? 0,
+      linkedin: sdkCounts.linkedin ?? 0,
+      gmail: sdkCounts.gmail ?? 0,
+      outlook: sdkCounts.outlook ?? 0,
+      instagram: sdkCounts.instagram ?? 0,
     };
-    
-    channels.forEach((channel) => {
-      if (channel in unreadCounts) {
-        result[channel] = (unreadCounts as any)[channel];
-      }
-    });
-    
-    return result;
   }, [unreadCounts]);
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Top Toolbar — "Test AI" playground toggle */}
-      <div className="h-10 flex items-center justify-end px-3 border-b border-border bg-card shrink-0">
-        <Button
-          variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
-          size="sm"
-          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
-          onClick={() => setIsPlaygroundOpen((v) => !v)}
-          title="Open AI Playground to test your system prompt"
-        >
-          <FlaskConical className="h-3.5 w-3.5" />
-          Test AI
-        </Button>
-      </div>
+    <div className="flex-1 flex overflow-hidden">
+      {/* Sidebar — desktop */}
+      <AnimatePresence mode="wait">
+        {!isSidebarCollapsed && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 340, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
+          >
+            <ConversationSidebar
+              conversations={typedConversations}
+              selectedId={selectedId}
+              onSelectConversation={handleSelectConversation}
+              channelFilter={channelFilter}
+              onChannelFilterChange={setChannelFilter}
+              contextStatusFilter={contextStatusFilter}
+              onContextStatusFilterChange={setContextStatusFilter}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              unreadCounts={allUnreadCounts}
+              onBulkAction={handleBulkAction}
+              onGroupSelect={handleSelectGroup}
+              onOpenGroupInfo={handleOpenGroupInfo}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <AnimatePresence mode="wait">
-          {!isSidebarCollapsed && (
+      {/* Mobile sidebar overlay */}
+      <AnimatePresence>
+        {!isSidebarCollapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={toggleSidebar}
+          >
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 340, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
+              initial={{ x: -340 }}
+              animate={{ x: 0 }}
+              exit={{ x: -340 }}
+              transition={{ duration: 0.2 }}
+              className="w-[340px] h-full"
+              onClick={(e) => e.stopPropagation()}
             >
               <ConversationSidebar
                 conversations={typedConversations}
                 selectedId={selectedId}
-                onSelectConversation={handleSelectConversation}
+                onSelectConversation={(id) => {
+                  handleSelectConversation(id);
+                  setIsSidebarCollapsed(true);
+                }}
                 channelFilter={channelFilter}
                 onChannelFilterChange={setChannelFilter}
                 contextStatusFilter={contextStatusFilter}
@@ -248,114 +244,129 @@ export function ConversationsPage() {
                 onOpenGroupInfo={handleOpenGroupInfo}
               />
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Mobile sidebar overlay */}
-        <AnimatePresence>
-          {!isSidebarCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-              onClick={toggleSidebar}
-            >
-              <motion.div
-                initial={{ x: -340 }}
-                animate={{ x: 0 }}
-                exit={{ x: -340 }}
-                transition={{ duration: 0.2 }}
-                className="w-[340px] h-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ConversationSidebar
-                  conversations={typedConversations}
-                  selectedId={selectedId}
-                  onSelectConversation={(id) => {
-                    handleSelectConversation(id);
-                    setIsSidebarCollapsed(true);
-                  }}
-                  channelFilter={channelFilter}
-                  onChannelFilterChange={setChannelFilter}
-                  contextStatusFilter={contextStatusFilter}
-                  onContextStatusFilterChange={setContextStatusFilter}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  unreadCounts={allUnreadCounts}
-                  onBulkAction={handleBulkAction}
-                  onGroupSelect={handleSelectGroup}
-                  onOpenGroupInfo={handleOpenGroupInfo}
-                />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Collapsed sidebar toggle (desktop) */}
-        {isSidebarCollapsed && (
-          <div className="hidden lg:flex flex-col items-center py-3 px-2 bg-card border-r border-border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={toggleSidebar}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Main Chat Area: group merged view OR individual chat */}
-        {activeGroup && !groupMemberSelected ? (
-          <GroupChatWindow
-            groupId={activeGroup.id}
-            groupName={activeGroup.name}
-            groupColor={activeGroup.color}
-            onBack={handleBackFromGroup}
-            autoOpenInfo={groupInfoAutoOpen}
-          />
-        ) : (
-          <ChatWindow
-            conversation={typedSelectedConversation}
-            onMarkResolved={markAsResolved}
-            onMute={muteConversation}
-            onSendMessage={sendMessage}
-            onTogglePanel={toggleContextPanel}
-            isPanelOpen={isContextPanelOpen}
-            onPin={handlePin}
-            onLock={handleLock}
-            onFavorite={handleFavorite}
-            onExport={handleExport}
-            onBlock={handleBlock}
-            onDelete={handleDelete}
-          />
+      {/* Collapsed sidebar toggle (desktop) */}
+      {isSidebarCollapsed && (
+        <div className="hidden lg:flex flex-col items-center py-3 px-2 bg-card border-r border-border">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggleSidebar}>
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Main chat area */}
+      {activeGroup && !groupMemberSelected ? (
+        <GroupChatWindow
+          groupId={activeGroup.id}
+          groupName={activeGroup.name}
+          groupColor={activeGroup.color}
+          onBack={handleBackFromGroup}
+          autoOpenInfo={groupInfoAutoOpen}
+        />
+      ) : (
+        <ChatWindow
+          conversation={typedSelectedConversation}
+          onMarkResolved={markAsResolved}
+          onMute={muteConversation}
+          onSendMessage={sendMessage}
+          onTogglePanel={toggleContextPanel}
+          isPanelOpen={isContextPanelOpen}
+          onPin={handlePin}
+          onLock={handleLock}
+          onFavorite={handleFavorite}
+          onExport={handleExport}
+          onBlock={handleBlock}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Context panel */}
+      <AnimatePresence mode="wait">
+        {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="h-full flex-shrink-0 overflow-hidden hidden md:block"
+          >
+            <ConversationContextPanel
+              conversation={typedSelectedConversation}
+              onClose={toggleContextPanel}
+            />
+          </motion.div>
         )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
-        {/* Context Panel (hidden in group merged view, shown for individual chats) */}
-        <AnimatePresence mode="wait">
-          {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="h-full flex-shrink-0 overflow-hidden hidden md:block"
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab definitions
+// ─────────────────────────────────────────────────────────────────────────────
+type WaTab = 'personal' | 'waba';
+
+const WA_TABS: { id: WaTab; label: string; sublabel: string }[] = [
+  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
+  { id: 'waba',    label: 'WA Business',  sublabel: 'business_whatsapp' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page shell — handles only tab + AI playground state
+// ─────────────────────────────────────────────────────────────────────────────
+export function ConversationsPage() {
+  const [activeTab, setActiveTab] = useState<WaTab>('personal');
+  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+
+  return (
+    <div className="h-full flex flex-col bg-background">
+      {/* Top bar: WA channel tabs + AI playground toggle */}
+      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
+        {/* Channel tabs */}
+        <div className="flex items-center gap-1">
+          {WA_TABS.map(({ id, label, sublabel }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
+                activeTab === id
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
             >
-              <ConversationContextPanel
-                conversation={typedSelectedConversation}
-                onClose={toggleContextPanel}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <ChannelIcon channel={sublabel as any} size={12} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* AI Playground toggle */}
+        <Button
+          variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+          size="sm"
+          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
+          onClick={() => setIsPlaygroundOpen((v) => !v)}
+          title="Open AI Playground to test your system prompt"
+        >
+          <FlaskConical className="h-3.5 w-3.5" />
+          Test AI
+        </Button>
       </div>
 
-      {/* AI Playground — fixed slide-over panel */}
+      {/* Channel views — only the active tab is mounted */}
+      <div className="flex-1 flex overflow-hidden">
+        {activeTab === 'personal' && <ChannelConversationView channel="personal" />}
+        {activeTab === 'waba'     && <ChannelConversationView channel="waba" />}
+      </div>
+
+      {/* AI Playground slide-over */}
       <AnimatePresence>
         {isPlaygroundOpen && (
           <>
-            {/* Backdrop (mobile only — on desktop the panel overlays partially) */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

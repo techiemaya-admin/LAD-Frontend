@@ -1,23 +1,35 @@
 import { memo } from 'react';
-import { Linkedin, Mail, Instagram } from 'lucide-react';
+import { Linkedin, Mail, Instagram, Building2 } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { faMicrosoft } from '@fortawesome/free-brands-svg-icons';
-import { Channel } from '@/types/conversation';
+import { Channel, WaSubChannel } from '@/types/conversation';
 import { cn } from '@/lib/utils';
 
+type AnyChannel = Channel | WaSubChannel;
+
 interface ChannelIconProps {
-  channel: Channel;
+  channel: AnyChannel;
   size?: number;
   className?: string;
   showBackground?: boolean;
 }
 
-const channelConfig: Record<Channel, { colorClass: string; bgClass: string; color: string }> = {
+const channelConfig: Record<AnyChannel, { colorClass: string; bgClass: string; color: string }> = {
   whatsapp: {
     colorClass: 'text-green-500',
     bgClass: 'bg-green-100',
     color: '#25D366',
+  },
+  personal_whatsapp: {
+    colorClass: 'text-green-500',
+    bgClass: 'bg-green-100',
+    color: '#25D366',
+  },
+  business_whatsapp: {
+    colorClass: 'text-emerald-600',
+    bgClass: 'bg-emerald-100',
+    color: '#128C7E',
   },
   linkedin: {
     colorClass: 'text-blue-600',
@@ -47,16 +59,31 @@ export const ChannelIcon = memo(function ChannelIcon({
   className,
   showBackground = false,
 }: ChannelIconProps) {
-  const config = channelConfig[channel];
+  const config = channelConfig[channel] ?? channelConfig.whatsapp;
 
   const renderIcon = () => {
-    if (channel === 'whatsapp') {
+    if (channel === 'whatsapp' || channel === 'personal_whatsapp') {
       return (
         <FontAwesomeIcon
           icon={faWhatsapp}
           size={`${size}px` as any}
           style={{ color: config.color }}
         />
+      );
+    } else if (channel === 'business_whatsapp') {
+      // WhatsApp Business — WA icon with a small building overlay
+      return (
+        <div className="relative inline-flex">
+          <FontAwesomeIcon
+            icon={faWhatsapp}
+            size={`${size}px` as any}
+            style={{ color: config.color }}
+          />
+          <Building2
+            size={Math.max(8, Math.round(size * 0.55))}
+            className="absolute -bottom-0.5 -right-1 text-emerald-700 bg-white rounded-full"
+          />
+        </div>
       );
     } else if (channel === 'linkedin') {
       return <Linkedin size={size} style={{ color: config.color }} />;

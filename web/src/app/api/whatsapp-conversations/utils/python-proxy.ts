@@ -1,15 +1,37 @@
 /**
- * Proxy utility for forwarding Next.js API requests to the BNI Conversation Service (Python FastAPI).
- * See: /comms-service-guidelines.md for full API documentation
+ * Proxy utility for forwarding Next.js API requests to the appropriate backend:
+ *   - channel=personal  → LAD_backend (Node.js) for personal WhatsApp (Baileys)
+ *   - channel=waba       → LAD-WABA-Comms (Python FastAPI) for WhatsApp Business API
+ *
+ * The channel is determined by the `channel` query param or `X-WhatsApp-Channel` header.
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-const DEFAULT_SERVICE_URL = process.env.NEXT_PUBLIC_BNI_SERVICE_URL
-  || process.env.BNI_SERVICE_URL
-  || 'https://bni-conversation-service-160078175457.us-central1.run.app';
+// ── Service URL resolvers ───────────────────────────────────────────
 
+/** LAD_backend (Node.js) – personal WhatsApp via Baileys */
+function getBackendUrl(): string {
+  return (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    'http://localhost:3004'
+  );
+}
+
+/** LAD-WABA-Comms (Python FastAPI) – WhatsApp Business API */
+function getWABAServiceUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_WHATSAPP_API_URL ||
+    process.env.WABA_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_BNI_SERVICE_URL ||
+    process.env.BNI_SERVICE_URL ||
+    'http://localhost:8000'
+  );
+}
+
+/** @deprecated – use channel-based routing; kept for backwards compat */
 export function getWhatsAppServiceUrl(): string {
-  return DEFAULT_SERVICE_URL;
+  return getWABAServiceUrl();
 }
 
 /**
@@ -32,11 +54,38 @@ export async function proxyToPythonService(
   baseUrl: string,
   path: string,
 ): Promise<Response> {
-  const url = new URL(path, baseUrl);
+  // ── Channel-based routing ──────────────────────────────────────
+  // Determine channel from query param or header. Default: 'personal'
+  const channel =
+    req.nextUrl.searchParams.get('channel') ||
+    req.headers.get('x-whatsapp-channel') ||
+    'personal';
 
-  // Forward query parameters
+  let resolvedBaseUrl: string;
+  let resolvedPath: string;
+
+  if (channel === 'personal') {
+    // Personal WhatsApp → LAD_backend
+    // Transform: /api/conversations → /api/whatsapp-conversations/conversations
+    resolvedBaseUrl = getBackendUrl();
+    resolvedPath = '/api/whatsapp-conversations' + path.replace(/^\/api/, '');
+  } else if (channel === 'waba') {
+    // WhatsApp Business API → LAD-WABA-Comms
+    resolvedBaseUrl = getWABAServiceUrl();
+    resolvedPath = path;
+  } else {
+    // Fallback: use the passed-in baseUrl (backwards compat)
+    resolvedBaseUrl = baseUrl;
+    resolvedPath = path;
+  }
+
+  const url = new URL(resolvedPath, resolvedBaseUrl);
+
+  // Forward query parameters (except `channel` — consumed by proxy)
   req.nextUrl.searchParams.forEach((value, key) => {
-    url.searchParams.set(key, value);
+    if (key !== 'channel') {
+      url.searchParams.set(key, value);
+    }
   });
 
   const headers: Record<string, string> = {
@@ -82,7 +131,7 @@ export async function proxyToPythonService(
     }
   }
 
-  console.log(`[python-proxy] Final X-Tenant-ID: ${headers['X-Tenant-ID'] || 'NONE'}, path: ${path}, trace: ${debugTraceId || 'none'}, clientTenant: ${debugClientTenant || 'none'}`);
+  console.log(`[python-proxy] channel=${channel}, baseUrl=${resolvedBaseUrl}, path=${resolvedPath}, tenant=${headers['X-Tenant-ID'] || 'NONE'}, trace=${debugTraceId || 'none'}`);
 
   const fetchOptions: RequestInit = {
     method: req.method,
@@ -116,7 +165,7 @@ export async function proxyToPythonService(
       return NextResponse.json(
         {
           success: false,
-          error: 'BNI service returned non-JSON response',
+          error: 'Conversation service returned non-JSON response',
           details: response.status >= 500 ? 'Service temporarily unavailable' : text.substring(0, 500)
         },
         { status: response.status >= 500 ? 502 : response.status },
@@ -132,7 +181,7 @@ export async function proxyToPythonService(
   } catch (error) {
     console.error(`[python-proxy] Error proxying to ${url}:`, error);
     const errorResponse = NextResponse.json(
-      { success: false, error: 'Failed to connect to BNI service' },
+      { success: false, error: `Failed to connect to conversation service (${channel})` },
       { status: 502 },
     );
     errorResponse.headers.set('X-Debug-Trace-Id', debugTraceId || 'none');
