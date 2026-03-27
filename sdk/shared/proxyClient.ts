@@ -18,6 +18,13 @@ type ApiResponse<T = any> = {
 type RequestOptions = {
   headers?: Record<string, string>;
   params?: Record<string, any>;
+  /**
+   * Override the WhatsApp backend routing for this request.
+   * 'personal' → LAD_backend (Baileys)
+   * 'waba'     → LAD-WABA-Comms (Meta Business API)
+   * When omitted, falls back to localStorage.whatsappChannel || 'personal'.
+   */
+  channel?: 'personal' | 'waba';
 };
 
 class ProxyClient {
@@ -36,6 +43,13 @@ class ProxyClient {
           url.searchParams.append(key, String(value));
         }
       });
+    }
+
+    // Inject channel param so the proxy routes to the correct backend.
+    // Prefer the per-request override; fall back to localStorage for legacy callers.
+    if (typeof window !== 'undefined' && !url.searchParams.has('channel')) {
+      const channel = options?.channel ?? safeStorage.getItem('whatsappChannel') ?? 'personal';
+      url.searchParams.set('channel', channel);
     }
 
     const headers: Record<string, string> = {
@@ -135,6 +149,46 @@ class ProxyClient {
 
   async patch<T = any>(path: string, body?: any, options?: RequestOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PATCH', path, body, options);
+  }
+
+  /**
+   * Create a channel-bound client that always sends requests to a specific backend.
+   * Used by the tab-scoped useConversations({ channel: 'personal' | 'waba' }) instances.
+   */
+  withChannel(channel: 'personal' | 'waba'): ChannelBoundClient {
+    return new ChannelBoundClient(this, channel);
+  }
+}
+
+/**
+ * A thin wrapper around ProxyClient that hard-wires the channel for every request.
+ * This is the backbone of the tab-scoped conversation views — each tab creates
+ * its own ChannelBoundClient so queries never share routing state.
+ */
+export class ChannelBoundClient {
+  constructor(
+    private readonly parent: ProxyClient,
+    private readonly channel: 'personal' | 'waba'
+  ) {}
+
+  async get<T = any>(path: string, options?: Omit<RequestOptions, 'channel'>): Promise<ApiResponse<T>> {
+    return this.parent.get<T>(path, { ...options, channel: this.channel });
+  }
+
+  async post<T = any>(path: string, body?: any, options?: Omit<RequestOptions, 'channel'>): Promise<ApiResponse<T>> {
+    return this.parent.post<T>(path, body, { ...options, channel: this.channel });
+  }
+
+  async patch<T = any>(path: string, body?: any, options?: Omit<RequestOptions, 'channel'>): Promise<ApiResponse<T>> {
+    return this.parent.patch<T>(path, body, { ...options, channel: this.channel });
+  }
+
+  async put<T = any>(path: string, body?: any, options?: Omit<RequestOptions, 'channel'>): Promise<ApiResponse<T>> {
+    return this.parent.put<T>(path, body, { ...options, channel: this.channel });
+  }
+
+  async delete<T = any>(path: string, options?: Omit<RequestOptions, 'channel'>): Promise<ApiResponse<T>> {
+    return this.parent.delete<T>(path, { ...options, channel: this.channel });
   }
 }
 

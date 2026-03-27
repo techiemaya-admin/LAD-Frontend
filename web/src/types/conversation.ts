@@ -4,6 +4,20 @@
  * The SDK types are the authoritative source.
  * Web-specific types (ContactTag, InternalComment) are defined here.
  */
+
+/**
+ * WhatsApp sub-channel type — used in the sidebar only.
+ * personal_whatsapp → routes to LAD_backend (Baileys)
+ * business_whatsapp  → routes to LAD-WABA-Comms (Meta Business API)
+ */
+export type WaSubChannel = 'personal_whatsapp' | 'business_whatsapp';
+
+/**
+ * Extended sidebar channel type that includes WA sub-channels.
+ * Used by ConversationSidebar and ConversationsPage.
+ */
+export type SidebarChannel = import('@lad/frontend-features/conversations').Channel | 'all' | WaSubChannel;
+
 export type {
   Channel,
   ConversationStatus,

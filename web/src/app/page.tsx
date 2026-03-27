@@ -1,4 +1,6 @@
 // src/app/page.tsx
-'use client';
+import { redirect } from 'next/navigation';
 
-export { default } from './landing/page';
+export default function RootPage() {
+  redirect('/onboarding/advanced-search-ai');
+}

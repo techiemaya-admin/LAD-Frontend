@@ -49,7 +49,7 @@ interface ConversationSidebarProps {
   onContextStatusFilterChange: (status: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  unreadCounts: Record<Channel | 'all', number>;
+  unreadCounts: Record<string, number>;
   onBulkAction?: (action: string, ids: string[]) => void;
   onRefresh?: () => void;
   onGroupSelect?: (group: ChatGroup) => void;
@@ -136,6 +136,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [groupConversationIds, setGroupConversationIds] = useState<Set<string>>(new Set());
   const [groupTemplateSendTarget, setGroupTemplateSendTarget] = useState<{ groupId: string; count: number } | null>(null);
 
+  // Named-only filter: hide contacts with unknown/unresolved names
+  const [namedOnly, setNamedOnly] = useState(false);
+
   // Fetch tenant-specific context statuses on mount
   useEffect(() => {
     setStatusesLoading(true);
@@ -172,16 +175,21 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {});
   }, [activeGroup]);
 
-  // Filter conversations: group only (context status is now server-side)
+  // Filter conversations: named-only + group filter (context status is server-side)
   const filteredConversations = useMemo(() => {
     let list = conversations;
+
+    // Hide conversations where the contact has no saved name ("Unknown")
+    if (namedOnly) {
+      list = list.filter((c) => c.contact.name && c.contact.name !== 'Unknown');
+    }
 
     if (activeGroup && groupConversationIds.size > 0) {
       list = list.filter((conv) => groupConversationIds.has(conv.id));
     }
 
     return list;
-  }, [conversations, activeGroup, groupConversationIds]);
+  }, [conversations, activeGroup, groupConversationIds, namedOnly]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -391,7 +399,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         <TooltipProvider>
           {channelButtons.map(({ id, label, channel }) => {
             const isActive = channelFilter === id;
-            const count = unreadCounts[id];
+            const count = unreadCounts[id] ?? 0;
 
             return (
               <Tooltip key={id}>
@@ -399,7 +407,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                   <Button
                     variant={isActive ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => onChannelFilterChange(id)}
+                    onClick={() => onChannelFilterChange(id as Channel | 'all')}
                     className={cn(
                       'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center gap-1.5 text-xs font-medium transition-all relative',
                       isActive
@@ -430,6 +438,28 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               </Tooltip>
             );
           })}
+
+          {/* Named-only toggle: hide Unknown / unsaved contacts */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={namedOnly ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setNamedOnly((v) => !v)}
+                className={cn(
+                  'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center text-xs font-medium transition-all',
+                  namedOnly
+                    ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
+                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                )}
+              >
+                <UserMinus className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+              {namedOnly ? 'Showing named only' : 'Hide unknown contacts'}
+            </TooltipContent>
+          </Tooltip>
         </TooltipProvider>
       </div>
 

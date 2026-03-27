@@ -110,7 +110,7 @@ export function Sidebar() {
       requiredCapability: "view_overview",
     },
     {
-      href: "/onboarding",
+      href: "/onboarding/advanced-search-ai",
       label: "AI Assistant",
       icon: Search,
       details: "AI-powered ICP assistant and workflow setup",
