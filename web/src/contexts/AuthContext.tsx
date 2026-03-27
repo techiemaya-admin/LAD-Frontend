@@ -116,8 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await response.json();
       // Token is set as httpOnly cookie by the API route — fetch user data
       await fetchCurrentUser();
-      // Redirect to dashboard
-      router.push('/overview');
+      // Redirect to AI Assistant after login
+      router.push('/onboarding/advanced-search-ai');
     } catch (error) {
       console.error('Login error:', error);
       throw error;

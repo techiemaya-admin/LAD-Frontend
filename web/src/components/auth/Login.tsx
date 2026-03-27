@@ -69,7 +69,7 @@ const Login: React.FC = () => {
       const user = await authService.getCurrentUser();
       dispatch(loginSuccess(user));
       // Verify token is stored before redirecting (use safeStorage, not direct localStorage)
-      router.push("/overview");
+      router.push("/onboarding/advanced-search-ai");
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
       dispatch(loginFailure(err.message));

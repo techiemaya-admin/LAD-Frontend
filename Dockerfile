@@ -102,10 +102,13 @@ RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
 # Build from root using turbo (builds SDK first, then web)
 RUN npm run build
 
-# Verify standalone output was generated (fails the build if missing)
-RUN test -f /app/web/.next/standalone/server.js && echo "✅ server.js found" || \
-    (echo "❌ .next/standalone/server.js NOT FOUND - next build may have failed or output:standalone is missing" && \
-     ls -la /app/web/.next/ 2>/dev/null && exit 1)
+# Verify standalone output was generated (fails the build if missing).
+# With outputFileTracingRoot=.. (monorepo root), Next.js places server.js at
+# standalone/web/server.js (mirroring the relative path from the tracing root).
+RUN test -f /app/web/.next/standalone/web/server.js && echo "✅ server.js found at standalone/web/server.js" || \
+    (echo "❌ standalone/web/server.js NOT FOUND - listing standalone dir:" && \
+     ls -la /app/web/.next/standalone/ 2>/dev/null && \
+     ls -la /app/web/.next/standalone/web/ 2>/dev/null && exit 1)
 
 # -------------------------
 # Runner
@@ -128,8 +131,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/stat
 # Copy public directory
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
-# Verify server.js exists at the correct path
-RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || (echo "❌ server.js not found!" && ls -la /app && ls -la /app/web 2>/dev/null && exit 1)
+# Verify server.js exists at the correct path.
+# With monorepo outputFileTracingRoot=.., standalone/web/server.js is copied to /app/web/server.js.
+RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || \
+    (echo "❌ server.js not found! Listing /app and /app/web:" && \
+     ls -la /app/ && ls -la /app/web/ 2>/dev/null && exit 1)
 
 # Cloud Run-friendly start script
 RUN printf '%s\n' \
