@@ -169,6 +169,25 @@ export const getConversationOptions = (conversationId: string) =>
   });
 
 /**
+ * Deduplicate messages: remove near-duplicate entries that share the same
+ * content, direction (isOutgoing), and fall within a 10-second window.
+ * This guards against historical DB duplicates created by the old TOCTOU
+ * webhook-dedup race condition before it was fixed with try_claim().
+ */
+function deduplicateMessages(messages: Message[]): Message[] {
+  const seen = new Map<string, number>(); // key → first-seen timestamp (ms)
+  return messages.filter((msg) => {
+    // Build a key that identifies "same content sent in roughly the same moment"
+    const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 10000)}`;
+    if (seen.has(bucketKey)) {
+      return false; // near-duplicate — skip
+    }
+    seen.set(bucketKey, msg.timestamp.getTime());
+    return true;
+  });
+}
+
+/**
  * Get messages for a conversation with pagination
  */
 export async function getConversationMessages(
@@ -186,8 +205,11 @@ export async function getConversationMessages(
     has_more: boolean;
   }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params });
 
+  const rawMessages = (response.data.data || []).map(mapMessageFromApi);
+  const messages = deduplicateMessages(rawMessages);
+
   return {
-    messages: (response.data.data || []).map(mapMessageFromApi),
+    messages,
     total: response.data.total || 0,
     hasMore: response.data.has_more || false,
   };

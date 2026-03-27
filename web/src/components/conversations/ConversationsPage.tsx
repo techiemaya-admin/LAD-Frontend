@@ -7,10 +7,11 @@ import { ConversationSidebar } from './ConversationSidebar';
 import { ChatWindow } from './ChatWindow';
 import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
+import { AIPlayground } from './AIPlayground';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelLeft } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, FlaskConical } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const CONV_API = '/api/whatsapp-conversations/conversations';
@@ -37,6 +38,7 @@ export function ConversationsPage() {
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   // Track whether user explicitly selected a conversation while in group view
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
@@ -204,6 +206,20 @@ export function ConversationsPage() {
 
   return (
     <div className="h-full flex flex-col bg-background">
+      {/* Top Toolbar — "Test AI" playground toggle */}
+      <div className="h-10 flex items-center justify-end px-3 border-b border-border bg-card shrink-0">
+        <Button
+          variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+          size="sm"
+          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
+          onClick={() => setIsPlaygroundOpen((v) => !v)}
+          title="Open AI Playground to test your system prompt"
+        >
+          <FlaskConical className="h-3.5 w-3.5" />
+          Test AI
+        </Button>
+      </div>
+
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
@@ -334,6 +350,23 @@ export function ConversationsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* AI Playground — fixed slide-over panel */}
+      <AnimatePresence>
+        {isPlaygroundOpen && (
+          <>
+            {/* Backdrop (mobile only — on desktop the panel overlays partially) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/30 sm:hidden"
+              onClick={() => setIsPlaygroundOpen(false)}
+            />
+            <AIPlayground onClose={() => setIsPlaygroundOpen(false)} />
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

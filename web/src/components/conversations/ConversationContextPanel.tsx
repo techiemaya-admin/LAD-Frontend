@@ -26,8 +26,10 @@ import {
   Users,
   Target,
   Loader2,
+  UserCheck,
 } from 'lucide-react';
 import { ChannelIcon } from './ChannelIcon';
+import { AssignmentPanel } from './AssignmentPanel';
 import { mockInternalComments } from '@/data/mockConversations';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { formatDistanceToNow } from 'date-fns';
@@ -561,9 +563,13 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             </div>
           </div>
 
-          {/* Tabs: Notes & Internal Comments */}
-          <Tabs defaultValue="notes" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 h-9">
+          {/* Tabs: Assignment, Notes & Internal Comments */}
+          <Tabs defaultValue="assignment" className="w-full">
+            <TabsList className="w-full grid grid-cols-3 h-9">
+              <TabsTrigger value="assignment" className="text-xs">
+                <UserCheck className="h-3 w-3 mr-1.5" />
+                Assignment
+              </TabsTrigger>
               <TabsTrigger value="notes" className="text-xs">
                 <Tag className="h-3 w-3 mr-1.5" />
                 Notes
@@ -573,6 +579,10 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                 Internal
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="assignment" className="mt-3">
+              <AssignmentPanel conversationId={conversation.id} />
+            </TabsContent>
 
             <TabsContent value="notes" className="mt-3">
               {/* Add note */}

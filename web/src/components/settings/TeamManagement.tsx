@@ -33,13 +33,20 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
 ];
+// Valid tenant_role enum values in database: owner, admin, member, viewer
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
-  { value: 'co_admin', label: 'Co Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'sales_rep', label: 'Sales Representative' },
+  { value: 'member', label: 'Manager / Sales Rep' },
   { value: 'viewer', label: 'Viewer' },
 ];
+
+// Maps UI labels back to valid DB enum values (for display)
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  member: 'Member',
+  viewer: 'Viewer',
+};
 export const TeamManagement: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -199,12 +206,11 @@ export const TeamManagement: React.FC = () => {
   };
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'co_admin': return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'manager': return 'bg-green-50 text-green-700 border border-green-200';
-      case 'sales_rep': return 'bg-orange-50 text-orange-700 border border-orange-200';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200';
+      case 'member': return 'bg-green-50 text-green-700 border border-green-200';
       case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200';
-      default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+      default:       return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
   };
   return (
@@ -338,6 +344,66 @@ export const TeamManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Conversation Assignments Section */}
+      <div className="space-y-4 mt-8">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Conversation Assignments</h3>
+          <p className="text-sm text-gray-600 mt-1">View team member workload and active assignments</p>
+        </div>
+
+        {loading ? (
+          <div className="bg-white rounded-lg p-8 text-center">
+            <p className="text-gray-500">Loading workload data...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Team Member</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Active Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Total Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {Array.isArray(users) && users.length > 0 ? (
+                    users
+                      .filter(user => user.role !== 'viewer')
+                      .map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-semibold text-blue-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                              Available
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                        No team members to display. Add a team member first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Add User Modal */}
       {showAddModal && (
