@@ -63,30 +63,12 @@ steps:
       - '-c'
       - |
         BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
-        
-        # Create env-vars file with proper YAML format (no indentation, direct substitution)
-        cat > /workspace/env-vars-final.yaml <<EOF
-NODE_ENV: development
-ENVIRONMENT: development
-BRANCH: $BRANCH_NAME
-COMMIT_SHA: $SHORT_SHA
-BUILD_ID: $BUILD_ID
-NEXT_PUBLIC_BACKEND_URL: $_API_URL
-NEXT_PUBLIC_ICP_BACKEND_URL: $_API_URL
-BACKEND_INTERNAL_URL: $_API_URL
-NEXT_PUBLIC_SOCKET_URL: $_NEXT_PUBLIC_SOCKET_URL
-NEXT_PUBLIC_DISABLE_VAPI: "false"
-NEXT_PUBLIC_WHATSAPP_API_URL: $_WABA_SERVICE_URL
-NEXT_PUBLIC_BNI_SERVICE_URL: $_WABA_SERVICE_URL
-BNI_SERVICE_URL: $_WABA_SERVICE_URL
-WABA_SERVICE_URL: $_WABA_SERVICE_URL
-WHATSAPP_SERVICE_URL: $_WABA_SERVICE_URL
-EOF
 
-        echo "=== Environment Variables File ==="
-        cat /workspace/env-vars-final.yaml
-        echo "=== End File ==="
-        
+        echo "=== Deploying with inline env vars ==="
+        echo "API_URL: $_API_URL"
+        echo "SOCKET_URL: $_NEXT_PUBLIC_SOCKET_URL"
+        echo "WABA_URL: $_WABA_SERVICE_URL"
+
         gcloud run deploy $_SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/lad-frontend-develop:$COMMIT_SHA \
           --region $_REGION \
@@ -99,9 +81,9 @@ EOF
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --env-vars-file /workspace/env-vars-final.yaml \
+          --set-env-vars "^@@^NODE_ENV=development@@ENVIRONMENT=development@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL" \
           --update-labels environment=development,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
-        
+
         echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
 
 # Images to be pushed to Container Registry
