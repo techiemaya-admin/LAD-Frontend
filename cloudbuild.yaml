@@ -8,17 +8,19 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
       - '--build-arg'
-      - 'VITE_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
+      - 'NEXT_PUBLIC_API_URL=$_API_URL'
       - '--build-arg'
-      - 'NEXT_PUBLIC_API_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
+      - 'NEXT_PUBLIC_BACKEND_URL=$_API_URL'
       - '--build-arg'
-      - 'NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
+      - 'NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL'
       - '--build-arg'
-      - 'NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-160078175457.us-central1.run.app'
+      - 'NEXT_PUBLIC_SOCKET_URL=$_API_URL'
       - '--build-arg'
       - 'NEXT_PUBLIC_DISABLE_VAPI=false'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_BNI_SERVICE_URL=$_BNI_SERVICE_URL'
       - '-f'
       - 'Dockerfile'
       - '.'
@@ -40,9 +42,9 @@ steps:
     args:
       - '-c'
       - |
-        gcloud run deploy lad-frontend-prod \
+        gcloud run deploy $_SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA \
-          --region us-central1 \
+          --region $_REGION \
           --platform managed \
           --allow-unauthenticated \
           --memory 2Gi \
@@ -51,8 +53,8 @@ steps:
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars NODE_ENV=production,BRANCH=$BRANCH_NAME,COMMIT_SHA=$SHORT_SHA,NEXT_PUBLIC_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_ICP_BACKEND_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_SOCKET_URL=https://lad-backend-develop-160078175457.us-central1.run.app,NEXT_PUBLIC_DISABLE_VAPI=false
-        
+          --set-env-vars "^@@^NODE_ENV=production@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_API_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@NEXT_PUBLIC_SOCKET_URL=$_API_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_BNI_SERVICE_URL@@BNI_SERVICE_URL=$_BNI_SERVICE_URL"
+
         echo "✅ Production deployment completed successfully"
 
 images:
@@ -65,3 +67,11 @@ options:
   substitutionOption: 'ALLOW_LOOSE'
 
 timeout: '1800s'
+
+# Substitutions — override these in the Cloud Build trigger configuration
+substitutions:
+  _REGION: 'us-central1'
+  _SERVICE_NAME: 'lad-frontend-prod'
+  _API_URL: 'https://lad-backend-prod-160078175457.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-prod-160078175457.us-central1.run.app'
+  _BNI_SERVICE_URL: 'https://lad-waba-comms-prod-160078175457.us-central1.run.app'
