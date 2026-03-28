@@ -18,6 +18,7 @@ steps:
         echo "BRANCH_NAME: ${BRANCH_NAME}"
         echo "_API_URL: ${_API_URL}"
         echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
+        echo "_WABA_SERVICE_URL: ${_WABA_SERVICE_URL}"
         echo "Environment: DEVELOPMENT"
         echo "=== End Debug ==="
 
@@ -35,6 +36,8 @@ steps:
       '--build-arg', 'NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL',
       '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL',
       '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
+      '--build-arg', 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL',
       '--build-arg', 'NODE_ENV=development',
       '-f', 'Dockerfile',
       '.'
@@ -70,8 +73,14 @@ steps:
         BUILD_ID: "${BUILD_ID}"
         NEXT_PUBLIC_BACKEND_URL: "${_API_URL}"
         NEXT_PUBLIC_ICP_BACKEND_URL: "${_API_URL}"
+        BACKEND_INTERNAL_URL: "${_API_URL}"
         NEXT_PUBLIC_SOCKET_URL: "${_NEXT_PUBLIC_SOCKET_URL}"
         NEXT_PUBLIC_DISABLE_VAPI: "false"
+        NEXT_PUBLIC_WHATSAPP_API_URL: "${_WABA_SERVICE_URL}"
+        NEXT_PUBLIC_BNI_SERVICE_URL: "${_WABA_SERVICE_URL}"
+        BNI_SERVICE_URL: "${_WABA_SERVICE_URL}"
+        WABA_SERVICE_URL: "${_WABA_SERVICE_URL}"
+        WHATSAPP_SERVICE_URL: "${_WABA_SERVICE_URL}"
         EOF
         
         # Substitute environment variables in the YAML file
@@ -123,3 +132,4 @@ substitutions:
   _ENV: 'development'
   _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-160078175457.us-central1.run.app'
