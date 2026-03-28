@@ -20,8 +20,6 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/web/node_modules ./web/node_modules
-COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 
 # Copy source code
 COPY . .
