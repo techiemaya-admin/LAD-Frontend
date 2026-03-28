@@ -61,6 +61,10 @@ RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
 
 RUN npm run build
 
+# Verify standalone output was generated (fails build if next.config.mjs output:standalone didn't work)
+RUN test -f .next/standalone/server.js && echo "✅ standalone/server.js present" || \
+    (echo "❌ standalone/server.js MISSING — check output:standalone in next.config.mjs" && ls -la .next/ && exit 1)
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -72,14 +76,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output (server.js at root)
+# Copy standalone output (server.js at root, app files in web/ subdirectory due to outputFileTracingRoot)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
 
-# Copy static assets to .next/static
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+# Copy static assets — must go to web/.next/static because outputFileTracingRoot is the monorepo root,
+# so Next.js serves static files relative to web/ inside the standalone output
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 
-# Copy public directory
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+# Copy public directory — same reason: server.js looks for public at web/public
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
 USER nextjs
 
