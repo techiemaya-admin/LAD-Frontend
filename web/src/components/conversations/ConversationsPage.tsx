@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@lad/frontend-features/conversations';
@@ -21,7 +21,7 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ channel }: { channel: 'personal' | 'waba' }) {
+function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: 'personal' | 'waba'; onShowBroadcastModal?: () => void }) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -202,6 +202,7 @@ function ChannelConversationView({ channel }: { channel: 'personal' | 'waba' }) 
               onBulkAction={handleBulkAction}
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
+              onShowBroadcastModal={onShowBroadcastModal}
             />
           </motion.div>
         )}
@@ -242,6 +243,7 @@ function ChannelConversationView({ channel }: { channel: 'personal' | 'waba' }) 
                 onBulkAction={handleBulkAction}
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
+                onShowBroadcastModal={onShowBroadcastModal}
               />
             </motion.div>
           </motion.div>
@@ -315,15 +317,68 @@ const WA_TABS: { id: WaTab; label: string; sublabel: string }[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Utility: Check which WhatsApp channels are connected
+// ─────────────────────────────────────────────────────────────────────────────
+async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean }> {
+  try {
+    // Check Personal WhatsApp connections
+    const personalRes = await fetchWithTenant('/api/whatsapp-conversations/accounts');
+    const personalData = personalRes.ok ? await personalRes.json() : null;
+    const personalConnected = personalData?.accounts?.some((a: any) => a.status === 'connected') ?? false;
+
+    // Check WABA connections by attempting to fetch conversations
+    // If the endpoint returns data without error, WABA is connected
+    const wabaRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=waba');
+    const wabaConnected = wabaRes.ok;
+
+    return { personalConnected, wabaConnected };
+  } catch (err) {
+    console.error('Error checking connected channels:', err);
+    return { personalConnected: false, wabaConnected: false };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Determine default tab based on connection status
+// Logic: If both connected → default to Personal, else default to whichever is connected
+// ─────────────────────────────────────────────────────────────────────────────
+function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTab {
+  // If both are connected, default to Personal WA
+  if (personalConnected && wabaConnected) {
+    return 'personal';
+  }
+  // If only Personal is connected
+  if (personalConnected) {
+    return 'personal';
+  }
+  // If only WABA is connected
+  if (wabaConnected) {
+    return 'waba';
+  }
+  // Fallback to Personal if neither is explicitly connected
+  return 'personal';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Page shell — handles only tab + AI playground state
 // ─────────────────────────────────────────────────────────────────────────────
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+
+  // Load connection status on mount and set default tab
+  useEffect(() => {
+    (async () => {
+      const { personalConnected, wabaConnected } = await getConnectedChannels();
+      const defaultTab = getDefaultTab(personalConnected, wabaConnected);
+      setActiveTab(defaultTab);
+    })();
+  }, []);
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI playground toggle */}
+      {/* Top bar: WA channel tabs + AI toggle */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
         {/* Channel tabs */}
         <div className="flex items-center gap-1">
@@ -359,9 +414,16 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal' && <ChannelConversationView channel="personal" />}
-        {activeTab === 'waba'     && <ChannelConversationView channel="waba" />}
+        {activeTab === 'personal' && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'waba'     && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
       </div>
+
+      {/* Broadcast Modal */}
+      <AnimatePresence>
+        {showBroadcastModal && (
+          <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab} />
+        )}
+      </AnimatePresence>
 
       {/* AI Playground slide-over */}
       <AnimatePresence>
@@ -379,5 +441,242 @@ export function ConversationsPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Broadcast Modal Component
+// ─────────────────────────────────────────────────────────────────────────────
+interface BroadcastModalProps {
+  onClose: () => void;
+  activeTab: WaTab;
+}
+
+function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isSending, setIsSending] = useState(false);
+
+  // Load groups and contacts
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        // Load chat groups
+        const groupsRes = await fetchWithTenant(
+          `/api/whatsapp-conversations/chat-groups?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+        );
+        if (groupsRes.ok) {
+          const groupsData = await groupsRes.json();
+          setGroups(groupsData.data || groupsData || []);
+        }
+
+        // Load contacts (from conversations)
+        const contactsRes = await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+        );
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json();
+          setContacts(contactsData.data || contactsData || []);
+        }
+
+        // Load templates
+        const templatesRes = await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations/templates?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+        );
+        if (templatesRes.ok) {
+          const templatesData = await templatesRes.json();
+          setTemplates(templatesData.data || templatesData || []);
+        }
+      } catch (err) {
+        console.error('Error loading broadcast data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [activeTab]);
+
+  const handleSendBroadcast = async () => {
+    if (selectedRecipients.length === 0 || !selectedTemplate) {
+      alert('Please select at least one recipient and a template');
+      return;
+    }
+
+    try {
+      setIsSending(true);
+
+      // Send broadcast to selected recipients
+      for (const recipientId of selectedRecipients) {
+        await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations/bulk`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'send-template',
+              ids: [recipientId],
+              template_id: selectedTemplate,
+              channel: activeTab === 'waba' ? 'waba' : 'personal',
+            }),
+          }
+        );
+      }
+
+      alert('Broadcast sent successfully!');
+      onClose();
+    } catch (err) {
+      console.error('Error sending broadcast:', err);
+      alert('Failed to send broadcast');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/50"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="fixed inset-x-4 top-1/2 z-50 transform -translate-y-1/2 max-w-md mx-auto bg-card rounded-lg shadow-xl border border-border md:inset-auto md:right-4 md:left-auto md:top-20 md:translate-y-0"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Send Broadcast</h2>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground">Loading...</div>
+          ) : (
+            <>
+              {/* Template Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Template</label>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                >
+                  <option value="">Choose a template...</option>
+                  {templates.map((t: any) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Recipients Selection */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                <label className="text-sm font-medium">Select Recipients</label>
+
+                {/* Groups */}
+                {groups.length > 0 && (
+                  <div className="border-t pt-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">Groups</h3>
+                    {groups.map((group: any) => (
+                      <label
+                        key={group.id}
+                        className="flex items-center gap-2 py-1 px-2 hover:bg-muted rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedRecipients.includes(group.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRecipients([...selectedRecipients, group.id]);
+                            } else {
+                              setSelectedRecipients(selectedRecipients.filter((id) => id !== group.id));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{group.name || `Group ${group.id.substring(0, 8)}`}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* Contacts */}
+                {contacts.length > 0 && (
+                  <div className="border-t pt-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">Contacts</h3>
+                    {contacts.map((contact: any) => (
+                      <label
+                        key={contact.id}
+                        className="flex items-center gap-2 py-1 px-2 hover:bg-muted rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedRecipients.includes(contact.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRecipients([...selectedRecipients, contact.id]);
+                            } else {
+                              setSelectedRecipients(selectedRecipients.filter((id) => id !== contact.id));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{contact.contact_name || contact.lead_name || `Contact ${contact.id.substring(0, 8)}`}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {groups.length === 0 && contacts.length === 0 && (
+                  <div className="text-sm text-muted-foreground text-center py-4">
+                    No groups or contacts available
+                  </div>
+                )}
+              </div>
+
+              {/* Selected count */}
+              <div className="text-sm text-muted-foreground">
+                {selectedRecipients.length} recipient(s) selected
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 border border-border rounded-md text-sm hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendBroadcast}
+                  disabled={isSending || selectedRecipients.length === 0 || !selectedTemplate}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSending ? 'Sending...' : 'Send Broadcast'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
   );
 }

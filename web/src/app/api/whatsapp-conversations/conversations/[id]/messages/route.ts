@@ -11,7 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/conversations/${id}/messages`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/conversations/${id}/messages`);
 }
 
 export async function POST(
@@ -19,5 +24,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/conversations/${id}/messages`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/conversations/${id}/messages`);
 }

@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
 
     // Re-create the request with the body (minus the action field)
     const { action: _, ...payload } = body;
-    const newReq = new NextRequest(req.url, {
+    const url = new URL(req.url);
+    if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
+    const newReq = new NextRequest(url, {
       method: 'POST',
       headers: req.headers,
       body: JSON.stringify(payload),

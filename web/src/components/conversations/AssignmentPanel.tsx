@@ -113,7 +113,7 @@ export const AssignmentPanel = memo(function AssignmentPanel({
   // Load team members
   const loadTeamMembers = useCallback(async () => {
     try {
-      const response = await fetchWithTenant('/api/team/workload');
+      const response = await fetchWithTenant('/api/threads/team/workload');
 
       if (!response.ok) {
         throw new Error('Failed to load team members');

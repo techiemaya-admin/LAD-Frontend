@@ -8,10 +8,20 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/notes/${id}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/notes/${id}`);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/notes/${id}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/notes/${id}`);
 }
