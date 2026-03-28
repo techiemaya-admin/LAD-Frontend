@@ -15,6 +15,10 @@ import {
   Users,
   UserMinus,
   UserPlus,
+  Plus,
+  ArrowLeft,
+  Megaphone,
+  FolderPlus,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -54,6 +58,7 @@ interface ConversationSidebarProps {
   onRefresh?: () => void;
   onGroupSelect?: (group: ChatGroup) => void;
   onOpenGroupInfo?: (group: ChatGroup) => void;
+  onShowBroadcastModal?: () => void;
 }
 
 const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[] = [
@@ -121,6 +126,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onRefresh,
   onGroupSelect,
   onOpenGroupInfo,
+  onShowBroadcastModal,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -130,11 +136,48 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [templateSending, setTemplateSending] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
+  // New Chat panel state (WhatsApp-style)
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [newChatSearch, setNewChatSearch] = useState('');
+  const [newChatGroups, setNewChatGroups] = useState<ChatGroup[]>([]);
+  const [newChatGroupsLoading, setNewChatGroupsLoading] = useState(false);
+  const [selectedNewChatIds, setSelectedNewChatIds] = useState<Set<string>>(new Set()); // contact IDs
+  const [selectedNewChatGroupIds, setSelectedNewChatGroupIds] = useState<Set<string>>(new Set()); // group IDs
+  const [newChatContacts, setNewChatContacts] = useState<Conversation[]>([]); // all contacts for New Chat panel
+  const [newChatContactsLoading, setNewChatContactsLoading] = useState(false);
+
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupConversationIds, setGroupConversationIds] = useState<Set<string>>(new Set());
   const [groupTemplateSendTarget, setGroupTemplateSendTarget] = useState<{ groupId: string; count: number } | null>(null);
+
+  // Load (or reload) groups + all contacts whenever the New Chat panel is open.
+  // Re-runs when: panel opens, panel closes (skip), or ChatGroupManager closes after editing.
+  useEffect(() => {
+    if (!isNewChatOpen) return;
+
+    // Load groups
+    setNewChatGroupsLoading(true);
+    fetchWithTenant('/api/whatsapp-conversations/chat-groups')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.data)) setNewChatGroups(data.data);
+      })
+      .catch(() => {})
+      .finally(() => setNewChatGroupsLoading(false));
+
+    // Load all contacts (limit=500 to show everyone, not just the default 20)
+    setNewChatContactsLoading(true);
+    fetchWithTenant('/api/whatsapp-conversations/conversations?limit=500')
+      .then((r) => r.json())
+      .then((data) => {
+        const list: Conversation[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+        setNewChatContacts(list);
+      })
+      .catch(() => {})
+      .finally(() => setNewChatContactsLoading(false));
+  }, [isNewChatOpen, isGroupManagerOpen]); // re-fetch when group manager closes
 
   // Named-only filter: hide contacts with unknown/unresolved names
   const [namedOnly, setNamedOnly] = useState(false);
@@ -356,8 +399,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     : selectedIds.size;
 
   return (
-    <div className="h-full flex flex-col bg-card border-r border-border">
-      {/* Search + Groups + Select toggle */}
+    <div className="h-full flex flex-col bg-card border-r border-border relative">
+      {/* Search + New Chat + Select toggle */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -369,23 +412,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="pl-9 h-9 bg-secondary/50"
             />
           </div>
+          {/* Circular + button — opens WhatsApp-style New Chat panel */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 flex-shrink-0"
-            onClick={() => setIsImportDialogOpen(true)}
-            title="Import Leads"
+            className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-muted"
+            onClick={() => setIsNewChatOpen(true)}
+            title="New chat"
           >
-            <UserPlus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 flex-shrink-0"
-            onClick={() => setIsGroupManagerOpen(true)}
-            title="Chat Groups"
-          >
-            <Users className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           </Button>
           <Button
             variant={isSelectMode ? 'default' : 'ghost'}
@@ -650,6 +685,303 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           />
         )}
       </div>
+
+      {/* ── WhatsApp-style "New Chat" Panel Overlay ── */}
+      {isNewChatOpen && (
+        <div className="absolute inset-0 z-30 bg-card flex flex-col">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-muted flex-shrink-0"
+              onClick={() => {
+                setIsNewChatOpen(false);
+                setNewChatSearch('');
+                setSelectedNewChatIds(new Set());
+                setSelectedNewChatGroupIds(new Set());
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-semibold flex-1">New chat</span>
+            {/* Selection count badge */}
+            {(selectedNewChatIds.size > 0 || selectedNewChatGroupIds.size > 0) && (
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {selectedNewChatIds.size + selectedNewChatGroupIds.size} selected
+              </span>
+            )}
+          </div>
+
+          {/* Search */}
+          <div className="px-3 py-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search name or number"
+                value={newChatSearch}
+                onChange={(e) => setNewChatSearch(e.target.value)}
+                className="pl-9 h-9 bg-secondary/50 rounded-full"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Action Items */}
+          <div className="flex flex-col border-b border-border">
+            {/* Import Leads */}
+            <button
+              onClick={() => {
+                setIsNewChatOpen(false);
+                setNewChatSearch('');
+                setIsImportDialogOpen(true);
+              }}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm font-medium">Import Leads</span>
+            </button>
+
+            {/* Chat Groups */}
+            <button
+              onClick={() => {
+                setIsNewChatOpen(false);
+                setNewChatSearch('');
+                setIsGroupManagerOpen(true);
+              }}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm font-medium">Chat Groups</span>
+            </button>
+          </div>
+
+          {/* Scrollable Groups & Contacts list with checkboxes */}
+          <div className="flex-1 overflow-y-auto">
+            {(() => {
+              const searchLower = newChatSearch.toLowerCase();
+
+              // Filter groups
+              const filteredGroups = searchLower
+                ? newChatGroups.filter((g) => g.name.toLowerCase().includes(searchLower))
+                : newChatGroups;
+
+              // Filter contacts — use newChatContacts once loaded, fall back to prop while loading
+              const contactSource = newChatContacts.length > 0 ? newChatContacts : conversations;
+              const filteredContacts = searchLower
+                ? contactSource.filter((c) =>
+                    (c.contact?.name || '').toLowerCase().includes(searchLower) ||
+                    (c.contact?.phone || '').includes(searchLower)
+                  )
+                : contactSource;
+
+              const noResults = filteredGroups.length === 0 && filteredContacts.length === 0 && !newChatContactsLoading;
+
+              return (
+                <>
+                  {/* ── Groups Section ── */}
+                  {filteredGroups.length > 0 && (
+                    <>
+                      <div className="px-4 py-2 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Groups
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {selectedNewChatGroupIds.size}/{filteredGroups.length}
+                        </span>
+                      </div>
+                      {filteredGroups.map((group) => {
+                        const isChecked = selectedNewChatGroupIds.has(group.id);
+                        return (
+                          <button
+                            key={group.id}
+                            onClick={() => {
+                              setSelectedNewChatGroupIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(group.id)) next.delete(group.id);
+                                else next.add(group.id);
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted transition-colors',
+                              isChecked && 'bg-emerald-50 dark:bg-emerald-950/20'
+                            )}
+                          >
+                            {/* Checkbox */}
+                            <div className={cn(
+                              'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                              isChecked
+                                ? 'bg-emerald-500 border-emerald-500'
+                                : 'border-slate-300 dark:border-slate-600'
+                            )}>
+                              {isChecked && (
+                                <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </div>
+                            {/* Group avatar */}
+                            <div
+                              className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: group.color || '#64748b' }}
+                            >
+                              <Users className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex flex-col items-start overflow-hidden">
+                              <span className="text-sm font-medium truncate w-full text-left">
+                                {group.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {group.conversation_count} member{group.conversation_count !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* ── Contacts Section ── */}
+                  {filteredContacts.length > 0 && (
+                    <>
+                      <div className="px-4 py-2 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Contacts
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {selectedNewChatIds.size}/{filteredContacts.length}
+                        </span>
+                      </div>
+                      {filteredContacts.map((conv) => {
+                        const isChecked = selectedNewChatIds.has(conv.id);
+                        return (
+                          <button
+                            key={conv.id}
+                            onClick={() => {
+                              setSelectedNewChatIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(conv.id)) next.delete(conv.id);
+                                else next.add(conv.id);
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted transition-colors',
+                              isChecked && 'bg-emerald-50 dark:bg-emerald-950/20'
+                            )}
+                          >
+                            {/* Checkbox */}
+                            <div className={cn(
+                              'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                              isChecked
+                                ? 'bg-emerald-500 border-emerald-500'
+                                : 'border-slate-300 dark:border-slate-600'
+                            )}>
+                              {isChecked && (
+                                <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </div>
+                            {/* Contact avatar */}
+                            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                              {(conv.contact?.name || '?')[0]?.toUpperCase()}
+                            </div>
+                            <div className="flex flex-col items-start overflow-hidden">
+                              <span className="text-sm font-medium truncate w-full text-left">
+                                {conv.contact?.name || conv.contact?.phone || 'Unknown'}
+                              </span>
+                              {conv.contact?.phone && conv.contact?.name && (
+                                <span className="text-xs text-muted-foreground truncate w-full text-left">
+                                  {conv.contact.phone}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* No results */}
+                  {noResults && newChatSearch && (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <Search className="h-8 w-8 mb-2 opacity-40" />
+                      <p className="text-sm">No contacts or groups found</p>
+                    </div>
+                  )}
+
+                  {/* Loading spinner — only while groups are fetching */}
+                  {newChatGroupsLoading && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {/* Subtle footer while the full contact list is still loading in the background */}
+                  {newChatContactsLoading && (
+                    <p className="text-[10px] text-center text-muted-foreground py-2">Loading all contacts…</p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Bottom action bar — visible when items are selected */}
+          {(selectedNewChatIds.size > 0 || selectedNewChatGroupIds.size > 0) && (
+            <div className="px-4 py-3 border-t border-border bg-card flex items-center gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs h-9"
+                onClick={() => {
+                  // If any group is selected → always go to broadcast
+                  if (selectedNewChatGroupIds.size > 0) {
+                    setIsNewChatOpen(false);
+                    setNewChatSearch('');
+                    setSelectedNewChatIds(new Set());
+                    setSelectedNewChatGroupIds(new Set());
+                    onShowBroadcastModal?.();
+                    return;
+                  }
+                  // Single contact → open that conversation
+                  if (selectedNewChatIds.size === 1) {
+                    const id = Array.from(selectedNewChatIds)[0];
+                    setIsNewChatOpen(false);
+                    setNewChatSearch('');
+                    setSelectedNewChatIds(new Set());
+                    setSelectedNewChatGroupIds(new Set());
+                    onSelectConversation(id);
+                    return;
+                  }
+                  // Multiple contacts → broadcast
+                  setIsNewChatOpen(false);
+                  setNewChatSearch('');
+                  setSelectedNewChatIds(new Set());
+                  setSelectedNewChatGroupIds(new Set());
+                  onShowBroadcastModal?.();
+                }}
+              >
+                {selectedNewChatGroupIds.size > 0 || selectedNewChatIds.size > 1 ? 'Send Broadcast' : 'Open Chat'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => {
+                  setSelectedNewChatIds(new Set());
+                  setSelectedNewChatGroupIds(new Set());
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Chat Group Manager Dialog */}
       <ChatGroupManager

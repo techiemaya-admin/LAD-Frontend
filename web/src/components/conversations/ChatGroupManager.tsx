@@ -79,7 +79,8 @@ function authHeaders(): Record<string, string> {
 async function fetchGroups(): Promise<ChatGroup[]> {
   const res = await fetch(API_BASE, { headers: authHeaders() });
   const data = await res.json();
-  return data.success ? data.data : [];
+  // GET /api/chat-groups returns {data: [...], total, limit, offset} — no `success` field
+  return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
 async function createGroup(name: string, color: string, description?: string): Promise<ChatGroup | null> {
@@ -89,7 +90,19 @@ async function createGroup(name: string, color: string, description?: string): P
     body: JSON.stringify({ name, color, description: description || null }),
   });
   const data = await res.json();
-  return data.success ? data.data : null;
+
+  // Python service wraps in {success, data}; handle both formats
+  if (data.success && data.data) return data.data;
+  // Direct group object (id present = success)
+  if (data.id) return data as ChatGroup;
+  // 409: group name already exists — fetch existing groups and return the match
+  if (res.status === 409) {
+    const listRes = await fetch(API_BASE, { headers: authHeaders() });
+    const listData = await listRes.json();
+    const groups: ChatGroup[] = listData.data || listData || [];
+    return groups.find((g) => g.name.toLowerCase() === name.toLowerCase()) || null;
+  }
+  return null;
 }
 
 async function updateGroup(id: string, updates: { name?: string; color?: string; description?: string }): Promise<boolean> {
@@ -118,6 +131,7 @@ interface SourceContact {
   name: string | null;
   phone: string | null;
   email: string | null;
+  channel?: string;          // 'personal' | 'waba' | 'crm' etc — saved with group membership
   company_name?: string | null;
   profile_photo?: string | null;
 }
@@ -126,6 +140,7 @@ interface ContactSource {
   key: string;
   label: string;
   color: string;
+  channel: string;           // channel tag applied to every contact from this source
   fetchContacts: (page: number, search: string) => Promise<{ contacts: SourceContact[]; total: number }>;
 }
 
@@ -134,41 +149,68 @@ const CONTACT_SOURCES: ContactSource[] = [
     key: 'crm',
     label: 'CRM Contacts',
     color: '#3b82f6',
+    channel: 'crm',
     fetchContacts: async (page, search) => {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (search) params.set('search', search);
       const res = await fetchWithTenant(`/api/social-integration/gohighlevel/contacts/local?${params}`);
       const data = await res.json();
       return {
-        contacts: (data.data || []).map((c: Record<string, unknown>) => ({
-          id: c.id || c.source_id,
-          name: c.name,
-          phone: c.phone,
-          email: c.email,
-          company_name: c.company_name,
-          profile_photo: c.profile_photo,
+        contacts: (data.data || []).map((c: Record<string, unknown>, idx: number) => ({
+          id: String(c.id || c.source_id || c.phone || `crm-${page}-${idx}`),
+          name: c.name as string | null,
+          phone: c.phone as string | null,
+          email: c.email as string | null,
+          channel: 'crm',
+          company_name: c.company_name as string | null,
+          profile_photo: c.profile_photo as string | null,
         })),
         total: data.total || 0,
       };
     },
   },
   {
-    key: 'whatsapp',
-    label: 'WhatsApp Contacts',
+    key: 'personal_wa',
+    label: 'Personal WA',
     color: '#25D366',
+    channel: 'personal',
     fetchContacts: async (page, search) => {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (search) params.set('search', search);
       const res = await fetchWithTenant(`/api/personal-whatsapp/contacts?${params}`);
       const data = await res.json();
       return {
-        contacts: (data.data || []).map((c: Record<string, unknown>) => ({
-          id: String(c.phone || c.whatsapp_id),
+        contacts: (data.data || []).map((c: Record<string, unknown>, idx: number) => ({
+          id: String(c.id || c.phone || c.whatsapp_id || `pwa-${page}-${idx}`),
           name: c.name as string | null,
           phone: c.phone as string | null,
           email: null,
+          channel: 'personal',
         })),
         total: data.total || 0,
+      };
+    },
+  },
+  {
+    key: 'waba',
+    label: 'WA Business',
+    color: '#128C7E',
+    channel: 'waba',
+    fetchContacts: async (page, search) => {
+      const params = new URLSearchParams({ limit: '50', offset: String((page - 1) * 50), channel: 'waba' });
+      if (search) params.set('search', search);
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations?${params}`);
+      const data = await res.json();
+      const convs: Record<string, unknown>[] = data.conversations || data.data || [];
+      return {
+        contacts: convs.map((c, idx) => ({
+          id: String(c.id || `waba-${page}-${idx}`),
+          name: (c.lead_name || c.contact_name || c.name) as string | null,
+          phone: (c.lead_phone || c.phone) as string | null,
+          email: (c.lead_email || c.email) as string | null,
+          channel: 'waba',
+        })),
+        total: data.total || convs.length,
       };
     },
   },
@@ -176,18 +218,14 @@ const CONTACT_SOURCES: ContactSource[] = [
     key: 'google',
     label: 'Google Contacts',
     color: '#ea4335',
+    channel: 'google',
     fetchContacts: async () => ({ contacts: [], total: 0 }),
   },
   {
     key: 'microsoft',
     label: 'Microsoft Contacts',
     color: '#00a4ef',
-    fetchContacts: async () => ({ contacts: [], total: 0 }),
-  },
-  {
-    key: 'other',
-    label: 'Other',
-    color: '#78716c',
+    channel: 'microsoft',
     fetchContacts: async () => ({ contacts: [], total: 0 }),
   },
 ];
@@ -603,54 +641,104 @@ export function ChatGroupManager({
                             : sourceSearch ? 'No contacts found.' : 'No contacts available.'}
                         </div>
                       ) : (
-                        <ScrollArea className="h-[200px]">
-                          <div className="space-y-0.5">
-                            {sourceContacts.map((contact) => {
-                              const isSelected = selectedContacts.has(contact.id);
-                              return (
-                                <button
-                                  key={contact.id}
-                                  onClick={() => toggleContact(contact)}
-                                  className={cn(
-                                    'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors',
-                                    isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
-                                  )}
-                                >
-                                  <div className={cn(
-                                    'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
-                                    isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
-                                  )}>
-                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                                  </div>
-                                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium flex-shrink-0">
-                                    {contact.profile_photo ? (
-                                      <img src={contact.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" />
-                                    ) : (
-                                      (contact.name || contact.email || '?')[0]?.toUpperCase()
+                        <>
+                          {/* Select All / Deselect All toggle */}
+                          {(() => {
+                            const allOnPageSelected = sourceContacts.length > 0 && sourceContacts.every(c => selectedContacts.has(c.id));
+                            const someSelected = sourceContacts.some(c => selectedContacts.has(c.id));
+                            return (
+                              <button
+                                onClick={() => {
+                                  setSelectedContacts(prev => {
+                                    const next = new Map(prev);
+                                    if (allOnPageSelected) {
+                                      // Deselect all on this page
+                                      sourceContacts.forEach(c => next.delete(c.id));
+                                    } else {
+                                      // Select all on this page
+                                      sourceContacts.forEach(c => next.set(c.id, c));
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-muted/50 border-b border-border mb-1"
+                              >
+                                <div className={cn(
+                                  'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
+                                  allOnPageSelected ? 'bg-primary border-primary' : someSelected ? 'bg-primary/40 border-primary' : 'border-muted-foreground/30'
+                                )}>
+                                  {(allOnPageSelected || someSelected) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                </div>
+                                <span className="text-xs font-semibold text-muted-foreground">
+                                  {allOnPageSelected ? 'Deselect All' : 'Select All'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground ml-auto">
+                                  {selectedContacts.size} selected
+                                </span>
+                              </button>
+                            );
+                          })()}
+
+                          <ScrollArea className="h-[200px]">
+                            <div className="space-y-0.5">
+                              {sourceContacts.map((contact, idx) => {
+                                const isSelected = selectedContacts.has(contact.id);
+                                return (
+                                  <button
+                                    key={`${contact.id}-${idx}`}
+                                    onClick={() => toggleContact(contact)}
+                                    className={cn(
+                                      'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors',
+                                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
                                     )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium truncate">
-                                      {contact.name || contact.phone || contact.email || 'Unknown'}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                      {contact.phone && (
-                                        <span className="flex items-center gap-0.5">
-                                          <Phone className="h-2.5 w-2.5" />{contact.phone}
-                                        </span>
-                                      )}
-                                      {contact.email && (
-                                        <span className="flex items-center gap-0.5 truncate">
-                                          <Mail className="h-2.5 w-2.5" />{contact.email}
-                                        </span>
+                                  >
+                                    <div className={cn(
+                                      'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
+                                      isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                                    )}>
+                                      {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </div>
+                                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                                      {contact.profile_photo ? (
+                                        <img src={contact.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" />
+                                      ) : (
+                                        (contact.name || contact.email || '?')[0]?.toUpperCase()
                                       )}
                                     </div>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </ScrollArea>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-xs font-medium truncate">
+                                          {contact.name || contact.phone || contact.email || 'Unknown'}
+                                        </p>
+                                        {contact.channel && (
+                                          <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
+                                            style={{
+                                              background: contact.channel === 'personal' ? '#dcfce7' : contact.channel === 'waba' ? '#d1fae5' : '#dbeafe',
+                                              color:      contact.channel === 'personal' ? '#15803d' : contact.channel === 'waba' ? '#065f46' : '#1d4ed8',
+                                            }}>
+                                            {contact.channel === 'personal' ? 'Personal WA' : contact.channel === 'waba' ? 'WA Business' : contact.channel.toUpperCase()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        {contact.phone && (
+                                          <span className="flex items-center gap-0.5">
+                                            <Phone className="h-2.5 w-2.5" />{contact.phone}
+                                          </span>
+                                        )}
+                                        {contact.email && (
+                                          <span className="flex items-center gap-0.5 truncate">
+                                            <Mail className="h-2.5 w-2.5" />{contact.email}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </>
                       )}
 
                       {/* Pagination for source contacts */}

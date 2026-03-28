@@ -10,5 +10,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; labelId: string }> }
 ) {
   const { id, labelId } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/conversations/${id}/labels/${labelId}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/conversations/${id}/labels/${labelId}`);
 }

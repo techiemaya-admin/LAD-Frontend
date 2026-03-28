@@ -9,15 +9,30 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const newReq = new NextRequest(url, req);
+
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
 }

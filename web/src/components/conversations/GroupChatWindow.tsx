@@ -170,71 +170,66 @@ const AddMembersPanel = memo(function AddMembersPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
 
+  // Channel source selector: 'personal' | 'waba'
+  const [contactSource, setContactSource] = useState<'personal' | 'waba'>('personal');
+
   // Saved contacts state
   const [savedContacts, setSavedContacts] = useState<ConversationResult[]>([]);
   const [contactsLoading, setContactsLoading] = useState(true);
   const [contactsPage, setContactsPage] = useState(1);
   const [contactsTotal, setContactsTotal] = useState(0);
 
-  // Load saved WhatsApp contacts on mount
-  useEffect(() => {
-    const loadContacts = async (page = 1, search = '') => {
-      setContactsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('page', String(page));
-        params.set('limit', '50');
-        if (search) params.set('search', search);
-        const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { headers: authHeaders() });
-        if (!res.ok) { setSavedContacts([]); return; }
-        const data = await res.json();
-        const contacts = data?.data || [];
-        setContactsTotal(data?.total || 0);
-        setContactsPage(data?.page || 1);
-        const mapped: ConversationResult[] = contacts.map((c: { phone: string; name: string | null; whatsapp_id: string | null }) => ({
-          id: `contact_${c.phone}`,
-          lead_name: c.name || c.phone,
-          lead_phone: c.phone,
-          lead_email: null,
-          lead_company: null,
-          channel: 'whatsapp-personal',
-        }));
-        setSavedContacts(mapped);
-      } catch {
-        setSavedContacts([]);
-      } finally {
-        setContactsLoading(false);
-      }
-    };
-    loadContacts();
-  }, []);
-
-  // Load more contacts (pagination) or search contacts
-  const loadContactsPage = useCallback((page: number, search = '') => {
+  // Load contacts for the selected source (personal WA or WABA)
+  const loadContactsPage = useCallback((page: number, search = '', source?: 'personal' | 'waba') => {
+    const src = source ?? contactSource;
     setContactsLoading(true);
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '50');
-    if (search) params.set('search', search);
-    fetch(`/api/personal-whatsapp/contacts?${params}`, { headers: authHeaders() })
+    let url: string;
+    if (src === 'personal') {
+      const p = new URLSearchParams({ page: String(page), limit: '50' });
+      if (search) p.set('search', search);
+      url = `/api/personal-whatsapp/contacts?${p}`;
+    } else {
+      const p = new URLSearchParams({ limit: '50', offset: String((page - 1) * 50), channel: 'waba' });
+      if (search) p.set('search', search);
+      url = `/api/whatsapp-conversations/conversations?${p}`;
+    }
+    fetch(url, { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) { setSavedContacts([]); return; }
-        setContactsTotal(data?.total || 0);
-        setContactsPage(data?.page || 1);
-        const contacts = data?.data || [];
-        setSavedContacts(contacts.map((c: { phone: string; name: string | null }) => ({
-          id: `contact_${c.phone}`,
-          lead_name: c.name || c.phone,
-          lead_phone: c.phone,
-          lead_email: null,
-          lead_company: null,
-          channel: 'whatsapp-personal',
-        })));
+        const raw: Record<string, unknown>[] = data?.data || data?.conversations || [];
+        setContactsTotal(data?.total || raw.length);
+        setContactsPage(page);
+        if (src === 'personal') {
+          setSavedContacts(raw.map((c, idx) => ({
+            id: String((c as Record<string,unknown>).whatsapp_id || (c as Record<string,unknown>).phone || `pwa-${page}-${idx}`),
+            lead_name: (c.name || c.phone) as string | null,
+            lead_phone: c.phone as string | null,
+            lead_email: null,
+            lead_company: null,
+            channel: 'personal',
+          })));
+        } else {
+          setSavedContacts(raw.map((c, idx) => ({
+            id: String(c.id || `waba-${page}-${idx}`),
+            lead_name: (c.lead_name || c.contact_name || c.name) as string | null,
+            lead_phone: (c.lead_phone || c.phone) as string | null,
+            lead_email: (c.lead_email || c.email) as string | null,
+            lead_company: null,
+            channel: 'waba',
+          })));
+        }
       })
       .catch(() => setSavedContacts([]))
       .finally(() => setContactsLoading(false));
-  }, []);
+  }, [contactSource]);
+
+  // Reload when source changes
+  useEffect(() => {
+    setSavedContacts([]);
+    setContactsPage(1);
+    loadContactsPage(1, '', contactSource);
+  }, [contactSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Search conversations
   useEffect(() => {
@@ -311,11 +306,31 @@ const AddMembersPanel = memo(function AddMembersPanel({
         )}
       </div>
 
-      <div className="px-4 py-3">
+      {/* Channel source tabs */}
+      <div className="px-4 pt-3 pb-1 flex gap-2">
+        {(['personal', 'waba'] as const).map((src) => (
+          <button
+            key={src}
+            onClick={() => setContactSource(src)}
+            className={cn(
+              'flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors',
+              contactSource === src
+                ? src === 'personal'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-teal-700 text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            {src === 'personal' ? '📱 Personal WA' : '💼 WA Business'}
+          </button>
+        ))}
+      </div>
+
+      <div className="px-4 py-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search conversations to add..."
+            placeholder={`Search ${contactSource === 'personal' ? 'Personal WA' : 'WA Business'} contacts...`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-9 text-sm pl-9"
@@ -328,7 +343,7 @@ const AddMembersPanel = memo(function AddMembersPanel({
       {selected.size > 0 && (
         <div className="px-4 pb-2 flex flex-wrap gap-1.5">
           {Array.from(selected).map((id) => {
-            const r = results.find((x) => x.id === id);
+            const r = results.find((x) => x.id === id) || savedContacts.find((x) => x.id === id);
             return (
               <span
                 key={id}
@@ -415,9 +430,18 @@ const AddMembersPanel = memo(function AddMembersPanel({
                       {selected.has(contact.id) ? '✓' : getInitials(contact.lead_name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block">{contact.lead_name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium truncate">{contact.lead_name}</span>
+                        <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
+                          style={{
+                            background: contact.channel === 'personal' ? '#dcfce7' : '#d1fae5',
+                            color:      contact.channel === 'personal' ? '#15803d' : '#065f46',
+                          }}>
+                          {contact.channel === 'personal' ? 'Personal WA' : 'WA Business'}
+                        </span>
+                      </div>
                       <span className="text-[11px] text-muted-foreground truncate block">
-                        +{contact.lead_phone}
+                        {contact.lead_phone || contact.lead_email || ''}
                       </span>
                     </div>
                   </button>
@@ -662,7 +686,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
   const handleMembersAdded = useCallback(() => {
     setShowAddMembers(false);
-    onMembersChanged();
+    onMembersChanged(); // refreshDetail is passed as onMembersChanged from GroupChatWindow
   }, [onMembersChanged]);
 
   return (

@@ -47,7 +47,12 @@ async function callNodeBackend(
 }
 
 export async function GET(req: NextRequest) {
-  const bniResponse = await proxyToPythonService(req, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
+  // Force WABA channel routing to Python service
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const wabaReq = new NextRequest(url, req);
+
+  const bniResponse = await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
 
   // Fall back to Node backend if BNI returned a server error or connection failure (5xx / 502)
   if (bniResponse.status >= 500) {
@@ -68,11 +73,13 @@ export async function POST(req: NextRequest) {
   try {
     // Reconstruct a cloned request with the already-read body for proxyToPythonService
     const bodyString = parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined;
-    const clonedReq = new Request(req.url, {
+    const url = new URL(req.url);
+    url.searchParams.set('channel', 'waba');
+    const clonedReq = new NextRequest(url, {
       method: req.method,
       headers: req.headers,
       body: bodyString,
-    }) as unknown as NextRequest;
+    });
 
     const bniResponse = await proxyToPythonService(clonedReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
 

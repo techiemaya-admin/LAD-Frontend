@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock } from 'lucide-react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock } from 'lucide-react';
+import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
@@ -24,6 +25,8 @@ interface IntegrationCard {
   category: string;
   comingSoon?: boolean;
 }
+
+const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'google', 'microsoft']);
 
 const INTEGRATIONS: IntegrationCard[] = [
   {
@@ -237,6 +240,10 @@ type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
   const { tenantId } = useTenant();
+  const { data: creditsData } = useCreditsBalance();
+  const availableCredits = creditsData?.availableBalance ?? creditsData?.balance ?? null;
+  const hasCredits = availableCredits === null || availableCredits > 0;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
@@ -791,16 +798,22 @@ export const IntegrationsSettings: React.FC = () => {
 
       {/* Card Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((integration) => (
+        {filtered.map((integration) => {
+          const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
+          const isAlreadyConnected = statusMap[integration.id] === 'connected';
+          // Lock the card only when credit-gated, credits are confirmed 0, and not already connected
+          const isLocked = isCreditGated && !hasCredits && !isAlreadyConnected;
+
+          return (
           <div
             key={integration.id}
             className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
-              integration.comingSoon
+              integration.comingSoon || isLocked
                 ? 'opacity-75 cursor-default'
                 : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
             }`}
             onClick={() => {
-              if (!integration.comingSoon) setActiveView(integration.id);
+              if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
             }}
           >
             {/* Coming Soon badge (top-right) */}
@@ -813,8 +826,18 @@ export const IntegrationsSettings: React.FC = () => {
               </div>
             )}
 
-            {/* Status badge (top-right) — only for non-coming-soon integrations */}
-            {!integration.comingSoon && statusMap[integration.id] && statusMap[integration.id] !== 'loading' && (
+            {/* Locked badge (top-right) — shown when credit-gated and no credits */}
+            {!integration.comingSoon && isLocked && (
+              <div className="absolute top-3 right-3">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                  <Lock className="h-2.5 w-2.5" />
+                  Requires Credits
+                </span>
+              </div>
+            )}
+
+            {/* Status badge (top-right) — only for non-coming-soon, non-locked integrations */}
+            {!integration.comingSoon && !isLocked && statusMap[integration.id] && statusMap[integration.id] !== 'loading' && (
               <div className="absolute top-3 right-3">
                 <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
                   statusMap[integration.id] === 'connected'
@@ -854,6 +877,14 @@ export const IntegrationsSettings: React.FC = () => {
                 <Clock className="h-3.5 w-3.5" />
                 Coming Soon
               </button>
+            ) : isLocked ? (
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-orange-600 border border-orange-200 bg-orange-50 rounded-lg py-2 cursor-not-allowed"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Add Credits to Connect
+              </button>
             ) : (
               <button className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-primary border border-border rounded-lg py-2 hover:bg-primary/5 transition-colors">
                 <Settings2 className="h-3.5 w-3.5" />
@@ -861,7 +892,8 @@ export const IntegrationsSettings: React.FC = () => {
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
