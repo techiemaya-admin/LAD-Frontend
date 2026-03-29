@@ -155,13 +155,22 @@ export default function CampaignsListPage() {
             Manage your multi-channel outreach campaigns
           </p>
         </div>
-        <Button
-          onClick={() => router.push('/onboarding')}
-          className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] w-full sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
-        >
-          <Plus />
-          Create Campaign
-        </Button>
+        <div className="flex gap-3 flex-col sm:flex-row">
+          <Button
+            onClick={() => router.push('/templates')}
+            className="bg-gray-700 text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(55,65,81,0.3)] w-full sm:w-auto hover:bg-gray-800 hover:shadow-[0_8px_30px_rgba(55,65,81,0.5)]"
+          >
+            <Plus className="w-5 h-5" />
+            Create Template
+          </Button>
+          <Button
+            onClick={() => router.push('/onboarding')}
+            className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] w-full sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
+          >
+            <Plus />
+            Create Campaign
+          </Button>
+        </div>
       </div>
       {/* Stats Cards */}
       {stats && <CampaignStatsCards stats={stats} />}
