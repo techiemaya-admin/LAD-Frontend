@@ -11,6 +11,7 @@ export default function TemplatesPage() {
   const [activeTab, setActiveTab] = useState<TabType>('email');
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (activeTab === 'email') {
@@ -20,13 +21,23 @@ export default function TemplatesPage() {
 
   const loadEmailTemplates = async () => {
     setLoading(true);
+    setError('');
     try {
       const response = await fetch('/api/campaigns/email-templates');
-      if (!response.ok) throw new Error('Failed to load templates');
+      if (!response.ok) {
+        throw new Error(`Failed to load templates: ${response.status} ${response.statusText}`);
+      }
       const data = await response.json();
-      setTemplates(data.data || []);
+      const templatesData = data.data || [];
+      console.log('Loaded templates:', templatesData);
+      templatesData.forEach((t: any, idx: number) => {
+        console.log(`Template ${idx}:`, { id: t.id, name: t.name });
+      });
+      setTemplates(templatesData);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Error loading templates:', error);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -42,7 +53,7 @@ export default function TemplatesPage() {
             <p className="mt-2 text-gray-600">Manage your communication templates</p>
           </div>
           <button
-            onClick={() => router.push(`/templates/create?type=${activeTab}`)}
+            onClick={() => router.push('/templates/create')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
             + Create Template
@@ -80,6 +91,11 @@ export default function TemplatesPage() {
       <div className="max-w-7xl mx-auto px-8 py-8">
         {activeTab === 'email' && (
           <div>
+            {error && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">Loading templates...</p>
@@ -88,7 +104,7 @@ export default function TemplatesPage() {
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">No templates yet</p>
                 <button
-                  onClick={() => router.push('/templates/create?type=email')}
+                  onClick={() => router.push('/templates/create')}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Create your first template

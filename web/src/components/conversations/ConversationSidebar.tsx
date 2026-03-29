@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import {
   Search,
@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   Megaphone,
   FolderPlus,
+  RefreshCw,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ interface ConversationSidebarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   unreadCounts: Record<string, number>;
+  backendChannel?: 'personal' | 'waba';
   onBulkAction?: (action: string, ids: string[]) => void;
   onRefresh?: () => void;
   onGroupSelect?: (group: ChatGroup) => void;
@@ -122,6 +124,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   searchQuery,
   onSearchChange,
   unreadCounts,
+  backendChannel,
   onBulkAction,
   onRefresh,
   onGroupSelect,
@@ -135,6 +138,48 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    if (!onRefresh || isRefreshing) return;
+    setIsRefreshing(true);
+
+    const channelParam = backendChannel ? `?channel=${backendChannel}` : '';
+
+    const refreshContextStatuses = () =>
+      fetchWithTenant(`/api/whatsapp-conversations/conversations/context-statuses${channelParam}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data)) {
+            setContextStatuses(
+              data.data.map((s: { value: string; count: number }) => ({
+                value: s.value,
+                label: formatContextStatus(s.value),
+                count: s.count,
+              }))
+            );
+          }
+        })
+        .catch(() => {});
+
+    // 1. Trigger a Baileys history resync on the backend (reconnects all active
+    //    sessions so WhatsApp re-pushes full message history).
+    fetchWithTenant(`/api/whatsapp-conversations/accounts/sync${channelParam}`, {
+      method: 'POST',
+    })
+      .catch(() => {}) // fire-and-forget – backend handles async reconnect
+      .finally(() => {
+        // 2. Refresh context-status chips immediately (shows any already-DB messages).
+        refreshContextStatuses();
+        // 3. After ~15 s: Baileys reconnects (~5s) + WA pushes full history
+        //    + syncMessagesBatch writes to DB. Then invalidate the query.
+        setTimeout(() => {
+          refreshContextStatuses();
+          onRefresh();
+          setIsRefreshing(false);
+        }, 15000);
+      });
+  }, [onRefresh, isRefreshing, backendChannel]);
 
   // New Chat panel state (WhatsApp-style)
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
@@ -182,10 +227,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   // Named-only filter: hide contacts with unknown/unresolved names
   const [namedOnly, setNamedOnly] = useState(false);
 
-  // Fetch tenant-specific context statuses on mount
+  // Fetch tenant-specific context statuses — scoped to the active backend channel
   useEffect(() => {
     setStatusesLoading(true);
-    fetchWithTenant('/api/whatsapp-conversations/conversations/context-statuses')
+    const channelParam = backendChannel ? `?channel=${backendChannel}` : '';
+    fetchWithTenant(`/api/whatsapp-conversations/conversations/context-statuses${channelParam}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -200,7 +246,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       })
       .catch(() => {})
       .finally(() => setStatusesLoading(false));
-  }, []);
+  }, [backendChannel]);
 
   // Fetch group conversation IDs when a group is selected
   useEffect(() => {
@@ -412,6 +458,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="pl-9 h-9 bg-secondary/50"
             />
           </div>
+          {/* Refresh button — re-fetches conversations from backend */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-muted"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Refresh conversations"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
           {/* Circular + button — opens WhatsApp-style New Chat panel */}
           <Button
             variant="ghost"

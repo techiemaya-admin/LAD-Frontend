@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Template {
   id: string;
@@ -11,147 +11,6 @@ interface Template {
   description: string;
 }
 
-const READY_TO_USE_TEMPLATES: Template[] = [
-  {
-    id: 'welcome-1',
-    name: 'Welcome Email',
-    category: 'Onboarding',
-    subject: 'Welcome to {{company_name}}!',
-    description: 'A friendly welcome email for new customers',
-    body: `Hi {{first_name}},
-
-Welcome to {{company_name}}! We're thrilled to have you on board.
-
-Here's what you can do next:
-1. Complete your profile
-2. Explore our features
-3. Join our community
-
-If you have any questions, feel free to reach out to our support team at support@{{company_domain}}.
-
-Best regards,
-The {{company_name}} Team`,
-  },
-  {
-    id: 'confirmation-1',
-    name: 'Order Confirmation',
-    category: 'Transactional',
-    subject: 'Your Order #{{order_id}} is Confirmed',
-    description: 'Send order confirmation details to customers',
-    body: `Dear {{first_name}},
-
-Thank you for your order! Here are your order details:
-
-Order ID: {{order_id}}
-Order Date: {{order_date}}
-Total Amount: {{order_total}}
-
-Items:
-{{order_items}}
-
-Estimated Delivery: {{delivery_date}}
-
-You can track your order here: {{tracking_link}}
-
-If you have any questions, reply to this email or contact us at support@{{company_domain}}.
-
-Thank you for shopping with us!
-
-Best regards,
-{{company_name}} Team`,
-  },
-  {
-    id: 'feedback-1',
-    name: 'Customer Feedback Request',
-    category: 'Engagement',
-    subject: "We'd Love Your Feedback!",
-    description: 'Request feedback from your customers',
-    body: `Hi {{first_name}},
-
-We hope you're enjoying your experience with {{company_name}}! Your feedback is incredibly valuable to us.
-
-Could you take a moment to share your thoughts? Your responses help us improve our service.
-
-{{feedback_link}}
-
-Thank you for being a valued customer!
-
-Best regards,
-{{company_name}} Team`,
-  },
-  {
-    id: 'reset-password-1',
-    name: 'Password Reset',
-    category: 'Security',
-    subject: 'Reset Your {{company_name}} Password',
-    description: 'Send password reset instructions',
-    body: `Hi {{first_name}},
-
-We received a request to reset your password. If you didn't make this request, please ignore this email.
-
-To reset your password, click the link below:
-{{reset_link}}
-
-This link will expire in 24 hours.
-
-If you need help, contact us at support@{{company_domain}}.
-
-Best regards,
-{{company_name}} Team`,
-  },
-  {
-    id: 'reminder-1',
-    name: 'Appointment Reminder',
-    category: 'Reminders',
-    subject: 'Reminder: Your appointment on {{appointment_date}}',
-    description: 'Remind customers about upcoming appointments',
-    body: `Hi {{first_name}},
-
-This is a friendly reminder about your upcoming appointment.
-
-📅 Date: {{appointment_date}}
-⏰ Time: {{appointment_time}}
-📍 Location: {{location}}
-
-Please let us know if you need to reschedule or cancel.
-
-{{reschedule_link}}
-
-See you soon!
-
-Best regards,
-{{company_name}} Team`,
-  },
-  {
-    id: 'newsletter-1',
-    name: 'Monthly Newsletter',
-    category: 'Marketing',
-    subject: "{{month}} Newsletter - What's New at {{company_name}}",
-    description: 'Share updates and news with your subscribers',
-    body: `Hi {{first_name}},
-
-Here's what happened at {{company_name}} this month:
-
-📰 Featured Article
-{{featured_article_title}}
-{{featured_article_excerpt}}
-
-🎉 Latest Updates
-{{update_1}}
-{{update_2}}
-{{update_3}}
-
-📚 Resources
-{{resource_1}}
-{{resource_2}}
-
-Have questions? Reply to this email!
-
-Best regards,
-{{company_name}} Team`,
-  },
-];
-
 interface ReadyToUseTemplatesProps {
   onSelectTemplate: (template: Template) => void;
 }
@@ -159,17 +18,81 @@ interface ReadyToUseTemplatesProps {
 export default function ReadyToUseTemplates({
   onSelectTemplate,
 }: ReadyToUseTemplatesProps) {
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const categories = [
-    'All',
-    ...new Set(READY_TO_USE_TEMPLATES.map((t) => t.category)),
-  ];
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/campaigns/email-templates');
+      if (!response.ok) {
+        throw new Error(`Failed to load templates: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Transform API response to component format
+      const formattedTemplates = (data.data || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        subject: t.subject || '',
+        body: t.body || '',
+        category: t.category || 'General',
+        description: t.description || '',
+      }));
+
+      setTemplates(formattedTemplates);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error loading templates:', err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = ['All', ...new Set(templates.map((t) => t.category))];
 
   const filteredTemplates =
     selectedCategory === 'All'
-      ? READY_TO_USE_TEMPLATES
-      : READY_TO_USE_TEMPLATES.filter((t) => t.category === selectedCategory);
+      ? templates
+      : templates.filter((t) => t.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Loading templates...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700 text-sm">{error}</p>
+        <button
+          onClick={loadTemplates}
+          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (templates.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No templates available yet. Create one to get started!</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

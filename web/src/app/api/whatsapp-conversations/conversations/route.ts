@@ -2,32 +2,18 @@
  * Conversations List Proxy
  * GET /api/whatsapp-conversations/conversations → Backend /api/conversations
  *
- * Routes based on channel parameter (per WHATSAPP_FEATURE_SYSTEM_PROMPT.md §2):
+ * Channel routing is handled entirely inside proxyToPythonService:
  * - channel=personal → LAD_backend Node.js at /api/whatsapp-conversations/conversations
  * - channel=waba (default) → LAD-WABA-Comms Python FastAPI at /api/conversations
+ *
+ * Pass the canonical waba-style path (/api/conversations) so the proxy's
+ * path transform works correctly for both channels:
+ *   personal: /api/whatsapp-conversations + /conversations  = /api/whatsapp-conversations/conversations
+ *   waba:     /api/conversations  (unchanged)
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getBackendUrl, getWABAServiceUrl } from '../utils/python-proxy';
+import { proxyToPythonService, getWABAServiceUrl } from '../utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-  // Channel detection: read from raw URL query param, then header, then default to waba
-  const rawUrl = new URL(req.url);
-  const channel =
-    rawUrl.searchParams.get('channel') ||
-    req.headers.get('x-whatsapp-channel') ||
-    'waba';
-
-  // Ensure channel is always in the URL for proxy function
-  if (!rawUrl.searchParams.get('channel')) {
-    rawUrl.searchParams.set('channel', channel);
-  }
-  const newReq = new NextRequest(rawUrl, req);
-
-  if (channel === 'personal') {
-    // Personal WhatsApp → LAD_backend Node.js
-    return proxyToPythonService(newReq, getBackendUrl(), '/api/whatsapp-conversations/conversations');
-  } else {
-    // WABA (default) → LAD-WABA-Comms Python FastAPI
-    return proxyToPythonService(newReq, getWABAServiceUrl(), '/api/conversations');
-  }
+  return proxyToPythonService(req, getWABAServiceUrl(), '/api/conversations');
 }

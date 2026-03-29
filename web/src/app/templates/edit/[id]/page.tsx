@@ -10,29 +10,75 @@ export default function EditTemplatePage() {
   const templateId = params.id as string;
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const loadTemplate = async () => {
       try {
-        const response = await fetch(`/api/campaigns/email-templates/${templateId}`);
-        if (!response.ok) throw new Error('Failed to load template');
+        // Validate template ID
+        if (!templateId || templateId === 'undefined') {
+          throw new Error('Invalid template ID');
+        }
+
+        console.log('Loading template with ID:', templateId);
+
+        const response = await fetch(`/api/campaigns/email-templates/${templateId}`, {
+          method: 'GET',
+          credentials: 'include', // Include cookies for auth
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          let errorDetail = `${response.status} ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorDetail = errorData.error || errorData.details || errorDetail;
+          } catch (e) {
+            // Use status text if response is not JSON
+          }
+          throw new Error(`Failed to load template: ${errorDetail}`);
+        }
+
         const data = await response.json();
+        console.log('Template loaded successfully:', data);
         setTemplate(data.data);
-      } catch (error) {
-        console.error('Error loading template:', error);
-        router.push('/templates');
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        console.error('Error loading template:', err);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     loadTemplate();
-  }, [templateId, router]);
+  }, [templateId]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Loading template...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-8 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-red-900 mb-2">Error Loading Template</h2>
+            <p className="text-red-700 mb-4">{error}</p>
+            <button
+              onClick={() => router.push('/templates')}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Back to Templates
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

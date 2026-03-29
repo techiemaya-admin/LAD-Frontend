@@ -20,19 +20,20 @@ export interface UseConversationMessagesReturn {
 
 export function useConversationMessages(
   conversationId: string | null,
-  pagination?: { limit?: number; offset?: number }
+  pagination?: { limit?: number; offset?: number },
+  backendChannel?: 'personal' | 'waba'
 ): UseConversationMessagesReturn {
   const query = useQuery({
-    ...getConversationMessagesOptions(conversationId || '', pagination),
+    ...getConversationMessagesOptions(conversationId || '', pagination, backendChannel),
     enabled: !!conversationId,
   });
 
-  // Force refetch when conversation ID changes to get latest messages
+  // Force refetch when conversation ID or channel changes to get latest messages
   useEffect(() => {
     if (conversationId) {
       query.refetch();
     }
-  }, [conversationId]);
+  }, [conversationId, backendChannel]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     messages: query.data?.messages || [],

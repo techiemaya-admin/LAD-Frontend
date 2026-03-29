@@ -204,7 +204,8 @@ function deduplicateMessages(messages: Message[]): Message[] {
  */
 export async function getConversationMessages(
   conversationId: string,
-  pagination?: { limit?: number; offset?: number }
+  pagination?: { limit?: number; offset?: number },
+  backendChannel?: 'personal' | 'waba'
 ): Promise<{ messages: Message[]; total: number; hasMore: boolean }> {
   const params: Record<string, string> = {};
   if (pagination?.limit) params.limit = String(pagination.limit);
@@ -215,7 +216,7 @@ export async function getConversationMessages(
     data: any[];
     total: number;
     has_more: boolean;
-  }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params });
+  }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
 
   const rawMessages = (response.data.data || []).map(mapMessageFromApi);
   const messages = deduplicateMessages(rawMessages);
@@ -232,11 +233,12 @@ export async function getConversationMessages(
  */
 export const getConversationMessagesOptions = (
   conversationId: string,
-  pagination?: { limit?: number; offset?: number }
+  pagination?: { limit?: number; offset?: number },
+  backendChannel?: 'personal' | 'waba'
 ) =>
   queryOptions({
-    queryKey: conversationKeys.messages(conversationId, pagination),
-    queryFn: () => getConversationMessages(conversationId, pagination),
+    queryKey: [...conversationKeys.messages(conversationId, pagination), backendChannel ?? 'default'],
+    queryFn: () => getConversationMessages(conversationId, pagination, backendChannel),
     staleTime: 10 * 1000, // 10 seconds
     gcTime: 5 * 60 * 1000,
     enabled: !!conversationId,
