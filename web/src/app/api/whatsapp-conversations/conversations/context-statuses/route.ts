@@ -1,15 +1,20 @@
 /**
  * Context Statuses Proxy
  * GET /api/whatsapp-conversations/conversations/context-statuses → Backend
+ *
+ * Routes based on channel parameter:
+ * - channel=personal → LAD_backend Node.js
+ * - channel=waba → LAD-WABA-Comms Python FastAPI (default if not specified)
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-proxy';
+import { proxyToPythonService } from '../../utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
+  // Preserve channel param, default to 'waba' for WABA-specific status checks
   const url = new URL(req.url);
   if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
   const newReq = new NextRequest(url, req);
 
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/conversations/context-statuses');
+  // Let proxyToPythonService handle channel-based routing
+  return proxyToPythonService(newReq, '', '/api/conversations/context-statuses');
 }
