@@ -74,22 +74,32 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output (server.js at root)
+# Copy standalone output (monorepo: server.js is at standalone/web/server.js)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
 
-# Copy static assets to .next/static
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+# Copy static assets to the correct monorepo location
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 
-# Copy public directory
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+# Copy public directory to the correct monorepo location
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
+
+# Cloud Run-friendly start script (reads PORT from env, defaults to 8080)
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'set -e' \
+  'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
+  'export PORT="${PORT:-8080}"' \
+  'echo "Starting Next.js server on ${HOSTNAME}:${PORT}"' \
+  'cd /app/web && exec node server.js' \
+  > /app/start.sh \
+  && chmod +x /app/start.sh
 
 USER nextjs
 
 # Expose port (Cloud Run uses PORT env variable, typically 8080)
 EXPOSE 8080
 
-ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["/app/start.sh"]
