@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // ── Service URL resolvers ───────────────────────────────────────────
 
 /** LAD_backend (Node.js) – personal WhatsApp via Baileys */
-function getBackendUrl(): string {
+export function getBackendUrl(): string {
   return (
     process.env.BACKEND_INTERNAL_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -19,7 +19,7 @@ function getBackendUrl(): string {
 }
 
 /** LAD-WABA-Comms (Python FastAPI) – WhatsApp Business API */
-function getWABAServiceUrl(): string {
+export function getWABAServiceUrl(): string {
   return (
     process.env.NEXT_PUBLIC_WHATSAPP_API_URL ||
     process.env.WABA_SERVICE_URL ||

@@ -13,6 +13,7 @@ interface ChatWindowProps {
   onSendMessage: (content: string) => void;
   onTogglePanel: () => void;
   isPanelOpen: boolean;
+  backendChannel?: 'personal' | 'waba';
   onPin?: (id: string) => void;
   onLock?: (id: string) => void;
   onFavorite?: (id: string) => void;
@@ -28,6 +29,7 @@ export const ChatWindow = memo(function ChatWindow({
   onSendMessage,
   onTogglePanel,
   isPanelOpen,
+  backendChannel,
   onPin,
   onLock,
   onFavorite,
@@ -35,9 +37,12 @@ export const ChatWindow = memo(function ChatWindow({
   onBlock,
   onDelete,
 }: ChatWindowProps) {
-  // Fetch messages from backend (replaces conversation.messages)
+  // Fetch messages from backend — pass backendChannel so messages route to
+  // the correct service (personal → LAD_backend, waba → LAD-WABA-Comms).
   const { messages, isLoading: messagesLoading } = useConversationMessages(
-    conversation?.id || null
+    conversation?.id || null,
+    undefined,
+    backendChannel
   );
 
   if (!conversation) {

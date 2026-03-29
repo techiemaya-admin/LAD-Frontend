@@ -199,7 +199,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               unreadCounts={allUnreadCounts}
+              backendChannel={channel}
               onBulkAction={handleBulkAction}
+              onRefresh={invalidate}
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
@@ -240,7 +242,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 unreadCounts={allUnreadCounts}
+                backendChannel={channel}
                 onBulkAction={handleBulkAction}
+                onRefresh={invalidate}
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
                 onShowBroadcastModal={onShowBroadcastModal}
@@ -276,6 +280,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           onSendMessage={sendMessage}
           onTogglePanel={toggleContextPanel}
           isPanelOpen={isContextPanelOpen}
+          backendChannel={channel}
           onPin={handlePin}
           onLock={handleLock}
           onFavorite={handleFavorite}
