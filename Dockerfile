@@ -62,8 +62,9 @@ RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
 RUN npm run build
 
 # Verify standalone output was generated (fails build if next.config.mjs output:standalone didn't work)
-RUN test -f .next/standalone/server.js && echo "✅ standalone/server.js present" || \
-    (echo "❌ standalone/server.js MISSING — check output:standalone in next.config.mjs" && ls -la .next/ && exit 1)
+# With outputFileTracingRoot: '..', Next.js places server.js at standalone/web/server.js
+RUN test -f .next/standalone/web/server.js && echo "✅ standalone/web/server.js present" || \
+    (echo "❌ standalone/web/server.js MISSING — check output:standalone in next.config.mjs" && ls -la .next/standalone/ && exit 1)
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -76,23 +77,38 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output (server.js at root, app files in web/ subdirectory due to outputFileTracingRoot)
+# Copy standalone output (with outputFileTracingRoot: '..', Next.js nests under web/)
+# This copies standalone/web/server.js → /app/web/server.js
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
 
-# Copy static assets — must go to web/.next/static because outputFileTracingRoot is the monorepo root,
-# so Next.js serves static files relative to web/ inside the standalone output
+# Copy static assets to web/.next/static (mirrored from standalone structure)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
 
-# Copy public directory — same reason: server.js looks for public at web/public
+# Copy public directory to web/public
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
+
+# Verify server.js was copied to the correct location
+RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || \
+    (echo "❌ server.js not found! Listing /app:" && ls -la /app/ && ls -la /app/web/ 2>/dev/null && exit 1)
+
+# Cloud Run-friendly start script (reads PORT from env, defaults to 8080)
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'set -e' \
+  'export HOSTNAME="${HOSTNAME:-0.0.0.0}"' \
+  'export PORT="${PORT:-8080}"' \
+  'echo "Starting Next.js server on ${HOSTNAME}:${PORT}"' \
+  'cd /app/web && exec node server.js' \
+  > /app/start.sh \
+  && chmod +x /app/start.sh \
+  && chown nextjs:nodejs /app/start.sh
 
 USER nextjs
 
 # Expose port (Cloud Run uses PORT env variable, typically 8080)
 EXPOSE 8080
 
-ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
-CMD ["node", "server.js"]
+# Start the application via start.sh which cd's to /app/web and runs server.js
+CMD ["/app/start.sh"]
