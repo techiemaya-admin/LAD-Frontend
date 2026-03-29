@@ -2,19 +2,32 @@
  * Context Statuses Proxy
  * GET /api/whatsapp-conversations/conversations/context-statuses → Backend
  *
- * Routes based on channel parameter:
- * - channel=personal → LAD_backend Node.js
- * - channel=waba → LAD-WABA-Comms Python FastAPI (default if not specified)
+ * Routes based on channel parameter (per WHATSAPP_FEATURE_SYSTEM_PROMPT.md §2):
+ * - channel=personal → LAD_backend Node.js at /api/whatsapp-conversations/conversations/context-statuses
+ * - channel=waba (default) → LAD-WABA-Comms Python FastAPI at /api/conversations/context-statuses
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService } from '../../utils/python-proxy';
+import { proxyToPythonService, getBackendUrl, getWABAServiceUrl } from '../../utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-  // Preserve channel param, default to 'waba' for WABA-specific status checks
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
+  // Channel detection: read from raw URL query param, then header, then default to waba
+  const rawUrl = new URL(req.url);
+  const channel =
+    rawUrl.searchParams.get('channel') ||
+    req.headers.get('x-whatsapp-channel') ||
+    'waba';  // default for context-status queries
 
-  // Let proxyToPythonService handle channel-based routing
-  return proxyToPythonService(newReq, '', '/api/conversations/context-statuses');
+  // Ensure channel is always in the URL for proxy function
+  if (!rawUrl.searchParams.get('channel')) {
+    rawUrl.searchParams.set('channel', channel);
+  }
+  const newReq = new NextRequest(rawUrl, req);
+
+  if (channel === 'personal') {
+    // Personal WhatsApp → LAD_backend Node.js
+    return proxyToPythonService(newReq, getBackendUrl(), '/api/whatsapp-conversations/conversations/context-statuses');
+  } else {
+    // WABA (default) → LAD-WABA-Comms Python FastAPI
+    return proxyToPythonService(newReq, getWABAServiceUrl(), '/api/conversations/context-statuses');
+  }
 }
