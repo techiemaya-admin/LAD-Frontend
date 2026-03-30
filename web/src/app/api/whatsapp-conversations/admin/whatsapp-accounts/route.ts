@@ -120,11 +120,20 @@ async function callNodeBackend(
 }
 
 export async function GET(req: NextRequest) {
+  // Resolve the current tenant ID from the request
+  const tenantId = req.headers.get('x-tenant-id') ?? null;
+
   // Fetch from both sources in parallel to minimise latency
-  const [nodeAccounts, pythonAccounts] = await Promise.all([
+  const [nodeAccounts, pythonAccountsRaw] = await Promise.all([
     fetchNodeAccounts(req),
     fetchPythonAccounts(req),
   ]);
+
+  // Filter Python accounts to the current tenant only (the Python service may
+  // return accounts for ALL tenants without server-side scoping).
+  const pythonAccounts = tenantId
+    ? pythonAccountsRaw.filter((a) => !a.tenant_id || a.tenant_id === tenantId)
+    : pythonAccountsRaw;
 
   const merged = mergeAccounts(nodeAccounts, pythonAccounts);
 
