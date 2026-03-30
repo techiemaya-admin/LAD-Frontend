@@ -77,7 +77,10 @@ export const ChatWindow = memo(function ChatWindow({
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <MessageList messages={messages.length > 0 ? messages : conversation.messages} />
+        <MessageList
+          messages={messages.length > 0 ? messages : conversation.messages}
+          conversationId={conversation.id}
+        />
       )}
       <MessageComposer
         channel={conversation.channel}
