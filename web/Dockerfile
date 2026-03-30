@@ -54,9 +54,8 @@ ENV NEXT_PUBLIC_BNI_SERVICE_URL=$NEXT_PUBLIC_BNI_SERVICE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Generate Prisma client if prisma directory exists
-# Use local binary to avoid npx downloading a newer incompatible version
-RUN if [ -d "prisma" ]; then ./node_modules/.bin/prisma generate; fi
+# Generate Prisma client — pin to v6 to match package.json (avoids npx pulling v7 which broke schema syntax)
+RUN if [ -d "prisma" ]; then npx --yes prisma@6 generate; fi
 
 # Verify React Query package resolution
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
