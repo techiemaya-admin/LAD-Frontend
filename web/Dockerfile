@@ -55,7 +55,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Generate Prisma client if prisma directory exists
-RUN if [ -d "prisma" ]; then npx prisma generate; fi
+# Use local binary to avoid npx downloading a newer incompatible version
+RUN if [ -d "prisma" ]; then ./node_modules/.bin/prisma generate; fi
 
 # Verify React Query package resolution
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
