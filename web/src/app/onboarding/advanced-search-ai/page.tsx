@@ -509,38 +509,41 @@ export default function AdvancedSearchAIPage() {
     ];
 
     // ── AI Playground state ──────────────────────────────────────────────────
-    const [showPlayground, setShowPlayground] = useState(false);
-    const [pgSaving, setPgSaving] = useState(false);
-    const [pgGenerating, setPgGenerating] = useState<string | null>(null); // section key being generated
-    const [businessProfile, setBusinessProfile] = useState({
-        companyName: '',
-        industry: '',
-        website: '',
-        companyDescription: '',
-        productsServices: '',
-        targetCustomers: '',
-        icpJobTitles: '',
-        icpCompanySize: '',
-        icpLocations: '',
-        icpPainPoints: '',
-        sampleConversation: '',
-        operatingHours: '',
-        timezone: '',
-        geographicFocus: '',
-        valueProposition: '',
-        competitors: '',
-        campaignTone: '',
+    // ── AI Playground (chat-based business profiling) ────────────────────────
+    const [showPlayground, setShowPlayground]           = useState(false);
+    const [pgChatHistory, setPgChatHistory]             = useState<Array<{ role: 'user'|'assistant'; content: string; card?: any }>>([]);
+    const [pgInput, setPgInput]                         = useState('');
+    const [pgBusy, setPgBusy]                           = useState(false);
+    const [pgCurrentCard, setPgCurrentCard]             = useState<any>(null);
+    const [pgCardValues, setPgCardValues]               = useState<Record<string, any>>({});  // working values for active card
+    const [pgTagInput, setPgTagInput]                   = useState('');  // tag input buffer
+    const [pgIsComplete, setPgIsComplete]               = useState(false);
+    const pgMessagesEndRef = useRef<HTMLDivElement>(null);
+    const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
+        companyName: '', industry: '', website: '', companyDescription: '',
+        productsServices: '', targetCustomers: '', icpJobTitles: '',
+        icpCompanySize: '', icpLocations: '', icpPainPoints: '',
+        sampleConversation: '', operatingHours: '', timezone: '',
+        geographicFocus: '', valueProposition: '', competitors: '', campaignTone: '',
     });
 
-    // Load business profile from backend on mount
+    // Load profile + history from backend on mount
     useEffect(() => {
         fetch('/api/ai-playground', { credentials: 'include' })
             .then(r => r.json())
             .then(d => {
-                if (d.success && d.profile && Object.keys(d.profile).length > 0) {
-                    setBusinessProfile(prev => ({ ...prev, ...d.profile }));
+                if (d.success) {
+                    if (d.profile && Object.keys(d.profile).length > 0) {
+                        setBusinessProfile(prev => ({ ...prev, ...d.profile }));
+                    }
+                    if (Array.isArray(d.history) && d.history.length > 0) {
+                        // Restore last card config from last assistant message
+                        setPgChatHistory(d.history.map((m: any) => ({
+                            role: m.role === 'user' ? 'user' : 'assistant',
+                            content: m.content,
+                        })));
+                    }
                 } else {
-                    // Try localStorage fallback
                     try {
                         const stored = localStorage.getItem('lad_business_profile');
                         if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
@@ -555,36 +558,81 @@ export default function AdvancedSearchAIPage() {
             });
     }, []);
 
-    const saveBusinessProfile = async (profile = businessProfile) => {
-        setPgSaving(true);
-        try {
-            localStorage.setItem('lad_business_profile', JSON.stringify(profile));
-            await fetch('/api/ai-playground', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ profile }),
-            });
-        } catch { }
-        setPgSaving(false);
-    };
+    // Auto-scroll playground chat
+    useEffect(() => {
+        pgMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [pgChatHistory]);
 
-    const generateSection = async (section: string) => {
-        setPgGenerating(section);
+    /** Send a message to the AI Playground chat endpoint */
+    const pgSendMessage = useCallback(async (msg: string) => {
+        if (!msg.trim() || pgBusy) return;
+        setPgBusy(true);
+        setPgCurrentCard(null);
+        const newHistory = [...pgChatHistory, { role: 'user' as const, content: msg }];
+        setPgChatHistory(newHistory);
+        setPgInput('');
         try {
-            const res = await fetch('/api/ai-playground/generate', {
+            const res = await fetch('/api/ai-playground/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ section, currentProfile: businessProfile }),
+                body: JSON.stringify({ message: msg }),
             });
             const data = await res.json();
-            if (data.success && data.content) {
-                setBusinessProfile(prev => ({ ...prev, [section]: data.content }));
+            if (data.success) {
+                setPgChatHistory(prev => [...prev, { role: 'assistant', content: data.reply, card: data.card }]);
+                if (data.card) {
+                    setPgCurrentCard(data.card);
+                    // Pre-populate card value from existing profile
+                    if (data.card.field && businessProfile[data.card.field]) {
+                        const existingVal = businessProfile[data.card.field];
+                        if (data.card.type === 'tags') {
+                            setPgCardValues({ [data.card.field]: existingVal.split(',').map((s: string) => s.trim()).filter(Boolean) });
+                        } else {
+                            setPgCardValues({ [data.card.field]: existingVal });
+                        }
+                    } else {
+                        setPgCardValues({});
+                    }
+                }
+                if (data.profile) {
+                    setBusinessProfile(prev => ({ ...prev, ...data.profile }));
+                    try { localStorage.setItem('lad_business_profile', JSON.stringify({ ...businessProfile, ...data.profile })); } catch { }
+                }
+                if (data.isComplete) setPgIsComplete(true);
             }
         } catch { }
-        setPgGenerating(null);
-    };
+        setPgBusy(false);
+    }, [pgBusy, pgChatHistory, businessProfile]);
+
+    /** Submit a card value */
+    const pgSubmitCard = useCallback(async () => {
+        if (!pgCurrentCard) return;
+        const { field, type } = pgCurrentCard;
+        let value = pgCardValues[field];
+        if (type === 'tags') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        } else if (type === 'chips') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        }
+        // Update profile immediately
+        setBusinessProfile(prev => ({ ...prev, [field]: String(value || '') }));
+        // Send as a card submission message
+        const cardMsg = `[Card submission: field=${field} value=${value}]`;
+        await pgSendMessage(cardMsg);
+    }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+
+    /** Start or restart the playground conversation */
+    const pgStartConversation = useCallback(async () => {
+        setPgChatHistory([]);
+        setPgCurrentCard(null);
+        setPgIsComplete(false);
+        setPgCardValues({});
+        // Reset history on backend
+        await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => {});
+        // Kick off with an empty message to get the greeting
+        await pgSendMessage('Hello, let\'s get started!');
+    }, [pgSendMessage]);
 
     // Build ICP description from business profile for search injection
     const getBusinessContext = () => {
@@ -3184,7 +3232,7 @@ export default function AdvancedSearchAIPage() {
                 )}
 
                 {/* ═══════════════════════════════════════════════
-                    AI PLAYGROUND DRAWER
+                    AI PLAYGROUND DRAWER — Chat + Card based
                     ═══════════════════════════════════════════════ */}
                 {showPlayground && (
                     <div style={{
@@ -3192,22 +3240,19 @@ export default function AdvancedSearchAIPage() {
                         display: 'flex', alignItems: 'stretch',
                     }}>
                         {/* Backdrop */}
-                        <div
-                            onClick={() => setShowPlayground(false)}
-                            style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
-                        />
+                        <div onClick={() => setShowPlayground(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }} />
 
                         {/* Drawer */}
                         <div style={{
-                            width: 520, maxWidth: '95vw', background: '#fff',
+                            width: 480, maxWidth: '96vw', background: '#fff',
                             display: 'flex', flexDirection: 'column',
                             boxShadow: '-8px 0 40px rgba(0,0,0,.18)',
                             animation: 'slideInRight .28s cubic-bezier(.4,0,.2,1) both',
                             overflow: 'hidden',
                         }}>
-                            {/* Header */}
+                            {/* ── Header ── */}
                             <div style={{
-                                padding: '20px 24px 16px',
+                                padding: '16px 20px 12px',
                                 borderBottom: '1.5px solid #e5e7eb',
                                 background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
                                 flexShrink: 0,
@@ -3215,43 +3260,59 @@ export default function AdvancedSearchAIPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div style={{
-                                            width: 38, height: 38, borderRadius: 10,
+                                            width: 36, height: 36, borderRadius: 10,
                                             background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
                                                 <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                                             </svg>
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>AI Playground</div>
-                                            <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 500 }}>Configure your business context for smarter lead discovery</div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>AI Playground</div>
+                                            <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
+                                                {pgIsComplete ? '✅ Business profile complete!' : 'Answer questions to power smarter lead discovery'}
+                                            </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowPlayground(false)} style={{
-                                        width: 32, height: 32, border: '1px solid #e5e7eb', borderRadius: 8,
-                                        background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    }}>
-                                        <X size={16} color="#6b7280" />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            title="Restart conversation"
+                                            style={{
+                                                padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
+                                                background: '#fff', color: '#6b7280', fontSize: 11.5, fontWeight: 600,
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                            }}
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                            Restart
+                                        </button>
+                                        <button onClick={() => setShowPlayground(false)} style={{
+                                            width: 30, height: 30, border: '1px solid #e5e7eb', borderRadius: 8,
+                                            background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <X size={15} color="#6b7280" />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {/* Progress bar */}
+                                {/* Profile completeness bar */}
                                 {(() => {
                                     const filled = Object.values(businessProfile).filter(v => v).length;
                                     const total = Object.keys(businessProfile).length;
                                     const pct = Math.round((filled / total) * 100);
                                     return (
-                                        <div style={{ marginTop: 14 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                                <span style={{ fontSize: 11.5, color: '#6b7280', fontWeight: 600 }}>Profile completeness</span>
-                                                <span style={{ fontSize: 11.5, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}%</span>
+                                        <div style={{ marginTop: 10 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Profile completeness</span>
+                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
                                             </div>
-                                            <div style={{ height: 6, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                            <div style={{ height: 5, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
                                                 <div style={{
                                                     height: '100%', borderRadius: 99,
                                                     background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
-                                                    width: `${pct}%`, transition: 'width .4s ease',
+                                                    width: `${pct}%`, transition: 'width .5s ease',
                                                 }} />
                                             </div>
                                         </div>
@@ -3259,167 +3320,313 @@ export default function AdvancedSearchAIPage() {
                                 })()}
                             </div>
 
-                            {/* Scrollable sections */}
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-
-                                {/* ── Section helper ── */}
-                                {([
-                                    {
-                                        key: null, label: '🏢 Company Overview', color: '#3b82f6',
-                                        fields: [
-                                            { key: 'companyName', label: 'Company Name', placeholder: 'e.g. Acme Corp', rows: 1 },
-                                            { key: 'industry', label: 'Industry', placeholder: 'e.g. SaaS, Real Estate, FinTech...', rows: 1 },
-                                            { key: 'website', label: 'Website', placeholder: 'e.g. https://acme.com', rows: 1 },
-                                            { key: 'companyDescription', label: 'Company Description', placeholder: 'What does your company do? Who do you serve?', rows: 3, aiKey: 'companyDescription' },
-                                        ]
-                                    },
-                                    {
-                                        key: null, label: '💼 Products & Services', color: '#0ea5e9',
-                                        fields: [
-                                            { key: 'productsServices', label: 'What you offer', placeholder: 'List your main products/services. Be specific.', rows: 4, aiKey: 'productsServices' },
-                                            { key: 'valueProposition', label: 'Value Proposition', placeholder: 'What unique value do you deliver? Why choose you?', rows: 3, aiKey: 'valueProposition' },
-                                        ]
-                                    },
-                                    {
-                                        key: null, label: '🎯 Ideal Customer Profile (ICP)', color: '#f59e0b',
-                                        fields: [
-                                            { key: 'targetCustomers', label: 'Who are your best customers?', placeholder: 'Describe company types, sizes, industries you target best', rows: 3, aiKey: 'targetCustomers' },
-                                            { key: 'icpJobTitles', label: 'Target Job Titles / Roles', placeholder: 'e.g. VP of Sales, CTO, Head of Marketing, CEO...', rows: 2 },
-                                            { key: 'icpCompanySize', label: 'Target Company Size', placeholder: 'e.g. 50-500 employees, Series A/B startups, SMBs...', rows: 1 },
-                                            { key: 'icpPainPoints', label: 'Customer Pain Points', placeholder: 'What problems do your ideal customers struggle with?', rows: 3, aiKey: 'icpPainPoints' },
-                                        ]
-                                    },
-                                    {
-                                        key: null, label: '💬 Sales Conversation', color: '#8b5cf6',
-                                        fields: [
-                                            { key: 'sampleConversation', label: 'Typical Sales Script / Opening', placeholder: 'How do you typically open a conversation with a prospect? What questions do you ask?', rows: 5, aiKey: 'sampleConversation' },
-                                            { key: 'campaignTone', label: 'Campaign Tone & Style', placeholder: 'e.g. Consultative, formal, friendly, data-driven, storytelling...', rows: 2, aiKey: 'campaignTone' },
-                                        ]
-                                    },
-                                    {
-                                        key: null, label: '⏰ Operations & Geography', color: '#10b981',
-                                        fields: [
-                                            { key: 'operatingHours', label: 'Operating Hours', placeholder: 'e.g. Mon–Fri 9am–6pm', rows: 1 },
-                                            { key: 'timezone', label: 'Timezone', placeholder: 'e.g. GST (UTC+4), EST, IST...', rows: 1 },
-                                            { key: 'geographicFocus', label: 'Geographic Target Markets', placeholder: 'e.g. UAE, Saudi Arabia, India, Southeast Asia...', rows: 2, aiKey: 'geographicFocus' },
-                                            { key: 'icpLocations', label: 'Where are your ideal customers located?', placeholder: 'e.g. Dubai, Riyadh, Singapore, London...', rows: 1 },
-                                        ]
-                                    },
-                                    {
-                                        key: null, label: '⚔️ Competition', color: '#ef4444',
-                                        fields: [
-                                            { key: 'competitors', label: 'Main Competitors', placeholder: 'Who do you compete with? What makes you different?', rows: 3 },
-                                        ]
-                                    },
-                                ] as Array<{ key: null; label: string; color: string; fields: Array<{ key: string; label: string; placeholder: string; rows: number; aiKey?: string }> }>).map((section, si) => (
-                                    <div key={si} style={{ padding: '16px 24px', borderBottom: '1px solid #f3f4f6' }}>
-                                        {/* Section header */}
-                                        <div style={{
-                                            display: 'flex', alignItems: 'center', gap: 8,
-                                            marginBottom: 14,
-                                        }}>
-                                            <div style={{ width: 4, height: 18, borderRadius: 2, background: section.color, flexShrink: 0 }} />
-                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>{section.label}</span>
+                            {/* ── Chat Messages ── */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
+                                {pgChatHistory.length === 0 && !pgBusy && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(124,58,237,.3)' }}>
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
                                         </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Configure Your AI Context</div>
+                                            <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                                                Answer a few questions about your business and I'll use that context to find better leads and craft smarter campaigns.
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            style={{
+                                                padding: '12px 28px', borderRadius: 12, border: 'none',
+                                                background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                color: '#fff', fontSize: 14, fontWeight: 700,
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,.4)',
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                            }}
+                                        >
+                                            <Sparkles size={16} />
+                                            Start AI Setup
+                                        </button>
+                                    </div>
+                                )}
 
-                                        {/* Fields */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                                            {section.fields.map(field => (
-                                                <div key={field.key}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{field.label}</label>
-                                                        {field.aiKey && (
-                                                            <button
-                                                                onClick={() => generateSection(field.aiKey!)}
-                                                                disabled={pgGenerating === field.aiKey}
-                                                                title="Generate with AI"
-                                                                style={{
-                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                    padding: '2px 8px', borderRadius: 10, border: '1px solid #ede9fe',
-                                                                    background: pgGenerating === field.aiKey ? '#f3f4f6' : '#faf5ff',
-                                                                    color: '#7c3aed', fontSize: 11, fontWeight: 600,
-                                                                    cursor: pgGenerating === field.aiKey ? 'default' : 'pointer',
-                                                                    transition: 'all .15s',
-                                                                }}
-                                                            >
-                                                                {pgGenerating === field.aiKey ? (
-                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                                                                ) : (
-                                                                    <Sparkles size={10} />
-                                                                )}
-                                                                {pgGenerating === field.aiKey ? 'Generating...' : 'AI Fill'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <textarea
-                                                        rows={field.rows}
-                                                        value={(businessProfile as any)[field.key] || ''}
-                                                        onChange={e => setBusinessProfile(prev => ({ ...prev, [field.key]: e.target.value }))}
-                                                        placeholder={field.placeholder}
-                                                        style={{
-                                                            width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10,
-                                                            padding: '9px 12px', fontSize: 13, color: '#374151',
-                                                            resize: 'vertical', outline: 'none', fontFamily: 'inherit',
-                                                            lineHeight: 1.55, background: '#fafafa',
-                                                            transition: 'border .15s',
-                                                        }}
-                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.background = '#fff'; }}
-                                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#fafafa'; }}
-                                                    />
+                                {pgChatHistory.map((msg, idx) => (
+                                    <div key={idx}>
+                                        {msg.role === 'user' ? (
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                <div style={{
+                                                    maxWidth: '78%', background: 'linear-gradient(135deg,#172560,#2563eb)',
+                                                    color: '#fff', borderRadius: '18px 18px 4px 18px',
+                                                    padding: '10px 14px', fontSize: 13.5, lineHeight: 1.55,
+                                                    boxShadow: '0 2px 8px rgba(23,37,96,.2)',
+                                                }}>
+                                                    {/* Hide card submission raw messages */}
+                                                    {msg.content.startsWith('[Card submission:') ? '✅ Submitted' : msg.content}
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, boxShadow: '0 2px 8px rgba(124,58,237,.3)',
+                                                }}>🧠</div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        background: '#fff', borderRadius: '4px 18px 18px 18px',
+                                                        padding: '10px 14px', fontSize: 13.5, color: '#374151',
+                                                        lineHeight: 1.65, boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+                                                        border: '1px solid #f3f4f6',
+                                                    }}>
+                                                        {msg.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
 
-                                {/* Bottom padding */}
-                                <div style={{ height: 80 }} />
+                                {/* Typing indicator */}
+                                {pgBusy && (
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🧠</div>
+                                        <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            {[0,1,2].map(i => (
+                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Active Card Input ── */}
+                                {pgCurrentCard && !pgBusy && (() => {
+                                    const card = pgCurrentCard;
+                                    const fieldVal = pgCardValues[card.field];
+
+                                    return (
+                                        <div style={{
+                                            background: '#fff', border: '1.5px solid #ede9fe', borderRadius: 14,
+                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(124,58,237,.1)',
+                                        }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Sparkles size={12} /> {card.label}
+                                            </div>
+
+                                            {/* TEXT / TEXTAREA */}
+                                            {(card.type === 'text' || card.type === 'textarea') && (
+                                                <textarea
+                                                    rows={card.type === 'textarea' ? 3 : 1}
+                                                    value={fieldVal || ''}
+                                                    onChange={e => setPgCardValues({ [card.field]: e.target.value })}
+                                                    placeholder={card.placeholder || ''}
+                                                    autoFocus
+                                                    style={{
+                                                        width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                        padding: '9px 12px', fontSize: 13, color: '#374151',
+                                                        resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                                        lineHeight: 1.5, background: '#fafafa',
+                                                    }}
+                                                    onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
+                                                />
+                                            )}
+
+                                            {/* CHIPS (multi or single select) */}
+                                            {card.type === 'chips' && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => {
+                                                        const selected = Array.isArray(fieldVal) ? fieldVal.includes(opt) : fieldVal === opt;
+                                                        return (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => {
+                                                                    if (card.field === 'icpCompanySize' || card.field === 'campaignTone' || card.field === 'timezone') {
+                                                                        // Single select
+                                                                        setPgCardValues({ [card.field]: opt });
+                                                                    } else {
+                                                                        // Multi-select
+                                                                        const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                        const idx = current.indexOf(opt);
+                                                                        if (idx >= 0) current.splice(idx, 1); else current.push(opt);
+                                                                        setPgCardValues({ [card.field]: current });
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
+                                                                    border: selected ? 'none' : '1.5px solid #e5e7eb',
+                                                                    background: selected ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#f9fafb',
+                                                                    color: selected ? '#fff' : '#374151',
+                                                                    cursor: 'pointer', transition: 'all .12s',
+                                                                }}
+                                                            >{opt}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* RADIO */}
+                                            {card.type === 'radio' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => (
+                                                        <button
+                                                            key={opt}
+                                                            onClick={() => setPgCardValues({ [card.field]: opt })}
+                                                            style={{
+                                                                textAlign: 'left', padding: '9px 14px', borderRadius: 10, fontSize: 13,
+                                                                border: fieldVal === opt ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                                                                background: fieldVal === opt ? '#faf5ff' : '#fff',
+                                                                color: '#374151', cursor: 'pointer', fontWeight: 500,
+                                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                            }}
+                                                        >
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#7c3aed' : '#d1d5db'}`, background: fieldVal === opt ? '#7c3aed' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* TAGS */}
+                                            {card.type === 'tags' && (
+                                                <div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                                        {(Array.isArray(fieldVal) ? fieldVal : []).map((tag: string, ti: number) => (
+                                                            <div key={ti} style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                background: '#ede9fe', borderRadius: 16, padding: '4px 10px',
+                                                                fontSize: 12.5, color: '#5b21b6', fontWeight: 600,
+                                                            }}>
+                                                                {tag}
+                                                                <button onClick={() => {
+                                                                    const updated = [...fieldVal];
+                                                                    updated.splice(ti, 1);
+                                                                    setPgCardValues({ [card.field]: updated });
+                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#7c3aed', display: 'flex', lineHeight: 1 }}>
+                                                                    <X size={11} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                        <input
+                                                            value={pgTagInput}
+                                                            onChange={e => setPgTagInput(e.target.value)}
+                                                            placeholder={card.placeholder || 'Type and press Enter'}
+                                                            onKeyDown={e => {
+                                                                if ((e.key === 'Enter' || e.key === ',') && pgTagInput.trim()) {
+                                                                    e.preventDefault();
+                                                                    const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                    if (!current.includes(pgTagInput.trim())) current.push(pgTagInput.trim());
+                                                                    setPgCardValues({ [card.field]: current });
+                                                                    setPgTagInput('');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                                padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                                                            }}
+                                                            onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                            onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* HOURS */}
+                                            {card.type === 'hours' && (
+                                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>From</div>
+                                                        <input type="time" value={(fieldVal as any)?.from || '09:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), from: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                    <div style={{ marginTop: 16, color: '#9ca3af' }}>–</div>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>To</div>
+                                                        <input type="time" value={(fieldVal as any)?.to || '18:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), to: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Submit card button */}
+                                            <button
+                                                onClick={pgSubmitCard}
+                                                disabled={!fieldVal && card.type !== 'hours'}
+                                                style={{
+                                                    marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
+                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                                    color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
+                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
+                                                    transition: 'all .15s',
+                                                }}
+                                            >
+                                                Submit →
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div ref={pgMessagesEndRef} />
                             </div>
 
-                            {/* Footer — Save button */}
-                            <div style={{
-                                padding: '14px 24px', borderTop: '1.5px solid #e5e7eb',
-                                background: '#fff', flexShrink: 0,
-                                display: 'flex', gap: 10, alignItems: 'center',
-                            }}>
-                                <button
-                                    onClick={async () => { await saveBusinessProfile(); setShowPlayground(false); }}
-                                    disabled={pgSaving}
-                                    style={{
-                                        flex: 1, padding: '11px 0', borderRadius: 12, border: 'none',
-                                        background: pgSaving ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-                                        color: pgSaving ? '#9ca3af' : '#fff',
-                                        fontSize: 14, fontWeight: 700, cursor: pgSaving ? 'default' : 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                                        transition: 'all .15s', boxShadow: pgSaving ? 'none' : '0 4px 14px rgba(124,58,237,.35)',
-                                    }}
-                                >
-                                    {pgSaving ? (
-                                        <>
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                                            Save &amp; Apply Context
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => saveBusinessProfile()}
-                                    disabled={pgSaving}
-                                    title="Save without closing"
-                                    style={{
-                                        padding: '11px 16px', borderRadius: 12,
-                                        border: '1.5px solid #e5e7eb', background: '#fff',
-                                        color: '#6b7280', fontSize: 13, fontWeight: 600,
-                                        cursor: 'pointer', transition: 'all .15s',
-                                    }}
-                                >
-                                    Save Draft
-                                </button>
-                            </div>
+                            {/* ── Text Input Bar ── */}
+                            {pgChatHistory.length > 0 && (
+                                <div style={{
+                                    padding: '10px 14px', borderTop: '1.5px solid #e5e7eb',
+                                    background: '#fff', flexShrink: 0, display: 'flex', gap: 8,
+                                }}>
+                                    <input
+                                        value={pgInput}
+                                        onChange={e => setPgInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); pgSendMessage(pgInput); } }}
+                                        placeholder="Type a message or skip to next question…"
+                                        disabled={pgBusy}
+                                        style={{
+                                            flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 24,
+                                            padding: '9px 16px', fontSize: 13.5, outline: 'none', fontFamily: 'inherit',
+                                            background: pgBusy ? '#f9fafb' : '#fff', color: '#374151',
+                                            transition: 'border .15s',
+                                        }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                    />
+                                    <button
+                                        onClick={() => pgSendMessage(pgInput)}
+                                        disabled={!pgInput.trim() || pgBusy}
+                                        style={{
+                                            width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── Footer: Done / Apply ── */}
+                            {pgIsComplete && (
+                                <div style={{ padding: '10px 14px', borderTop: '1.5px solid #e5e7eb', background: '#f0fdf4', flexShrink: 0 }}>
+                                    <button
+                                        onClick={() => setShowPlayground(false)}
+                                        style={{
+                                            width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+                                            background: 'linear-gradient(135deg,#10b981,#059669)',
+                                            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                            boxShadow: '0 4px 14px rgba(16,185,129,.35)',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                        ✅ Profile Complete — Apply Context
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
