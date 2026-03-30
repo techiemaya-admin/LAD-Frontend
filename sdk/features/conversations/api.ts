@@ -219,7 +219,10 @@ export async function getConversationMessages(
   }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
 
   const rawMessages = (response.data.data || []).map(mapMessageFromApi);
-  const messages = deduplicateMessages(rawMessages);
+  // Backend returns newest-first (ORDER BY created_at DESC). Reverse to
+  // chronological order so MessageList renders oldest→newest (top→bottom)
+  // and followOutput / scrollToIndex work correctly for new messages.
+  const messages = deduplicateMessages(rawMessages).reverse();
 
   return {
     messages,
