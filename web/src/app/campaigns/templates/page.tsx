@@ -44,7 +44,7 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F8F9FE]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-6">
         <div className="flex items-center justify-between">
@@ -53,8 +53,8 @@ export default function TemplatesPage() {
             <p className="mt-2 text-gray-600">Manage your communication templates</p>
           </div>
           <button
-            onClick={() => router.push('/templates/create')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            onClick={() => router.push('/campaigns/templates/create')}
+            className="px-4 py-2 bg-[#0b1957] text-white rounded-xl hover:bg-[#0a1540] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
           >
             + Create Template
           </button>
@@ -69,7 +69,7 @@ export default function TemplatesPage() {
               onClick={() => setActiveTab('email')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'email'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-[#0b1957] text-[#0b1957]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -104,8 +104,8 @@ export default function TemplatesPage() {
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">No templates yet</p>
                 <button
-                  onClick={() => router.push('/templates/create')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  onClick={() => router.push('/campaigns/templates/create')}
+                  className="px-4 py-2 bg-[#0b1957] text-white rounded-xl hover:bg-[#0a1540] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
                 >
                   Create your first template
                 </button>
@@ -133,8 +133,8 @@ export default function TemplatesPage() {
                       </span>
                       <div className="flex gap-2">
                         <Link
-                          href={`/templates/edit/${template.id}`}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          href={`/campaigns/templates/edit/${template.id}`}
+                          className="text-[#0b1957] hover:text-[#0a1540] text-sm font-semibold"
                         >
                           Edit
                         </Link>
