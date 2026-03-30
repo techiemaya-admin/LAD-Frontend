@@ -146,7 +146,14 @@ export default function AIEmailGeneratorPreview({
       }
 
       const data = await response.json();
-      router.push(`/templates/edit/${data.data.id}`);
+      // Handle both { success, data: { id } } and flat { id } response shapes
+      const templateId = data?.data?.id ?? data?.id ?? data?.templateId;
+      if (templateId) {
+        router.push(`/templates/edit/${templateId}`);
+      } else {
+        // Fallback: go to templates list if ID is missing
+        router.push('/templates');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
