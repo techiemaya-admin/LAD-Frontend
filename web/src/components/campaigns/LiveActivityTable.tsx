@@ -55,19 +55,38 @@ const SKIP_STEP_TYPES = new Set(['delay', 'lead_generation', 'start', 'end']);
  * the WorkflowStep[] format consumed by <StatusStepper>.
  */
 function buildWorkflowSteps(
-  rawSteps: Array<{ type: string; title?: string; order?: number }>
+  rawSteps: Array<{ type: string; title?: string; order?: number; config?: any }>
 ): WorkflowStep[] {
   return rawSteps
-    .filter((s) => s.type && !SKIP_STEP_TYPES.has(s.type.toLowerCase()))
+    .filter((s) => {
+      if (!s.type || SKIP_STEP_TYPES.has(s.type.toLowerCase())) return false;
+      // Skip wait_for_condition whose action_type is PROFILE_VISITED —
+      // it's an internal gate that fires immediately after linkedin_visit
+      // and creates a confusing duplicate step in the UI stepper.
+      if (s.type.toLowerCase() === 'wait_for_condition') {
+        const cfg = typeof s.config === 'string'
+          ? JSON.parse(s.config || '{}')
+          : (s.config || {});
+        if (cfg.action_type === 'PROFILE_VISITED') return false;
+      }
+      return true;
+    })
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((s, idx) => ({
-      id: idx + 1,
-      type: s.type.toLowerCase(),
-      label:
-        s.title ||
-        STEP_TYPE_LABEL[s.type.toLowerCase()] ||
-        s.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    }));
+    .map((s, idx) => {
+      const cfg = typeof s.config === 'string'
+        ? JSON.parse(s.config || '{}')
+        : (s.config || {});
+      return {
+        id: idx + 1,
+        type: s.type.toLowerCase(),
+        // Carry config so calculateCurrentStep can resolve the right done-condition
+        config: cfg,
+        label:
+          s.title ||
+          STEP_TYPE_LABEL[s.type.toLowerCase()] ||
+          s.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      };
+    });
 }
 
 interface LiveActivityTableProps {
@@ -380,7 +399,6 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       const STEP_DONE: Record<string, (l: any) => boolean> = {
         linkedin_visit:    (l) => l.profileVisited,
         linkedin_connect:  (l) => l.connectionStatus === 'SENT',
-        wait_for_condition:(l) => l.connectionAccepted,
         linkedin_message:  (l) => l.contacted,
         voice_agent_call:  (l) => l.callMade,
         voice_call:        (l) => l.callMade,
@@ -395,7 +413,17 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       let lastDoneIdx = -1; // index (0-based) of the last completed step
       workflowSteps.forEach((step, idx) => {
-        const isDone = STEP_DONE[step.type]?.(lead) ?? false;
+        let isDone: boolean;
+        if (step.type === 'wait_for_condition') {
+          // Resolve done-condition based on what we're waiting for
+          const actionType: string = (step as any).config?.action_type || 'CONNECTION_ACCEPTED';
+          if (actionType === 'PROFILE_VISITED')        isDone = lead.profileVisited;
+          else if (actionType === 'CONNECTION_ACCEPTED') isDone = lead.connectionAccepted;
+          else if (actionType === 'REPLY_RECEIVED')      isDone = lead.leadReplied;
+          else                                           isDone = lead.connectionAccepted;
+        } else {
+          isDone = STEP_DONE[step.type]?.(lead) ?? false;
+        }
         if (isDone) lastDoneIdx = idx;
       });
 
