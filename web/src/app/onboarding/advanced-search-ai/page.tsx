@@ -1952,7 +1952,7 @@ export default function AdvancedSearchAIPage() {
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
-        if (loadingMore || !lastSearchQuery || !searchCursor) return;
+        if (loadingMore || !lastSearchQuery) return;
 
         setLoadingMore(true);
         try {
@@ -1985,7 +1985,9 @@ export default function AdvancedSearchAIPage() {
                     company_size: targeting.company_size,
                 } : undefined,
                 icp_description: icpDesc,
-                filters: { cursor: searchCursor },
+                // Use cursor when available (Unipile token); fall back to start-offset pagination
+                filters: searchCursor ? { cursor: searchCursor } : {},
+                start: searchCursor ? 0 : leads.length,
                 useSalesNav,
             };
 
@@ -2921,8 +2923,10 @@ export default function AdvancedSearchAIPage() {
                                 </div>
                             )}
 
-                            {/* Get More Leads button */}
-                            {!inboundMode && searchCursor && (
+                            {/* Get More Leads button — show when there are leads and either a
+                                cursor token is available or the backend reported more total
+                                results than we're currently displaying */}
+                            {!inboundMode && leads.length > 0 && (searchCursor || totalResults > leads.length) && (
                                 <div style={{
                                     display: 'flex', justifyContent: 'center',
                                     padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
