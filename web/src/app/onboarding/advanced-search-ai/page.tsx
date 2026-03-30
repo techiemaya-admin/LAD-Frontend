@@ -50,6 +50,8 @@ interface LeadProfile {
     industry: string;
     network_distance: string;
     locked?: boolean;
+    phone?: string;
+    email?: string;
     icp_score?: number;
     match_level?: 'strong' | 'moderate' | 'weak';
     icp_reasoning?: string;
@@ -506,6 +508,146 @@ export default function AdvancedSearchAIPage() {
         { key: 'microsoft', label: 'Microsoft Contacts',  color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
     ];
 
+    // ── AI Playground state ──────────────────────────────────────────────────
+    // ── AI Playground (chat-based business profiling) ────────────────────────
+    const [showPlayground, setShowPlayground]           = useState(false);
+    const [pgChatHistory, setPgChatHistory]             = useState<Array<{ role: 'user'|'assistant'; content: string; card?: any }>>([]);
+    const [pgInput, setPgInput]                         = useState('');
+    const [pgBusy, setPgBusy]                           = useState(false);
+    const [pgCurrentCard, setPgCurrentCard]             = useState<any>(null);
+    const [pgCardValues, setPgCardValues]               = useState<Record<string, any>>({});  // working values for active card
+    const [pgTagInput, setPgTagInput]                   = useState('');  // tag input buffer
+    const [pgIsComplete, setPgIsComplete]               = useState(false);
+    const pgMessagesEndRef = useRef<HTMLDivElement>(null);
+    const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
+        companyName: '', industry: '', website: '', companyDescription: '',
+        productsServices: '', targetCustomers: '', icpJobTitles: '',
+        icpCompanySize: '', icpLocations: '', icpPainPoints: '',
+        sampleConversation: '', operatingHours: '', timezone: '',
+        geographicFocus: '', valueProposition: '', competitors: '', campaignTone: '',
+    });
+
+    // Load profile + history from backend on mount
+    useEffect(() => {
+        fetch('/api/ai-playground', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    if (d.profile && Object.keys(d.profile).length > 0) {
+                        setBusinessProfile(prev => ({ ...prev, ...d.profile }));
+                    }
+                    if (Array.isArray(d.history) && d.history.length > 0) {
+                        // Restore last card config from last assistant message
+                        setPgChatHistory(d.history.map((m: any) => ({
+                            role: m.role === 'user' ? 'user' : 'assistant',
+                            content: m.content,
+                        })));
+                    }
+                } else {
+                    try {
+                        const stored = localStorage.getItem('lad_business_profile');
+                        if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                    } catch { }
+                }
+            })
+            .catch(() => {
+                try {
+                    const stored = localStorage.getItem('lad_business_profile');
+                    if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                } catch { }
+            });
+    }, []);
+
+    // Auto-scroll playground chat
+    useEffect(() => {
+        pgMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [pgChatHistory]);
+
+    /** Send a message to the AI Playground chat endpoint */
+    const pgSendMessage = useCallback(async (msg: string) => {
+        if (!msg.trim() || pgBusy) return;
+        setPgBusy(true);
+        setPgCurrentCard(null);
+        const newHistory = [...pgChatHistory, { role: 'user' as const, content: msg }];
+        setPgChatHistory(newHistory);
+        setPgInput('');
+        try {
+            const res = await fetch('/api/ai-playground/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ message: msg }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPgChatHistory(prev => [...prev, { role: 'assistant', content: data.reply, card: data.card }]);
+                if (data.card) {
+                    setPgCurrentCard(data.card);
+                    // Pre-populate card value from existing profile
+                    if (data.card.field && businessProfile[data.card.field]) {
+                        const existingVal = businessProfile[data.card.field];
+                        if (data.card.type === 'tags') {
+                            setPgCardValues({ [data.card.field]: existingVal.split(',').map((s: string) => s.trim()).filter(Boolean) });
+                        } else {
+                            setPgCardValues({ [data.card.field]: existingVal });
+                        }
+                    } else {
+                        setPgCardValues({});
+                    }
+                }
+                if (data.profile) {
+                    setBusinessProfile(prev => ({ ...prev, ...data.profile }));
+                    try { localStorage.setItem('lad_business_profile', JSON.stringify({ ...businessProfile, ...data.profile })); } catch { }
+                }
+                if (data.isComplete) setPgIsComplete(true);
+            }
+        } catch { }
+        setPgBusy(false);
+    }, [pgBusy, pgChatHistory, businessProfile]);
+
+    /** Submit a card value */
+    const pgSubmitCard = useCallback(async () => {
+        if (!pgCurrentCard) return;
+        const { field, type } = pgCurrentCard;
+        let value = pgCardValues[field];
+        if (type === 'tags') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        } else if (type === 'chips') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        }
+        // Update profile immediately
+        setBusinessProfile(prev => ({ ...prev, [field]: String(value || '') }));
+        // Send as a card submission message
+        const cardMsg = `[Card submission: field=${field} value=${value}]`;
+        await pgSendMessage(cardMsg);
+    }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+
+    /** Start or restart the playground conversation */
+    const pgStartConversation = useCallback(async () => {
+        setPgChatHistory([]);
+        setPgCurrentCard(null);
+        setPgIsComplete(false);
+        setPgCardValues({});
+        // Reset history on backend
+        await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => {});
+        // Kick off with an empty message to get the greeting
+        await pgSendMessage('Hello, let\'s get started!');
+    }, [pgSendMessage]);
+
+    // Build ICP description from business profile for search injection
+    const getBusinessContext = () => {
+        const p = businessProfile;
+        const parts: string[] = [];
+        if (p.companyDescription) parts.push(`Company: ${p.companyDescription}`);
+        if (p.productsServices) parts.push(`Products/Services: ${p.productsServices}`);
+        if (p.targetCustomers) parts.push(`Target Customers: ${p.targetCustomers}`);
+        if (p.icpJobTitles) parts.push(`Target Job Titles: ${p.icpJobTitles}`);
+        if (p.icpPainPoints) parts.push(`Customer Pain Points: ${p.icpPainPoints}`);
+        if (p.valueProposition) parts.push(`Value Proposition: ${p.valueProposition}`);
+        if (p.geographicFocus) parts.push(`Geographic Focus: ${p.geographicFocus}`);
+        return parts.join('\n');
+    };
+
     // Landing attach menu & web search state
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [showChatAttachMenu, setShowChatAttachMenu] = useState(false);
@@ -554,13 +696,93 @@ export default function AdvancedSearchAIPage() {
             if (stored) setLeadFeedback(JSON.parse(stored));
         } catch { }
     }, []);
-    const toggleFeedback = (leadId: string, rating: 'good' | 'bad') => {
+
+    // Comments attached to bad-feedback ratings
+    const [leadFeedbackComments, setLeadFeedbackComments] = useState<Record<string, string>>({});
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lad_lead_feedback_comments');
+            if (stored) setLeadFeedbackComments(JSON.parse(stored));
+        } catch { }
+    }, []);
+
+    // Popup state for bad-feedback comment collection
+    const [badFeedbackPopup, setBadFeedbackPopup] = useState<{ leadId: string; leadName: string } | null>(null);
+    const [badFeedbackDraft, setBadFeedbackDraft] = useState('');
+
+    const toggleFeedback = (leadId: string, rating: 'good' | 'bad', leadName?: string) => {
+        if (rating === 'bad') {
+            // If already marked bad — toggle it off directly
+            if (leadFeedback[leadId] === 'bad') {
+                setLeadFeedback(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+                setLeadFeedbackComments(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+            } else {
+                // Show comment popup before saving
+                setBadFeedbackDraft('');
+                setBadFeedbackPopup({ leadId, leadName: leadName || 'this lead' });
+            }
+            return;
+        }
         setLeadFeedback(prev => {
             const updated = { ...prev };
             if (updated[leadId] === rating) { delete updated[leadId]; } else { updated[leadId] = rating; }
             try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
+    };
+
+    // Build a natural-language enrichment string from the Targeting card form values
+    // and any bad-feedback comments — sent to the backend LLM to generate sharper keywords.
+    const buildSearchEnrichment = (): string | undefined => {
+        const parts: string[] = [];
+        if (targeting) {
+            if (targeting.decision_maker_nationality?.length)
+                parts.push(`Preferred nationality: ${targeting.decision_maker_nationality.join(', ')}`);
+            if (targeting.decision_maker_experience_level?.length)
+                parts.push(`Required experience level: ${targeting.decision_maker_experience_level.join(', ')}`);
+            if (targeting.decision_maker_skills?.length)
+                parts.push(`Required skills: ${targeting.decision_maker_skills.join(', ')}`);
+            if (targeting.decision_maker_education?.length)
+                parts.push(`Required education: ${targeting.decision_maker_education.join(', ')}`);
+            if (targeting.company_size?.length)
+                parts.push(`Target company size: ${targeting.company_size.join(', ')} employees`);
+            if (targeting.company_age?.length)
+                parts.push(`Target company age: ${targeting.company_age.join(', ')}`);
+        }
+        const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
+        const comments = badLeads.map(l => leadFeedbackComments[l.id]).filter(Boolean);
+        if (comments.length > 0)
+            parts.push(`Avoid profiles matching these issues: ${comments.join('; ')}`);
+        return parts.length > 0 ? parts.join('\n') : undefined;
+    };
+
+    const confirmBadFeedback = (comment: string) => {
+        if (!badFeedbackPopup) return;
+        const { leadId } = badFeedbackPopup;
+        setLeadFeedback(prev => {
+            const updated = { ...prev, [leadId]: 'bad' as const };
+            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+            return updated;
+        });
+        if (comment.trim()) {
+            setLeadFeedbackComments(prev => {
+                const updated = { ...prev, [leadId]: comment.trim() };
+                try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                return updated;
+            });
+        }
+        setBadFeedbackPopup(null);
+        setBadFeedbackDraft('');
     };
 
     // Search sessions (persisted in localStorage for campaign context)
@@ -648,6 +870,10 @@ export default function AdvancedSearchAIPage() {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+    // Scroll to bottom whenever a form is opened from the card/button clicks
+    useEffect(() => { if (cpStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cpStep]);
+    useEffect(() => { if (tgStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [tgStep]);
 
     // Sync credit balance from billing hook
     useEffect(() => {
@@ -1563,11 +1789,14 @@ export default function AdvancedSearchAIPage() {
                     : text;
             }
 
+            let searchErrorMessage: string | null = null;
+
             try {
                 // Enhance ICP description with user feedback on previous leads
                 // Use the effective searchQuery (never "yes") as the ICP base description
                 const icpBase = confirmedForSearch ? searchQuery : text;
-                let icpDesc = icpBase;
+                const bizCtx = getBusinessContext();
+                let icpDesc = bizCtx ? `${icpBase}\n\n--- Business Context ---\n${bizCtx}` : icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
@@ -1576,7 +1805,7 @@ export default function AdvancedSearchAIPage() {
                         parts.push(`\n\nUser marked these leads as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
                     }
                     if (badLeads.length > 0) {
-                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
+                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`; }).join('\n')}`);
                     }
                     icpDesc = parts.join('');
                 }
@@ -1602,6 +1831,7 @@ export default function AdvancedSearchAIPage() {
                         company_size: targeting.company_size,
                     } : undefined,
                     icp_description: icpDesc,
+                    search_enrichment: buildSearchEnrichment(),
                     useSalesNav,
                 });
 
@@ -1718,7 +1948,6 @@ export default function AdvancedSearchAIPage() {
 
             // ── Build final AI response text ──
             let finalText = aiResponseText; // May be set by lead-chat above
-            let searchErrorMessage: string | null = null;
 
             if (!finalText) {
                 // If search failed, show the error
@@ -1919,7 +2148,7 @@ export default function AdvancedSearchAIPage() {
     }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); messages.length === 0 ? onLandingSubmit() : onChatSend(); }
     };
 
     const reset = () => {
@@ -1963,7 +2192,7 @@ export default function AdvancedSearchAIPage() {
             if (icpDesc && (goodLeads.length > 0 || badLeads.length > 0)) {
                 const parts = [icpDesc];
                 if (goodLeads.length > 0) parts.push(`\n\nUser marked these as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
-                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
+                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}`; }).join('\n')}`);
                 icpDesc = parts.join('');
             }
 
@@ -1985,6 +2214,7 @@ export default function AdvancedSearchAIPage() {
                     company_size: targeting.company_size,
                 } : undefined,
                 icp_description: icpDesc,
+                search_enrichment: buildSearchEnrichment(),
                 // Use cursor when available (Unipile token); fall back to start-offset pagination
                 filters: searchCursor ? { cursor: searchCursor } : {},
                 start: searchCursor ? 0 : leads.length,
@@ -2304,6 +2534,36 @@ export default function AdvancedSearchAIPage() {
                 <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '50%' : '100%' }}>
                     <button className="adv-chat-back" onClick={reset}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                    </button>
+
+                    {/* AI Playground button — top-right */}
+                    <button
+                        onClick={() => setShowPlayground(true)}
+                        title="Configure AI context: company, ICP, sales script, etc."
+                        style={{
+                            position: 'absolute', top: '16px', right: '20px', zIndex: 10,
+                            display: 'flex', alignItems: 'center', gap: '7px',
+                            padding: '8px 14px', borderRadius: '20px',
+                            border: '1.5px solid',
+                            borderColor: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb',
+                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#ede9fe,#f5f3ff)' : '#fff',
+                            color: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280',
+                            fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb';
+                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280';
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        AI Playground
+                        {Object.values(businessProfile).some(v => v) && (
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
+                        )}
                     </button>
 
                     <div className="adv-chat-msgs">
@@ -2769,7 +3029,7 @@ export default function AdvancedSearchAIPage() {
                                                     </button>
                                                     <button
                                                         title="Bad match"
-                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                         style={{
                                                             border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
                                                             borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2872,7 +3132,7 @@ export default function AdvancedSearchAIPage() {
                                                             >👍</button>
                                                             <button
                                                                 title="Confirmed bad fit"
-                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                                 style={{
                                                                     border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
                                                                     borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2971,6 +3231,406 @@ export default function AdvancedSearchAIPage() {
                     </div>
                 )}
 
+                {/* ═══════════════════════════════════════════════
+                    AI PLAYGROUND DRAWER — Chat + Card based
+                    ═══════════════════════════════════════════════ */}
+                {showPlayground && (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 9998,
+                        display: 'flex', alignItems: 'stretch',
+                    }}>
+                        {/* Backdrop */}
+                        <div onClick={() => setShowPlayground(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }} />
+
+                        {/* Drawer */}
+                        <div style={{
+                            width: 480, maxWidth: '96vw', background: '#fff',
+                            display: 'flex', flexDirection: 'column',
+                            boxShadow: '-8px 0 40px rgba(0,0,0,.18)',
+                            animation: 'slideInRight .28s cubic-bezier(.4,0,.2,1) both',
+                            overflow: 'hidden',
+                        }}>
+                            {/* ── Header ── */}
+                            <div style={{
+                                padding: '16px 20px 12px',
+                                borderBottom: '1.5px solid #e5e7eb',
+                                background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
+                                flexShrink: 0,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 36, height: 36, borderRadius: 10,
+                                            background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>AI Playground</div>
+                                            <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
+                                                {pgIsComplete ? '✅ Business profile complete!' : 'Answer questions to power smarter lead discovery'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            title="Restart conversation"
+                                            style={{
+                                                padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
+                                                background: '#fff', color: '#6b7280', fontSize: 11.5, fontWeight: 600,
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                            }}
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                            Restart
+                                        </button>
+                                        <button onClick={() => setShowPlayground(false)} style={{
+                                            width: 30, height: 30, border: '1px solid #e5e7eb', borderRadius: 8,
+                                            background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <X size={15} color="#6b7280" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Profile completeness bar */}
+                                {(() => {
+                                    const filled = Object.values(businessProfile).filter(v => v).length;
+                                    const total = Object.keys(businessProfile).length;
+                                    const pct = Math.round((filled / total) * 100);
+                                    return (
+                                        <div style={{ marginTop: 10 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Profile completeness</span>
+                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
+                                            </div>
+                                            <div style={{ height: 5, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 99,
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                                                    width: `${pct}%`, transition: 'width .5s ease',
+                                                }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* ── Chat Messages ── */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
+                                {pgChatHistory.length === 0 && !pgBusy && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(124,58,237,.3)' }}>
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Configure Your AI Context</div>
+                                            <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                                                Answer a few questions about your business and I'll use that context to find better leads and craft smarter campaigns.
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            style={{
+                                                padding: '12px 28px', borderRadius: 12, border: 'none',
+                                                background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                color: '#fff', fontSize: 14, fontWeight: 700,
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,.4)',
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                            }}
+                                        >
+                                            <Sparkles size={16} />
+                                            Start AI Setup
+                                        </button>
+                                    </div>
+                                )}
+
+                                {pgChatHistory.map((msg, idx) => (
+                                    <div key={idx}>
+                                        {msg.role === 'user' ? (
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                <div style={{
+                                                    maxWidth: '78%', background: 'linear-gradient(135deg,#172560,#2563eb)',
+                                                    color: '#fff', borderRadius: '18px 18px 4px 18px',
+                                                    padding: '10px 14px', fontSize: 13.5, lineHeight: 1.55,
+                                                    boxShadow: '0 2px 8px rgba(23,37,96,.2)',
+                                                }}>
+                                                    {/* Hide card submission raw messages */}
+                                                    {msg.content.startsWith('[Card submission:') ? '✅ Submitted' : msg.content}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, boxShadow: '0 2px 8px rgba(124,58,237,.3)',
+                                                }}>🧠</div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        background: '#fff', borderRadius: '4px 18px 18px 18px',
+                                                        padding: '10px 14px', fontSize: 13.5, color: '#374151',
+                                                        lineHeight: 1.65, boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+                                                        border: '1px solid #f3f4f6',
+                                                    }}>
+                                                        {msg.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Typing indicator */}
+                                {pgBusy && (
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🧠</div>
+                                        <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            {[0,1,2].map(i => (
+                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Active Card Input ── */}
+                                {pgCurrentCard && !pgBusy && (() => {
+                                    const card = pgCurrentCard;
+                                    const fieldVal = pgCardValues[card.field];
+
+                                    return (
+                                        <div style={{
+                                            background: '#fff', border: '1.5px solid #ede9fe', borderRadius: 14,
+                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(124,58,237,.1)',
+                                        }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Sparkles size={12} /> {card.label}
+                                            </div>
+
+                                            {/* TEXT / TEXTAREA */}
+                                            {(card.type === 'text' || card.type === 'textarea') && (
+                                                <textarea
+                                                    rows={card.type === 'textarea' ? 3 : 1}
+                                                    value={fieldVal || ''}
+                                                    onChange={e => setPgCardValues({ [card.field]: e.target.value })}
+                                                    placeholder={card.placeholder || ''}
+                                                    autoFocus
+                                                    style={{
+                                                        width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                        padding: '9px 12px', fontSize: 13, color: '#374151',
+                                                        resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                                        lineHeight: 1.5, background: '#fafafa',
+                                                    }}
+                                                    onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
+                                                />
+                                            )}
+
+                                            {/* CHIPS (multi or single select) */}
+                                            {card.type === 'chips' && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => {
+                                                        const selected = Array.isArray(fieldVal) ? fieldVal.includes(opt) : fieldVal === opt;
+                                                        return (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => {
+                                                                    if (card.field === 'icpCompanySize' || card.field === 'campaignTone' || card.field === 'timezone') {
+                                                                        // Single select
+                                                                        setPgCardValues({ [card.field]: opt });
+                                                                    } else {
+                                                                        // Multi-select
+                                                                        const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                        const idx = current.indexOf(opt);
+                                                                        if (idx >= 0) current.splice(idx, 1); else current.push(opt);
+                                                                        setPgCardValues({ [card.field]: current });
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
+                                                                    border: selected ? 'none' : '1.5px solid #e5e7eb',
+                                                                    background: selected ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#f9fafb',
+                                                                    color: selected ? '#fff' : '#374151',
+                                                                    cursor: 'pointer', transition: 'all .12s',
+                                                                }}
+                                                            >{opt}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* RADIO */}
+                                            {card.type === 'radio' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => (
+                                                        <button
+                                                            key={opt}
+                                                            onClick={() => setPgCardValues({ [card.field]: opt })}
+                                                            style={{
+                                                                textAlign: 'left', padding: '9px 14px', borderRadius: 10, fontSize: 13,
+                                                                border: fieldVal === opt ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                                                                background: fieldVal === opt ? '#faf5ff' : '#fff',
+                                                                color: '#374151', cursor: 'pointer', fontWeight: 500,
+                                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                            }}
+                                                        >
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#7c3aed' : '#d1d5db'}`, background: fieldVal === opt ? '#7c3aed' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* TAGS */}
+                                            {card.type === 'tags' && (
+                                                <div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                                        {(Array.isArray(fieldVal) ? fieldVal : []).map((tag: string, ti: number) => (
+                                                            <div key={ti} style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                background: '#ede9fe', borderRadius: 16, padding: '4px 10px',
+                                                                fontSize: 12.5, color: '#5b21b6', fontWeight: 600,
+                                                            }}>
+                                                                {tag}
+                                                                <button onClick={() => {
+                                                                    const updated = [...fieldVal];
+                                                                    updated.splice(ti, 1);
+                                                                    setPgCardValues({ [card.field]: updated });
+                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#7c3aed', display: 'flex', lineHeight: 1 }}>
+                                                                    <X size={11} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                        <input
+                                                            value={pgTagInput}
+                                                            onChange={e => setPgTagInput(e.target.value)}
+                                                            placeholder={card.placeholder || 'Type and press Enter'}
+                                                            onKeyDown={e => {
+                                                                if ((e.key === 'Enter' || e.key === ',') && pgTagInput.trim()) {
+                                                                    e.preventDefault();
+                                                                    const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                    if (!current.includes(pgTagInput.trim())) current.push(pgTagInput.trim());
+                                                                    setPgCardValues({ [card.field]: current });
+                                                                    setPgTagInput('');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                                padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                                                            }}
+                                                            onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                            onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* HOURS */}
+                                            {card.type === 'hours' && (
+                                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>From</div>
+                                                        <input type="time" value={(fieldVal as any)?.from || '09:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), from: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                    <div style={{ marginTop: 16, color: '#9ca3af' }}>–</div>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>To</div>
+                                                        <input type="time" value={(fieldVal as any)?.to || '18:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), to: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Submit card button */}
+                                            <button
+                                                onClick={pgSubmitCard}
+                                                disabled={!fieldVal && card.type !== 'hours'}
+                                                style={{
+                                                    marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
+                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                                    color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
+                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
+                                                    transition: 'all .15s',
+                                                }}
+                                            >
+                                                Submit →
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div ref={pgMessagesEndRef} />
+                            </div>
+
+                            {/* ── Text Input Bar ── */}
+                            {pgChatHistory.length > 0 && (
+                                <div style={{
+                                    padding: '10px 14px', borderTop: '1.5px solid #e5e7eb',
+                                    background: '#fff', flexShrink: 0, display: 'flex', gap: 8,
+                                }}>
+                                    <input
+                                        value={pgInput}
+                                        onChange={e => setPgInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); pgSendMessage(pgInput); } }}
+                                        placeholder="Type a message or skip to next question…"
+                                        disabled={pgBusy}
+                                        style={{
+                                            flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 24,
+                                            padding: '9px 16px', fontSize: 13.5, outline: 'none', fontFamily: 'inherit',
+                                            background: pgBusy ? '#f9fafb' : '#fff', color: '#374151',
+                                            transition: 'border .15s',
+                                        }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                    />
+                                    <button
+                                        onClick={() => pgSendMessage(pgInput)}
+                                        disabled={!pgInput.trim() || pgBusy}
+                                        style={{
+                                            width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── Footer: Done / Apply ── */}
+                            {pgIsComplete && (
+                                <div style={{ padding: '10px 14px', borderTop: '1.5px solid #e5e7eb', background: '#f0fdf4', flexShrink: 0 }}>
+                                    <button
+                                        onClick={() => setShowPlayground(false)}
+                                        style={{
+                                            width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+                                            background: 'linear-gradient(135deg,#10b981,#059669)',
+                                            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                            boxShadow: '0 4px 14px rgba(16,185,129,.35)',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                        ✅ Profile Complete — Apply Context
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Credit Recharge Modal */}
                 {showRechargeModal && (
                     <div style={{
@@ -3058,6 +3718,98 @@ export default function AdvancedSearchAIPage() {
                 loading={summaryLoading}
                 error={summaryError}
             />
+
+            {/* ── Bad-feedback comment popup ── */}
+            {badFeedbackPopup && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', zIndex: 10000,
+                    }}
+                    onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                >
+                    <div
+                        style={{
+                            background: '#fff', borderRadius: '14px', padding: '24px',
+                            width: '90%', maxWidth: '420px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.18)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>
+                                👎 Why is this a bad match?
+                            </div>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', lineHeight: 1, padding: '2px' }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
+                            {badFeedbackPopup.leadName} — your feedback helps refine future searches.
+                        </div>
+
+                        {/* Quick-select chips */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                            {['Role not relevant', 'Wrong seniority level', 'Wrong industry', 'Wrong location', 'Missing key responsibility', 'Wrong company size'].map(chip => (
+                                <button
+                                    key={chip}
+                                    onClick={() => setBadFeedbackDraft(prev => prev ? `${prev}, ${chip}` : chip)}
+                                    style={{
+                                        padding: '5px 10px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500,
+                                        border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151',
+                                        cursor: 'pointer', transition: 'all 0.15s',
+                                    }}
+                                >
+                                    {chip}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Free-text comment */}
+                        <textarea
+                            value={badFeedbackDraft}
+                            onChange={(e) => setBadFeedbackDraft(e.target.value)}
+                            placeholder="e.g. Role doesn't include finance responsibilities, profile is too junior…"
+                            rows={3}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                border: '1.5px solid #e5e7eb', borderRadius: '8px',
+                                padding: '10px 12px', fontSize: '13px', color: '#374151',
+                                resize: 'vertical', outline: 'none', marginBottom: '14px',
+                                fontFamily: 'inherit', lineHeight: 1.5,
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = '#172560'; }}
+                            onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; }}
+                        />
+
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{
+                                    padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                                    border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', cursor: 'pointer',
+                                }}
+                            >
+                                Skip
+                            </button>
+                            <button
+                                onClick={() => confirmBadFeedback(badFeedbackDraft)}
+                                style={{
+                                    padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                                    border: 'none', background: '#172560', color: '#fff', cursor: 'pointer',
+                                }}
+                            >
+                                Mark as Bad Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ── end bad-feedback popup ── */}
 
             {/* Edit Inbound Lead Modal */}
             {editingLeadIndex !== null && editFormData && (
@@ -3583,7 +4335,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                         onMouseLeave={e => (e.currentTarget.style.background = '#f8faff')}
                                     >
                                         {/* Globe icon */}
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" flexShrink="0" style={{ flexShrink: 0 }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
                                             <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                                         </svg>
                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -5990,6 +6742,7 @@ const css = `
             /* ── ANIMATIONS ── */
             @keyframes fadeUp {from {opacity:0; transform:translateY(14px); } to {opacity:1; transform:translateY(0); } }
             @keyframes slideIn {from {opacity:0; transform:translateX(50px); } to {opacity:1; transform:translateX(0); } }
+            @keyframes slideInRight {from {opacity:0; transform:translateX(100%); } to {opacity:1; transform:translateX(0); } }
             @keyframes spin {to {transform: rotate(360deg); } }
             @keyframes pulse {0 %, 100 % { opacity: .4 } 50% {opacity:1 } }
             .fadeUp {animation: fadeUp .35s ease both; }
