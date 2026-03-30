@@ -7,6 +7,7 @@ import { isSameDay } from 'date-fns';
 
 interface MessageListProps {
   messages: Message[];
+  conversationId?: string;
 }
 
 interface ListItem {
@@ -15,7 +16,7 @@ interface ListItem {
   key: string;
 }
 
-export const MessageList = memo(function MessageList({ messages }: MessageListProps) {
+export const MessageList = memo(function MessageList({ messages, conversationId }: MessageListProps) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Build list with date separators
@@ -46,15 +47,31 @@ export const MessageList = memo(function MessageList({ messages }: MessageListPr
     return items;
   }, [messages]);
 
-  // Auto-scroll to bottom on new messages
+  // Derive the ID of the last (newest) message so we can scroll when it changes.
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+
+  // Scroll to bottom whenever:
+  //  • The conversation changes (conversationId)
+  //  • A new message arrives (lastMessageId changes)
+  //  • The total item count changes (date separators added)
+  // Using 'auto' for conversation switches (instant jump) and 'smooth' for
+  // new messages (visible animation).
   useEffect(() => {
-    if (virtuosoRef.current && listItems.length > 0) {
-      virtuosoRef.current.scrollToIndex({
-        index: listItems.length - 1,
-        behavior: 'smooth',
-      });
-    }
-  }, [listItems.length]);
+    if (!virtuosoRef.current || listItems.length === 0) return;
+    virtuosoRef.current.scrollToIndex({
+      index: listItems.length - 1,
+      behavior: 'auto',
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]); // instant jump when conversation switches
+
+  useEffect(() => {
+    if (!virtuosoRef.current || listItems.length === 0) return;
+    virtuosoRef.current.scrollToIndex({
+      index: listItems.length - 1,
+      behavior: 'smooth',
+    });
+  }, [lastMessageId, listItems.length]); // smooth scroll on new message or count change
 
   const itemContent = (index: number) => {
     const item = listItems[index];
