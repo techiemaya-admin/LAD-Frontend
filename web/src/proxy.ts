@@ -10,8 +10,29 @@ import { isOpenRoute, isAuthRoute } from './lib/routes';
  */
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  
+
   logger.debug('[Middleware] Processing request', { pathname });
+
+  // 0. If token is passed via URL query param, set it as a cookie (replacing existing one)
+  const urlToken = req.nextUrl.searchParams.get('token');
+  if (urlToken) {
+    logger.debug('[Middleware] Token found in URL query param, setting cookie');
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Remove the token param from URL to keep it clean
+    const cleanUrl = req.nextUrl.clone();
+    cleanUrl.searchParams.delete('token');
+
+    const response = NextResponse.redirect(cleanUrl);
+    response.cookies.set('token', urlToken, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+    return response;
+  }
 
   // 1. Get authentication token from cookies (check both 'token' and 'access_token' for backward compatibility)
   const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value || '';
