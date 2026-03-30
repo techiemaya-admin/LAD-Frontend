@@ -50,6 +50,8 @@ interface LeadProfile {
     industry: string;
     network_distance: string;
     locked?: boolean;
+    phone?: string;
+    email?: string;
     icp_score?: number;
     match_level?: 'strong' | 'moderate' | 'weak';
     icp_reasoning?: string;
@@ -506,6 +508,98 @@ export default function AdvancedSearchAIPage() {
         { key: 'microsoft', label: 'Microsoft Contacts',  color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
     ];
 
+    // ── AI Playground state ──────────────────────────────────────────────────
+    const [showPlayground, setShowPlayground] = useState(false);
+    const [pgSaving, setPgSaving] = useState(false);
+    const [pgGenerating, setPgGenerating] = useState<string | null>(null); // section key being generated
+    const [businessProfile, setBusinessProfile] = useState({
+        companyName: '',
+        industry: '',
+        website: '',
+        companyDescription: '',
+        productsServices: '',
+        targetCustomers: '',
+        icpJobTitles: '',
+        icpCompanySize: '',
+        icpLocations: '',
+        icpPainPoints: '',
+        sampleConversation: '',
+        operatingHours: '',
+        timezone: '',
+        geographicFocus: '',
+        valueProposition: '',
+        competitors: '',
+        campaignTone: '',
+    });
+
+    // Load business profile from backend on mount
+    useEffect(() => {
+        fetch('/api/ai-playground', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.profile && Object.keys(d.profile).length > 0) {
+                    setBusinessProfile(prev => ({ ...prev, ...d.profile }));
+                } else {
+                    // Try localStorage fallback
+                    try {
+                        const stored = localStorage.getItem('lad_business_profile');
+                        if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                    } catch { }
+                }
+            })
+            .catch(() => {
+                try {
+                    const stored = localStorage.getItem('lad_business_profile');
+                    if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                } catch { }
+            });
+    }, []);
+
+    const saveBusinessProfile = async (profile = businessProfile) => {
+        setPgSaving(true);
+        try {
+            localStorage.setItem('lad_business_profile', JSON.stringify(profile));
+            await fetch('/api/ai-playground', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ profile }),
+            });
+        } catch { }
+        setPgSaving(false);
+    };
+
+    const generateSection = async (section: string) => {
+        setPgGenerating(section);
+        try {
+            const res = await fetch('/api/ai-playground/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ section, currentProfile: businessProfile }),
+            });
+            const data = await res.json();
+            if (data.success && data.content) {
+                setBusinessProfile(prev => ({ ...prev, [section]: data.content }));
+            }
+        } catch { }
+        setPgGenerating(null);
+    };
+
+    // Build ICP description from business profile for search injection
+    const getBusinessContext = () => {
+        const p = businessProfile;
+        const parts: string[] = [];
+        if (p.companyDescription) parts.push(`Company: ${p.companyDescription}`);
+        if (p.productsServices) parts.push(`Products/Services: ${p.productsServices}`);
+        if (p.targetCustomers) parts.push(`Target Customers: ${p.targetCustomers}`);
+        if (p.icpJobTitles) parts.push(`Target Job Titles: ${p.icpJobTitles}`);
+        if (p.icpPainPoints) parts.push(`Customer Pain Points: ${p.icpPainPoints}`);
+        if (p.valueProposition) parts.push(`Value Proposition: ${p.valueProposition}`);
+        if (p.geographicFocus) parts.push(`Geographic Focus: ${p.geographicFocus}`);
+        return parts.join('\n');
+    };
+
     // Landing attach menu & web search state
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [showChatAttachMenu, setShowChatAttachMenu] = useState(false);
@@ -554,13 +648,93 @@ export default function AdvancedSearchAIPage() {
             if (stored) setLeadFeedback(JSON.parse(stored));
         } catch { }
     }, []);
-    const toggleFeedback = (leadId: string, rating: 'good' | 'bad') => {
+
+    // Comments attached to bad-feedback ratings
+    const [leadFeedbackComments, setLeadFeedbackComments] = useState<Record<string, string>>({});
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lad_lead_feedback_comments');
+            if (stored) setLeadFeedbackComments(JSON.parse(stored));
+        } catch { }
+    }, []);
+
+    // Popup state for bad-feedback comment collection
+    const [badFeedbackPopup, setBadFeedbackPopup] = useState<{ leadId: string; leadName: string } | null>(null);
+    const [badFeedbackDraft, setBadFeedbackDraft] = useState('');
+
+    const toggleFeedback = (leadId: string, rating: 'good' | 'bad', leadName?: string) => {
+        if (rating === 'bad') {
+            // If already marked bad — toggle it off directly
+            if (leadFeedback[leadId] === 'bad') {
+                setLeadFeedback(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+                setLeadFeedbackComments(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+            } else {
+                // Show comment popup before saving
+                setBadFeedbackDraft('');
+                setBadFeedbackPopup({ leadId, leadName: leadName || 'this lead' });
+            }
+            return;
+        }
         setLeadFeedback(prev => {
             const updated = { ...prev };
             if (updated[leadId] === rating) { delete updated[leadId]; } else { updated[leadId] = rating; }
             try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
+    };
+
+    // Build a natural-language enrichment string from the Targeting card form values
+    // and any bad-feedback comments — sent to the backend LLM to generate sharper keywords.
+    const buildSearchEnrichment = (): string | undefined => {
+        const parts: string[] = [];
+        if (targeting) {
+            if (targeting.decision_maker_nationality?.length)
+                parts.push(`Preferred nationality: ${targeting.decision_maker_nationality.join(', ')}`);
+            if (targeting.decision_maker_experience_level?.length)
+                parts.push(`Required experience level: ${targeting.decision_maker_experience_level.join(', ')}`);
+            if (targeting.decision_maker_skills?.length)
+                parts.push(`Required skills: ${targeting.decision_maker_skills.join(', ')}`);
+            if (targeting.decision_maker_education?.length)
+                parts.push(`Required education: ${targeting.decision_maker_education.join(', ')}`);
+            if (targeting.company_size?.length)
+                parts.push(`Target company size: ${targeting.company_size.join(', ')} employees`);
+            if (targeting.company_age?.length)
+                parts.push(`Target company age: ${targeting.company_age.join(', ')}`);
+        }
+        const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
+        const comments = badLeads.map(l => leadFeedbackComments[l.id]).filter(Boolean);
+        if (comments.length > 0)
+            parts.push(`Avoid profiles matching these issues: ${comments.join('; ')}`);
+        return parts.length > 0 ? parts.join('\n') : undefined;
+    };
+
+    const confirmBadFeedback = (comment: string) => {
+        if (!badFeedbackPopup) return;
+        const { leadId } = badFeedbackPopup;
+        setLeadFeedback(prev => {
+            const updated = { ...prev, [leadId]: 'bad' as const };
+            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+            return updated;
+        });
+        if (comment.trim()) {
+            setLeadFeedbackComments(prev => {
+                const updated = { ...prev, [leadId]: comment.trim() };
+                try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                return updated;
+            });
+        }
+        setBadFeedbackPopup(null);
+        setBadFeedbackDraft('');
     };
 
     // Search sessions (persisted in localStorage for campaign context)
@@ -648,6 +822,10 @@ export default function AdvancedSearchAIPage() {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+    // Scroll to bottom whenever a form is opened from the card/button clicks
+    useEffect(() => { if (cpStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cpStep]);
+    useEffect(() => { if (tgStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [tgStep]);
 
     // Sync credit balance from billing hook
     useEffect(() => {
@@ -1563,11 +1741,14 @@ export default function AdvancedSearchAIPage() {
                     : text;
             }
 
+            let searchErrorMessage: string | null = null;
+
             try {
                 // Enhance ICP description with user feedback on previous leads
                 // Use the effective searchQuery (never "yes") as the ICP base description
                 const icpBase = confirmedForSearch ? searchQuery : text;
-                let icpDesc = icpBase;
+                const bizCtx = getBusinessContext();
+                let icpDesc = bizCtx ? `${icpBase}\n\n--- Business Context ---\n${bizCtx}` : icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
@@ -1576,7 +1757,7 @@ export default function AdvancedSearchAIPage() {
                         parts.push(`\n\nUser marked these leads as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
                     }
                     if (badLeads.length > 0) {
-                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
+                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`; }).join('\n')}`);
                     }
                     icpDesc = parts.join('');
                 }
@@ -1602,6 +1783,7 @@ export default function AdvancedSearchAIPage() {
                         company_size: targeting.company_size,
                     } : undefined,
                     icp_description: icpDesc,
+                    search_enrichment: buildSearchEnrichment(),
                     useSalesNav,
                 });
 
@@ -1718,7 +1900,6 @@ export default function AdvancedSearchAIPage() {
 
             // ── Build final AI response text ──
             let finalText = aiResponseText; // May be set by lead-chat above
-            let searchErrorMessage: string | null = null;
 
             if (!finalText) {
                 // If search failed, show the error
@@ -1919,7 +2100,7 @@ export default function AdvancedSearchAIPage() {
     }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); messages.length === 0 ? onLandingSubmit() : onChatSend(); }
     };
 
     const reset = () => {
@@ -1963,7 +2144,7 @@ export default function AdvancedSearchAIPage() {
             if (icpDesc && (goodLeads.length > 0 || badLeads.length > 0)) {
                 const parts = [icpDesc];
                 if (goodLeads.length > 0) parts.push(`\n\nUser marked these as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
-                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
+                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}`; }).join('\n')}`);
                 icpDesc = parts.join('');
             }
 
@@ -1985,6 +2166,7 @@ export default function AdvancedSearchAIPage() {
                     company_size: targeting.company_size,
                 } : undefined,
                 icp_description: icpDesc,
+                search_enrichment: buildSearchEnrichment(),
                 // Use cursor when available (Unipile token); fall back to start-offset pagination
                 filters: searchCursor ? { cursor: searchCursor } : {},
                 start: searchCursor ? 0 : leads.length,
@@ -2304,6 +2486,36 @@ export default function AdvancedSearchAIPage() {
                 <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '50%' : '100%' }}>
                     <button className="adv-chat-back" onClick={reset}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                    </button>
+
+                    {/* AI Playground button — top-right */}
+                    <button
+                        onClick={() => setShowPlayground(true)}
+                        title="Configure AI context: company, ICP, sales script, etc."
+                        style={{
+                            position: 'absolute', top: '16px', right: '20px', zIndex: 10,
+                            display: 'flex', alignItems: 'center', gap: '7px',
+                            padding: '8px 14px', borderRadius: '20px',
+                            border: '1.5px solid',
+                            borderColor: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb',
+                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#ede9fe,#f5f3ff)' : '#fff',
+                            color: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280',
+                            fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb';
+                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280';
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        AI Playground
+                        {Object.values(businessProfile).some(v => v) && (
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
+                        )}
                     </button>
 
                     <div className="adv-chat-msgs">
@@ -2769,7 +2981,7 @@ export default function AdvancedSearchAIPage() {
                                                     </button>
                                                     <button
                                                         title="Bad match"
-                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                         style={{
                                                             border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
                                                             borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2872,7 +3084,7 @@ export default function AdvancedSearchAIPage() {
                                                             >👍</button>
                                                             <button
                                                                 title="Confirmed bad fit"
-                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                                 style={{
                                                                     border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
                                                                     borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2971,6 +3183,247 @@ export default function AdvancedSearchAIPage() {
                     </div>
                 )}
 
+                {/* ═══════════════════════════════════════════════
+                    AI PLAYGROUND DRAWER
+                    ═══════════════════════════════════════════════ */}
+                {showPlayground && (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 9998,
+                        display: 'flex', alignItems: 'stretch',
+                    }}>
+                        {/* Backdrop */}
+                        <div
+                            onClick={() => setShowPlayground(false)}
+                            style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
+                        />
+
+                        {/* Drawer */}
+                        <div style={{
+                            width: 520, maxWidth: '95vw', background: '#fff',
+                            display: 'flex', flexDirection: 'column',
+                            boxShadow: '-8px 0 40px rgba(0,0,0,.18)',
+                            animation: 'slideInRight .28s cubic-bezier(.4,0,.2,1) both',
+                            overflow: 'hidden',
+                        }}>
+                            {/* Header */}
+                            <div style={{
+                                padding: '20px 24px 16px',
+                                borderBottom: '1.5px solid #e5e7eb',
+                                background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
+                                flexShrink: 0,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 38, height: 38, borderRadius: 10,
+                                            background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>AI Playground</div>
+                                            <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 500 }}>Configure your business context for smarter lead discovery</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setShowPlayground(false)} style={{
+                                        width: 32, height: 32, border: '1px solid #e5e7eb', borderRadius: 8,
+                                        background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <X size={16} color="#6b7280" />
+                                    </button>
+                                </div>
+
+                                {/* Progress bar */}
+                                {(() => {
+                                    const filled = Object.values(businessProfile).filter(v => v).length;
+                                    const total = Object.keys(businessProfile).length;
+                                    const pct = Math.round((filled / total) * 100);
+                                    return (
+                                        <div style={{ marginTop: 14 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                                                <span style={{ fontSize: 11.5, color: '#6b7280', fontWeight: 600 }}>Profile completeness</span>
+                                                <span style={{ fontSize: 11.5, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}%</span>
+                                            </div>
+                                            <div style={{ height: 6, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 99,
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                                                    width: `${pct}%`, transition: 'width .4s ease',
+                                                }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Scrollable sections */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+
+                                {/* ── Section helper ── */}
+                                {([
+                                    {
+                                        key: null, label: '🏢 Company Overview', color: '#3b82f6',
+                                        fields: [
+                                            { key: 'companyName', label: 'Company Name', placeholder: 'e.g. Acme Corp', rows: 1 },
+                                            { key: 'industry', label: 'Industry', placeholder: 'e.g. SaaS, Real Estate, FinTech...', rows: 1 },
+                                            { key: 'website', label: 'Website', placeholder: 'e.g. https://acme.com', rows: 1 },
+                                            { key: 'companyDescription', label: 'Company Description', placeholder: 'What does your company do? Who do you serve?', rows: 3, aiKey: 'companyDescription' },
+                                        ]
+                                    },
+                                    {
+                                        key: null, label: '💼 Products & Services', color: '#0ea5e9',
+                                        fields: [
+                                            { key: 'productsServices', label: 'What you offer', placeholder: 'List your main products/services. Be specific.', rows: 4, aiKey: 'productsServices' },
+                                            { key: 'valueProposition', label: 'Value Proposition', placeholder: 'What unique value do you deliver? Why choose you?', rows: 3, aiKey: 'valueProposition' },
+                                        ]
+                                    },
+                                    {
+                                        key: null, label: '🎯 Ideal Customer Profile (ICP)', color: '#f59e0b',
+                                        fields: [
+                                            { key: 'targetCustomers', label: 'Who are your best customers?', placeholder: 'Describe company types, sizes, industries you target best', rows: 3, aiKey: 'targetCustomers' },
+                                            { key: 'icpJobTitles', label: 'Target Job Titles / Roles', placeholder: 'e.g. VP of Sales, CTO, Head of Marketing, CEO...', rows: 2 },
+                                            { key: 'icpCompanySize', label: 'Target Company Size', placeholder: 'e.g. 50-500 employees, Series A/B startups, SMBs...', rows: 1 },
+                                            { key: 'icpPainPoints', label: 'Customer Pain Points', placeholder: 'What problems do your ideal customers struggle with?', rows: 3, aiKey: 'icpPainPoints' },
+                                        ]
+                                    },
+                                    {
+                                        key: null, label: '💬 Sales Conversation', color: '#8b5cf6',
+                                        fields: [
+                                            { key: 'sampleConversation', label: 'Typical Sales Script / Opening', placeholder: 'How do you typically open a conversation with a prospect? What questions do you ask?', rows: 5, aiKey: 'sampleConversation' },
+                                            { key: 'campaignTone', label: 'Campaign Tone & Style', placeholder: 'e.g. Consultative, formal, friendly, data-driven, storytelling...', rows: 2, aiKey: 'campaignTone' },
+                                        ]
+                                    },
+                                    {
+                                        key: null, label: '⏰ Operations & Geography', color: '#10b981',
+                                        fields: [
+                                            { key: 'operatingHours', label: 'Operating Hours', placeholder: 'e.g. Mon–Fri 9am–6pm', rows: 1 },
+                                            { key: 'timezone', label: 'Timezone', placeholder: 'e.g. GST (UTC+4), EST, IST...', rows: 1 },
+                                            { key: 'geographicFocus', label: 'Geographic Target Markets', placeholder: 'e.g. UAE, Saudi Arabia, India, Southeast Asia...', rows: 2, aiKey: 'geographicFocus' },
+                                            { key: 'icpLocations', label: 'Where are your ideal customers located?', placeholder: 'e.g. Dubai, Riyadh, Singapore, London...', rows: 1 },
+                                        ]
+                                    },
+                                    {
+                                        key: null, label: '⚔️ Competition', color: '#ef4444',
+                                        fields: [
+                                            { key: 'competitors', label: 'Main Competitors', placeholder: 'Who do you compete with? What makes you different?', rows: 3 },
+                                        ]
+                                    },
+                                ] as Array<{ key: null; label: string; color: string; fields: Array<{ key: string; label: string; placeholder: string; rows: number; aiKey?: string }> }>).map((section, si) => (
+                                    <div key={si} style={{ padding: '16px 24px', borderBottom: '1px solid #f3f4f6' }}>
+                                        {/* Section header */}
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            marginBottom: 14,
+                                        }}>
+                                            <div style={{ width: 4, height: 18, borderRadius: 2, background: section.color, flexShrink: 0 }} />
+                                            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>{section.label}</span>
+                                        </div>
+
+                                        {/* Fields */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                            {section.fields.map(field => (
+                                                <div key={field.key}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{field.label}</label>
+                                                        {field.aiKey && (
+                                                            <button
+                                                                onClick={() => generateSection(field.aiKey!)}
+                                                                disabled={pgGenerating === field.aiKey}
+                                                                title="Generate with AI"
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                    padding: '2px 8px', borderRadius: 10, border: '1px solid #ede9fe',
+                                                                    background: pgGenerating === field.aiKey ? '#f3f4f6' : '#faf5ff',
+                                                                    color: '#7c3aed', fontSize: 11, fontWeight: 600,
+                                                                    cursor: pgGenerating === field.aiKey ? 'default' : 'pointer',
+                                                                    transition: 'all .15s',
+                                                                }}
+                                                            >
+                                                                {pgGenerating === field.aiKey ? (
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                                                                ) : (
+                                                                    <Sparkles size={10} />
+                                                                )}
+                                                                {pgGenerating === field.aiKey ? 'Generating...' : 'AI Fill'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <textarea
+                                                        rows={field.rows}
+                                                        value={(businessProfile as any)[field.key] || ''}
+                                                        onChange={e => setBusinessProfile(prev => ({ ...prev, [field.key]: e.target.value }))}
+                                                        placeholder={field.placeholder}
+                                                        style={{
+                                                            width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10,
+                                                            padding: '9px 12px', fontSize: 13, color: '#374151',
+                                                            resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                                            lineHeight: 1.55, background: '#fafafa',
+                                                            transition: 'border .15s',
+                                                        }}
+                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.background = '#fff'; }}
+                                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#fafafa'; }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Bottom padding */}
+                                <div style={{ height: 80 }} />
+                            </div>
+
+                            {/* Footer — Save button */}
+                            <div style={{
+                                padding: '14px 24px', borderTop: '1.5px solid #e5e7eb',
+                                background: '#fff', flexShrink: 0,
+                                display: 'flex', gap: 10, alignItems: 'center',
+                            }}>
+                                <button
+                                    onClick={async () => { await saveBusinessProfile(); setShowPlayground(false); }}
+                                    disabled={pgSaving}
+                                    style={{
+                                        flex: 1, padding: '11px 0', borderRadius: 12, border: 'none',
+                                        background: pgSaving ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                        color: pgSaving ? '#9ca3af' : '#fff',
+                                        fontSize: 14, fontWeight: 700, cursor: pgSaving ? 'default' : 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                        transition: 'all .15s', boxShadow: pgSaving ? 'none' : '0 4px 14px rgba(124,58,237,.35)',
+                                    }}
+                                >
+                                    {pgSaving ? (
+                                        <>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                            Save &amp; Apply Context
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => saveBusinessProfile()}
+                                    disabled={pgSaving}
+                                    title="Save without closing"
+                                    style={{
+                                        padding: '11px 16px', borderRadius: 12,
+                                        border: '1.5px solid #e5e7eb', background: '#fff',
+                                        color: '#6b7280', fontSize: 13, fontWeight: 600,
+                                        cursor: 'pointer', transition: 'all .15s',
+                                    }}
+                                >
+                                    Save Draft
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Credit Recharge Modal */}
                 {showRechargeModal && (
                     <div style={{
@@ -3058,6 +3511,98 @@ export default function AdvancedSearchAIPage() {
                 loading={summaryLoading}
                 error={summaryError}
             />
+
+            {/* ── Bad-feedback comment popup ── */}
+            {badFeedbackPopup && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', zIndex: 10000,
+                    }}
+                    onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                >
+                    <div
+                        style={{
+                            background: '#fff', borderRadius: '14px', padding: '24px',
+                            width: '90%', maxWidth: '420px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.18)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>
+                                👎 Why is this a bad match?
+                            </div>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', lineHeight: 1, padding: '2px' }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
+                            {badFeedbackPopup.leadName} — your feedback helps refine future searches.
+                        </div>
+
+                        {/* Quick-select chips */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                            {['Role not relevant', 'Wrong seniority level', 'Wrong industry', 'Wrong location', 'Missing key responsibility', 'Wrong company size'].map(chip => (
+                                <button
+                                    key={chip}
+                                    onClick={() => setBadFeedbackDraft(prev => prev ? `${prev}, ${chip}` : chip)}
+                                    style={{
+                                        padding: '5px 10px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500,
+                                        border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151',
+                                        cursor: 'pointer', transition: 'all 0.15s',
+                                    }}
+                                >
+                                    {chip}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Free-text comment */}
+                        <textarea
+                            value={badFeedbackDraft}
+                            onChange={(e) => setBadFeedbackDraft(e.target.value)}
+                            placeholder="e.g. Role doesn't include finance responsibilities, profile is too junior…"
+                            rows={3}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                border: '1.5px solid #e5e7eb', borderRadius: '8px',
+                                padding: '10px 12px', fontSize: '13px', color: '#374151',
+                                resize: 'vertical', outline: 'none', marginBottom: '14px',
+                                fontFamily: 'inherit', lineHeight: 1.5,
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = '#172560'; }}
+                            onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; }}
+                        />
+
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{
+                                    padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                                    border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', cursor: 'pointer',
+                                }}
+                            >
+                                Skip
+                            </button>
+                            <button
+                                onClick={() => confirmBadFeedback(badFeedbackDraft)}
+                                style={{
+                                    padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                                    border: 'none', background: '#172560', color: '#fff', cursor: 'pointer',
+                                }}
+                            >
+                                Mark as Bad Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ── end bad-feedback popup ── */}
 
             {/* Edit Inbound Lead Modal */}
             {editingLeadIndex !== null && editFormData && (
@@ -3583,7 +4128,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                         onMouseLeave={e => (e.currentTarget.style.background = '#f8faff')}
                                     >
                                         {/* Globe icon */}
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" flexShrink="0" style={{ flexShrink: 0 }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
                                             <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                                         </svg>
                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -5990,6 +6535,7 @@ const css = `
             /* ── ANIMATIONS ── */
             @keyframes fadeUp {from {opacity:0; transform:translateY(14px); } to {opacity:1; transform:translateY(0); } }
             @keyframes slideIn {from {opacity:0; transform:translateX(50px); } to {opacity:1; transform:translateX(0); } }
+            @keyframes slideInRight {from {opacity:0; transform:translateX(100%); } to {opacity:1; transform:translateX(0); } }
             @keyframes spin {to {transform: rotate(360deg); } }
             @keyframes pulse {0 %, 100 % { opacity: .4 } 50% {opacity:1 } }
             .fadeUp {animation: fadeUp .35s ease both; }
