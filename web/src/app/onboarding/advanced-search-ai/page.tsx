@@ -472,6 +472,40 @@ export default function AdvancedSearchAIPage() {
     const [directContactLeadIds, setDirectContactLeadIds] = useState<string[]>([]); // Real UUIDs for chat-entered direct contacts
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Contact picker modal state
+    const [showContactPicker, setShowContactPicker] = useState(false);
+    const [cpPickerStep, setCpPickerStep] = useState<'source' | 'contacts'>('source');
+    const [cpSourceKey, setCpSourceKey] = useState<string>('');
+    const [cpSearch, setCpSearch] = useState('');
+    const [cpContacts, setCpContacts] = useState<any[]>([]);
+    const [cpLoading, setCpLoading] = useState(false);
+    const [cpSelected, setCpSelected] = useState<Set<string>>(new Set());
+    const cpSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Contact source definitions (mirrors ChatGroupManager)
+    const CP_SOURCES = [
+        { key: 'crm',       label: 'CRM Contacts',       color: '#3b82f6', icon: 'crm',       fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/social-integration/gohighlevel/contacts/local?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.source_id || c.phone || `crm-${i}`), name: c.name || '', phone: c.phone || '', email: c.email || '', company: c.company_name || '' }));
+        }},
+        { key: 'personal_wa', label: 'Personal WA',      color: '#25D366', icon: 'personal_wa', fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.phone || `pwa-${i}`), name: c.name || '', phone: c.phone || '', email: '', company: '' }));
+        }},
+        { key: 'waba',      label: 'WA Business',         color: '#128C7E', icon: 'waba',      fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ limit: '100', offset: '0', channel: 'waba' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/whatsapp-conversations/conversations?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.conversations || data.data || []).map((c: any, i: number) => ({ id: String(c.id || `waba-${i}`), name: c.lead_name || c.contact_name || c.name || '', phone: c.lead_phone || c.phone || '', email: c.lead_email || c.email || '', company: '' }));
+        }},
+        { key: 'google',    label: 'Google Contacts',     color: '#ea4335', icon: 'google',    fetchContacts: async () => [] },
+        { key: 'microsoft', label: 'Microsoft Contacts',  color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
+    ];
+
     // Landing attach menu & web search state
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [showChatAttachMenu, setShowChatAttachMenu] = useState(false);
@@ -864,6 +898,100 @@ export default function AdvancedSearchAIPage() {
         setTimeout(() => doSend(input.trim()), 100);
         setInput('');
     }, [input]);
+
+    /* ── Contact Picker handlers ── */
+    const fetchCpContacts = useCallback(async (sourceKey: string, q: string) => {
+        const source = CP_SOURCES.find(s => s.key === sourceKey);
+        if (!source) { setCpContacts([]); return; }
+        setCpLoading(true);
+        try {
+            const results = await source.fetchContacts(q);
+            setCpContacts(results);
+        } catch {
+            setCpContacts([]);
+        }
+        setCpLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const openContactPicker = useCallback(() => {
+        setShowContactPicker(true);
+        setCpPickerStep('source');
+        setCpSourceKey('');
+        setCpSearch('');
+        setCpSelected(new Set());
+        setCpContacts([]);
+    }, []);
+
+    const selectCpSource = useCallback(async (key: string) => {
+        setCpSourceKey(key);
+        setCpPickerStep('contacts');
+        setCpSearch('');
+        setCpSelected(new Set());
+        await fetchCpContacts(key, '');
+    }, [fetchCpContacts]);
+
+    const handleCpSearch = useCallback((q: string) => {
+        setCpSearch(q);
+        if (cpSearchTimer.current) clearTimeout(cpSearchTimer.current);
+        cpSearchTimer.current = setTimeout(() => fetchCpContacts(cpSourceKey, q), 350);
+    }, [fetchCpContacts, cpSourceKey]);
+
+    const toggleCpContact = useCallback((id: string) => {
+        setCpSelected(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    }, []);
+
+    const toggleCpSelectAll = useCallback(() => {
+        setCpSelected(prev =>
+            prev.size === cpContacts.length
+                ? new Set()
+                : new Set(cpContacts.map((c: any) => c.id))
+        );
+    }, [cpContacts]);
+
+    const confirmContactPicker = useCallback(async () => {
+        const selected = cpContacts.filter((c: any) => cpSelected.has(c.id));
+        if (!selected.length) return;
+
+        const asInbound: ParsedInboundLead[] = selected.map((c: any) => ({
+            firstName: c.first_name || (typeof c.name === 'string' ? c.name.split(' ')[0] : '') || '',
+            lastName: c.last_name || (typeof c.name === 'string' ? c.name.split(' ').slice(1).join(' ') : '') || '',
+            companyName: c.company || c.company_name || '',
+            linkedinProfile: c.linkedin_url || '',
+            email: c.email || '',
+            whatsapp: c.phone || '',
+            phone: c.phone || '',
+            website: c.website || '',
+            notes: c.notes || '',
+        }));
+
+        setInboundLeads(asInbound);
+        setInboundMode(true);
+        setShowContactPicker(false);
+
+        const counts = {
+            total: asInbound.length,
+            linkedin: asInbound.filter(l => l.linkedinProfile).length,
+            email: asInbound.filter(l => l.email).length,
+            whatsapp: asInbound.filter(l => l.whatsapp).length,
+            phone: asInbound.filter(l => l.phone).length,
+            website: asInbound.filter(l => l.website).length,
+        };
+
+        const sourceName = CP_SOURCES.find(s => s.key === cpSourceKey)?.label || 'Contacts';
+        setMessages(p => [...p,
+            { id: `u-${Date.now()}`, role: 'user', text: `👥 Selected ${asInbound.length} contact${asInbound.length !== 1 ? 's' : ''} from ${sourceName}`, ts: new Date() },
+            { id: `a-${Date.now()}`, role: 'ai', text: '', ts: new Date(), inboundAction: 'summary', inboundSummary: counts },
+        ]);
+
+        // Auto-start campaign checkpoint flow
+        setTimeout(() => setCpStep(0), 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cpContacts, cpSelected, cpSourceKey]);
 
     /* ── Core send logic ── */
     /* ── Inbound file handler ── */
@@ -2076,6 +2204,15 @@ export default function AdvancedSearchAIPage() {
                                             <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
                                         </div>
                                     </div>
+                                    <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowAttachMenu(false); }}>
+                                        <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        </div>
+                                        <div>
+                                            <div className="adv-attach-label">Select contacts</div>
+                                            <div className="adv-attach-sub">Pick from your existing contacts</div>
+                                        </div>
+                                    </div>
                                     <div className={`adv-attach-item${webSearchEnabled ? ' adv-attach-active' : ''}`} onClick={() => { setWebSearchEnabled(!webSearchEnabled); setShowAttachMenu(false); }}>
                                         <div className="adv-attach-icon" style={{background: webSearchEnabled ? '#dbeafe' : '#e0f2fe'}}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={webSearchEnabled ? '#2563eb' : '#0284c7'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -2318,6 +2455,15 @@ export default function AdvancedSearchAIPage() {
                                                 <div>
                                                     <div className="adv-attach-label">Import leads</div>
                                                     <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
+                                                </div>
+                                            </div>
+                                            <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
+                                                <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                                </div>
+                                                <div>
+                                                    <div className="adv-attach-label">Select contacts</div>
+                                                    <div className="adv-attach-sub">Pick from your existing contacts</div>
                                                 </div>
                                             </div>
                                             <div className="adv-attach-divider"/>
@@ -3139,6 +3285,160 @@ export default function AdvancedSearchAIPage() {
                                 {deletingLead ? 'Removing...' : 'Remove Lead'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Contact Picker Modal ── */}
+            {showContactPicker && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}
+                    onClick={() => setShowContactPicker(false)}
+                >
+                    <div
+                        style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '82vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 48px rgba(0,0,0,0.18)', overflow: 'hidden' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* ── Modal Header ── */}
+                        <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {cpPickerStep === 'contacts' && (
+                                        <button onClick={() => setCpPickerStep('source')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px 4px', marginLeft: '-4px', display: 'flex', alignItems: 'center' }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                                        </button>
+                                    )}
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
+                                            {cpPickerStep === 'source' ? 'Select contact source' : (CP_SOURCES.find(s => s.key === cpSourceKey)?.label || 'Contacts')}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '1px' }}>
+                                            {cpPickerStep === 'source' ? 'Choose where to pull contacts from' : 'Select contacts for your campaign'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowContactPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── STEP 1: Source selection ── */}
+                        {cpPickerStep === 'source' && (
+                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                                {CP_SOURCES.map(src => (
+                                    <div
+                                        key={src.key}
+                                        onClick={() => selectCpSource(src.key)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', transition: 'background 0.1s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf5ff')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                    >
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: src.color, flexShrink: 0 }} />
+                                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#111827', flex: 1 }}>{src.label}</span>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* ── STEP 2: Contact list ── */}
+                        {cpPickerStep === 'contacts' && (<>
+                            {/* Search bar */}
+                            <div style={{ padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={cpSearch}
+                                        onChange={e => handleCpSearch(e.target.value)}
+                                        placeholder="Search by name, phone or email…"
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 12px 7px 30px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', outline: 'none', color: '#111827', background: '#f9fafb' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Select-all row */}
+                            {!cpLoading && cpContacts.length > 0 && (
+                                <div
+                                    onClick={toggleCpSelectAll}
+                                    style={{ padding: '8px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#fafafa' }}
+                                >
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#7c3aed', borderRadius: '1px' }}/>}
+                                    </div>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
+                                        {cpSelected.size === cpContacts.length ? 'Deselect all' : `Select all ${cpContacts.length} shown`}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* List */}
+                            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                                {cpLoading ? (
+                                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                                        <svg style={{ margin: '0 auto 8px', display: 'block', animation: 'spin 1s linear infinite' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".3"/><path d="M21 12a9 9 0 00-9-9"/></svg>
+                                        Loading contacts…
+                                    </div>
+                                ) : cpContacts.length === 0 ? (
+                                    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="1.5" style={{ margin: '0 auto 8px', display: 'block' }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#6b7280' }}>No contacts found</div>
+                                        <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>{cpSearch ? 'Try a different search term' : 'No contacts in this source'}</div>
+                                    </div>
+                                ) : cpContacts.map((c: any) => {
+                                    const checked = cpSelected.has(c.id);
+                                    const name = c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+                                    const sub = [c.company || c.company_name, c.email || c.phone].filter(Boolean).join(' · ');
+                                    const initl = name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+                                    return (
+                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#faf5ff' : 'white', transition: 'background 0.1s' }}>
+                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+                                            </div>
+                                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(name), flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: '#fff' }}>{initl}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+                                                {sub && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+                                            </div>
+                                            {c.phone && (
+                                                <span style={{ fontSize: '11px', color: '#6b7280', flexShrink: 0 }}>
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '2px' }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.1 10.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Footer */}
+                            <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                                    {cpSelected.size > 0
+                                        ? <><strong style={{ color: '#7c3aed' }}>{cpSelected.size}</strong> selected</>
+                                        : 'None selected'
+                                    }
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => setCpPickerStep('source')} style={{ padding: '7px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#6b7280', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={confirmContactPicker}
+                                        disabled={cpSelected.size === 0}
+                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#7c3aed' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                        Start Campaign{cpSelected.size > 0 ? ` (${cpSelected.size})` : ''}
+                                    </button>
+                                </div>
+                            </div>
+                        </>)}
                     </div>
                 </div>
             )}
