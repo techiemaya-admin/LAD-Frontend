@@ -89,6 +89,15 @@ interface ChatMsg {
     webSearchResult?: boolean;
     sources?: Array<{ title: string; url: string }>;
     leadDetailForm?: boolean;
+    outreach_journey?: OutreachStep[];
+}
+
+interface OutreachStep {
+    channel: 'linkedin' | 'email' | 'whatsapp' | 'voice';
+    label: string;
+    action: string;
+    reason: string;
+    recommended: boolean;
 }
 
 /* ═══════════════════════════════════════════════
@@ -99,6 +108,46 @@ function toArr(v: any): string[] {
     if (Array.isArray(v)) return v.filter((x: any) => typeof x === 'string' && x.trim());
     if (typeof v === 'string' && v.trim()) return [v];
     return [];
+}
+
+function buildOutreachJourney(leads: LeadProfile[], targeting: LeadTargeting | null): OutreachStep[] {
+    const hasEmail   = leads.some(l => l.email);
+    const hasPhone   = leads.some(l => l.phone);
+    const hasLi      = leads.some(l => l.profile_url?.startsWith('http'));
+    const locs       = (targeting?.locations || []).map(l => l.toLowerCase());
+    const isGCC      = locs.some(l => ['uae','dubai','saudi','gcc','qatar','kuwait','bahrain','oman','riyadh','abu dhabi'].some(g => l.includes(g)));
+    const isEnterprise = (targeting?.company_size || []).some(s => s.includes('1000'));
+
+    return [
+        {
+            channel: 'linkedin',
+            label: 'LinkedIn',
+            action: 'Visit profile → Connect → Message',
+            reason: hasLi ? 'LinkedIn profiles found — warm up with a connection request first.' : 'Start with LinkedIn to build familiarity before reaching out.',
+            recommended: true,
+        },
+        {
+            channel: 'email',
+            label: 'Email',
+            action: 'Personalised cold email + follow-up sequence',
+            reason: hasEmail ? 'Email addresses available — follow up 3–5 days after LinkedIn connect.' : 'Enrich emails via enrichment tools after LinkedIn connection is accepted.',
+            recommended: true,
+        },
+        {
+            channel: 'whatsapp',
+            label: 'WhatsApp',
+            action: 'Direct message, broadcast + follow-up sequence',
+            reason: isGCC ? 'GCC region — WhatsApp has very high open rates (98%). Use after email.' : 'Add WhatsApp as a follow-up channel for warm leads.',
+            recommended: true,
+        },
+        {
+            channel: 'voice',
+            label: 'Voice Call',
+            action: 'AI-powered voice call with script',
+            reason: isEnterprise ? 'Enterprise deals benefit from a personal call to qualify intent.' : 'Reserve voice calls for high-priority leads who haven\'t responded.',
+            recommended: true,
+        },
+    ];
 }
 
 function avatarColor(name: string): string {
@@ -809,6 +858,7 @@ export default function AdvancedSearchAIPage() {
     const [lastTargeting, setLastTargeting] = useState<LeadTargeting | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [noMoreLeads, setNoMoreLeads] = useState(false);
+    const [targetingFiltersActive, setTargetingFiltersActive] = useState(false); // true when targeting card filters applied
 
     // Credits & unlock state
     const [showRechargeModal, setShowRechargeModal] = useState(false);
@@ -1350,7 +1400,7 @@ export default function AdvancedSearchAIPage() {
             if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
             if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
             if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
-            summaryText += `\n\n👉 Click **"Create Campaign Checkpoints"** to set up your campaign with these leads!`;
+            summaryText += `\n\n👉 Click **"Create Outreach Journey"** to set up your campaign with these leads!`;
 
             setMessages(p => p.filter(m => m.id !== processingId).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
@@ -1365,7 +1415,7 @@ export default function AdvancedSearchAIPage() {
         } finally { setBusy(false); }
     }, []);
 
-    const doSend = useCallback(async (text: string) => {
+    const doSend = useCallback(async (text: string, opts?: { targetingOverride?: LeadTargeting }) => {
         if (!text.trim() || busy) return;
         // Enforce 10-message limit only when user has no credits
         if (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) return;
@@ -1457,7 +1507,7 @@ export default function AdvancedSearchAIPage() {
                 const emailCount = inboundLeads.filter(l => l.email).length;
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Campaign Checkpoints"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Campaign Checkpoints"** button to get started!`,
+                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Outreach Journey"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Outreach Journey"** button to get started!`,
                     ts: new Date(),
                     targeting: targeting || undefined,
                 }));
@@ -1468,7 +1518,7 @@ export default function AdvancedSearchAIPage() {
             if (isRefine) {
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Campaign Checkpoints"** to set up your campaign!`,
+                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Outreach Journey"** to set up your campaign!`,
                     ts: new Date(),
                     targeting: targeting || undefined,
                 }));
@@ -1491,7 +1541,7 @@ export default function AdvancedSearchAIPage() {
                 if (counts.whatsapp > 0) summaryParts.push(`• **WhatsApp Numbers:** ${counts.whatsapp}`);
                 if (counts.phone > 0) summaryParts.push(`• **Phone Numbers:** ${counts.phone}`);
                 if (counts.website > 0) summaryParts.push(`• **Websites:** ${counts.website}`);
-                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Campaign Checkpoints"**!`);
+                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Outreach Journey"**!`);
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
                     text: summaryParts.join('\n'),
@@ -1617,8 +1667,8 @@ export default function AdvancedSearchAIPage() {
             let shouldRunSearch = false;
             let aiResponseText = '';
             let aiOpts: { label: string; value: string }[] | undefined;
-            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting
-            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : targeting;
+            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting (or override from caller)
+            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : (opts?.targetingOverride || targeting);
 
             if (confirmedForSearch) {
                 // User confirmed the search preview — skip lead-chat and go straight to search
@@ -1629,7 +1679,7 @@ export default function AdvancedSearchAIPage() {
                     const chatD = await aiChat.sendLeadChatMessage({
                         message: text,
                         history: historySnapshot,
-                        currentTargeting: targeting,
+                        currentTargeting: opts?.targetingOverride || targeting,
                         pendingIntent: (pendingIntent as string | null),
                         conversationSummary,
                     });
@@ -1742,6 +1792,7 @@ export default function AdvancedSearchAIPage() {
             // ── CASE 2: Run LinkedIn search ──
             let ext: LeadTargeting | null = updatedTargetState;
             let realLeads: LeadProfile[] = [];
+            let rawSearchResults: any[] = [];
             let searchTotal = 0;
             let icpWasApplied = false;
 
@@ -1856,6 +1907,7 @@ export default function AdvancedSearchAIPage() {
                     setCursorHistory([null, nextCursor]); // page1=null(start), page2=nextCursor
                     icpWasApplied = !!d.icp_applied;
                     if (Array.isArray(d.results) && d.results.length > 0) {
+                        rawSearchResults = d.results;
                         realLeads = d.results.map((item: any, idx: number) => ({
                             id: item.id || item.provider_id || `lead-${idx}`,
                             name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (item.profile_url ? 'LinkedIn User' : 'Contact'),
@@ -1964,10 +2016,46 @@ export default function AdvancedSearchAIPage() {
                 setTimeout(() => setShowPanel('leads'), 500);
             }
 
+            const journey = realLeads.length > 0 ? buildOutreachJourney(realLeads, ext) : undefined;
             setMessages(p => p.filter(m => m.id !== lid).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: finalText, ts: new Date(),
                 targeting: ext || undefined, options: aiOpts, leads: realLeads.length > 0 ? realLeads.slice(0, 3) : undefined,
+                outreach_journey: journey,
             }));
+
+            // ── Persist search results to ai_messages.message_data (non-blocking) ──
+            if (rawSearchResults.length > 0) {
+                const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || '') : '';
+                fetch('/api/ai-icp-assistant/messages/batch-save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({
+                        sessionId: convId,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: text,
+                                timestamp: new Date().toISOString(),
+                                messageData: { source: 'advanced_search_ai' },
+                            },
+                            {
+                                role: 'ai',
+                                content: finalText,
+                                timestamp: new Date().toISOString(),
+                                messageData: {
+                                    source: 'advanced_search_ai',
+                                    search_query: text,
+                                    targeting: ext || null,
+                                    total_results: searchTotal,
+                                    icp_applied: icpWasApplied,
+                                    leads: rawSearchResults,
+                                },
+                            },
+                        ],
+                    }),
+                }).catch(e => console.warn('[batch-save] Failed to persist search results:', e));
+            }
         } catch (err) {
             console.error('Error:', err);
             setMessages(p => p.filter(m => m.id !== lid).concat({
@@ -2075,7 +2163,7 @@ export default function AdvancedSearchAIPage() {
                 // Add campaign overview message — msg.targeting triggers the 3-card UI
                 setMessages(p => [...p, {
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `✅ **Contact added!** Here's your campaign overview — click **"Create Campaign Checkpoints"** to proceed:`,
+                    text: `✅ **Contact added!** Here's your campaign overview — click **"Create Outreach Journey"** to proceed:`,
                     ts: new Date(),
                     targeting: targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] },
                 }]);
@@ -2127,11 +2215,22 @@ export default function AdvancedSearchAIPage() {
             ? `Refine my targeting with these additional criteria:\n${filterParts.join('\n')}`
             : 'Confirm my current targeting criteria';
 
+        // Clear previous results so the UI shows fresh leads after the new search
+        if (filterParts.length > 0) {
+            setLeads([]);
+            setSearchPage(1);
+            setTotalResults(0);
+            setSearchCursor(null);
+            setCursorHistory([null]);
+            setNoMoreLeads(false);
+            setTargetingFiltersActive(true);
+        }
+
         // Close the targeting form
         setTgStep(-1);
 
-        // Send to AI for refinement - this will trigger the search
-        doSend(refinementMessage);
+        // Send to AI for refinement with explicit targeting override so stale state isn't used
+        doSend(refinementMessage, { targetingOverride: updatedTargeting });
     }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
@@ -2165,6 +2264,7 @@ export default function AdvancedSearchAIPage() {
         setTgCompanyAge([]);
         setTgEducation([]);
         setTgSkills([]);
+        setTargetingFiltersActive(false);
     };
 
     /* ── Load more leads (append to existing list) ── */
@@ -2944,10 +3044,14 @@ export default function AdvancedSearchAIPage() {
                                         )}
                                         <div className="adv-lead-info">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                                    {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
-                                                </a>
-                                                {lead.icp_score !== undefined && (
+                                                {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                    <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }} onClick={e => e.stopPropagation()}>
+                                                        {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
+                                                    </a>
+                                                ) : (
+                                                    <span className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
+                                                )}
+                                                {!targetingFiltersActive && lead.icp_score !== undefined && (
                                                     <span style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                         padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
@@ -2962,7 +3066,7 @@ export default function AdvancedSearchAIPage() {
                                                 {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
                                             </div>
                                             {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
-                                            {lead.icp_reasoning && (
+                                            {!targetingFiltersActive && lead.icp_reasoning && (
                                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
                                                     {lead.icp_reasoning}
                                                 </div>
@@ -4435,7 +4539,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
                         <button className="adv-act-btn" style={{
                             padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
-                        }} onClick={onStartCheckpoints}>Create Campaign Checkpoints</button>
+                        }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
                     </div>
                 )}
 
@@ -4477,6 +4581,103 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.options && msg.options.length > 0 && (
                     <div className="adv-opts">
                         {msg.options.map((o, i) => <button key={i} className="adv-opt-btn" onClick={() => onOpt(o.value)}>{o.label}</button>)}
+                    </div>
+                )}
+
+                {/* ── Outreach Journey Stepper ── */}
+                {msg.outreach_journey && msg.outreach_journey.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            Suggested Outreach Journey
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {msg.outreach_journey.map((step, si) => {
+                                const icons: Record<string, React.ReactNode> = {
+                                    linkedin: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                    ),
+                                    email: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                    ),
+                                    whatsapp: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                    ),
+                                    voice: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                    ),
+                                };
+                                const bgColor = step.recommended
+                                    ? step.channel === 'linkedin' ? '#0a66c2'
+                                        : step.channel === 'email' ? '#4f46e5'
+                                        : step.channel === 'whatsapp' ? '#25d366'
+                                        : '#f97316'
+                                    : '#f3f4f6';
+                                return (
+                                    <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100px' }}>
+                                            {/* Icon circle with custom tooltip */}
+                                            <div style={{ position: 'relative', display: 'inline-flex' }}
+                                                onMouseEnter={e => {
+                                                    const tip = (e.currentTarget as HTMLElement).querySelector('.journey-tip') as HTMLElement;
+                                                    if (tip) tip.style.opacity = '1';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    const tip = (e.currentTarget as HTMLElement).querySelector('.journey-tip') as HTMLElement;
+                                                    if (tip) tip.style.opacity = '0';
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: '44px', height: '44px', borderRadius: '50%',
+                                                    background: bgColor,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    boxShadow: step.recommended ? `0 4px 12px ${bgColor}55` : 'none',
+                                                    border: step.recommended ? 'none' : '1.5px solid #e5e7eb',
+                                                    flexShrink: 0, cursor: 'default',
+                                                }}>
+                                                    {icons[step.channel]}
+                                                </div>
+                                                {/* Custom tooltip */}
+                                                <div className="journey-tip" style={{
+                                                    opacity: 0, pointerEvents: 'none', transition: 'opacity 0.15s',
+                                                    position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    background: '#1f2937', color: '#fff', fontSize: '11px',
+                                                    borderRadius: '8px', padding: '6px 10px', width: '160px',
+                                                    lineHeight: 1.4, textAlign: 'center', zIndex: 50,
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                    whiteSpace: 'normal',
+                                                }}>
+                                                    {step.reason}
+                                                    {/* Arrow */}
+                                                    <div style={{
+                                                        position: 'absolute', top: '100%', left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        borderWidth: '5px', borderStyle: 'solid',
+                                                        borderColor: '#1f2937 transparent transparent transparent',
+                                                    }} />
+                                                </div>
+                                            </div>
+                                            {/* Label */}
+                                            <div style={{ fontSize: '11px', fontWeight: 700, color: step.recommended ? '#111827' : '#9ca3af', marginTop: '6px', textAlign: 'center' }}>{step.label}</div>
+                                            {/* Action */}
+                                            <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', textAlign: 'center', lineHeight: 1.3, padding: '0 4px' }}>{step.action}</div>
+                                            {step.recommended && (
+                                                <div style={{ marginTop: '4px', fontSize: '9px', background: '#eff6ff', color: '#2563eb', borderRadius: '8px', padding: '1px 6px', fontWeight: 700, textTransform: 'uppercase' }}>Recommended</div>
+                                            )}
+                                        </div>
+                                        {/* Connector arrow between steps */}
+                                        {si < msg.outreach_journey!.length - 1 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', paddingTop: '14px', flexShrink: 0 }}>
+                                                <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+                                                    <path d="M0 8h20M16 4l4 4-4 4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
