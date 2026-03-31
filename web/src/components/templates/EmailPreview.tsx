@@ -195,7 +195,7 @@ export default function EmailPreview({
         }}
       >
         <iframe
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts allow-forms"
           srcDoc={htmlWithStyles}
           style={{
             width: '100%',
