@@ -25,11 +25,11 @@ function getAuthHeaders(req: NextRequest): Record<string, string> {
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const backend = getBackendBase();
-    const { id } = params;
+    const { id } = await params;
     const url = `${backend}/api/campaigns/email-templates/${id}`;
 
     const headers = getAuthHeaders(req);
@@ -57,12 +57,12 @@ export async function GET(
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await req.json().catch(() => ({}));
     const backend = getBackendBase();
-    const { id } = params;
+    const { id } = await params;
     const url = `${backend}/api/campaigns/email-templates/${id}`;
 
     const headers = getAuthHeaders(req);
@@ -91,11 +91,11 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const backend = getBackendBase();
-    const { id } = params;
+    const { id } = await params;
     const url = `${backend}/api/campaigns/email-templates/${id}`;
 
     const headers = getAuthHeaders(req);

@@ -7,12 +7,12 @@ function getBackendBase() {
 // PUT /api/users/:userId/role
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const body = await req.json().catch(() => ({}));
     const backend = getBackendBase();
-    const { userId } = params;
+    const { userId } = await params;
     const token = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
