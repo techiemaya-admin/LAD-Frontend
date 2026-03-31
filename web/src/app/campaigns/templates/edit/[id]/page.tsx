@@ -15,9 +15,10 @@ export default function EditTemplatePage() {
   useEffect(() => {
     const loadTemplate = async () => {
       try {
-        // Validate template ID
-        if (!templateId || templateId === 'undefined') {
-          throw new Error('Invalid template ID');
+        // Validate template ID — must be a valid UUID
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!templateId || !UUID_REGEX.test(templateId)) {
+          throw new Error(`Invalid template ID: "${templateId}". Please navigate from the Templates list.`);
         }
 
         console.log('Loading template with ID:', templateId);

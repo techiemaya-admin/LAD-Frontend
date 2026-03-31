@@ -746,16 +746,12 @@ export default function AdvancedSearchAIPage() {
     const buildSearchEnrichment = (): string | undefined => {
         const parts: string[] = [];
         if (targeting) {
-            if (targeting.decision_maker_nationality?.length)
-                parts.push(`Preferred nationality: ${targeting.decision_maker_nationality.join(', ')}`);
-            if (targeting.decision_maker_experience_level?.length)
-                parts.push(`Required experience level: ${targeting.decision_maker_experience_level.join(', ')}`);
+            // Note: nationality, experience_level, and company_size go into targeting_filters
+            // (structured filter), NOT here. Only free-text feedback goes here.
             if (targeting.decision_maker_skills?.length)
                 parts.push(`Required skills: ${targeting.decision_maker_skills.join(', ')}`);
             if (targeting.decision_maker_education?.length)
                 parts.push(`Required education: ${targeting.decision_maker_education.join(', ')}`);
-            if (targeting.company_size?.length)
-                parts.push(`Target company size: ${targeting.company_size.join(', ')} employees`);
             if (targeting.company_age?.length)
                 parts.push(`Target company age: ${targeting.company_age.join(', ')}`);
         }
@@ -812,6 +808,7 @@ export default function AdvancedSearchAIPage() {
     const [lastIcpDescription, setLastIcpDescription] = useState<string>('');
     const [lastTargeting, setLastTargeting] = useState<LeadTargeting | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [noMoreLeads, setNoMoreLeads] = useState(false);
 
     // Credits & unlock state
     const [showRechargeModal, setShowRechargeModal] = useState(false);
@@ -864,7 +861,7 @@ export default function AdvancedSearchAIPage() {
         setLeadFeedback({}); setSearchSessions([]); setSearchHistory([]);
         setLeadCount(10); setSearchPage(1); setTotalResults(0);
         setSearchCursor(null); setLastSearchQuery(''); setLastIcpDescription('');
-        setLastTargeting(null); setLoadingMore(false);
+        setLastTargeting(null); setLoadingMore(false); setNoMoreLeads(false);
         setFilteredLeads([]); setShowFilteredLeads(false);
         setWebSearchEnabled(false);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2165,6 +2162,7 @@ export default function AdvancedSearchAIPage() {
         setSearchPage(1);
         setTotalResults(0);
         setSearchCursor(null);
+        setNoMoreLeads(false);
         setCursorHistory([null]);
         setLastSearchQuery('');
         setLastIcpDescription('');
@@ -2259,6 +2257,7 @@ export default function AdvancedSearchAIPage() {
             } else {
                 // No more results
                 setSearchCursor(null);
+                setNoMoreLeads(true);
             }
         } catch (e) { console.error('[LoadMore] error', e); }
         setLoadingMore(false);
@@ -2591,7 +2590,7 @@ export default function AdvancedSearchAIPage() {
                                         : 'Qualifying...'
                                 }
                                 : m;
-                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} />;
+                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
                         })}
                         </div>
 
@@ -3186,7 +3185,7 @@ export default function AdvancedSearchAIPage() {
                             {/* Get More Leads button — show when there are leads and either a
                                 cursor token is available or the backend reported more total
                                 results than we're currently displaying */}
-                            {!inboundMode && leads.length > 0 && (searchCursor || totalResults > leads.length) && (
+                            {!inboundMode && leads.length > 0 && !noMoreLeads && (
                                 <div style={{
                                     display: 'flex', justifyContent: 'center',
                                     padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
@@ -4207,7 +4206,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean }) {
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -4391,14 +4390,17 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     <div className="adv-result-cards" style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
                         {/* Targeting card */}
                         <div className="adv-rc" onClick={onStartTargeting} style={{
-                            flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
+                            flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
                             <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
-                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#6b7280", display: "flex", alignItems: "center", gap: "4px" }}>
-                                    <span style={{ color: "#10b981" }}>✓</span> Param extracted
-                                </div>
+                                {!useSalesNav && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                                        <span style={{ fontSize: "10px", color: "#d97706", fontWeight: 500, lineHeight: 1.3 }}>Sales Navigator required for narrow filters</span>
+                                    </div>
+                                )}
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
@@ -4721,6 +4723,20 @@ function CheckpointFormInline({
     const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
     const createEmailTemplate = useCreateEmailTemplate();
 
+    // LinkedIn account daily limit (for All Leads label)
+    const [linkedInDailyLimit, setLinkedInDailyLimit] = useState<number | null>(null);
+    useEffect(() => {
+        fetch('/api/social-integration/linkedin/accounts', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.accounts?.length) {
+                    const limit = d.accounts[0].default_daily_limit;
+                    if (limit) setLinkedInDailyLimit(limit);
+                }
+            })
+            .catch(() => {});
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     // SDK hook — connected Gmail / Outlook accounts from integration tab
     const { data: connectedSenders = [] } = useConnectedEmailSenders();
 
@@ -4813,9 +4829,27 @@ function CheckpointFormInline({
             .catch(() => {});
     }, [nextChannels, liTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Toggle a LinkedIn channel action (multi-select)
+    // Toggle a LinkedIn channel action (multi-select) with dependency auto-select:
+    // - selecting 'connect'  → also selects 'profile_view'
+    // - selecting 'message'  → also selects 'profile_view' and 'connect'
+    // - deselecting follows the reverse: deselecting 'profile_view' also deselects 'connect'+'message'; deselecting 'connect' also deselects 'message'
     const toggleLiChannelAction = (id: string) => {
-        setLiChannelActions(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+        setLiChannelActions(prev => {
+            const isOn = prev.includes(id);
+            if (!isOn) {
+                // turning ON
+                const toAdd = new Set([...prev, id]);
+                if (id === 'connect') toAdd.add('profile_view');
+                if (id === 'message') { toAdd.add('profile_view'); toAdd.add('connect'); }
+                return Array.from(toAdd);
+            } else {
+                // turning OFF
+                let toRemove = [id];
+                if (id === 'profile_view') toRemove = ['profile_view', 'connect', 'message'];
+                if (id === 'connect') toRemove = ['connect', 'message'];
+                return prev.filter(a => !toRemove.includes(a));
+            }
+        });
     };
 
     // Save a new LinkedIn message template
@@ -5442,10 +5476,13 @@ function CheckpointFormInline({
                                 { value: '75', label: 'Above 75%', desc: 'High quality leads' },
                                 { value: '50', label: 'Above 50%', desc: 'Moderate fit and above' },
                                 { value: '25', label: 'Above 25%', desc: 'Include most leads' },
-                                { value: '0', label: 'All Leads', desc: 'No filtering — include everyone' },
+                                { value: '0', label: 'All Leads — Within the LinkedIn Account Limits', desc: linkedInDailyLimit ? `Up to ${linkedInDailyLimit} leads/day based on your account limit` : 'No filtering — include everyone' },
                             ].map((opt, i) => {
                                 const selected = icpThreshold === opt.value;
                                 const count = leads.filter(l => (l.icp_score ?? 0) >= parseInt(opt.value)).length;
+                                const displayCount = opt.value === '0' && linkedInDailyLimit && count > linkedInDailyLimit
+                                    ? linkedInDailyLimit
+                                    : count;
                                 return (
                                     <div key={opt.value} onClick={() => setIcpThreshold(opt.value)} style={optStyle(selected)}>
                                         <div style={numBadge(i + 1, selected)}>{selected ? '✓' : i + 1}</div>
@@ -5454,7 +5491,7 @@ function CheckpointFormInline({
                                             <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{opt.desc}</div>
                                         </div>
                                         <div style={{ fontSize: '12px', fontWeight: 700, color: selected ? '#172560' : '#9ca3af', whiteSpace: 'nowrap' }}>
-                                            {count} lead{count !== 1 ? 's' : ''}
+                                            {displayCount} lead{displayCount !== 1 ? 's' : ''}
                                         </div>
                                     </div>
                                 );

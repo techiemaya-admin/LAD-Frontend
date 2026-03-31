@@ -1,48 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutTemplate, Mail, Pencil, FileText } from 'lucide-react';
+import { useEmailTemplates } from '@lad/frontend-features/email-templates';
 
 type TabType = 'email' | 'whatsapp';
 
 export default function TemplatesPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('email');
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (activeTab === 'email') {
-      loadEmailTemplates();
-    }
-  }, [activeTab]);
-
-  const loadEmailTemplates = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch('/api/campaigns/email-templates');
-      if (!response.ok) {
-        throw new Error(`Failed to load templates: ${response.status} ${response.statusText}`);
-      }
-      const data = await response.json();
-      const templatesData = data.data || [];
-      console.log('Loaded templates:', templatesData);
-      templatesData.forEach((t: any, idx: number) => {
-        console.log(`Template ${idx}:`, { id: t.id, name: t.name });
-      });
-      setTemplates(templatesData);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Error loading templates:', error);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: templates = [], isLoading: loading, error: queryError } = useEmailTemplates();
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Failed to load templates') : '';
 
   return (
     <div className="min-h-screen bg-[#F8F9FE]">

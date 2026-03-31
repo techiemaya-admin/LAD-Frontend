@@ -30,7 +30,11 @@ export default function EmailTemplateEditor({
 }: EmailTemplateEditorProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'editor' | 'templates'>('editor');
-  const [editorMode, setEditorMode] = useState<'plain' | 'html'>('plain');
+  // Initialize editorMode from the template's content_format so HTML templates
+  // open in the HTML editor instead of the plain-text editor.
+  const [editorMode, setEditorMode] = useState<'plain' | 'html'>(
+    initialTemplate?.content_format === 'html' ? 'html' : 'plain'
+  );
   const [template, setTemplate] = useState<Template>(
     initialTemplate || {
       name: '',
@@ -110,7 +114,11 @@ export default function EmailTemplateEditor({
   };
 
   const handleSave = async () => {
-    if (!template.name.trim() || !template.subject.trim() || !template.body.trim()) {
+    const hasContent = editorMode === 'html'
+      ? (template.body_html || '').trim().length > 0
+      : template.body.trim().length > 0;
+
+    if (!template.name.trim() || !template.subject.trim() || !hasContent) {
       setError('Please fill in all required fields (Name, Subject, Body)');
       return;
     }
@@ -138,9 +146,11 @@ export default function EmailTemplateEditor({
         body: JSON.stringify({
           name: template.name,
           subject: template.subject,
-          body: template.body,
-          body_html: template.body_html || null,
-          content_format: template.content_format || 'plain_text',
+          body: editorMode === 'html'
+            ? (template.body || (template.body_html || '').replace(/<[^>]*>/g, '').trim())
+            : template.body,
+          body_html: editorMode === 'html' ? (template.body_html || null) : null,
+          content_format: editorMode === 'html' ? 'html' : 'plain_text',
           category: template.category,
           description: template.description,
           is_active: template.is_active,
@@ -161,7 +171,7 @@ export default function EmailTemplateEditor({
       }
 
       const data = await response.json();
-      router.push('/templates');
+      router.push('/campaigns/templates');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -288,7 +298,7 @@ export default function EmailTemplateEditor({
               </label>
               <textarea
                 name="description"
-                value={template.description}
+                value={template.description ?? ''}
                 onChange={handleInputChange}
                 placeholder="Describe when this template should be used"
                 rows={2}
@@ -380,7 +390,7 @@ export default function EmailTemplateEditor({
                   <label className="block text-sm font-medium text-gray-900">Email Body *</label>
                   <textarea
                     name="body"
-                    value={template.body}
+                    value={template.body ?? ''}
                     onChange={handleInputChange}
                     placeholder="Enter your email content here..."
                     rows={12}
@@ -432,7 +442,7 @@ export default function EmailTemplateEditor({
                     : 'Save Template'}
               </button>
               <button
-                onClick={() => router.push('/templates')}
+                onClick={() => router.push('/campaigns/templates')}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
