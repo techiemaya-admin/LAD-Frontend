@@ -1746,33 +1746,23 @@ export default function AdvancedSearchAIPage() {
             let icpWasApplied = false;
 
             // Determine effective search query for confirmed searches.
-            // If the confirmed originalQuery was a trigger word ("yes", "ok", etc.) we must NOT
-            // send it to the backend — Gemini will parse "yes" as keywords: ["yes"] and corrupt
-            // the targeting state. Instead, use the pre-parsed intent targeting directly.
-            // For real query strings ("Find CTOs at SaaS startups in Dubai") we still re-parse
-            // via the backend for best accuracy (e.g. "from Company" parsing).
-            const CONFIRM_TRIGGER_RE = /^(yes|yeah|yep|sure|ok|okay|go|proceed|perfect|great|sounds good|find them?|find leads?|search|start|do it|go ahead)[\s.,!]*$/i;
+            // When user confirms a preview with "yes", "ok", etc., always use the pre-extracted intent
+            // directly to avoid re-parsing, which can introduce inconsistencies (Gemini may extract
+            // different fields on repeat calls). The original intent was already extracted correctly
+            // during the first lead-chat call, so re-using it preserves user intent.
             let searchQuery: string;
-            if (confirmedForSearch) {
-                const isTriggerOriginal = CONFIRM_TRIGGER_RE.test(confirmedForSearch.originalQuery.trim())
-                    || confirmedForSearch.originalQuery.trim().length <= 12;
-                if (isTriggerOriginal && confirmedForSearch.intent) {
-                    // Trigger word confirmed — use the pre-parsed intent targeting directly.
-                    // Build a readable search query from the intent so the backend can score it properly.
-                    // Include company_names and keywords so person+company searches are not lost.
-                    ext = confirmedForSearch.intent;
-                    searchQuery = [
-                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
-                        ...(ext.job_titles || []),
-                        ...(ext.company_names || []),
-                        ...(ext.industries || []),
-                        ...(ext.locations || []),
-                    ].filter(Boolean).join(' ') || 'leads';
-                } else {
-                    // Real query — send to backend for fresh re-parsing (fixes "from Company" parsing).
-                    searchQuery = confirmedForSearch.originalQuery;
-                    ext = null;
-                }
+            if (confirmedForSearch && confirmedForSearch.intent) {
+                // User confirmed the preview — use the pre-parsed intent targeting directly.
+                // Build a readable search query from the intent so the backend can score it properly.
+                // Include company_names and keywords so person+company searches are not lost.
+                ext = confirmedForSearch.intent;
+                searchQuery = [
+                    ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
+                    ...(ext.job_titles || []),
+                    ...(ext.company_names || []),
+                    ...(ext.industries || []),
+                    ...(ext.locations || []),
+                ].filter(Boolean).join(' ') || 'leads';
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
