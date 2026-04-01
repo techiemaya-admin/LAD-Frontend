@@ -98,15 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const login = async (email: string, password: string) => {
     try {
-      // Use Next.js API route for local dev, direct backend call for production
-      const apiUrl = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' 
-        ? '/api/auth/login' 
-        : `${process.env.NEXT_PUBLIC_API_BASE || 'https://lad-backend-develop-160078175457.us-central1.run.app'}/api/auth/login`;
-      const response = await fetch(apiUrl, {
+      // Always use the Next.js proxy route so the token cookie is set correctly
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
       if (!response.ok) {
