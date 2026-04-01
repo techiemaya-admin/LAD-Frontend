@@ -1,5 +1,5 @@
 steps:
-  # Create lowercase branch name for GCP labels
+  # Create lowercase branch name for GCP labels (which require lowercase)
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
@@ -8,21 +8,21 @@ steps:
         echo "${BRANCH_NAME,,}" > /workspace/branch_lower.txt
         cat /workspace/branch_lower.txt
 
-  # Debug step: Show the values that will be used for build arguments
+  # Debug step
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "=== Develop Build Arguments Debug ==="
-        echo "BRANCH_NAME: ${BRANCH_NAME}"
-        echo "_API_URL: ${_API_URL}"
+        echo "=== Develop Build Arguments ==="
+        echo "BRANCH_NAME         : ${BRANCH_NAME}"
+        echo "_API_URL            : ${_API_URL}"
         echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
-        echo "_WABA_SERVICE_URL: ${_WABA_SERVICE_URL}"
-        echo "Environment: DEVELOPMENT"
-        echo "=== End Debug ==="
+        echo "_WABA_SERVICE_URL   : ${_WABA_SERVICE_URL}"
+        echo "Environment         : DEVELOPMENT"
+        echo "==============================="
 
-  # Build the Docker image with buildkit for better caching
+  # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -38,21 +38,19 @@ steps:
       '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
       '--build-arg', 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL',
       '--build-arg', 'NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL',
       '--build-arg', 'NODE_ENV=development',
       '-f', 'Dockerfile',
       '.'
     ]
 
-  # Push the Docker images to Container Registry
+  # Push images
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend-develop:$COMMIT_SHA']
-
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend-develop:$SHORT_SHA']
-
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend-develop:$BRANCH_NAME']
-
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend-develop:latest']
 
@@ -64,45 +62,44 @@ steps:
       - |
         BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
 
-        echo "=== Deploying with inline env vars ==="
-        echo "API_URL: $_API_URL"
-        echo "SOCKET_URL: $_NEXT_PUBLIC_SOCKET_URL"
-        echo "WABA_URL: $_WABA_SERVICE_URL"
+        echo "=== Deploying to Development ==="
+        echo "API_URL    : $_API_URL"
+        echo "SOCKET_URL : $_NEXT_PUBLIC_SOCKET_URL"
+        echo "WABA_URL   : $_WABA_SERVICE_URL"
 
         gcloud run deploy $_SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/lad-frontend-develop:$COMMIT_SHA \
           --region $_REGION \
           --platform managed \
           --allow-unauthenticated \
-          --port 8080 \
-          --memory 1Gi \
-          --cpu 1 \
+          --port 3000 \
+          --memory 2Gi \
+          --cpu 2 \
           --min-instances 0 \
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars "^@@^NODE_ENV=development@@ENVIRONMENT=development@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL" \
+          --set-env-vars "^@@^NODE_ENV=development@@ENVIRONMENT=development@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@API_BASE_URL=http://localhost:3000@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL" \
           --update-labels environment=development,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
 
         echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
 
-# Images to be pushed to Container Registry
+# Images
 images:
   - 'gcr.io/$PROJECT_ID/lad-frontend-develop:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/lad-frontend-develop:$SHORT_SHA'
   - 'gcr.io/$PROJECT_ID/lad-frontend-develop:$BRANCH_NAME'
   - 'gcr.io/$PROJECT_ID/lad-frontend-develop:latest'
 
-# Build options
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'
   substitutionOption: 'ALLOW_LOOSE'
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
-# Timeout for the entire build
 timeout: '1800s'
 
-# Substitutions for Development Environment
+# Substitutions for Development Environment (lad-develop)
 substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'lad-frontend-develop'
@@ -110,3 +107,9 @@ substitutions:
   _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
   _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-160078175457.us-central1.run.app'
+
+# Cloud Build trigger configuration (set in Cloud Console):
+# - Source repository: LAD-Frontend
+# - Branch filter   : ^develop$
+# - Config file     : cloudbuild-develop.yaml
+# - Approval        : not required
