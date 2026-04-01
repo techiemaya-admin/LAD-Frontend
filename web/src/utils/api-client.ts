@@ -6,9 +6,14 @@
 const getBaseUrl = (): string => {
   // For server-side (middleware, API routes)
   if (typeof window === 'undefined') {
-    return process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    // Use explicitly configured base URL if available
+    if (process.env.API_BASE_URL) return process.env.API_BASE_URL;
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    // Fall back to localhost using PORT env var (Cloud Run sets this to --port value)
+    const port = process.env.PORT || '3000';
+    return `http://localhost:${port}`;
   }
-  
+
   // For client-side
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 };
@@ -67,17 +72,13 @@ export async function apiFetch(
  * Calls the /api/auth/me endpoint to verify token is valid and authorized
  */
 export async function validateAuthToken(token: string): Promise<boolean> {
-  try {
-    const response = await apiFetch('/api/auth/me', {
-      method: 'GET',
-      token,
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error('[API Client] Token validation error:', error);
-    return false;
-  }
+  // Let network errors propagate — the proxy's catch block allows requests through
+  // on thrown errors, so this correctly distinguishes "unreachable" from "invalid token"
+  const response = await apiFetch('/api/auth/me', {
+    method: 'GET',
+    token,
+  });
+  return response.ok;
 }
 
 /**
