@@ -13,7 +13,12 @@ export async function PATCH(
 ) {
   const { slug } = await params;
   try {
-    const res = await proxyToPythonService(req, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
+    // Force WABA channel routing to Python service
+    const url = new URL(req.url);
+    url.searchParams.set('channel', 'waba');
+    const wabaReq = new NextRequest(url, req);
+
+    const res = await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
     if (res.status < 400) return res;
   } catch { /* fall through */ }
 
@@ -42,7 +47,12 @@ export async function DELETE(
 ) {
   const { slug } = await params;
   try {
-    return await proxyToPythonService(req, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
+    // Force WABA channel routing to Python service
+    const url = new URL(req.url);
+    url.searchParams.set('channel', 'waba');
+    const wabaReq = new NextRequest(url, req);
+
+    return await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
   } catch {
     return NextResponse.json({ success: false, error: 'Failed to delete account' }, { status: 500 });
   }

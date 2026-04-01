@@ -10,8 +10,14 @@ export async function DELETE(
   { params }: { params: Promise<{ groupId: string; conversationId: string }> }
 ) {
   const { groupId, conversationId } = await params;
+
+  // Force WABA channel routing to Python service
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const wabaReq = new NextRequest(url, req);
+
   return proxyToPythonService(
-    req,
+    wabaReq,
     getWhatsAppServiceUrl(),
     `/api/chat-groups/${groupId}/conversations/${conversationId}`
   );

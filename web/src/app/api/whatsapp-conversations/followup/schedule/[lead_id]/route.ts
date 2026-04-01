@@ -8,22 +8,34 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/pyth
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { lead_id: string } },
+  { params }: { params: Promise<{ lead_id: string }> },
 ) {
+  const { lead_id } = await params;
+  // Force WABA channel routing to Python service
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const wabaReq = new NextRequest(url, req);
+
   return proxyToPythonService(
-    req,
+    wabaReq,
     getWhatsAppServiceUrl(),
-    `/followup/schedule/${params.lead_id}`,
+    `/followup/schedule/${lead_id}`,
   );
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { lead_id: string } },
+  { params }: { params: Promise<{ lead_id: string }> },
 ) {
+  const { lead_id } = await params;
+  // Force WABA channel routing to Python service
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'waba');
+  const wabaReq = new NextRequest(url, req);
+
   return proxyToPythonService(
-    req,
+    wabaReq,
     getWhatsAppServiceUrl(),
-    `/followup/cancel/${params.lead_id}`,
+    `/followup/cancel/${lead_id}`,
   );
 }

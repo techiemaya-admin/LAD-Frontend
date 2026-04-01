@@ -7,11 +7,11 @@ function getBackendBase() {
 // DELETE /api/users/:userId
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const backend = getBackendBase();
-    const { userId } = params;
+    const { userId } = await params;
     const token = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

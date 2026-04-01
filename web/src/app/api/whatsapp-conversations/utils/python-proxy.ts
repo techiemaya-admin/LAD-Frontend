@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // ── Service URL resolvers ───────────────────────────────────────────
 
 /** LAD_backend (Node.js) – personal WhatsApp via Baileys */
-function getBackendUrl(): string {
+export function getBackendUrl(): string {
   return (
     process.env.BACKEND_INTERNAL_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -19,7 +19,7 @@ function getBackendUrl(): string {
 }
 
 /** LAD-WABA-Comms (Python FastAPI) – WhatsApp Business API */
-function getWABAServiceUrl(): string {
+export function getWABAServiceUrl(): string {
   return (
     process.env.NEXT_PUBLIC_WHATSAPP_API_URL ||
     process.env.WABA_SERVICE_URL ||
@@ -55,11 +55,14 @@ export async function proxyToPythonService(
   path: string,
 ): Promise<Response> {
   // ── Channel-based routing ──────────────────────────────────────
-  // Determine channel from query param or header. Default: 'personal'
+  // Read from req.url (raw URL) — nextUrl may cache the original URL even after
+  // a route rewrites it via new NextRequest(modifiedUrl, req).
+  const rawUrl = new URL(req.url);
   const channel =
+    rawUrl.searchParams.get('channel') ||
     req.nextUrl.searchParams.get('channel') ||
     req.headers.get('x-whatsapp-channel') ||
-    'personal';
+    'waba';  // default to waba (all our active integrations are WABA)
 
   let resolvedBaseUrl: string;
   let resolvedPath: string;

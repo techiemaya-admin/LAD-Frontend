@@ -55,8 +55,14 @@ const ADMIN_API = '/api/whatsapp-conversations/admin/whatsapp-accounts';
 
 async function fetchAccounts(): Promise<WhatsAppAccount[]> {
   const res = await fetchWithTenant(ADMIN_API);
+  if (!res.ok) return [];
   const data = await res.json();
-  return data.success ? data.data : [];
+  if (data.success) {
+    return Array.isArray(data.data) ? data.data : [];
+  }
+  // Handle flat array response shape
+  if (Array.isArray(data)) return data;
+  return [];
 }
 
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {

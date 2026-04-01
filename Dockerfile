@@ -1,151 +1,97 @@
-# Multi-stage build for Next.js production deployment (monorepo-safe)
+# Multi-stage build for Next.js production deployment with monorepo workspaces
+FROM node:20-alpine AS base
 
-FROM node:20-slim AS base
-
-RUN apt-get update -y \
-  && apt-get install -y openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-# -------------------------
-# Builder
-# -------------------------
-FROM base AS builder
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-RUN apt-get update -y \
-  && apt-get install -y python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-# Copy only package files first for better caching
+# Copy package files for monorepo workspaces
 COPY package*.json ./
 COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
-# Install root dependencies first (monorepo dependencies like @tanstack/react-query)
-RUN npm install --include=optional --foreground-scripts --no-audit --fund=false
+# Install dependencies using npm workspaces (resolves SDK as workspace package)
+RUN npm ci --ignore-scripts
 
-WORKDIR /app/web
-
-# Install web workspace dependencies
-RUN rm -rf node_modules \
-  && npm install --include=optional --foreground-scripts --no-audit --fund=false
-
-# Force-install native linux bindings (deterministic).
-# package-lock.json is generated on macOS so linux-specific optional packages
-# are not in the lockfile. Install them explicitly here.
-# Also install the main esbuild wrapper so require('esbuild') resolves correctly.
-RUN npm install --no-save --no-audit --fund=false \
-    lightningcss-linux-x64-gnu \
-    @tailwindcss/oxide-linux-x64-gnu \
-    @esbuild/linux-x64 \
-    esbuild || true
-
-# Ensure lightningcss binding exists where lightningcss expects it
-RUN if [ ! -f node_modules/lightningcss/lightningcss.linux-x64-gnu.node ]; then \
-      echo "⚠️ lightningcss binding missing; searching..."; \
-      f="$(find node_modules -maxdepth 6 -name 'lightningcss.linux-x64-*.node' | head -n 1 || true)"; \
-      echo "Found: $f"; \
-      if [ -n "$f" ]; then \
-        mkdir -p node_modules/lightningcss && \
-        cp "$f" node_modules/lightningcss/lightningcss.linux-x64-gnu.node; \
-      fi; \
-    fi
-
-# Verify critical native bindings — esbuild check is non-fatal since Next.js
-# bundles its own copy; the real build below will catch any actual missing dep.
-RUN node -e "require('lightningcss'); console.log('✅ lightningcss ok')" \
- && node -e "require('@tailwindcss/oxide'); console.log('✅ tailwind oxide ok')" \
- && (node -e "require('esbuild'); console.log('✅ esbuild ok')" \
-     || echo "⚠️  esbuild wrapper not found via require() — binary may still work for build")
-
-# Copy source code after deps are installed (back to /app root for correct structure)
+# Rebuild the source code only when needed
+FROM base AS builder
 WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
 COPY . .
 
 # Verify critical config files are present in build context
 RUN test -f /app/web/next.config.mjs && echo "✅ next.config.mjs present" || (echo "❌ next.config.mjs missing" && exit 1)
 RUN test -f /app/web/tsconfig.json && echo "✅ tsconfig.json present" || (echo "❌ tsconfig.json missing" && exit 1)
 
-# Verify React Query package resolution from root (monorepo location)
-WORKDIR /app
-RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
- && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
-
+# Build Next.js app from web workspace
 WORKDIR /app/web
 
-# Build args - these MUST be provided via --build-arg in cloudbuild
-ARG VITE_BACKEND_URL
+# Accept build arguments for API URL
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_API_BASE
 ARG NEXT_PUBLIC_BACKEND_URL
 ARG NEXT_PUBLIC_ICP_BACKEND_URL
-ARG NEXT_PUBLIC_COMMUNITY_API_URL
-ARG NEXT_PUBLIC_WHATSAPP_API_URL
-ARG NEXT_PUBLIC_COMMS_SERVICE_URL
+ARG NEXT_PUBLIC_API_BASE
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_DISABLE_VAPI
+ARG NEXT_PUBLIC_WHATSAPP_API_URL
+ARG NEXT_PUBLIC_BNI_SERVICE_URL
 
-# Set environment variables from build args
-ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL}
-ENV NEXT_PUBLIC_COMMUNITY_API_URL=${NEXT_PUBLIC_COMMUNITY_API_URL}
-ENV NEXT_PUBLIC_WHATSAPP_API_URL=${NEXT_PUBLIC_WHATSAPP_API_URL}
-ENV NEXT_PUBLIC_COMMS_SERVICE_URL=${NEXT_PUBLIC_COMMS_SERVICE_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
+ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
 ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
-ENV NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+ENV NEXT_PUBLIC_WHATSAPP_API_URL=$NEXT_PUBLIC_WHATSAPP_API_URL
+ENV NEXT_PUBLIC_BNI_SERVICE_URL=$NEXT_PUBLIC_BNI_SERVICE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-# NODE_ENV=production enables Next.js optimizations (minification, tree-shaking)
-# This should be 'production' for ALL environments (dev/stage/prod)
 ENV NODE_ENV=production
 
-WORKDIR /app
-RUN if [ -d "prisma" ]; then npx prisma generate; fi
+# Generate Prisma client — pin to v6 to match package.json (avoids npx pulling v7 which broke schema syntax)
+RUN if [ -d "prisma" ]; then npx --yes prisma@6 generate; fi
 
-# Verify React Query package resolution from root (monorepo location)
+# Verify React Query package resolution
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
 
-# Build from root using turbo (builds SDK first, then web)
 RUN npm run build
 
-# Verify standalone output was generated (fails the build if missing).
-# With outputFileTracingRoot=.. (monorepo root), Next.js places server.js at
-# standalone/web/server.js (mirroring the relative path from the tracing root).
-RUN test -f /app/web/.next/standalone/web/server.js && echo "✅ server.js found at standalone/web/server.js" || \
-    (echo "❌ standalone/web/server.js NOT FOUND - listing standalone dir:" && \
-     ls -la /app/web/.next/standalone/ 2>/dev/null && \
-     ls -la /app/web/.next/standalone/web/ 2>/dev/null && exit 1)
+# Verify standalone output was generated (fails build if next.config.mjs output:standalone didn't work)
+# With outputFileTracingRoot: '..', Next.js places server.js at standalone/web/server.js
+RUN test -f .next/standalone/web/server.js && echo "✅ standalone/web/server.js present" || \
+    (echo "❌ standalone/web/server.js MISSING — check output:standalone in next.config.mjs" && ls -la .next/standalone/ && exit 1)
 
-# -------------------------
-# Runner
-# -------------------------
+# Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# IMPORTANT: do NOT set PORT here — Cloud Run provides it (often 8080)
-ENV HOSTNAME="0.0.0.0"
 
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
-  adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 nextjs
 
-# Copy the entire standalone output (includes monorepo structure)
+# Copy standalone output (with outputFileTracingRoot: '..', Next.js nests under web/)
+# This copies standalone/web/server.js → /app/web/server.js
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
-# Copy static assets to the correct location
+
+# Copy static assets to web/.next/static (mirrored from standalone structure)
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
-# Copy public directory
+
+# Copy public directory to web/public
 COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
 
-# Verify server.js exists at the correct path.
-# With monorepo outputFileTracingRoot=.., standalone/web/server.js is copied to /app/web/server.js.
+# Verify server.js was copied to the correct location
 RUN test -f /app/web/server.js && echo "✅ server.js found at /app/web/server.js" || \
-    (echo "❌ server.js not found! Listing /app and /app/web:" && \
-     ls -la /app/ && ls -la /app/web/ 2>/dev/null && exit 1)
+    (echo "❌ server.js not found! Listing /app:" && ls -la /app/ && ls -la /app/web/ 2>/dev/null && exit 1)
 
-# Cloud Run-friendly start script
+# Cloud Run-friendly start script (reads PORT from env, defaults to 8080)
 RUN printf '%s\n' \
   '#!/bin/sh' \
   'set -e' \
@@ -158,6 +104,11 @@ RUN printf '%s\n' \
   && chown nextjs:nodejs /app/start.sh
 
 USER nextjs
+
+# Expose port (Cloud Run uses PORT env variable, typically 8080)
 EXPOSE 8080
 
+ENV HOSTNAME="0.0.0.0"
+
+# Start the application via start.sh which cd's to /app/web and runs server.js
 CMD ["/app/start.sh"]

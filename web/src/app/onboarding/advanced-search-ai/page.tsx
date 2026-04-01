@@ -50,6 +50,8 @@ interface LeadProfile {
     industry: string;
     network_distance: string;
     locked?: boolean;
+    phone?: string;
+    email?: string;
     icp_score?: number;
     match_level?: 'strong' | 'moderate' | 'weak';
     icp_reasoning?: string;
@@ -87,6 +89,15 @@ interface ChatMsg {
     webSearchResult?: boolean;
     sources?: Array<{ title: string; url: string }>;
     leadDetailForm?: boolean;
+    outreach_journey?: OutreachStep[];
+}
+
+interface OutreachStep {
+    channel: 'linkedin' | 'email' | 'whatsapp' | 'voice';
+    label: string;
+    action: string;
+    reason: string;
+    recommended: boolean;
 }
 
 /* ═══════════════════════════════════════════════
@@ -97,6 +108,46 @@ function toArr(v: any): string[] {
     if (Array.isArray(v)) return v.filter((x: any) => typeof x === 'string' && x.trim());
     if (typeof v === 'string' && v.trim()) return [v];
     return [];
+}
+
+function buildOutreachJourney(leads: LeadProfile[], targeting: LeadTargeting | null): OutreachStep[] {
+    const hasEmail   = leads.some(l => l.email);
+    const hasPhone   = leads.some(l => l.phone);
+    const hasLi      = leads.some(l => l.profile_url?.startsWith('http'));
+    const locs       = (targeting?.locations || []).map(l => l.toLowerCase());
+    const isGCC      = locs.some(l => ['uae','dubai','saudi','gcc','qatar','kuwait','bahrain','oman','riyadh','abu dhabi'].some(g => l.includes(g)));
+    const isEnterprise = (targeting?.company_size || []).some(s => s.includes('1000'));
+
+    return [
+        {
+            channel: 'linkedin',
+            label: 'LinkedIn',
+            action: 'Visit profile → Connect → Message',
+            reason: hasLi ? 'LinkedIn profiles found — warm up with a connection request first.' : 'Start with LinkedIn to build familiarity before reaching out.',
+            recommended: true,
+        },
+        {
+            channel: 'email',
+            label: 'Email',
+            action: 'Personalised cold email + follow-up sequence',
+            reason: hasEmail ? 'Email addresses available — follow up 3–5 days after LinkedIn connect.' : 'Enrich emails via enrichment tools after LinkedIn connection is accepted.',
+            recommended: true,
+        },
+        {
+            channel: 'whatsapp',
+            label: 'WhatsApp',
+            action: 'Direct message, broadcast + follow-up sequence',
+            reason: isGCC ? 'GCC region — WhatsApp has very high open rates (98%). Use after email.' : 'Add WhatsApp as a follow-up channel for warm leads.',
+            recommended: true,
+        },
+        {
+            channel: 'voice',
+            label: 'Voice Call',
+            action: 'AI-powered voice call with script',
+            reason: isEnterprise ? 'Enterprise deals benefit from a personal call to qualify intent.' : 'Reserve voice calls for high-priority leads who haven\'t responded.',
+            recommended: true,
+        },
+    ];
 }
 
 function avatarColor(name: string): string {
@@ -472,6 +523,234 @@ export default function AdvancedSearchAIPage() {
     const [directContactLeadIds, setDirectContactLeadIds] = useState<string[]>([]); // Real UUIDs for chat-entered direct contacts
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Contact picker modal state
+    const [showContactPicker, setShowContactPicker] = useState(false);
+    const [cpPickerStep, setCpPickerStep] = useState<'source' | 'contacts'>('source');
+    const [cpSourceKey, setCpSourceKey] = useState<string>('');
+    const [cpSearch, setCpSearch] = useState('');
+    const [cpContacts, setCpContacts] = useState<any[]>([]);
+    const [cpLoading, setCpLoading] = useState(false);
+    const [cpSelected, setCpSelected] = useState<Set<string>>(new Set());
+    const cpSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Contact source definitions (mirrors ChatGroupManager)
+    const CP_SOURCES = [
+        { key: 'crm',       label: 'CRM Contacts',       color: '#3b82f6', icon: 'crm',       fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/social-integration/gohighlevel/contacts/local?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.source_id || c.phone || `crm-${i}`), name: c.name || '', phone: c.phone || '', email: c.email || '', company: c.company_name || '' }));
+        }},
+        { key: 'personal_wa', label: 'Personal WA',      color: '#25D366', icon: 'personal_wa', fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.phone || `pwa-${i}`), name: c.name || '', phone: c.phone || '', email: '', company: '' }));
+        }},
+        { key: 'waba',      label: 'WA Business',         color: '#128C7E', icon: 'waba',      fetchContacts: async (search: string) => {
+            const params = new URLSearchParams({ limit: '100', offset: '0', channel: 'waba' }); if (search) params.set('search', search);
+            const res = await fetch(`/api/whatsapp-conversations/conversations?${params}`, { credentials: 'include' });
+            const data = await res.json();
+            return (data.conversations || data.data || []).map((c: any, i: number) => ({ id: String(c.id || `waba-${i}`), name: c.lead_name || c.contact_name || c.name || '', phone: c.lead_phone || c.phone || '', email: c.lead_email || c.email || '', company: '' }));
+        }},
+        { key: 'google',    label: 'Google Contacts',     color: '#ea4335', icon: 'google',    fetchContacts: async () => [] },
+        { key: 'microsoft', label: 'Microsoft Contacts',  color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
+    ];
+
+    // ── AI Playground state ──────────────────────────────────────────────────
+    // ── AI Playground (chat-based business profiling) ────────────────────────
+    const [showPlayground, setShowPlayground]           = useState(false);
+    const [pgChatHistory, setPgChatHistory]             = useState<Array<{ role: 'user'|'assistant'; content: string; card?: any }>>([]);
+    const [pgInput, setPgInput]                         = useState('');
+    const [pgBusy, setPgBusy]                           = useState(false);
+    const [pgCurrentCard, setPgCurrentCard]             = useState<any>(null);
+    const [pgCardValues, setPgCardValues]               = useState<Record<string, any>>({});  // working values for active card
+    const [pgTagInput, setPgTagInput]                   = useState('');  // tag input buffer
+    const [pgIsComplete, setPgIsComplete]               = useState(false);
+    const [pgSuggesting, setPgSuggesting]               = useState(false);  // AI suggestion loading
+    const pgMessagesEndRef = useRef<HTMLDivElement>(null);
+    const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
+        companyName: '', industry: '', website: '', companyDescription: '',
+        productsServices: '', targetCustomers: '', icpJobTitles: '',
+        icpCompanySize: '', icpLocations: '', icpPainPoints: '',
+        sampleConversation: '', operatingHours: '', timezone: '',
+        geographicFocus: '', valueProposition: '', competitors: '', campaignTone: '',
+    });
+
+    // Load profile + history from backend on mount
+    useEffect(() => {
+        fetch('/api/ai-playground', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    if (d.profile && Object.keys(d.profile).length > 0) {
+                        setBusinessProfile(prev => ({ ...prev, ...d.profile }));
+                    }
+                    if (Array.isArray(d.history) && d.history.length > 0) {
+                        // Filter out bootstrap trigger messages, restore history
+                        const filtered = d.history
+                            .filter((m: any) => m.content !== '__init__' && m.content !== "Hello, let's get started!")
+                            .map((m: any) => ({
+                                role: m.role === 'user' ? 'user' : 'assistant',
+                                content: m.content,
+                            }));
+                        if (filtered.length > 0) setPgChatHistory(filtered);
+                    }
+                } else {
+                    try {
+                        const stored = localStorage.getItem('lad_business_profile');
+                        if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                    } catch { }
+                }
+            })
+            .catch(() => {
+                try {
+                    const stored = localStorage.getItem('lad_business_profile');
+                    if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+                } catch { }
+            });
+    }, []);
+
+    // Auto-scroll playground chat — also fires when busy clears (card widget appears)
+    useEffect(() => {
+        pgMessagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }, [pgChatHistory, pgBusy]);
+
+    /** Send a message to the AI Playground chat endpoint */
+    const pgSendMessage = useCallback(async (msg: string) => {
+        if (!msg.trim() || pgBusy) return;
+        setPgBusy(true);
+        setPgCurrentCard(null);
+        const newHistory = [...pgChatHistory, { role: 'user' as const, content: msg }];
+        setPgChatHistory(newHistory);
+        setPgInput('');
+        try {
+            const res = await fetch('/api/ai-playground/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ message: msg }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPgChatHistory(prev => [...prev, { role: 'assistant', content: data.reply, card: data.card }]);
+                if (data.card) {
+                    setPgCurrentCard(data.card);
+                    // Pre-populate card value from existing profile
+                    if (data.card.field && businessProfile[data.card.field]) {
+                        const existingVal = businessProfile[data.card.field];
+                        if (data.card.type === 'tags') {
+                            setPgCardValues({ [data.card.field]: existingVal.split(',').map((s: string) => s.trim()).filter(Boolean) });
+                        } else {
+                            setPgCardValues({ [data.card.field]: existingVal });
+                        }
+                    } else {
+                        setPgCardValues({});
+                    }
+                }
+                if (data.profile) {
+                    setBusinessProfile(prev => ({ ...prev, ...data.profile }));
+                    try { localStorage.setItem('lad_business_profile', JSON.stringify({ ...businessProfile, ...data.profile })); } catch { }
+                }
+                if (data.isComplete) {
+                    setPgIsComplete(true);
+                    // Explicitly persist the final complete profile to DB so lead-chat always has full context
+                    const finalProfile = { ...businessProfile, ...(data.profile || {}) };
+                    fetch('/api/ai-playground', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ profile: finalProfile }),
+                    }).catch(() => {});
+                }
+            }
+        } catch { }
+        setPgBusy(false);
+    }, [pgBusy, pgChatHistory, businessProfile]);
+
+    /** Submit a card value */
+    const pgSubmitCard = useCallback(async () => {
+        if (!pgCurrentCard) return;
+        const { field, type } = pgCurrentCard;
+        let value = pgCardValues[field];
+        if (type === 'tags') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        } else if (type === 'chips') {
+            value = Array.isArray(value) ? value.join(', ') : (value || '');
+        }
+        // Update profile immediately
+        setBusinessProfile(prev => ({ ...prev, [field]: String(value || '') }));
+        // Send as a card submission message
+        const cardMsg = `[Card submission: field=${field} value=${value}]`;
+        await pgSendMessage(cardMsg);
+    }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+
+    /** Generate an AI suggestion for the current card field */
+    const pgGenerateSuggestion = useCallback(async () => {
+        if (!pgCurrentCard || pgSuggesting) return;
+        setPgSuggesting(true);
+        try {
+            const res = await fetch('/api/ai-playground/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    field: pgCurrentCard.field,
+                    label: pgCurrentCard.label,
+                    placeholder: pgCurrentCard.placeholder,
+                    profile: businessProfile,
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.suggestion) {
+                setPgCardValues(prev => ({ ...prev, [pgCurrentCard.field]: data.suggestion }));
+            }
+        } catch { }
+        setPgSuggesting(false);
+    }, [pgCurrentCard, pgSuggesting, businessProfile]);
+
+    /** Start or restart the playground conversation */
+    const pgStartConversation = useCallback(async () => {
+        setPgChatHistory([]);
+        setPgCurrentCard(null);
+        setPgIsComplete(false);
+        setPgCardValues({});
+        setPgBusy(true);
+        // Reset history on backend
+        await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => {});
+        // Bootstrap: get AI greeting without showing a user message bubble
+        try {
+            const res = await fetch('/api/ai-playground/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ message: '__init__' }),
+            });
+            const data = await res.json();
+            if (data.success && data.reply) {
+                setPgChatHistory([{ role: 'assistant', content: data.reply, card: data.card }]);
+                if (data.profile) {
+                    setBusinessProfile((prev: Record<string, string>) => ({ ...prev, ...data.profile }));
+                }
+            }
+        } catch { }
+        setPgBusy(false);
+    }, []);
+
+    // Build ICP description from business profile for search injection
+    const getBusinessContext = () => {
+        const p = businessProfile;
+        const parts: string[] = [];
+        if (p.companyDescription) parts.push(`Company: ${p.companyDescription}`);
+        if (p.productsServices) parts.push(`Products/Services: ${p.productsServices}`);
+        if (p.targetCustomers) parts.push(`Target Customers: ${p.targetCustomers}`);
+        if (p.icpJobTitles) parts.push(`Target Job Titles: ${p.icpJobTitles}`);
+        if (p.icpPainPoints) parts.push(`Customer Pain Points: ${p.icpPainPoints}`);
+        if (p.valueProposition) parts.push(`Value Proposition: ${p.valueProposition}`);
+        if (p.geographicFocus) parts.push(`Geographic Focus: ${p.geographicFocus}`);
+        return parts.join('\n');
+    };
+
     // Landing attach menu & web search state
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [showChatAttachMenu, setShowChatAttachMenu] = useState(false);
@@ -520,13 +799,89 @@ export default function AdvancedSearchAIPage() {
             if (stored) setLeadFeedback(JSON.parse(stored));
         } catch { }
     }, []);
-    const toggleFeedback = (leadId: string, rating: 'good' | 'bad') => {
+
+    // Comments attached to bad-feedback ratings
+    const [leadFeedbackComments, setLeadFeedbackComments] = useState<Record<string, string>>({});
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lad_lead_feedback_comments');
+            if (stored) setLeadFeedbackComments(JSON.parse(stored));
+        } catch { }
+    }, []);
+
+    // Popup state for bad-feedback comment collection
+    const [badFeedbackPopup, setBadFeedbackPopup] = useState<{ leadId: string; leadName: string } | null>(null);
+    const [badFeedbackDraft, setBadFeedbackDraft] = useState('');
+
+    const toggleFeedback = (leadId: string, rating: 'good' | 'bad', leadName?: string) => {
+        if (rating === 'bad') {
+            // If already marked bad — toggle it off directly
+            if (leadFeedback[leadId] === 'bad') {
+                setLeadFeedback(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+                setLeadFeedbackComments(prev => {
+                    const updated = { ...prev };
+                    delete updated[leadId];
+                    try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                    return updated;
+                });
+            } else {
+                // Show comment popup before saving
+                setBadFeedbackDraft('');
+                setBadFeedbackPopup({ leadId, leadName: leadName || 'this lead' });
+            }
+            return;
+        }
         setLeadFeedback(prev => {
             const updated = { ...prev };
             if (updated[leadId] === rating) { delete updated[leadId]; } else { updated[leadId] = rating; }
             try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
+    };
+
+    // Build a natural-language enrichment string from the Targeting card form values
+    // and any bad-feedback comments — sent to the backend LLM to generate sharper keywords.
+    const buildSearchEnrichment = (): string | undefined => {
+        const parts: string[] = [];
+        if (targeting) {
+            // Note: nationality, experience_level, and company_size go into targeting_filters
+            // (structured filter), NOT here. Only free-text feedback goes here.
+            if (targeting.decision_maker_skills?.length)
+                parts.push(`Required skills: ${targeting.decision_maker_skills.join(', ')}`);
+            if (targeting.decision_maker_education?.length)
+                parts.push(`Required education: ${targeting.decision_maker_education.join(', ')}`);
+            if (targeting.company_age?.length)
+                parts.push(`Target company age: ${targeting.company_age.join(', ')}`);
+        }
+        const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
+        const comments = badLeads.map(l => leadFeedbackComments[l.id]).filter(Boolean);
+        if (comments.length > 0)
+            parts.push(`Avoid profiles matching these issues: ${comments.join('; ')}`);
+        return parts.length > 0 ? parts.join('\n') : undefined;
+    };
+
+    const confirmBadFeedback = (comment: string) => {
+        if (!badFeedbackPopup) return;
+        const { leadId } = badFeedbackPopup;
+        setLeadFeedback(prev => {
+            const updated = { ...prev, [leadId]: 'bad' as const };
+            try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
+            return updated;
+        });
+        if (comment.trim()) {
+            setLeadFeedbackComments(prev => {
+                const updated = { ...prev, [leadId]: comment.trim() };
+                try { localStorage.setItem('lad_lead_feedback_comments', JSON.stringify(updated)); } catch { }
+                return updated;
+            });
+        }
+        setBadFeedbackPopup(null);
+        setBadFeedbackDraft('');
     };
 
     // Search sessions (persisted in localStorage for campaign context)
@@ -556,6 +911,8 @@ export default function AdvancedSearchAIPage() {
     const [lastIcpDescription, setLastIcpDescription] = useState<string>('');
     const [lastTargeting, setLastTargeting] = useState<LeadTargeting | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [noMoreLeads, setNoMoreLeads] = useState(false);
+    const [targetingFiltersActive, setTargetingFiltersActive] = useState(false); // true when targeting card filters applied
 
     // Credits & unlock state
     const [showRechargeModal, setShowRechargeModal] = useState(false);
@@ -608,12 +965,16 @@ export default function AdvancedSearchAIPage() {
         setLeadFeedback({}); setSearchSessions([]); setSearchHistory([]);
         setLeadCount(10); setSearchPage(1); setTotalResults(0);
         setSearchCursor(null); setLastSearchQuery(''); setLastIcpDescription('');
-        setLastTargeting(null); setLoadingMore(false);
+        setLastTargeting(null); setLoadingMore(false); setNoMoreLeads(false);
         setFilteredLeads([]); setShowFilteredLeads(false);
         setWebSearchEnabled(false);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+    // Scroll to bottom whenever a form is opened from the card/button clicks
+    useEffect(() => { if (cpStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cpStep]);
+    useEffect(() => { if (tgStep >= 0) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [tgStep]);
 
     // Sync credit balance from billing hook
     useEffect(() => {
@@ -865,6 +1226,100 @@ export default function AdvancedSearchAIPage() {
         setInput('');
     }, [input]);
 
+    /* ── Contact Picker handlers ── */
+    const fetchCpContacts = useCallback(async (sourceKey: string, q: string) => {
+        const source = CP_SOURCES.find(s => s.key === sourceKey);
+        if (!source) { setCpContacts([]); return; }
+        setCpLoading(true);
+        try {
+            const results = await source.fetchContacts(q);
+            setCpContacts(results);
+        } catch {
+            setCpContacts([]);
+        }
+        setCpLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const openContactPicker = useCallback(() => {
+        setShowContactPicker(true);
+        setCpPickerStep('source');
+        setCpSourceKey('');
+        setCpSearch('');
+        setCpSelected(new Set());
+        setCpContacts([]);
+    }, []);
+
+    const selectCpSource = useCallback(async (key: string) => {
+        setCpSourceKey(key);
+        setCpPickerStep('contacts');
+        setCpSearch('');
+        setCpSelected(new Set());
+        await fetchCpContacts(key, '');
+    }, [fetchCpContacts]);
+
+    const handleCpSearch = useCallback((q: string) => {
+        setCpSearch(q);
+        if (cpSearchTimer.current) clearTimeout(cpSearchTimer.current);
+        cpSearchTimer.current = setTimeout(() => fetchCpContacts(cpSourceKey, q), 350);
+    }, [fetchCpContacts, cpSourceKey]);
+
+    const toggleCpContact = useCallback((id: string) => {
+        setCpSelected(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    }, []);
+
+    const toggleCpSelectAll = useCallback(() => {
+        setCpSelected(prev =>
+            prev.size === cpContacts.length
+                ? new Set()
+                : new Set(cpContacts.map((c: any) => c.id))
+        );
+    }, [cpContacts]);
+
+    const confirmContactPicker = useCallback(async () => {
+        const selected = cpContacts.filter((c: any) => cpSelected.has(c.id));
+        if (!selected.length) return;
+
+        const asInbound: ParsedInboundLead[] = selected.map((c: any) => ({
+            firstName: c.first_name || (typeof c.name === 'string' ? c.name.split(' ')[0] : '') || '',
+            lastName: c.last_name || (typeof c.name === 'string' ? c.name.split(' ').slice(1).join(' ') : '') || '',
+            companyName: c.company || c.company_name || '',
+            linkedinProfile: c.linkedin_url || '',
+            email: c.email || '',
+            whatsapp: c.phone || '',
+            phone: c.phone || '',
+            website: c.website || '',
+            notes: c.notes || '',
+        }));
+
+        setInboundLeads(asInbound);
+        setInboundMode(true);
+        setShowContactPicker(false);
+
+        const counts = {
+            total: asInbound.length,
+            linkedin: asInbound.filter(l => l.linkedinProfile).length,
+            email: asInbound.filter(l => l.email).length,
+            whatsapp: asInbound.filter(l => l.whatsapp).length,
+            phone: asInbound.filter(l => l.phone).length,
+            website: asInbound.filter(l => l.website).length,
+        };
+
+        const sourceName = CP_SOURCES.find(s => s.key === cpSourceKey)?.label || 'Contacts';
+        setMessages(p => [...p,
+            { id: `u-${Date.now()}`, role: 'user', text: `👥 Selected ${asInbound.length} contact${asInbound.length !== 1 ? 's' : ''} from ${sourceName}`, ts: new Date() },
+            { id: `a-${Date.now()}`, role: 'ai', text: '', ts: new Date(), inboundAction: 'summary', inboundSummary: counts },
+        ]);
+
+        // Auto-start campaign checkpoint flow
+        setTimeout(() => setCpStep(0), 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cpContacts, cpSelected, cpSourceKey]);
+
     /* ── Core send logic ── */
     /* ── Inbound file handler ── */
     const handleInboundFile = useCallback(async (file: File) => {
@@ -985,6 +1440,47 @@ export default function AdvancedSearchAIPage() {
                     // Store real lead UUIDs so campaign creation can link to leads table
                     if (saveData.leadIds && saveData.leadIds.length > 0) {
                         setInboundLeadIds(saveData.leadIds);
+
+                        // ── FULL INBOUND ENRICHMENT (Google + Gemini + Unipile) ──
+                        try {
+                            const enrichRes = await fetch('/api/campaigns/leads/enrich-inbound', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    leadIds: saveData.leadIds,
+                                    icpProfile: businessProfile || null,
+                                }),
+                            });
+                            if (enrichRes.ok) {
+                                const enrichData = await enrichRes.json();
+                                if (enrichData.success && enrichData.results?.length > 0) {
+                                    const enrichedIds: string[] = saveData.leadIds;
+                                    // Build maps: leadId → enriched data
+                                    const enrichMap: Record<string, { linkedin_url?: string; background_summary?: string; job_title?: string; industry?: string; icp_score?: number; tier?: string }> = {};
+                                    enrichData.results.forEach((r: any) => {
+                                        enrichMap[r.leadId] = r;
+                                    });
+                                    // Update inboundLeads state
+                                    setInboundLeads(prev => prev.map((lead, idx) => {
+                                        const lid = enrichedIds[idx];
+                                        const enriched = lid ? enrichMap[lid] : null;
+                                        if (!enriched) return lead;
+                                        return {
+                                            ...lead,
+                                            linkedinProfile: lead.linkedinProfile || enriched.linkedin_url || lead.linkedinProfile,
+                                            notes: enriched.background_summary
+                                                ? `${enriched.background_summary}${lead.notes ? '\n' + lead.notes : ''}`
+                                                : lead.notes,
+                                        };
+                                    }));
+                                    // Update counts
+                                    const newLinkedIn = enrichData.results.filter((r: any) => r.linkedin_url && !parsed[enrichedIds.indexOf(r.leadId)]?.linkedinProfile).length;
+                                    if (newLinkedIn > 0) counts.linkedin = (counts.linkedin || 0) + newLinkedIn;
+                                }
+                            }
+                        } catch (enrichErr) {
+                            console.warn('[Lead Import] Inbound enrichment error:', enrichErr);
+                        }
                     }
                 } else {
                     console.warn('Failed to save leads to database');
@@ -999,7 +1495,8 @@ export default function AdvancedSearchAIPage() {
             if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
             if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
             if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
-            summaryText += `\n\n👉 Click **"Create Campaign Checkpoints"** to set up your campaign with these leads!`;
+            summaryText += `\n\n🔍 **Running background research** — searching Google + LinkedIn to build profiles for each lead...`;
+            summaryText += `\n\n👉 Click **"Create Outreach Journey"** to set up your campaign with these leads!`;
 
             setMessages(p => p.filter(m => m.id !== processingId).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
@@ -1014,7 +1511,7 @@ export default function AdvancedSearchAIPage() {
         } finally { setBusy(false); }
     }, []);
 
-    const doSend = useCallback(async (text: string) => {
+    const doSend = useCallback(async (text: string, opts?: { targetingOverride?: LeadTargeting }) => {
         if (!text.trim() || busy) return;
         // Enforce 10-message limit only when user has no credits
         if (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) return;
@@ -1106,7 +1603,7 @@ export default function AdvancedSearchAIPage() {
                 const emailCount = inboundLeads.filter(l => l.email).length;
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Campaign Checkpoints"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Campaign Checkpoints"** button to get started!`,
+                    text: `🎯 **Great question! Here's your next steps:**\n\nYou have **${leadsCount} leads** uploaded and ready to go${linkedinCount > 0 ? ` (${linkedinCount} with LinkedIn profiles)` : ''}${emailCount > 0 ? ` (${emailCount} with emails)` : ''}.\n\n**To create your campaign:**\n1. Click **"Create Outreach Journey"** button above\n2. Select your **outreach actions** (Connect, Message, Follow-up)\n3. Set up your **message templates** (AI can generate them for you! ✨)\n4. Choose **campaign duration**\n5. **Name & launch** your campaign 🚀\n\n👉 Click the **"Create Outreach Journey"** button to get started!`,
                     ts: new Date(),
                     targeting: targeting || undefined,
                 }));
@@ -1117,7 +1614,7 @@ export default function AdvancedSearchAIPage() {
             if (isRefine) {
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Campaign Checkpoints"** to set up your campaign!`,
+                    text: `✏️ **Want to refine your leads?**\n\nHere's what you can do:\n• **Remove leads** — Click the 🗑️ icon next to any lead in the panel\n• **Upload new file** — Upload a different CSV to replace your current leads\n• **View leads** — Click on the leads panel to review all your uploaded contacts\n\nYou currently have **${inboundLeads.length}** leads loaded. Once you're happy with the list, click **"Create Outreach Journey"** to set up your campaign!`,
                     ts: new Date(),
                     targeting: targeting || undefined,
                 }));
@@ -1140,7 +1637,7 @@ export default function AdvancedSearchAIPage() {
                 if (counts.whatsapp > 0) summaryParts.push(`• **WhatsApp Numbers:** ${counts.whatsapp}`);
                 if (counts.phone > 0) summaryParts.push(`• **Phone Numbers:** ${counts.phone}`);
                 if (counts.website > 0) summaryParts.push(`• **Websites:** ${counts.website}`);
-                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Campaign Checkpoints"**!`);
+                summaryParts.push(`\n👉 Ready to create a campaign? Click **"Create Outreach Journey"**!`);
                 setMessages(p => p.filter(m => m.id !== lid).concat({
                     id: `a-${Date.now()}`, role: 'ai',
                     text: summaryParts.join('\n'),
@@ -1266,8 +1763,8 @@ export default function AdvancedSearchAIPage() {
             let shouldRunSearch = false;
             let aiResponseText = '';
             let aiOpts: { label: string; value: string }[] | undefined;
-            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting
-            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : targeting;
+            // If user confirmed a search preview, start with the stored intent; otherwise use current targeting (or override from caller)
+            let updatedTargetState = confirmedForSearch ? confirmedForSearch.intent : (opts?.targetingOverride || targeting);
 
             if (confirmedForSearch) {
                 // User confirmed the search preview — skip lead-chat and go straight to search
@@ -1278,9 +1775,10 @@ export default function AdvancedSearchAIPage() {
                     const chatD = await aiChat.sendLeadChatMessage({
                         message: text,
                         history: historySnapshot,
-                        currentTargeting: targeting,
+                        currentTargeting: opts?.targetingOverride || targeting,
                         pendingIntent: (pendingIntent as string | null),
                         conversationSummary,
+                        icpProfile: businessProfile,
                     });
                     if (chatD) {
                         aiResponseText = chatD.response || '';
@@ -1391,37 +1889,28 @@ export default function AdvancedSearchAIPage() {
             // ── CASE 2: Run LinkedIn search ──
             let ext: LeadTargeting | null = updatedTargetState;
             let realLeads: LeadProfile[] = [];
+            let rawSearchResults: any[] = [];
             let searchTotal = 0;
             let icpWasApplied = false;
 
             // Determine effective search query for confirmed searches.
-            // If the confirmed originalQuery was a trigger word ("yes", "ok", etc.) we must NOT
-            // send it to the backend — Gemini will parse "yes" as keywords: ["yes"] and corrupt
-            // the targeting state. Instead, use the pre-parsed intent targeting directly.
-            // For real query strings ("Find CTOs at SaaS startups in Dubai") we still re-parse
-            // via the backend for best accuracy (e.g. "from Company" parsing).
-            const CONFIRM_TRIGGER_RE = /^(yes|yeah|yep|sure|ok|okay|go|proceed|perfect|great|sounds good|find them?|find leads?|search|start|do it|go ahead)[\s.,!]*$/i;
+            // When user confirms a preview with "yes", "ok", etc., always use the pre-extracted intent
+            // directly to avoid re-parsing, which can introduce inconsistencies (Gemini may extract
+            // different fields on repeat calls). The original intent was already extracted correctly
+            // during the first lead-chat call, so re-using it preserves user intent.
             let searchQuery: string;
-            if (confirmedForSearch) {
-                const isTriggerOriginal = CONFIRM_TRIGGER_RE.test(confirmedForSearch.originalQuery.trim())
-                    || confirmedForSearch.originalQuery.trim().length <= 12;
-                if (isTriggerOriginal && confirmedForSearch.intent) {
-                    // Trigger word confirmed — use the pre-parsed intent targeting directly.
-                    // Build a readable search query from the intent so the backend can score it properly.
-                    // Include company_names and keywords so person+company searches are not lost.
-                    ext = confirmedForSearch.intent;
-                    searchQuery = [
-                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
-                        ...(ext.job_titles || []),
-                        ...(ext.company_names || []),
-                        ...(ext.industries || []),
-                        ...(ext.locations || []),
-                    ].filter(Boolean).join(' ') || 'leads';
-                } else {
-                    // Real query — send to backend for fresh re-parsing (fixes "from Company" parsing).
-                    searchQuery = confirmedForSearch.originalQuery;
-                    ext = null;
-                }
+            if (confirmedForSearch && confirmedForSearch.intent) {
+                // User confirmed the preview — use the pre-parsed intent targeting directly.
+                // Build a readable search query from the intent so the backend can score it properly.
+                // Include company_names and keywords so person+company searches are not lost.
+                ext = confirmedForSearch.intent;
+                searchQuery = [
+                    ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
+                    ...(ext.job_titles || []),
+                    ...(ext.company_names || []),
+                    ...(ext.industries || []),
+                    ...(ext.locations || []),
+                ].filter(Boolean).join(' ') || 'leads';
             } else {
                 // If we have updated targeting from lead-chat or custom flows, use that for search query
                 searchQuery = shouldRunSearch && ext && !isFirstMessage
@@ -1435,11 +1924,14 @@ export default function AdvancedSearchAIPage() {
                     : text;
             }
 
+            let searchErrorMessage: string | null = null;
+
             try {
                 // Enhance ICP description with user feedback on previous leads
                 // Use the effective searchQuery (never "yes") as the ICP base description
                 const icpBase = confirmedForSearch ? searchQuery : text;
-                let icpDesc = icpBase;
+                const bizCtx = getBusinessContext();
+                let icpDesc = bizCtx ? `${icpBase}\n\n--- Business Context ---\n${bizCtx}` : icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
@@ -1448,7 +1940,7 @@ export default function AdvancedSearchAIPage() {
                         parts.push(`\n\nUser marked these leads as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
                     }
                     if (badLeads.length > 0) {
-                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`).join('\n')}`);
+                        parts.push(`\n\nUser marked these leads as BAD matches (avoid similar profiles):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}${l.icp_reasoning ? ` (${l.icp_reasoning})` : ''}`; }).join('\n')}`);
                     }
                     icpDesc = parts.join('');
                 }
@@ -1474,6 +1966,7 @@ export default function AdvancedSearchAIPage() {
                         company_size: targeting.company_size,
                     } : undefined,
                     icp_description: icpDesc,
+                    search_enrichment: buildSearchEnrichment(),
                     useSalesNav,
                 });
 
@@ -1511,6 +2004,7 @@ export default function AdvancedSearchAIPage() {
                     setCursorHistory([null, nextCursor]); // page1=null(start), page2=nextCursor
                     icpWasApplied = !!d.icp_applied;
                     if (Array.isArray(d.results) && d.results.length > 0) {
+                        rawSearchResults = d.results;
                         realLeads = d.results.map((item: any, idx: number) => ({
                             id: item.id || item.provider_id || `lead-${idx}`,
                             name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (item.profile_url ? 'LinkedIn User' : 'Contact'),
@@ -1590,7 +2084,6 @@ export default function AdvancedSearchAIPage() {
 
             // ── Build final AI response text ──
             let finalText = aiResponseText; // May be set by lead-chat above
-            let searchErrorMessage: string | null = null;
 
             if (!finalText) {
                 // If search failed, show the error
@@ -1620,10 +2113,46 @@ export default function AdvancedSearchAIPage() {
                 setTimeout(() => setShowPanel('leads'), 500);
             }
 
+            const journey = realLeads.length > 0 ? buildOutreachJourney(realLeads, ext) : undefined;
             setMessages(p => p.filter(m => m.id !== lid).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: finalText, ts: new Date(),
                 targeting: ext || undefined, options: aiOpts, leads: realLeads.length > 0 ? realLeads.slice(0, 3) : undefined,
+                outreach_journey: journey,
             }));
+
+            // ── Persist search results to ai_messages.message_data (non-blocking) ──
+            if (rawSearchResults.length > 0) {
+                const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || '') : '';
+                fetch('/api/ai-icp-assistant/messages/batch-save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({
+                        sessionId: convId,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: text,
+                                timestamp: new Date().toISOString(),
+                                messageData: { source: 'advanced_search_ai' },
+                            },
+                            {
+                                role: 'ai',
+                                content: finalText,
+                                timestamp: new Date().toISOString(),
+                                messageData: {
+                                    source: 'advanced_search_ai',
+                                    search_query: text,
+                                    targeting: ext || null,
+                                    total_results: searchTotal,
+                                    icp_applied: icpWasApplied,
+                                    leads: rawSearchResults,
+                                },
+                            },
+                        ],
+                    }),
+                }).catch(e => console.warn('[batch-save] Failed to persist search results:', e));
+            }
         } catch (err) {
             console.error('Error:', err);
             setMessages(p => p.filter(m => m.id !== lid).concat({
@@ -1731,7 +2260,7 @@ export default function AdvancedSearchAIPage() {
                 // Add campaign overview message — msg.targeting triggers the 3-card UI
                 setMessages(p => [...p, {
                     id: `a-${Date.now()}`, role: 'ai',
-                    text: `✅ **Contact added!** Here's your campaign overview — click **"Create Campaign Checkpoints"** to proceed:`,
+                    text: `✅ **Contact added!** Here's your campaign overview — click **"Create Outreach Journey"** to proceed:`,
                     ts: new Date(),
                     targeting: targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] },
                 }]);
@@ -1783,15 +2312,26 @@ export default function AdvancedSearchAIPage() {
             ? `Refine my targeting with these additional criteria:\n${filterParts.join('\n')}`
             : 'Confirm my current targeting criteria';
 
+        // Clear previous results so the UI shows fresh leads after the new search
+        if (filterParts.length > 0) {
+            setLeads([]);
+            setSearchPage(1);
+            setTotalResults(0);
+            setSearchCursor(null);
+            setCursorHistory([null]);
+            setNoMoreLeads(false);
+            setTargetingFiltersActive(true);
+        }
+
         // Close the targeting form
         setTgStep(-1);
 
-        // Send to AI for refinement - this will trigger the search
-        doSend(refinementMessage);
+        // Send to AI for refinement with explicit targeting override so stale state isn't used
+        doSend(refinementMessage, { targetingOverride: updatedTargeting });
     }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); screen === 'landing' ? onLandingSubmit() : onChatSend(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); messages.length === 0 ? onLandingSubmit() : onChatSend(); }
     };
 
     const reset = () => {
@@ -1808,6 +2348,7 @@ export default function AdvancedSearchAIPage() {
         setSearchPage(1);
         setTotalResults(0);
         setSearchCursor(null);
+        setNoMoreLeads(false);
         setCursorHistory([null]);
         setLastSearchQuery('');
         setLastIcpDescription('');
@@ -1820,11 +2361,12 @@ export default function AdvancedSearchAIPage() {
         setTgCompanyAge([]);
         setTgEducation([]);
         setTgSkills([]);
+        setTargetingFiltersActive(false);
     };
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
-        if (loadingMore || !lastSearchQuery || !searchCursor) return;
+        if (loadingMore || !lastSearchQuery) return;
 
         setLoadingMore(true);
         try {
@@ -1835,7 +2377,7 @@ export default function AdvancedSearchAIPage() {
             if (icpDesc && (goodLeads.length > 0 || badLeads.length > 0)) {
                 const parts = [icpDesc];
                 if (goodLeads.length > 0) parts.push(`\n\nUser marked these as GOOD matches (find more like these):\n${goodLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
-                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}`).join('\n')}`);
+                if (badLeads.length > 0) parts.push(`\n\nUser marked these as BAD matches (avoid similar):\n${badLeads.map(l => { const c = leadFeedbackComments[l.id]; return `- ${l.name}: ${l.headline || ''} at ${l.current_company || ''}${c ? ` — Reason: "${c}"` : ''}`; }).join('\n')}`);
                 icpDesc = parts.join('');
             }
 
@@ -1857,7 +2399,10 @@ export default function AdvancedSearchAIPage() {
                     company_size: targeting.company_size,
                 } : undefined,
                 icp_description: icpDesc,
-                filters: { cursor: searchCursor },
+                search_enrichment: buildSearchEnrichment(),
+                // Use cursor when available (Unipile token); fall back to start-offset pagination
+                filters: searchCursor ? { cursor: searchCursor } : {},
+                start: searchCursor ? 0 : leads.length,
                 useSalesNav,
             };
 
@@ -1899,6 +2444,7 @@ export default function AdvancedSearchAIPage() {
             } else {
                 // No more results
                 setSearchCursor(null);
+                setNoMoreLeads(true);
             }
         } catch (e) { console.error('[LoadMore] error', e); }
         setLoadingMore(false);
@@ -2076,6 +2622,15 @@ export default function AdvancedSearchAIPage() {
                                             <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
                                         </div>
                                     </div>
+                                    <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowAttachMenu(false); }}>
+                                        <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        </div>
+                                        <div>
+                                            <div className="adv-attach-label">Select contacts</div>
+                                            <div className="adv-attach-sub">Pick from your existing contacts</div>
+                                        </div>
+                                    </div>
                                     <div className={`adv-attach-item${webSearchEnabled ? ' adv-attach-active' : ''}`} onClick={() => { setWebSearchEnabled(!webSearchEnabled); setShowAttachMenu(false); }}>
                                         <div className="adv-attach-icon" style={{background: webSearchEnabled ? '#dbeafe' : '#e0f2fe'}}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={webSearchEnabled ? '#2563eb' : '#0284c7'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -2167,6 +2722,36 @@ export default function AdvancedSearchAIPage() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                     </button>
 
+                    {/* AI Playground button — top-right */}
+                    <button
+                        onClick={() => setShowPlayground(true)}
+                        title="Configure AI context: company, ICP, sales script, etc."
+                        style={{
+                            position: 'absolute', top: '16px', right: '20px', zIndex: 10,
+                            display: 'flex', alignItems: 'center', gap: '7px',
+                            padding: '8px 14px', borderRadius: '20px',
+                            border: '1.5px solid',
+                            borderColor: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb',
+                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#ede9fe,#f5f3ff)' : '#fff',
+                            color: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280',
+                            fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb';
+                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280';
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        ICP Discovery
+                        {Object.values(businessProfile).some(v => v) && (
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
+                        )}
+                    </button>
+
                     <div className="adv-chat-msgs">
                         {/* Landing Content - Show when no messages */}
                         {messages.length === 0 && (
@@ -2192,7 +2777,7 @@ export default function AdvancedSearchAIPage() {
                                         : 'Qualifying...'
                                 }
                                 : m;
-                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} />;
+                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
                         })}
                         </div>
 
@@ -2318,6 +2903,15 @@ export default function AdvancedSearchAIPage() {
                                                 <div>
                                                     <div className="adv-attach-label">Import leads</div>
                                                     <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
+                                                </div>
+                                            </div>
+                                            <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
+                                                <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                                </div>
+                                                <div>
+                                                    <div className="adv-attach-label">Select contacts</div>
+                                                    <div className="adv-attach-sub">Pick from your existing contacts</div>
                                                 </div>
                                             </div>
                                             <div className="adv-attach-divider"/>
@@ -2476,7 +3070,34 @@ export default function AdvancedSearchAIPage() {
                                                 <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
                                                 {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
                                                 {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
-                                                {lead.linkedinProfile && <div style={{ fontSize: '12px', color: '#0a66c2' }}>💼 LinkedIn</div>}
+                                                {lead.linkedinProfile && (
+                                                    <div style={{ fontSize: '12px', color: '#0a66c2' }}>
+                                                        <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
+                                                            style={{ color: '#0a66c2', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                                            LinkedIn Profile
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {lead.notes && lead.notes.length > 0 && (
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#374151',
+                                                        marginTop: '6px',
+                                                        padding: '8px 10px',
+                                                        background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #c7d7f5',
+                                                        lineHeight: '1.6',
+                                                        maxWidth: '300px',
+                                                    }}>
+                                                        <span style={{ color: '#172560', fontWeight: 700, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                                            AI Research Summary
+                                                        </span>
+                                                        {lead.notes.length > 200 ? lead.notes.substring(0, 200) + '…' : lead.notes}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button
@@ -2547,10 +3168,14 @@ export default function AdvancedSearchAIPage() {
                                         )}
                                         <div className="adv-lead-info">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                                    {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
-                                                </a>
-                                                {lead.icp_score !== undefined && (
+                                                {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                    <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }} onClick={e => e.stopPropagation()}>
+                                                        {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
+                                                    </a>
+                                                ) : (
+                                                    <span className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
+                                                )}
+                                                {!targetingFiltersActive && lead.icp_score !== undefined && (
                                                     <span style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                         padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
@@ -2565,7 +3190,7 @@ export default function AdvancedSearchAIPage() {
                                                 {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
                                             </div>
                                             {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
-                                            {lead.icp_reasoning && (
+                                            {!targetingFiltersActive && lead.icp_reasoning && (
                                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
                                                     {lead.icp_reasoning}
                                                 </div>
@@ -2621,7 +3246,7 @@ export default function AdvancedSearchAIPage() {
                                                     </button>
                                                     <button
                                                         title="Bad match"
-                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                         style={{
                                                             border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
                                                             borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2724,7 +3349,7 @@ export default function AdvancedSearchAIPage() {
                                                             >👍</button>
                                                             <button
                                                                 title="Confirmed bad fit"
-                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad'); }}
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
                                                                 style={{
                                                                     border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
                                                                     borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
@@ -2775,8 +3400,10 @@ export default function AdvancedSearchAIPage() {
                                 </div>
                             )}
 
-                            {/* Get More Leads button */}
-                            {!inboundMode && searchCursor && (
+                            {/* Get More Leads button — show when there are leads and either a
+                                cursor token is available or the backend reported more total
+                                results than we're currently displaying */}
+                            {!inboundMode && leads.length > 0 && !noMoreLeads && (
                                 <div style={{
                                     display: 'flex', justifyContent: 'center',
                                     padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
@@ -2818,6 +3445,436 @@ export default function AdvancedSearchAIPage() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════
+                    AI PLAYGROUND DRAWER — Chat + Card based
+                    ═══════════════════════════════════════════════ */}
+                {showPlayground && (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 9998,
+                        display: 'flex', alignItems: 'stretch',
+                    }}>
+                        {/* Backdrop */}
+                        <div onClick={() => setShowPlayground(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }} />
+
+                        {/* Drawer */}
+                        <div style={{
+                            width: 480, maxWidth: '96vw', background: '#fff',
+                            display: 'flex', flexDirection: 'column',
+                            boxShadow: '-8px 0 40px rgba(0,0,0,.18)',
+                            animation: 'slideInRight .28s cubic-bezier(.4,0,.2,1) both',
+                            overflow: 'hidden',
+                        }}>
+                            {/* ── Header ── */}
+                            <div style={{
+                                padding: '16px 20px 12px',
+                                borderBottom: '1.5px solid #e5e7eb',
+                                background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
+                                flexShrink: 0,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 36, height: 36, borderRadius: 10,
+                                            background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>ICP Discovery</div>
+                                            <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
+                                                {pgIsComplete ? '✅ ICP profile complete!' : 'Answer questions to power smarter lead discovery'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            title="Restart conversation"
+                                            style={{
+                                                padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
+                                                background: '#fff', color: '#6b7280', fontSize: 11.5, fontWeight: 600,
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                            }}
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                            Restart
+                                        </button>
+                                        <button onClick={() => setShowPlayground(false)} style={{
+                                            width: 30, height: 30, border: '1px solid #e5e7eb', borderRadius: 8,
+                                            background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <X size={15} color="#6b7280" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Profile completeness bar */}
+                                {(() => {
+                                    // Optional/supplementary fields not part of the core conversation flow
+                                    const optionalFields = new Set(['website', 'sampleConversation', 'competitors']);
+                                    const coreProfile = Object.fromEntries(
+                                        Object.entries(businessProfile).filter(([k]) => !optionalFields.has(k))
+                                    );
+                                    const filled = pgIsComplete
+                                        ? Object.keys(coreProfile).length
+                                        : Object.values(coreProfile).filter(v => v).length;
+                                    const total = Object.keys(coreProfile).length;
+                                    const pct = Math.round((filled / total) * 100);
+                                    return (
+                                        <div style={{ marginTop: 10 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Profile completeness</span>
+                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
+                                            </div>
+                                            <div style={{ height: 5, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 99,
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                                                    width: `${pct}%`, transition: 'width .5s ease',
+                                                }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* ── Chat Messages ── */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
+                                {pgChatHistory.length === 0 && !pgBusy && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(124,58,237,.3)' }}>
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                            </svg>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Define Your Ideal Customer Profile</div>
+                                            <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                                                Answer a few questions about your business and I'll identify exactly who you should target for outreach.
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={pgStartConversation}
+                                            style={{
+                                                padding: '12px 28px', borderRadius: 12, border: 'none',
+                                                background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                color: '#fff', fontSize: 14, fontWeight: 700,
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,.4)',
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                            }}
+                                        >
+                                            <Sparkles size={16} />
+                                            Start AI Setup
+                                        </button>
+                                    </div>
+                                )}
+
+                                {pgChatHistory.map((msg, idx) => (
+                                    <div key={idx}>
+                                        {msg.role === 'user' ? (
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                <div style={{
+                                                    maxWidth: '78%', background: 'linear-gradient(135deg,#172560,#2563eb)',
+                                                    color: '#fff', borderRadius: '18px 18px 4px 18px',
+                                                    padding: '10px 14px', fontSize: 13.5, lineHeight: 1.55,
+                                                    boxShadow: '0 2px 8px rgba(23,37,96,.2)',
+                                                }}>
+                                                    {/* Hide card submission raw messages */}
+                                                    {msg.content.startsWith('[Card submission:') ? '✅ Submitted' : msg.content}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, boxShadow: '0 2px 8px rgba(124,58,237,.3)',
+                                                }}>🧠</div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        background: '#fff', borderRadius: '4px 18px 18px 18px',
+                                                        padding: '10px 14px', fontSize: 13.5, color: '#374151',
+                                                        lineHeight: 1.65, boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+                                                        border: '1px solid #f3f4f6',
+                                                    }}>
+                                                        {msg.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Typing indicator */}
+                                {pgBusy && (
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🧠</div>
+                                        <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            {[0,1,2].map(i => (
+                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Active Card Input ── */}
+                                {pgCurrentCard && !pgBusy && (() => {
+                                    const card = pgCurrentCard;
+                                    const fieldVal = pgCardValues[card.field];
+
+                                    return (
+                                        <div style={{
+                                            background: '#fff', border: '1.5px solid #ede9fe', borderRadius: 14,
+                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(124,58,237,.1)',
+                                        }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Sparkles size={12} /> {card.label}
+                                            </div>
+
+                                            {/* TEXT / TEXTAREA */}
+                                            {(card.type === 'text' || card.type === 'textarea') && (
+                                                <div style={{ position: 'relative' }}>
+                                                    <textarea
+                                                        rows={card.type === 'textarea' ? 3 : 1}
+                                                        value={fieldVal || ''}
+                                                        onChange={e => setPgCardValues({ [card.field]: e.target.value })}
+                                                        placeholder={card.placeholder || ''}
+                                                        autoFocus
+                                                        style={{
+                                                            width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                            padding: '9px 12px', paddingBottom: card.type === 'textarea' ? '36px' : '9px',
+                                                            fontSize: 13, color: '#374151',
+                                                            resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                                            lineHeight: 1.5, background: '#fafafa', boxSizing: 'border-box',
+                                                        }}
+                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
+                                                    />
+                                                    {card.type === 'textarea' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={pgGenerateSuggestion}
+                                                            disabled={pgSuggesting}
+                                                            title="Generate with AI"
+                                                            style={{
+                                                                position: 'absolute', bottom: 8, right: 8,
+                                                                display: 'flex', alignItems: 'center', gap: 4,
+                                                                padding: '4px 10px', borderRadius: 6, border: 'none',
+                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                                color: pgSuggesting ? '#9ca3af' : '#fff',
+                                                                fontSize: 11.5, fontWeight: 600, cursor: pgSuggesting ? 'default' : 'pointer',
+                                                                transition: 'all .15s',
+                                                            }}
+                                                        >
+                                                            <Sparkles size={11} />
+                                                            {pgSuggesting ? 'Generating…' : 'Generate with AI'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* CHIPS (multi or single select) */}
+                                            {card.type === 'chips' && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => {
+                                                        const selected = Array.isArray(fieldVal) ? fieldVal.includes(opt) : fieldVal === opt;
+                                                        return (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => {
+                                                                    if (card.field === 'icpCompanySize' || card.field === 'campaignTone' || card.field === 'timezone') {
+                                                                        // Single select
+                                                                        setPgCardValues({ [card.field]: opt });
+                                                                    } else {
+                                                                        // Multi-select
+                                                                        const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                        const idx = current.indexOf(opt);
+                                                                        if (idx >= 0) current.splice(idx, 1); else current.push(opt);
+                                                                        setPgCardValues({ [card.field]: current });
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
+                                                                    border: selected ? 'none' : '1.5px solid #e5e7eb',
+                                                                    background: selected ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#f9fafb',
+                                                                    color: selected ? '#fff' : '#374151',
+                                                                    cursor: 'pointer', transition: 'all .12s',
+                                                                }}
+                                                            >{opt}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* RADIO */}
+                                            {card.type === 'radio' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                                                    {(card.options || []).map((opt: string) => (
+                                                        <button
+                                                            key={opt}
+                                                            onClick={() => setPgCardValues({ [card.field]: opt })}
+                                                            style={{
+                                                                textAlign: 'left', padding: '9px 14px', borderRadius: 10, fontSize: 13,
+                                                                border: fieldVal === opt ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                                                                background: fieldVal === opt ? '#faf5ff' : '#fff',
+                                                                color: '#374151', cursor: 'pointer', fontWeight: 500,
+                                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                            }}
+                                                        >
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#7c3aed' : '#d1d5db'}`, background: fieldVal === opt ? '#7c3aed' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* TAGS */}
+                                            {card.type === 'tags' && (
+                                                <div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                                        {(Array.isArray(fieldVal) ? fieldVal : []).map((tag: string, ti: number) => (
+                                                            <div key={ti} style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                background: '#ede9fe', borderRadius: 16, padding: '4px 10px',
+                                                                fontSize: 12.5, color: '#5b21b6', fontWeight: 600,
+                                                            }}>
+                                                                {tag}
+                                                                <button onClick={() => {
+                                                                    const updated = [...fieldVal];
+                                                                    updated.splice(ti, 1);
+                                                                    setPgCardValues({ [card.field]: updated });
+                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#7c3aed', display: 'flex', lineHeight: 1 }}>
+                                                                    <X size={11} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                        <input
+                                                            value={pgTagInput}
+                                                            onChange={e => setPgTagInput(e.target.value)}
+                                                            placeholder={card.placeholder || 'Type and press Enter'}
+                                                            onKeyDown={e => {
+                                                                if ((e.key === 'Enter' || e.key === ',') && pgTagInput.trim()) {
+                                                                    e.preventDefault();
+                                                                    const current = Array.isArray(fieldVal) ? [...fieldVal] : [];
+                                                                    if (!current.includes(pgTagInput.trim())) current.push(pgTagInput.trim());
+                                                                    setPgCardValues({ [card.field]: current });
+                                                                    setPgTagInput('');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                                padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                                                            }}
+                                                            onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                            onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* HOURS */}
+                                            {card.type === 'hours' && (
+                                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>From</div>
+                                                        <input type="time" value={(fieldVal as any)?.from || '09:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), from: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                    <div style={{ marginTop: 16, color: '#9ca3af' }}>–</div>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 600 }}>To</div>
+                                                        <input type="time" value={(fieldVal as any)?.to || '18:00'} onChange={e => setPgCardValues({ [card.field]: { ...(fieldVal as any || {}), to: e.target.value } })}
+                                                            style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, outline: 'none' }} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Submit card button */}
+                                            <button
+                                                onClick={pgSubmitCard}
+                                                disabled={!fieldVal && card.type !== 'hours'}
+                                                style={{
+                                                    marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
+                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                                    color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
+                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
+                                                    transition: 'all .15s',
+                                                }}
+                                            >
+                                                Submit →
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div ref={pgMessagesEndRef} />
+                            </div>
+
+                            {/* ── Text Input Bar ── */}
+                            {pgChatHistory.length > 0 && (
+                                <div style={{
+                                    padding: '10px 14px', borderTop: '1.5px solid #e5e7eb',
+                                    background: '#fff', flexShrink: 0, display: 'flex', gap: 8,
+                                }}>
+                                    <input
+                                        value={pgInput}
+                                        onChange={e => setPgInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); pgSendMessage(pgInput); } }}
+                                        placeholder="Type a message or skip to next question…"
+                                        disabled={pgBusy}
+                                        style={{
+                                            flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 24,
+                                            padding: '9px 16px', fontSize: 13.5, outline: 'none', fontFamily: 'inherit',
+                                            background: pgBusy ? '#f9fafb' : '#fff', color: '#374151',
+                                            transition: 'border .15s',
+                                        }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                    />
+                                    <button
+                                        onClick={() => pgSendMessage(pgInput)}
+                                        disabled={!pgInput.trim() || pgBusy}
+                                        style={{
+                                            width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── Footer: Done / Apply ── */}
+                            {pgIsComplete && (
+                                <div style={{ padding: '10px 14px', borderTop: '1.5px solid #e5e7eb', background: '#f0fdf4', flexShrink: 0 }}>
+                                    <button
+                                        onClick={() => setShowPlayground(false)}
+                                        style={{
+                                            width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+                                            background: 'linear-gradient(135deg,#10b981,#059669)',
+                                            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                            boxShadow: '0 4px 14px rgba(16,185,129,.35)',
+                                        }}
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                        ✅ Profile Complete — Apply Context
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -2908,6 +3965,98 @@ export default function AdvancedSearchAIPage() {
                 loading={summaryLoading}
                 error={summaryError}
             />
+
+            {/* ── Bad-feedback comment popup ── */}
+            {badFeedbackPopup && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', zIndex: 10000,
+                    }}
+                    onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                >
+                    <div
+                        style={{
+                            background: '#fff', borderRadius: '14px', padding: '24px',
+                            width: '90%', maxWidth: '420px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.18)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>
+                                👎 Why is this a bad match?
+                            </div>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', lineHeight: 1, padding: '2px' }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
+                            {badFeedbackPopup.leadName} — your feedback helps refine future searches.
+                        </div>
+
+                        {/* Quick-select chips */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                            {['Role not relevant', 'Wrong seniority level', 'Wrong industry', 'Wrong location', 'Missing key responsibility', 'Wrong company size'].map(chip => (
+                                <button
+                                    key={chip}
+                                    onClick={() => setBadFeedbackDraft(prev => prev ? `${prev}, ${chip}` : chip)}
+                                    style={{
+                                        padding: '5px 10px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 500,
+                                        border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151',
+                                        cursor: 'pointer', transition: 'all 0.15s',
+                                    }}
+                                >
+                                    {chip}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Free-text comment */}
+                        <textarea
+                            value={badFeedbackDraft}
+                            onChange={(e) => setBadFeedbackDraft(e.target.value)}
+                            placeholder="e.g. Role doesn't include finance responsibilities, profile is too junior…"
+                            rows={3}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                border: '1.5px solid #e5e7eb', borderRadius: '8px',
+                                padding: '10px 12px', fontSize: '13px', color: '#374151',
+                                resize: 'vertical', outline: 'none', marginBottom: '14px',
+                                fontFamily: 'inherit', lineHeight: 1.5,
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = '#172560'; }}
+                            onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; }}
+                        />
+
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setBadFeedbackPopup(null); setBadFeedbackDraft(''); }}
+                                style={{
+                                    padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                                    border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', cursor: 'pointer',
+                                }}
+                            >
+                                Skip
+                            </button>
+                            <button
+                                onClick={() => confirmBadFeedback(badFeedbackDraft)}
+                                style={{
+                                    padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                                    border: 'none', background: '#172560', color: '#fff', cursor: 'pointer',
+                                }}
+                            >
+                                Mark as Bad Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ── end bad-feedback popup ── */}
 
             {/* Edit Inbound Lead Modal */}
             {editingLeadIndex !== null && editFormData && (
@@ -3143,6 +4292,160 @@ export default function AdvancedSearchAIPage() {
                 </div>
             )}
 
+            {/* ── Contact Picker Modal ── */}
+            {showContactPicker && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}
+                    onClick={() => setShowContactPicker(false)}
+                >
+                    <div
+                        style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '82vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 48px rgba(0,0,0,0.18)', overflow: 'hidden' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* ── Modal Header ── */}
+                        <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {cpPickerStep === 'contacts' && (
+                                        <button onClick={() => setCpPickerStep('source')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px 4px', marginLeft: '-4px', display: 'flex', alignItems: 'center' }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                                        </button>
+                                    )}
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
+                                            {cpPickerStep === 'source' ? 'Select contact source' : (CP_SOURCES.find(s => s.key === cpSourceKey)?.label || 'Contacts')}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '1px' }}>
+                                            {cpPickerStep === 'source' ? 'Choose where to pull contacts from' : 'Select contacts for your campaign'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowContactPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── STEP 1: Source selection ── */}
+                        {cpPickerStep === 'source' && (
+                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                                {CP_SOURCES.map(src => (
+                                    <div
+                                        key={src.key}
+                                        onClick={() => selectCpSource(src.key)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', transition: 'background 0.1s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf5ff')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                    >
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: src.color, flexShrink: 0 }} />
+                                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#111827', flex: 1 }}>{src.label}</span>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* ── STEP 2: Contact list ── */}
+                        {cpPickerStep === 'contacts' && (<>
+                            {/* Search bar */}
+                            <div style={{ padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={cpSearch}
+                                        onChange={e => handleCpSearch(e.target.value)}
+                                        placeholder="Search by name, phone or email…"
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 12px 7px 30px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', outline: 'none', color: '#111827', background: '#f9fafb' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Select-all row */}
+                            {!cpLoading && cpContacts.length > 0 && (
+                                <div
+                                    onClick={toggleCpSelectAll}
+                                    style={{ padding: '8px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#fafafa' }}
+                                >
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#7c3aed', borderRadius: '1px' }}/>}
+                                    </div>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
+                                        {cpSelected.size === cpContacts.length ? 'Deselect all' : `Select all ${cpContacts.length} shown`}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* List */}
+                            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                                {cpLoading ? (
+                                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                                        <svg style={{ margin: '0 auto 8px', display: 'block', animation: 'spin 1s linear infinite' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".3"/><path d="M21 12a9 9 0 00-9-9"/></svg>
+                                        Loading contacts…
+                                    </div>
+                                ) : cpContacts.length === 0 ? (
+                                    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="1.5" style={{ margin: '0 auto 8px', display: 'block' }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#6b7280' }}>No contacts found</div>
+                                        <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>{cpSearch ? 'Try a different search term' : 'No contacts in this source'}</div>
+                                    </div>
+                                ) : cpContacts.map((c: any) => {
+                                    const checked = cpSelected.has(c.id);
+                                    const name = c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+                                    const sub = [c.company || c.company_name, c.email || c.phone].filter(Boolean).join(' · ');
+                                    const initl = name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+                                    return (
+                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#faf5ff' : 'white', transition: 'background 0.1s' }}>
+                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+                                            </div>
+                                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(name), flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: '#fff' }}>{initl}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+                                                {sub && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+                                            </div>
+                                            {c.phone && (
+                                                <span style={{ fontSize: '11px', color: '#6b7280', flexShrink: 0 }}>
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '2px' }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.1 10.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Footer */}
+                            <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                                    {cpSelected.size > 0
+                                        ? <><strong style={{ color: '#7c3aed' }}>{cpSelected.size}</strong> selected</>
+                                        : 'None selected'
+                                    }
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => setCpPickerStep('source')} style={{ padding: '7px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#6b7280', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={confirmContactPicker}
+                                        disabled={cpSelected.size === 0}
+                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#7c3aed' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                        Start Campaign{cpSelected.size > 0 ? ` (${cpSelected.size})` : ''}
+                                    </button>
+                                </div>
+                            </div>
+                        </>)}
+                    </div>
+                </div>
+            )}
+
             <style>{css}</style>
         </div>
     );
@@ -3151,7 +4454,7 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean }) {
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -3279,7 +4582,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                         onMouseLeave={e => (e.currentTarget.style.background = '#f8faff')}
                                     >
                                         {/* Globe icon */}
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" flexShrink="0" style={{ flexShrink: 0 }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
                                             <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                                         </svg>
                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -3335,14 +4638,17 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     <div className="adv-result-cards" style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
                         {/* Targeting card */}
                         <div className="adv-rc" onClick={onStartTargeting} style={{
-                            flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
+                            flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
                             <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
-                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#6b7280", display: "flex", alignItems: "center", gap: "4px" }}>
-                                    <span style={{ color: "#10b981" }}>✓</span> Param extracted
-                                </div>
+                                {!useSalesNav && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                                        <span style={{ fontSize: "10px", color: "#d97706", fontWeight: 500, lineHeight: 1.3 }}>Sales Navigator required for narrow filters</span>
+                                    </div>
+                                )}
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
@@ -3387,7 +4693,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
                         <button className="adv-act-btn" style={{
                             padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
-                        }} onClick={onStartCheckpoints}>Create Campaign Checkpoints</button>
+                        }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
                     </div>
                 )}
 
@@ -3429,6 +4735,103 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.options && msg.options.length > 0 && (
                     <div className="adv-opts">
                         {msg.options.map((o, i) => <button key={i} className="adv-opt-btn" onClick={() => onOpt(o.value)}>{o.label}</button>)}
+                    </div>
+                )}
+
+                {/* ── Outreach Journey Stepper ── */}
+                {msg.outreach_journey && msg.outreach_journey.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            Suggested Outreach Journey
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {msg.outreach_journey.map((step, si) => {
+                                const icons: Record<string, React.ReactNode> = {
+                                    linkedin: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                    ),
+                                    email: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                    ),
+                                    whatsapp: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                    ),
+                                    voice: (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                    ),
+                                };
+                                const bgColor = step.recommended
+                                    ? step.channel === 'linkedin' ? '#0a66c2'
+                                        : step.channel === 'email' ? '#4f46e5'
+                                        : step.channel === 'whatsapp' ? '#25d366'
+                                        : '#f97316'
+                                    : '#f3f4f6';
+                                return (
+                                    <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100px' }}>
+                                            {/* Icon circle with custom tooltip */}
+                                            <div style={{ position: 'relative', display: 'inline-flex' }}
+                                                onMouseEnter={e => {
+                                                    const tip = (e.currentTarget as HTMLElement).querySelector('.journey-tip') as HTMLElement;
+                                                    if (tip) tip.style.opacity = '1';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    const tip = (e.currentTarget as HTMLElement).querySelector('.journey-tip') as HTMLElement;
+                                                    if (tip) tip.style.opacity = '0';
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: '44px', height: '44px', borderRadius: '50%',
+                                                    background: bgColor,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    boxShadow: step.recommended ? `0 4px 12px ${bgColor}55` : 'none',
+                                                    border: step.recommended ? 'none' : '1.5px solid #e5e7eb',
+                                                    flexShrink: 0, cursor: 'default',
+                                                }}>
+                                                    {icons[step.channel]}
+                                                </div>
+                                                {/* Custom tooltip */}
+                                                <div className="journey-tip" style={{
+                                                    opacity: 0, pointerEvents: 'none', transition: 'opacity 0.15s',
+                                                    position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    background: '#1f2937', color: '#fff', fontSize: '11px',
+                                                    borderRadius: '8px', padding: '6px 10px', width: '160px',
+                                                    lineHeight: 1.4, textAlign: 'center', zIndex: 50,
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                    whiteSpace: 'normal',
+                                                }}>
+                                                    {step.reason}
+                                                    {/* Arrow */}
+                                                    <div style={{
+                                                        position: 'absolute', top: '100%', left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        borderWidth: '5px', borderStyle: 'solid',
+                                                        borderColor: '#1f2937 transparent transparent transparent',
+                                                    }} />
+                                                </div>
+                                            </div>
+                                            {/* Label */}
+                                            <div style={{ fontSize: '11px', fontWeight: 700, color: step.recommended ? '#111827' : '#9ca3af', marginTop: '6px', textAlign: 'center' }}>{step.label}</div>
+                                            {/* Action */}
+                                            <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', textAlign: 'center', lineHeight: 1.3, padding: '0 4px' }}>{step.action}</div>
+                                            {step.recommended && (
+                                                <div style={{ marginTop: '4px', fontSize: '9px', background: '#eff6ff', color: '#2563eb', borderRadius: '8px', padding: '1px 6px', fontWeight: 700, textTransform: 'uppercase' }}>Recommended</div>
+                                            )}
+                                        </div>
+                                        {/* Connector arrow between steps */}
+                                        {si < msg.outreach_journey!.length - 1 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', paddingTop: '14px', flexShrink: 0 }}>
+                                                <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+                                                    <path d="M0 8h20M16 4l4 4-4 4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
@@ -3665,6 +5068,20 @@ function CheckpointFormInline({
     const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
     const createEmailTemplate = useCreateEmailTemplate();
 
+    // LinkedIn account daily limit (for All Leads label)
+    const [linkedInDailyLimit, setLinkedInDailyLimit] = useState<number | null>(null);
+    useEffect(() => {
+        fetch('/api/social-integration/linkedin/accounts', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.accounts?.length) {
+                    const limit = d.accounts[0].default_daily_limit;
+                    if (limit) setLinkedInDailyLimit(limit);
+                }
+            })
+            .catch(() => {});
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     // SDK hook — connected Gmail / Outlook accounts from integration tab
     const { data: connectedSenders = [] } = useConnectedEmailSenders();
 
@@ -3757,9 +5174,27 @@ function CheckpointFormInline({
             .catch(() => {});
     }, [nextChannels, liTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Toggle a LinkedIn channel action (multi-select)
+    // Toggle a LinkedIn channel action (multi-select) with dependency auto-select:
+    // - selecting 'connect'  → also selects 'profile_view'
+    // - selecting 'message'  → also selects 'profile_view' and 'connect'
+    // - deselecting follows the reverse: deselecting 'profile_view' also deselects 'connect'+'message'; deselecting 'connect' also deselects 'message'
     const toggleLiChannelAction = (id: string) => {
-        setLiChannelActions(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+        setLiChannelActions(prev => {
+            const isOn = prev.includes(id);
+            if (!isOn) {
+                // turning ON
+                const toAdd = new Set([...prev, id]);
+                if (id === 'connect') toAdd.add('profile_view');
+                if (id === 'message') { toAdd.add('profile_view'); toAdd.add('connect'); }
+                return Array.from(toAdd);
+            } else {
+                // turning OFF
+                let toRemove = [id];
+                if (id === 'profile_view') toRemove = ['profile_view', 'connect', 'message'];
+                if (id === 'connect') toRemove = ['connect', 'message'];
+                return prev.filter(a => !toRemove.includes(a));
+            }
+        });
     };
 
     // Save a new LinkedIn message template
@@ -4386,10 +5821,13 @@ function CheckpointFormInline({
                                 { value: '75', label: 'Above 75%', desc: 'High quality leads' },
                                 { value: '50', label: 'Above 50%', desc: 'Moderate fit and above' },
                                 { value: '25', label: 'Above 25%', desc: 'Include most leads' },
-                                { value: '0', label: 'All Leads', desc: 'No filtering — include everyone' },
+                                { value: '0', label: 'All Leads — Within the LinkedIn Account Limits', desc: linkedInDailyLimit ? `Up to ${linkedInDailyLimit} leads/day based on your account limit` : 'No filtering — include everyone' },
                             ].map((opt, i) => {
                                 const selected = icpThreshold === opt.value;
                                 const count = leads.filter(l => (l.icp_score ?? 0) >= parseInt(opt.value)).length;
+                                const displayCount = opt.value === '0' && linkedInDailyLimit && count > linkedInDailyLimit
+                                    ? linkedInDailyLimit
+                                    : count;
                                 return (
                                     <div key={opt.value} onClick={() => setIcpThreshold(opt.value)} style={optStyle(selected)}>
                                         <div style={numBadge(i + 1, selected)}>{selected ? '✓' : i + 1}</div>
@@ -4398,7 +5836,7 @@ function CheckpointFormInline({
                                             <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{opt.desc}</div>
                                         </div>
                                         <div style={{ fontSize: '12px', fontWeight: 700, color: selected ? '#172560' : '#9ca3af', whiteSpace: 'nowrap' }}>
-                                            {count} lead{count !== 1 ? 's' : ''}
+                                            {displayCount} lead{displayCount !== 1 ? 's' : ''}
                                         </div>
                                     </div>
                                 );
@@ -5686,6 +7124,7 @@ const css = `
             /* ── ANIMATIONS ── */
             @keyframes fadeUp {from {opacity:0; transform:translateY(14px); } to {opacity:1; transform:translateY(0); } }
             @keyframes slideIn {from {opacity:0; transform:translateX(50px); } to {opacity:1; transform:translateX(0); } }
+            @keyframes slideInRight {from {opacity:0; transform:translateX(100%); } to {opacity:1; transform:translateX(0); } }
             @keyframes spin {to {transform: rotate(360deg); } }
             @keyframes pulse {0 %, 100 % { opacity: .4 } 50% {opacity:1 } }
             .fadeUp {animation: fadeUp .35s ease both; }
