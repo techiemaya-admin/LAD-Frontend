@@ -567,6 +567,7 @@ export default function AdvancedSearchAIPage() {
     const [pgCardValues, setPgCardValues]               = useState<Record<string, any>>({});  // working values for active card
     const [pgTagInput, setPgTagInput]                   = useState('');  // tag input buffer
     const [pgIsComplete, setPgIsComplete]               = useState(false);
+    const [pgSuggesting, setPgSuggesting]               = useState(false);  // AI suggestion loading
     const pgMessagesEndRef = useRef<HTMLDivElement>(null);
     const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
         companyName: '', industry: '', website: '', companyDescription: '',
@@ -610,10 +611,10 @@ export default function AdvancedSearchAIPage() {
             });
     }, []);
 
-    // Auto-scroll playground chat
+    // Auto-scroll playground chat — also fires when busy clears (card widget appears)
     useEffect(() => {
-        pgMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [pgChatHistory]);
+        pgMessagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }, [pgChatHistory, pgBusy]);
 
     /** Send a message to the AI Playground chat endpoint */
     const pgSendMessage = useCallback(async (msg: string) => {
@@ -651,7 +652,17 @@ export default function AdvancedSearchAIPage() {
                     setBusinessProfile(prev => ({ ...prev, ...data.profile }));
                     try { localStorage.setItem('lad_business_profile', JSON.stringify({ ...businessProfile, ...data.profile })); } catch { }
                 }
-                if (data.isComplete) setPgIsComplete(true);
+                if (data.isComplete) {
+                    setPgIsComplete(true);
+                    // Explicitly persist the final complete profile to DB so lead-chat always has full context
+                    const finalProfile = { ...businessProfile, ...(data.profile || {}) };
+                    fetch('/api/ai-playground', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ profile: finalProfile }),
+                    }).catch(() => {});
+                }
             }
         } catch { }
         setPgBusy(false);
@@ -673,6 +684,30 @@ export default function AdvancedSearchAIPage() {
         const cardMsg = `[Card submission: field=${field} value=${value}]`;
         await pgSendMessage(cardMsg);
     }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+
+    /** Generate an AI suggestion for the current card field */
+    const pgGenerateSuggestion = useCallback(async () => {
+        if (!pgCurrentCard || pgSuggesting) return;
+        setPgSuggesting(true);
+        try {
+            const res = await fetch('/api/ai-playground/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    field: pgCurrentCard.field,
+                    label: pgCurrentCard.label,
+                    placeholder: pgCurrentCard.placeholder,
+                    profile: businessProfile,
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.suggestion) {
+                setPgCardValues(prev => ({ ...prev, [pgCurrentCard.field]: data.suggestion }));
+            }
+        } catch { }
+        setPgSuggesting(false);
+    }, [pgCurrentCard, pgSuggesting, businessProfile]);
 
     /** Start or restart the playground conversation */
     const pgStartConversation = useCallback(async () => {
@@ -1701,6 +1736,7 @@ export default function AdvancedSearchAIPage() {
                         currentTargeting: opts?.targetingOverride || targeting,
                         pendingIntent: (pendingIntent as string | null),
                         conversationSummary,
+                        icpProfile: businessProfile,
                     });
                     if (chatD) {
                         aiResponseText = chatD.response || '';
@@ -3411,8 +3447,15 @@ export default function AdvancedSearchAIPage() {
 
                                 {/* Profile completeness bar */}
                                 {(() => {
-                                    const filled = Object.values(businessProfile).filter(v => v).length;
-                                    const total = Object.keys(businessProfile).length;
+                                    // Optional/supplementary fields not part of the core conversation flow
+                                    const optionalFields = new Set(['website', 'sampleConversation', 'competitors']);
+                                    const coreProfile = Object.fromEntries(
+                                        Object.entries(businessProfile).filter(([k]) => !optionalFields.has(k))
+                                    );
+                                    const filled = pgIsComplete
+                                        ? Object.keys(coreProfile).length
+                                        : Object.values(coreProfile).filter(v => v).length;
+                                    const total = Object.keys(coreProfile).length;
                                     const pct = Math.round((filled / total) * 100);
                                     return (
                                         <div style={{ marginTop: 10 }}>
@@ -3528,22 +3571,45 @@ export default function AdvancedSearchAIPage() {
 
                                             {/* TEXT / TEXTAREA */}
                                             {(card.type === 'text' || card.type === 'textarea') && (
-                                                <textarea
-                                                    rows={card.type === 'textarea' ? 3 : 1}
-                                                    value={fieldVal || ''}
-                                                    onChange={e => setPgCardValues({ [card.field]: e.target.value })}
-                                                    placeholder={card.placeholder || ''}
-                                                    autoFocus
-                                                    style={{
-                                                        width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8,
-                                                        padding: '9px 12px', fontSize: 13, color: '#374151',
-                                                        resize: 'vertical', outline: 'none', fontFamily: 'inherit',
-                                                        lineHeight: 1.5, background: '#fafafa',
-                                                    }}
-                                                    onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
-                                                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
-                                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
-                                                />
+                                                <div style={{ position: 'relative' }}>
+                                                    <textarea
+                                                        rows={card.type === 'textarea' ? 3 : 1}
+                                                        value={fieldVal || ''}
+                                                        onChange={e => setPgCardValues({ [card.field]: e.target.value })}
+                                                        placeholder={card.placeholder || ''}
+                                                        autoFocus
+                                                        style={{
+                                                            width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8,
+                                                            padding: '9px 12px', paddingBottom: card.type === 'textarea' ? '36px' : '9px',
+                                                            fontSize: 13, color: '#374151',
+                                                            resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                                            lineHeight: 1.5, background: '#fafafa', boxSizing: 'border-box',
+                                                        }}
+                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                        onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
+                                                    />
+                                                    {card.type === 'textarea' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={pgGenerateSuggestion}
+                                                            disabled={pgSuggesting}
+                                                            title="Generate with AI"
+                                                            style={{
+                                                                position: 'absolute', bottom: 8, right: 8,
+                                                                display: 'flex', alignItems: 'center', gap: 4,
+                                                                padding: '4px 10px', borderRadius: 6, border: 'none',
+                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                                color: pgSuggesting ? '#9ca3af' : '#fff',
+                                                                fontSize: 11.5, fontWeight: 600, cursor: pgSuggesting ? 'default' : 'pointer',
+                                                                transition: 'all .15s',
+                                                            }}
+                                                        >
+                                                            <Sparkles size={11} />
+                                                            {pgSuggesting ? 'Generating…' : 'Generate with AI'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
 
                                             {/* CHIPS (multi or single select) */}
