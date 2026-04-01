@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('channel', 'waba');
   const newReq = new NextRequest(url, req);
 
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/chat-settings');
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/settings');
 }
 
 export async function PUT(req: NextRequest) {
@@ -21,5 +21,5 @@ export async function PUT(req: NextRequest) {
   url.searchParams.set('channel', 'waba');
   const newReq = new NextRequest(url, req);
 
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/chat-settings');
+  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/settings');
 }
