@@ -50,15 +50,31 @@ export async function DELETE(
     // Force WABA channel routing to Python service
     const url = new URL(req.url);
     url.searchParams.set('channel', 'waba');
-
-    // Python DELETE endpoint requires tenant_id as a query param (Query(...))
-    // Extract from X-Tenant-ID header and inject into the URL
-    const tenantId = req.headers.get('x-tenant-id');
-    if (tenantId) url.searchParams.set('tenant_id', tenantId);
-
     const wabaReq = new NextRequest(url, req);
 
-    return await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
+    // Python DELETE endpoint requires tenant_id as a query param (Query(...)).
+    // Embed it directly in the path string — nextUrl.searchParams can cache the
+    // original URL when using new NextRequest(modifiedUrl, req), so setting it
+    // on the cloned URL is not reliably forwarded by proxyToPythonService.
+    // Try header first, fall back to JWT cookie decode.
+    let tenantId = req.headers.get('x-tenant-id');
+    if (!tenantId) {
+      const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value;
+      if (token) {
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+            tenantId = payload.tenantId || payload.tenant_id || null;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    const pythonPath = tenantId
+      ? `/admin/whatsapp-accounts/${slug}?tenant_id=${encodeURIComponent(tenantId)}`
+      : `/admin/whatsapp-accounts/${slug}`;
+
+    return await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), pythonPath);
   } catch {
     return NextResponse.json({ success: false, error: 'Failed to delete account' }, { status: 500 });
   }
