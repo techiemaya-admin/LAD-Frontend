@@ -1440,6 +1440,47 @@ export default function AdvancedSearchAIPage() {
                     // Store real lead UUIDs so campaign creation can link to leads table
                     if (saveData.leadIds && saveData.leadIds.length > 0) {
                         setInboundLeadIds(saveData.leadIds);
+
+                        // ── FULL INBOUND ENRICHMENT (Google + Gemini + Unipile) ──
+                        try {
+                            const enrichRes = await fetch('/api/campaigns/leads/enrich-inbound', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    leadIds: saveData.leadIds,
+                                    icpProfile: businessProfile || null,
+                                }),
+                            });
+                            if (enrichRes.ok) {
+                                const enrichData = await enrichRes.json();
+                                if (enrichData.success && enrichData.results?.length > 0) {
+                                    const enrichedIds: string[] = saveData.leadIds;
+                                    // Build maps: leadId → enriched data
+                                    const enrichMap: Record<string, { linkedin_url?: string; background_summary?: string; job_title?: string; industry?: string; icp_score?: number; tier?: string }> = {};
+                                    enrichData.results.forEach((r: any) => {
+                                        enrichMap[r.leadId] = r;
+                                    });
+                                    // Update inboundLeads state
+                                    setInboundLeads(prev => prev.map((lead, idx) => {
+                                        const lid = enrichedIds[idx];
+                                        const enriched = lid ? enrichMap[lid] : null;
+                                        if (!enriched) return lead;
+                                        return {
+                                            ...lead,
+                                            linkedinProfile: lead.linkedinProfile || enriched.linkedin_url || lead.linkedinProfile,
+                                            notes: enriched.background_summary
+                                                ? `${enriched.background_summary}${lead.notes ? '\n' + lead.notes : ''}`
+                                                : lead.notes,
+                                        };
+                                    }));
+                                    // Update counts
+                                    const newLinkedIn = enrichData.results.filter((r: any) => r.linkedin_url && !parsed[enrichedIds.indexOf(r.leadId)]?.linkedinProfile).length;
+                                    if (newLinkedIn > 0) counts.linkedin = (counts.linkedin || 0) + newLinkedIn;
+                                }
+                            }
+                        } catch (enrichErr) {
+                            console.warn('[Lead Import] Inbound enrichment error:', enrichErr);
+                        }
                     }
                 } else {
                     console.warn('Failed to save leads to database');
@@ -1454,6 +1495,7 @@ export default function AdvancedSearchAIPage() {
             if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
             if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
             if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
+            summaryText += `\n\n🔍 **Running background research** — searching Google + LinkedIn to build profiles for each lead...`;
             summaryText += `\n\n👉 Click **"Create Outreach Journey"** to set up your campaign with these leads!`;
 
             setMessages(p => p.filter(m => m.id !== processingId).concat({
@@ -3028,7 +3070,34 @@ export default function AdvancedSearchAIPage() {
                                                 <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
                                                 {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
                                                 {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
-                                                {lead.linkedinProfile && <div style={{ fontSize: '12px', color: '#0a66c2' }}>💼 LinkedIn</div>}
+                                                {lead.linkedinProfile && (
+                                                    <div style={{ fontSize: '12px', color: '#0a66c2' }}>
+                                                        <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
+                                                            style={{ color: '#0a66c2', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                                            LinkedIn Profile
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {lead.notes && lead.notes.length > 0 && (
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#374151',
+                                                        marginTop: '6px',
+                                                        padding: '8px 10px',
+                                                        background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #c7d7f5',
+                                                        lineHeight: '1.6',
+                                                        maxWidth: '300px',
+                                                    }}>
+                                                        <span style={{ color: '#172560', fontWeight: 700, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                                            AI Research Summary
+                                                        </span>
+                                                        {lead.notes.length > 200 ? lead.notes.substring(0, 200) + '…' : lead.notes}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button
