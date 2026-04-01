@@ -586,11 +586,14 @@ export default function AdvancedSearchAIPage() {
                         setBusinessProfile(prev => ({ ...prev, ...d.profile }));
                     }
                     if (Array.isArray(d.history) && d.history.length > 0) {
-                        // Restore last card config from last assistant message
-                        setPgChatHistory(d.history.map((m: any) => ({
-                            role: m.role === 'user' ? 'user' : 'assistant',
-                            content: m.content,
-                        })));
+                        // Filter out bootstrap trigger messages, restore history
+                        const filtered = d.history
+                            .filter((m: any) => m.content !== '__init__' && m.content !== "Hello, let's get started!")
+                            .map((m: any) => ({
+                                role: m.role === 'user' ? 'user' : 'assistant',
+                                content: m.content,
+                            }));
+                        if (filtered.length > 0) setPgChatHistory(filtered);
                     }
                 } else {
                     try {
@@ -677,11 +680,27 @@ export default function AdvancedSearchAIPage() {
         setPgCurrentCard(null);
         setPgIsComplete(false);
         setPgCardValues({});
+        setPgBusy(true);
         // Reset history on backend
         await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => {});
-        // Kick off with an empty message to get the greeting
-        await pgSendMessage('Hello, let\'s get started!');
-    }, [pgSendMessage]);
+        // Bootstrap: get AI greeting without showing a user message bubble
+        try {
+            const res = await fetch('/api/ai-playground/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ message: '__init__' }),
+            });
+            const data = await res.json();
+            if (data.success && data.reply) {
+                setPgChatHistory([{ role: 'assistant', content: data.reply, card: data.card }]);
+                if (data.profile) {
+                    setBusinessProfile((prev: Record<string, string>) => ({ ...prev, ...data.profile }));
+                }
+            }
+        } catch { }
+        setPgBusy(false);
+    }, []);
 
     // Build ICP description from business profile for search injection
     const getBusinessContext = () => {
@@ -2649,7 +2668,7 @@ export default function AdvancedSearchAIPage() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                             <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                         </svg>
-                        AI Playground
+                        ICP Discovery
                         {Object.values(businessProfile).some(v => v) && (
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
                         )}
@@ -3362,9 +3381,9 @@ export default function AdvancedSearchAIPage() {
                                             </svg>
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>AI Playground</div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>ICP Discovery</div>
                                             <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
-                                                {pgIsComplete ? '✅ Business profile complete!' : 'Answer questions to power smarter lead discovery'}
+                                                {pgIsComplete ? '✅ ICP profile complete!' : 'Answer questions to power smarter lead discovery'}
                                             </div>
                                         </div>
                                     </div>
@@ -3423,9 +3442,9 @@ export default function AdvancedSearchAIPage() {
                                             </svg>
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
-                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Configure Your AI Context</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Define Your Ideal Customer Profile</div>
                                             <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
-                                                Answer a few questions about your business and I'll use that context to find better leads and craft smarter campaigns.
+                                                Answer a few questions about your business and I'll identify exactly who you should target for outreach.
                                             </div>
                                         </div>
                                         <button
