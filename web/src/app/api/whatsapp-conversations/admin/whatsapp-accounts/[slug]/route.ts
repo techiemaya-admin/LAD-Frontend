@@ -50,6 +50,12 @@ export async function DELETE(
     // Force WABA channel routing to Python service
     const url = new URL(req.url);
     url.searchParams.set('channel', 'waba');
+
+    // Python DELETE endpoint requires tenant_id as a query param (Query(...))
+    // Extract from X-Tenant-ID header and inject into the URL
+    const tenantId = req.headers.get('x-tenant-id');
+    if (tenantId) url.searchParams.set('tenant_id', tenantId);
+
     const wabaReq = new NextRequest(url, req);
 
     return await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), `/admin/whatsapp-accounts/${slug}`);
