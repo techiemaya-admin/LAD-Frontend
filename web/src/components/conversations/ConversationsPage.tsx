@@ -303,6 +303,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
             <ConversationContextPanel
               conversation={typedSelectedConversation}
               onClose={toggleContextPanel}
+              backendChannel={channel}
             />
           </motion.div>
         )}

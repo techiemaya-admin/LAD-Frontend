@@ -50,12 +50,15 @@ interface AssignmentDropdownProps {
   conversationId: string;
   onAssign?: () => void;
   trigger?: React.ReactNode;
+  /** Which backend channel this conversation belongs to. Used for API routing. */
+  channel?: 'personal' | 'waba';
 }
 
 export const AssignmentDropdown = memo(function AssignmentDropdown({
   conversationId,
   onAssign,
   trigger,
+  channel = 'waba',
 }: AssignmentDropdownProps) {
   // State
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -77,7 +80,7 @@ export const AssignmentDropdown = memo(function AssignmentDropdown({
       setLoading(true);
       setError(null);
 
-      const response = await fetchWithTenant('/api/team/workload');
+      const response = await fetchWithTenant(`/api/team/workload?channel=${channel}`);
 
       if (!response.ok) {
         throw new Error('Failed to load team members');
@@ -112,7 +115,7 @@ export const AssignmentDropdown = memo(function AssignmentDropdown({
       setError(null);
 
       const response = await fetchWithTenant(
-        `/api/threads/${conversationId}/assign`,
+        `/api/threads/${conversationId}/assign?channel=${channel}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -42,6 +42,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface ConversationContextPanelProps {
   conversation: Conversation;
   onClose: () => void;
+  backendChannel?: 'personal' | 'waba';
 }
 
 const tagColors: Record<ContactTag, string> = {
@@ -80,6 +81,7 @@ const LABEL_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8
 export const ConversationContextPanel = memo(function ConversationContextPanel({
   conversation,
   onClose,
+  backendChannel = 'waba',
 }: ConversationContextPanelProps) {
   const { contact, channel, createdAt } = conversation;
   const [newComment, setNewComment] = useState('');
@@ -751,7 +753,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             </TabsList>
 
             <TabsContent value="assignment" className="mt-3">
-              <AssignmentPanel conversationId={conversation.id} />
+              <AssignmentPanel conversationId={conversation.id} channel={backendChannel} />
             </TabsContent>
 
             <TabsContent value="notes" className="mt-3">

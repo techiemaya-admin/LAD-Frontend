@@ -13,11 +13,6 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../whatsapp-c
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  // Assignments are managed in the Python service, not the Node backend
-  const url = new URL(req.url);
-  url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/threads/${id}/unassign`);
+  // channel param forwarded as-is — proxyToPythonService handles routing to personal or waba
+  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/threads/${id}/unassign`);
 }

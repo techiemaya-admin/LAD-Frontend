@@ -39,7 +39,7 @@ export const ChatWindow = memo(function ChatWindow({
 }: ChatWindowProps) {
   // Fetch messages from backend — pass backendChannel so messages route to
   // the correct service (personal → LAD_backend, waba → LAD-WABA-Comms).
-  const { messages, isLoading: messagesLoading } = useConversationMessages(
+  const { messages, isLoading: messagesLoading, isAgentTyping } = useConversationMessages(
     conversation?.id || null,
     undefined,
     backendChannel
@@ -80,6 +80,7 @@ export const ChatWindow = memo(function ChatWindow({
         <MessageList
           messages={messages.length > 0 ? messages : conversation.messages}
           conversationId={conversation.id}
+          isAgentTyping={isAgentTyping}
         />
       )}
       <MessageComposer
