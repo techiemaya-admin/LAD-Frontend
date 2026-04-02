@@ -24,7 +24,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 };
 
 const SkeletonCard = () => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
@@ -56,7 +56,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: StatCardProps) => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div
       className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98]' : ''}
@@ -77,7 +77,7 @@ const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: St
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            <p className="text-[10px] sm:text-sm text-slate-500 mb-1">
               {title}
             </p>
             <h5 className="text-2xl font-bold text-slate-800">{renderValue()}</h5>
