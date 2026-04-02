@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X, MessageSquare, Users, Zap } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
@@ -2385,6 +2385,42 @@ export default function AdvancedSearchAIPage() {
                     <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.pdf" className="hidden" style={{ display: 'none' }}
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
                 </div>
+
+                {/* MOBILE NAVIGATION SIDEBAR (Right side, top-anchored, mobile only) */}
+                {(messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
+                    <div className="adv-mobile-nav">
+                        {showPanel && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel(false)}
+                                title="Chat"
+                            >
+                                <MessageSquare size={20} />
+                                <span className="adv-nav-label">Chat</span>
+                            </button>
+                        )}
+                        {showPanel !== 'leads' && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('leads')}
+                                title="Leads"
+                            >
+                                <Users size={20} />
+                                <span className="adv-nav-label">Leads</span>
+                            </button>
+                        )}
+                        {showPanel !== 'workflow' && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('workflow')}
+                                title="Workflow"
+                            >
+                                <Zap size={20} />
+                                <span className="adv-nav-label">Flow</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* RIGHT: PANELS */}
                 {(showPanel === 'leads' || showPanel === 'workflow') && (leads.length > 0 || inboundLeads.length > 0 || filteredLeads.length > 0 || showPanel === 'workflow') && (
@@ -5798,6 +5834,61 @@ const css = `
             .adv-tag-label {font - size:11px; font-weight:600; color:#0f1842; min-width:70px; }
             .adv-tag {font - size:11px; background:rgba(255,255,255,.85); color:#0a112e; padding:3px 11px; border-radius:20px; border:1px solid #c2d6eb; }
 
+            /* ── MOBILE NAV SIDEBAR ── */
+            .adv-mobile-nav {
+                display: none;
+                position: fixed;
+                right: 12px;
+                top: 80px;
+                flex-direction: column;
+                gap: 12px;
+                z-index: 100;
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(10px);
+                padding: 10px 8px;
+                border: 1.5px solid #e0eaf5;
+                border-radius: 20px;
+                box-shadow: 0 8px 32px rgba(23, 37, 96, 0.15);
+                animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+            }
+            @keyframes slideInRight {
+                from { opacity: 0; transform: translateX(20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            .adv-nav-btn {
+                width: 46px;
+                height: 48px;
+                border-radius: 14px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                border: none;
+                background: transparent;
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                color: #64748b;
+                padding: 0;
+            }
+            .adv-nav-btn:hover {
+                background: #f1f5f9;
+                color: #172560;
+            }
+            .adv-nav-btn-active {
+                background: #172560 !important;
+                color: #fff !important;
+                box-shadow: 0 4px 12px rgba(23, 37, 96, 0.25);
+                transform: scale(1.05);
+            }
+            .adv-nav-label {
+                font-size: 9px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.02em;
+            }
+
+
             /* ── MINI LEADS IN CHAT ── */
             .adv-mini-leads {margin - top:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:12px 14px; }
             .adv-ml-header {display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:12px; font-weight:600; color:#166534; }
@@ -5975,6 +6066,15 @@ const css = `
                 .adv-chat-back {width: 36px; height: 36px; top: 12px; left: 12px; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
                 .adv-chat-left {min-width: 100%; }
+                .adv-mobile-nav { display: flex; }
+                /* Padding to prevent content overlap with sidebar */
+                .adv-chat-msgs { padding-right: 68px !important; }
+                .adv-panel-body { padding-right: 68px !important; }
+                .adv-chat-input-wrap { padding-right: 68px !important; }
+                
+                /* Hide Leads/Workflow cards and action buttons in chat on mobile */
+                .adv-rc-leads { display: none !important; }
+                .adv-action-btns { display: none !important; }
             }
             @media (max-width: 480px) {
                 .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }
