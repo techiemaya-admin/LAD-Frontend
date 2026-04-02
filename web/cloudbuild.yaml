@@ -103,10 +103,17 @@ options:
 timeout: '1800s'
 
 # Substitutions for Production Environment
+# ⚠ Update REPLACE_PROJECT_NUMBER after running setup-production-gcp.sh
 substitutions:
   _REGION: 'us-central1'
-  _SERVICE_NAME: 'lad-frontend-prod'
+  _SERVICE_NAME: 'lad-frontend'
   _ENV: 'production'
-  _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
-  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-160078175457.us-central1.run.app'
+  _API_URL: 'https://lad-backend-REPLACE_PROJECT_NUMBER.us-central1.run.app'
+  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-REPLACE_PROJECT_NUMBER.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-REPLACE_PROJECT_NUMBER.us-central1.run.app'
+
+# Cloud Build trigger configuration (set in Cloud Console):
+# - Source repository: LAD-Frontend
+# - Branch filter   : ^main$
+# - Config file     : web/cloudbuild.yaml
+# - Approval        : REQUIRED
