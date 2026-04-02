@@ -42,6 +42,8 @@ interface TemplatePickerProps {
   selectedCount: number;
   onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions) => void;
   sending?: boolean;
+  /** Which backend channel to fetch templates from. Defaults to 'waba'. */
+  channel?: 'personal' | 'waba';
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
@@ -58,6 +60,7 @@ export function TemplatePicker({
   selectedCount,
   onSend,
   sending = false,
+  channel = 'waba',
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,14 +72,15 @@ export function TemplatePicker({
   const [delayMin, setDelayMin] = useState(120);    // seconds
   const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
 
-  // Fetch templates when dialog opens
+  // Fetch templates when dialog opens (re-fetch if channel changes)
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setSelectedTemplate(null);
     setParamValues([]);
     setSearch('');
-    fetchWithTenant(TEMPLATES_API)
+    const apiUrl = `${TEMPLATES_API}?channel=${channel}`;
+    fetchWithTenant(apiUrl)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
@@ -107,7 +111,7 @@ export function TemplatePicker({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, channel]);
 
   const filtered = useMemo(() => {
     if (!search) return templates;
