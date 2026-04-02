@@ -208,7 +208,7 @@ export async function getConversationMessages(
   conversationId: string,
   pagination?: { limit?: number; offset?: number },
   backendChannel?: 'personal' | 'waba'
-): Promise<{ messages: Message[]; total: number; hasMore: boolean }> {
+): Promise<{ messages: Message[]; total: number; hasMore: boolean; isAgentTyping: boolean }> {
   const params: Record<string, string> = {};
   if (pagination?.limit) params.limit = String(pagination.limit);
   if (pagination?.offset) params.offset = String(pagination.offset);
