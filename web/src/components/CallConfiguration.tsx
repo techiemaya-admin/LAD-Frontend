@@ -402,24 +402,23 @@ export function CallConfiguration({
             Voice Agent
           </label>
 
-          <div className="flex flex-col md:flex-row md:items-start items-center gap-3">
-            {/* Select */}
-            <div className="w-full md:flex-shrink-0 md:w-80">
+          <div className="flex flex-row items-center gap-3">
+            {/* Select - expands to fill space */}
+            <div className="flex-1 min-w-0">
               <Select
                 value={agentId || ""}
                 onValueChange={(value) => onAgentIdChange(value)}
               >
-                <SelectTrigger className="h-12 rounded-[10px] border-gray-200 focus:ring-2 focus:ring-primary w-full md:w-80 overflow-hidden">
+                <SelectTrigger className="h-12 rounded-[10px] border-gray-200 focus:ring-2 focus:ring-primary w-full overflow-hidden">
                   {selectedAgent ? (
                     <div className="flex items-center gap-3 p-2 overflow-hidden">
                       <Mic className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <div className="flex flex-col items-start min-w-0 overflow-hidden whitespace-nowrap">
-                        <span className="font-medium overflow-hidden whitespace-nowrap text-ellipsis">
+                      <div className="flex flex-col items-start min-w-0 overflow-hidden whitespace-nowrap text-left">
+                        <span className="font-medium overflow-hidden whitespace-nowrap text-ellipsis max-w-full">
                           {selectedAgent.name}
                         </span>
-                        <span className="text-xs text-muted-foreground overflow-hidden whitespace-nowrap text-ellipsis">
-                          {selectedAgent.description} • {selectedAgent.accent} •{" "}
-                          {selectedAgent.gender}
+                        <span className="text-[10px] sm:text-xs text-muted-foreground overflow-hidden whitespace-nowrap text-ellipsis max-w-full">
+                          {selectedAgent.accent} • {selectedAgent.gender}
                         </span>
                       </div>
                     </div>
@@ -456,19 +455,18 @@ export function CallConfiguration({
               </Select>
             </div>
 
-            {/* Round play/pause icon button */}
+            {/* Round play/pause icon button - fixed size */}
             <button
               type="button"
               onClick={togglePlay}
               disabled={!selectedAgent?.voice_sample_url}
               aria-label={isPlaying ? "Pause sample" : "Play sample"}
               className={[
-                "relative inline-flex items-center justify-center",
-                "h-12 w-12 rounded-full shadow-xl",
+                "relative inline-flex items-center justify-center flex-shrink-0",
+                "h-12 w-12 rounded-full shadow-lg",
                 "bg-[#0f1f5a]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0f1f5a]/40",
-                "md:ml-auto",
               ].join(" ")}
             >
               <span className="absolute inset-0 rounded-full bg-black/0 pointer-events-none" />
