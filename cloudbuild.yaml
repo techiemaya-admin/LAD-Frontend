@@ -1,77 +1,116 @@
 steps:
-  # Build Docker image for PRODUCTION
-  - name: 'gcr.io/cloud-builders/docker'
+  # Create lowercase branch name for GCP labels (which require lowercase)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_API_URL=$_API_URL'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_BACKEND_URL=$_API_URL'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_SOCKET_URL=$_API_URL'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_DISABLE_VAPI=false'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_BNI_SERVICE_URL=$_BNI_SERVICE_URL'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
+      - '-c'
+      - |
+        echo "${BRANCH_NAME,,}" > /workspace/branch_lower.txt
+        cat /workspace/branch_lower.txt
 
-  # Push image to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
+  # Debug step
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
+      - '-c'
+      - |
+        echo "=== Production Build Arguments ==="
+        echo "BRANCH_NAME         : ${BRANCH_NAME}"
+        echo "_API_URL            : ${_API_URL}"
+        echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
+        echo "_WABA_SERVICE_URL   : ${_WABA_SERVICE_URL}"
+        echo "Environment         : PRODUCTION"
+        echo "==================================="
 
+  # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME',
+      '-t', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
+      '--cache-from', 'gcr.io/$PROJECT_ID/lad-frontend:latest',
+      '--build-arg', 'BUILDKIT_INLINE_CACHE=1',
+      '--build-arg', 'NEXT_PUBLIC_BACKEND_URL=$_API_URL',
+      '--build-arg', 'NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL',
+      '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL',
+      '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
+      '--build-arg', 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NODE_ENV=production',
+      '-f', 'Dockerfile',
+      '.'
+    ]
 
-  # Deploy to Cloud Run (PRODUCTION)
+  # Push images
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/lad-frontend:latest']
+
+  # Deploy to Cloud Run (Production)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
+        BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
+
+        echo "=== Deploying to Production ==="
+        echo "API_URL    : $_API_URL"
+        echo "SOCKET_URL : $_NEXT_PUBLIC_SOCKET_URL"
+        echo "WABA_URL   : $_WABA_SERVICE_URL"
+
         gcloud run deploy $_SERVICE_NAME \
-          --image gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA \
+          --image gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA \
           --region $_REGION \
           --platform managed \
           --allow-unauthenticated \
+          --port 3000 \
           --memory 2Gi \
           --cpu 2 \
           --min-instances 1 \
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars "^@@^NODE_ENV=production@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_API_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@NEXT_PUBLIC_SOCKET_URL=$_API_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_BNI_SERVICE_URL@@BNI_SERVICE_URL=$_BNI_SERVICE_URL"
+          --set-env-vars "^@@^NODE_ENV=production@@ENVIRONMENT=production@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@API_BASE_URL=http://localhost:3000@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL" \
+          --update-labels environment=production,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
 
-        echo "✅ Production deployment completed successfully"
+        echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
 
+# Images
 images:
-  - 'gcr.io/$PROJECT_ID/lad-frontend-prod:$SHORT_SHA'
-  - 'gcr.io/$PROJECT_ID/lad-frontend-prod:latest'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME'
+  - 'gcr.io/$PROJECT_ID/lad-frontend:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'
   substitutionOption: 'ALLOW_LOOSE'
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 timeout: '1800s'
 
-# Substitutions — override these in the Cloud Build trigger configuration
+# Substitutions for Production Environment (mrlad-production)
+# ⚠ Replace 202224011999 after running setup-production-gcp.sh
 substitutions:
   _REGION: 'us-central1'
-  _SERVICE_NAME: 'lad-frontend-prod'
-  _API_URL: 'https://lad-backend-prod-160078175457.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-prod-160078175457.us-central1.run.app'
-  _BNI_SERVICE_URL: 'https://lad-waba-comms-prod-160078175457.us-central1.run.app'
+  _SERVICE_NAME: 'lad-frontend'
+  _ENV: 'production'
+  _API_URL: 'https://lad-backend-202224011999.us-central1.run.app'
+  _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-202224011999.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-202224011999.us-central1.run.app'
+
+# Cloud Build trigger configuration (set in Cloud Console):
+# - Source repository: LAD-Frontend
+# - Branch filter   : ^main$
+# - Config file     : cloudbuild.yaml
+# - Approval        : REQUIRED
