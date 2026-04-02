@@ -1059,6 +1059,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+        channel={backendChannel ?? 'waba'}
       />
 
       {/* Import Leads Dialog */}

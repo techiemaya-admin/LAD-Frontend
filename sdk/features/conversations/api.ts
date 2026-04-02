@@ -190,7 +190,9 @@ function deduplicateMessages(messages: Message[]): Message[] {
   const seen = new Map<string, number>(); // key → first-seen timestamp (ms)
   return messages.filter((msg) => {
     // Build a key that identifies "same content sent in roughly the same moment"
-    const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 10000)}`;
+    // 1-second bucket — tight enough to catch real DB duplicates without
+    // incorrectly merging legitimately different messages sent 1-2s apart
+    const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 1000)}`;
     if (seen.has(bucketKey)) {
       return false; // near-duplicate — skip
     }
@@ -219,15 +221,14 @@ export async function getConversationMessages(
   }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
 
   const rawMessages = (response.data.data || []).map(mapMessageFromApi);
-  // Backend returns newest-first (ORDER BY created_at DESC). Reverse to
-  // chronological order so MessageList renders oldest→newest (top→bottom)
-  // and followOutput / scrollToIndex work correctly for new messages.
-  const messages = deduplicateMessages(rawMessages).reverse();
+  // Backend returns oldest-first (ORDER BY created_at ASC) — no reverse needed.
+  const messages = deduplicateMessages(rawMessages);
 
   return {
     messages,
     total: response.data.total || 0,
     hasMore: response.data.has_more || false,
+    isAgentTyping: !!(response.data as any).is_agent_typing,
   };
 }
 
@@ -242,10 +243,10 @@ export const getConversationMessagesOptions = (
   queryOptions({
     queryKey: [...conversationKeys.messages(conversationId, pagination), backendChannel ?? 'default'],
     queryFn: () => getConversationMessages(conversationId, pagination, backendChannel),
-    staleTime: 10 * 1000, // 10 seconds
+    staleTime: 0, // always re-fetch on next poll cycle
     gcTime: 5 * 60 * 1000,
     enabled: !!conversationId,
-    refetchInterval: 10000, // Poll every 10 seconds for new messages
+    refetchInterval: 3000, // Poll every 3 seconds for near-real-time updates
   });
 
 // ====================

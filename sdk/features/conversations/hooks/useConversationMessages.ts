@@ -16,6 +16,7 @@ export interface UseConversationMessagesReturn {
   error: Error | null;
   refetch: () => void;
   isFetching: boolean;
+  isAgentTyping: boolean;
 }
 
 export function useConversationMessages(
@@ -43,5 +44,6 @@ export function useConversationMessages(
     error: query.error,
     refetch: query.refetch,
     isFetching: query.isFetching,
+    isAgentTyping: query.data?.isAgentTyping || false,
   };
 }
