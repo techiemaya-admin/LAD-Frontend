@@ -52,10 +52,12 @@ async function fetchNodeAccounts(req: NextRequest): Promise<WaAccount[]> {
 }
 
 /** Pull accounts from the Python BNI conversation service. */
-async function fetchPythonAccounts(req: NextRequest): Promise<WaAccount[]> {
+async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): Promise<WaAccount[]> {
   try {
     const url = new URL(req.url);
     url.searchParams.set('channel', 'waba');
+    // Always pass tenant_id so the Python service filters server-side
+    if (tenantId) url.searchParams.set('tenant_id', tenantId);
     const wabaReq = new NextRequest(url, req);
     const resp = await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
     if (resp.status >= 400) return [];
@@ -126,14 +128,15 @@ export async function GET(req: NextRequest) {
   // Fetch from both sources in parallel to minimise latency
   const [nodeAccounts, pythonAccountsRaw] = await Promise.all([
     fetchNodeAccounts(req),
-    fetchPythonAccounts(req),
+    fetchPythonAccounts(req, tenantId),
   ]);
 
-  // Filter Python accounts to the current tenant only (the Python service may
-  // return accounts for ALL tenants without server-side scoping).
+  // Secondary client-side guard: only keep accounts that explicitly belong to
+  // this tenant. Accounts with no tenant_id are NOT included (they are cross-
+  // tenant admin records and must never be surfaced to individual tenants).
   const pythonAccounts = tenantId
-    ? pythonAccountsRaw.filter((a) => !a.tenant_id || a.tenant_id === tenantId)
-    : pythonAccountsRaw;
+    ? pythonAccountsRaw.filter((a) => a.tenant_id === tenantId)
+    : [];
 
   const merged = mergeAccounts(nodeAccounts, pythonAccounts);
 
