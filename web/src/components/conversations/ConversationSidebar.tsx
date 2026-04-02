@@ -374,7 +374,13 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           if (!data.success) console.error('Group template send failed:', data.error);
         } else if (selectedIds.size > 0) {
           // Bulk send to selected conversations
-          const res = await fetchWithTenant('/api/whatsapp-conversations/conversations/bulk', {
+          // personal WA → /conversations/bulk/send-template  (Node.js controller)
+          // WABA        → /conversations/bulk                (Python service, action: send-template)
+          const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
+          const bulkEndpoint = backendChannel === 'personal'
+            ? `/api/whatsapp-conversations/conversations/bulk/send-template${channelParam}`
+            : `/api/whatsapp-conversations/conversations/bulk${channelParam}`;
+          const res = await fetchWithTenant(bulkEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1059,6 +1065,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+        channel={backendChannel ?? 'waba'}
       />
 
       {/* Import Leads Dialog */}

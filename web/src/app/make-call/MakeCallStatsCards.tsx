@@ -25,7 +25,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 
 // Skeleton loading component
 const SkeletonCard = () => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
@@ -57,7 +57,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, bgColor }: StatCardProps) => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
@@ -69,7 +69,7 @@ const StatCard = ({ title, value, icon, bgColor }: StatCardProps) => (
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            <p className="text-[10px] sm:text-sm text-slate-500 mb-1">
               {title}
             </p>
             <h5 className="text-2xl font-bold text-slate-800">
