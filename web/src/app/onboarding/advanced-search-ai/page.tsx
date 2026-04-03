@@ -5158,6 +5158,13 @@ function CheckpointFormInline({
     const [liChannelActions, setLiChannelActions] = useState<string[]>([]);
     const [liFollowGenLoading, setLiFollowGenLoading] = useState(false);
 
+    // AI Generate inline context panel state (one per message type)
+    const [showAiConnPanel, setShowAiConnPanel]     = useState(false);
+    const [showAiFollowPanel, setShowAiFollowPanel] = useState(false);
+    const [aiMsgValueProp, setAiMsgValueProp]       = useState('');
+    const [aiMsgTone, setAiMsgTone]                 = useState('professional');  // 'professional' | 'casual' | 'direct'
+    const [aiMsgGoal, setAiMsgGoal]                 = useState('get_meeting');   // 'get_meeting' | 'share_resource' | 'explore_collab' | 'general'
+
     // LinkedIn message templates (communication_templates table, channel='linkedin')
     const [liTemplates, setLiTemplates] = useState<any[]>([]);
     const [liTemplatesLoaded, setLiTemplatesLoaded] = useState(false);
@@ -5485,10 +5492,17 @@ function CheckpointFormInline({
         setName(`${titlePart}${locPart}${indPart} - ${datePart}`);
     };
 
-    // AI-generate a LinkedIn message for the step-3 LinkedIn channel
+    // AI-generate a LinkedIn message for the given type
     const generateLinkedInFollowup = async (type: 'connect' | 'followup') => {
+        // Close whichever inline panel was open
+        if (type === 'connect') setShowAiConnPanel(false);
+        else setShowAiFollowPanel(false);
         setLiFollowGenLoading(true);
         try {
+            const sampleLead = leads && leads.length > 0 ? (leads[0] as any) : null;
+            const sampleLinkedInUrl = sampleLead
+                ? sampleLead.linkedin_url || sampleLead.employee_linkedin_url || null
+                : null;
             const resp = await fetch('/api/campaigns/generate-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -5497,8 +5511,10 @@ function CheckpointFormInline({
                     type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
                     targeting,
                     context: {
-                        connection_message: connMsg || '',
-                        follow_type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
+                        value_prop:          aiMsgValueProp || '',
+                        tone:                aiMsgTone,
+                        goal:                aiMsgGoal,
+                        sample_linkedin_url: sampleLinkedInUrl,
                     },
                 }),
             });
@@ -6478,9 +6494,9 @@ function CheckpointFormInline({
                                                                         style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
                                                                         {showLiConnTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
-                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('connect')}
-                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
-                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    <button disabled={liFollowGenLoading} onClick={() => { setShowAiConnPanel(v => !v); setShowAiFollowPanel(false); }}
+                                                                        style={{ background: showAiConnPanel ? '#eef2ff' : 'none', border: showAiConnPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiConnPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        {liFollowGenLoading ? '⏳ Generating...' : (showAiConnPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -6541,12 +6557,34 @@ function CheckpointFormInline({
                                                             })()}
                                                             <textarea
                                                                 value={connMsg}
-                                                                onChange={e => setConnMsg(e.target.value)}
+                                                                onChange={e => setConnMsg(e.target.value.slice(0, 300))}
                                                                 placeholder={'Hi {{first_name}}, I noticed your work at {{company}} and would love to connect...'}
                                                                 rows={3}
-                                                                style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                                maxLength={300}
+                                                                style={{ width: '100%', border: `1px solid ${connMsg.length > 270 ? (connMsg.length >= 300 ? '#ef4444' : '#f59e0b') : '#bfdbfe'}`, borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                             />
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                            {/* Character counter */}
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
+                                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+                                                                <div style={{ fontSize: '11px', fontWeight: 700, flexShrink: 0, marginLeft: '8px', color: connMsg.length >= 300 ? '#ef4444' : connMsg.length > 270 ? '#f59e0b' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                                                                    {connMsg.length}/300{connMsg.length >= 300 && ' ⚠️ limit reached'}
+                                                                </div>
+                                                            </div>
+                                                            {connMsg.length >= 300 && (
+                                                                <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px', fontWeight: 500 }}>
+                                                                    LinkedIn hard limit is 300 characters. Message will be sent as-is — keep it concise.
+                                                                </div>
+                                                            )}
+
+                                                            {/* ── AI Generate inline panel (connection) ── */}
+                                                            {showAiConnPanel && <AiMsgContextPanel
+                                                                valueProp={aiMsgValueProp} setValueProp={setAiMsgValueProp}
+                                                                tone={aiMsgTone} setTone={setAiMsgTone}
+                                                                goal={aiMsgGoal} setGoal={setAiMsgGoal}
+                                                                targeting={targeting} leadsCount={leads?.length || 0}
+                                                                loading={liFollowGenLoading}
+                                                                onGenerate={() => generateLinkedInFollowup('connect')}
+                                                            />}
                                                         </div>
                                                     )}
 
@@ -6561,9 +6599,9 @@ function CheckpointFormInline({
                                                                         style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
                                                                         {showLiFollowTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
-                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('followup')}
-                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
-                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    <button disabled={liFollowGenLoading} onClick={() => { setShowAiFollowPanel(v => !v); setShowAiConnPanel(false); }}
+                                                                        style={{ background: showAiFollowPanel ? '#eef2ff' : 'none', border: showAiFollowPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiFollowPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        {liFollowGenLoading ? '⏳ Generating...' : (showAiFollowPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -6629,7 +6667,17 @@ function CheckpointFormInline({
                                                                 rows={3}
                                                                 style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                             />
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+
+                                                            {/* ── AI Generate inline panel (follow-up) ── */}
+                                                            {showAiFollowPanel && <AiMsgContextPanel
+                                                                valueProp={aiMsgValueProp} setValueProp={setAiMsgValueProp}
+                                                                tone={aiMsgTone} setTone={setAiMsgTone}
+                                                                goal={aiMsgGoal} setGoal={setAiMsgGoal}
+                                                                targeting={targeting} leadsCount={leads?.length || 0}
+                                                                loading={liFollowGenLoading}
+                                                                onGenerate={() => generateLinkedInFollowup('followup')}
+                                                            />}
                                                         </div>
                                                     )}
                                                 </div>
@@ -7068,6 +7116,110 @@ function TargetingFormInline({
                     </div>
                 </div>
             </div>
+
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════
+   AI MESSAGE CONTEXT PANEL
+   Inline expandable panel for AI Generate inputs.
+   Rendered directly inside the settings card — no portals,
+   no fixed positioning, no z-index issues.
+   ═══════════════════════════════════════════════ */
+function AiMsgContextPanel({
+    valueProp, setValueProp,
+    tone, setTone,
+    goal, setGoal,
+    targeting, leadsCount,
+    loading, onGenerate,
+}: {
+    valueProp: string; setValueProp: (v: string) => void;
+    tone: string; setTone: (v: string) => void;
+    goal: string; setGoal: (v: string) => void;
+    targeting: any; leadsCount: number;
+    loading: boolean; onGenerate: () => void;
+}) {
+    const tones = [
+        { id: 'professional', label: '🤝 Professional' },
+        { id: 'casual',       label: '😊 Casual' },
+        { id: 'direct',       label: '⚡ Direct' },
+    ];
+    const goals = [
+        { id: 'get_meeting',    label: '📅 Book a call' },
+        { id: 'share_resource', label: '📄 Share a resource' },
+        { id: 'explore_collab', label: '🤝 Explore collab' },
+        { id: 'general',        label: '💬 Start a chat' },
+    ];
+    const targetingTags = [
+        ...(targeting?.job_titles  || []).slice(0, 2),
+        ...(targeting?.industries  || []).slice(0, 2),
+    ].filter(Boolean);
+
+    return (
+        <div style={{ marginTop: '10px', border: '1.5px solid #c7d2fe', borderRadius: '12px', background: '#f8f9ff', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Header */}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ✨ AI Generate — tell us about your offer
+                <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '11px' }}>Will use lead's web presence &amp; posts</span>
+            </div>
+
+            {/* Value prop */}
+            <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>
+                    What do you offer? <span style={{ color: '#9ca3af', fontWeight: 400 }}>product / service / value prop</span>
+                </label>
+                <textarea
+                    value={valueProp}
+                    onChange={e => setValueProp(e.target.value)}
+                    placeholder="e.g. We help SaaS companies reduce churn with AI-powered customer success..."
+                    rows={2}
+                    style={{ width: '100%', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '7px 10px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: '#111827' }}
+                />
+            </div>
+
+            {/* Tone + Goal */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Tone</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {tones.map(t => (
+                            <div key={t.id} onClick={() => setTone(t.id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${tone === t.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: tone === t.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: tone === t.id ? 600 : 400, color: tone === t.id ? '#4f46e5' : '#374151' }}>
+                                {tone === t.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                {t.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Goal</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {goals.map(g => (
+                            <div key={g.id} onClick={() => setGoal(g.id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${goal === g.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: goal === g.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: goal === g.id ? 600 : 400, color: goal === g.id ? '#4f46e5' : '#374151' }}>
+                                {goal === g.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                {g.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Targeting badge */}
+            {targetingTags.length > 0 && (
+                <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '7px', padding: '6px 10px', fontSize: '11px', color: '#4f46e5', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                    <span style={{ fontWeight: 700 }}>🎯</span>
+                    {targetingTags.join(' · ')}
+                    {leadsCount > 0 && <span style={{ marginLeft: '4px', color: '#6366f1' }}>· {leadsCount} lead{leadsCount !== 1 ? 's' : ''} with live web insights</span>}
+                </div>
+            )}
+
+            {/* Generate button */}
+            <button onClick={onGenerate} disabled={loading}
+                style={{ background: loading ? '#9ca3af' : 'linear-gradient(135deg,#4f46e5,#6366f1)', color: '#fff', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: loading ? 'none' : '0 3px 10px rgba(79,70,229,.35)' }}>
+                {loading ? '⏳ Generating...' : '✨ Generate Message'}
+            </button>
         </div>
     );
 }
