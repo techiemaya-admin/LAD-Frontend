@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
+import AgentVisualizer from '@/components/ui/AgentVisualizer';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
@@ -924,6 +925,8 @@ export default function AdvancedSearchAIPage() {
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
     const [profileSummary, setProfileSummary] = useState<string | null>(null);
+    const [profileWebPresence, setProfileWebPresence] = useState<any | null>(null);
+    const [profileRecentPosts, setProfileRecentPosts] = useState<any[] | null>(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
 
@@ -1024,6 +1027,8 @@ export default function AdvancedSearchAIPage() {
         });
         setSummaryDialogOpen(true);
         setProfileSummary(null);
+        setProfileWebPresence(lead.inferred?.web_presence || null);
+        setProfileRecentPosts(null);
         setSummaryError(null);
         setSummaryLoading(true);
 
@@ -1039,6 +1044,11 @@ export default function AdvancedSearchAIPage() {
 
             if (data?.summary) {
                 setProfileSummary(data.summary);
+                // Prefer web_presence from API (freshest), fall back to already-set inferred data
+                if (data.web_presence) {
+                    setProfileWebPresence(data.web_presence);
+                }
+                setProfileRecentPosts(data.recent_posts?.length ? data.recent_posts : null);
             } else {
                 throw new Error(data?.error || 'Failed to generate summary');
             }
@@ -1053,6 +1063,8 @@ export default function AdvancedSearchAIPage() {
         setSummaryDialogOpen(false);
         setSelectedEmployee(null);
         setProfileSummary(null);
+        setProfileWebPresence(null);
+        setProfileRecentPosts(null);
         setSummaryError(null);
     };
 
@@ -2022,6 +2034,7 @@ export default function AdvancedSearchAIPage() {
                             match_level: item.match_level || undefined,
                             icp_reasoning: item.icp_reasoning || undefined,
                             enriched_profile: item.enriched_profile || undefined,
+                            inferred: item.inferred || undefined,
                         }));
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
@@ -2623,8 +2636,8 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                     </div>
                                     <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowAttachMenu(false); }}>
-                                        <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Select contacts</div>
@@ -2731,16 +2744,16 @@ export default function AdvancedSearchAIPage() {
                             display: 'flex', alignItems: 'center', gap: '7px',
                             padding: '8px 14px', borderRadius: '20px',
                             border: '1.5px solid',
-                            borderColor: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb',
-                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#ede9fe,#f5f3ff)' : '#fff',
-                            color: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280',
+                            borderColor: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb',
+                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#e8ecfa,#f0f3ff)' : '#fff',
+                            color: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280',
                             fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
                             boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#0b1957'; e.currentTarget.style.color = '#0b1957'; }}
                         onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb';
-                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280';
+                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb';
+                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280';
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2887,7 +2900,7 @@ export default function AdvancedSearchAIPage() {
                             <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
                                 onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
                                 onKeyDown={onKey}
-                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask your AI Lead Finder...'}
+                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
                                 className="adv-chat-ta" />
                             <div className="adv-chat-input-foot">
                                 <div style={{position:'relative'}}>
@@ -2906,8 +2919,8 @@ export default function AdvancedSearchAIPage() {
                                                 </div>
                                             </div>
                                             <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                                <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                                 </div>
                                                 <div>
                                                     <div className="adv-attach-label">Select contacts</div>
@@ -3471,14 +3484,14 @@ export default function AdvancedSearchAIPage() {
                             <div style={{
                                 padding: '16px 20px 12px',
                                 borderBottom: '1.5px solid #e5e7eb',
-                                background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
+                                background: 'linear-gradient(135deg,#f0f3ff 0%,#e8ecfa 100%)',
                                 flexShrink: 0,
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div style={{
                                             width: 36, height: 36, borderRadius: 10,
-                                            background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                            background: 'linear-gradient(135deg,#0b1957,#172560)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
@@ -3487,7 +3500,7 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>ICP Discovery</div>
-                                            <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
+                                            <div style={{ fontSize: 11.5, color: '#0b1957', fontWeight: 500 }}>
                                                 {pgIsComplete ? '✅ ICP profile complete!' : 'Answer questions to power smarter lead discovery'}
                                             </div>
                                         </div>
@@ -3530,12 +3543,12 @@ export default function AdvancedSearchAIPage() {
                                         <div style={{ marginTop: 10 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                                                 <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Profile completeness</span>
-                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
+                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#0b1957', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
                                             </div>
-                                            <div style={{ height: 5, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                            <div style={{ height: 5, borderRadius: 99, background: '#dce3f5', overflow: 'hidden' }}>
                                                 <div style={{
                                                     height: '100%', borderRadius: 99,
-                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#0b1957,#172560)',
                                                     width: `${pct}%`, transition: 'width .5s ease',
                                                 }} />
                                             </div>
@@ -3548,10 +3561,8 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
                                 {pgChatHistory.length === 0 && !pgBusy && (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
-                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(124,58,237,.3)' }}>
-                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                                            </svg>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#0b1957,#172560)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(11,25,87,.3)' }}>
+                                            <AgentVisualizer state="idle" size={36} />
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
                                             <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Define Your Ideal Customer Profile</div>
@@ -3563,9 +3574,9 @@ export default function AdvancedSearchAIPage() {
                                             onClick={pgStartConversation}
                                             style={{
                                                 padding: '12px 28px', borderRadius: 12, border: 'none',
-                                                background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                background: 'linear-gradient(135deg,#0b1957,#172560)',
                                                 color: '#fff', fontSize: 14, fontWeight: 700,
-                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,.4)',
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(11,25,87,.4)',
                                                 display: 'flex', alignItems: 'center', gap: 8,
                                             }}
                                         >
@@ -3591,12 +3602,9 @@ export default function AdvancedSearchAIPage() {
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                                <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 14, boxShadow: '0 2px 8px rgba(124,58,237,.3)',
-                                                }}>🧠</div>
+                                                <div className="adv-ai-avatar adv-ai-avatar-viz" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                                                    <AgentVisualizer state="idle" size={32} />
+                                                </div>
                                                 <div style={{ flex: 1 }}>
                                                     <div style={{
                                                         background: '#fff', borderRadius: '4px 18px 18px 18px',
@@ -3615,10 +3623,12 @@ export default function AdvancedSearchAIPage() {
                                 {/* Typing indicator */}
                                 {pgBusy && (
                                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🧠</div>
+                                        <div className="adv-ai-avatar adv-ai-avatar-viz" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                                            <AgentVisualizer state="thinking" size={32} />
+                                        </div>
                                         <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
                                             {[0,1,2].map(i => (
-                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
+                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#0b1957', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
                                             ))}
                                         </div>
                                     </div>
@@ -3631,10 +3641,10 @@ export default function AdvancedSearchAIPage() {
 
                                     return (
                                         <div style={{
-                                            background: '#fff', border: '1.5px solid #ede9fe', borderRadius: 14,
-                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(124,58,237,.1)',
+                                            background: '#fff', border: '1.5px solid #dce3f5', borderRadius: 14,
+                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(11,25,87,.08)',
                                         }}>
-                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#0b1957', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <Sparkles size={12} /> {card.label}
                                             </div>
 
@@ -3654,7 +3664,7 @@ export default function AdvancedSearchAIPage() {
                                                             resize: 'vertical', outline: 'none', fontFamily: 'inherit',
                                                             lineHeight: 1.5, background: '#fafafa', boxSizing: 'border-box',
                                                         }}
-                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                        onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                                         onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
                                                     />
@@ -3668,7 +3678,7 @@ export default function AdvancedSearchAIPage() {
                                                                 position: 'absolute', bottom: 8, right: 8,
                                                                 display: 'flex', alignItems: 'center', gap: 4,
                                                                 padding: '4px 10px', borderRadius: 6, border: 'none',
-                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#0b1957,#172560)',
                                                                 color: pgSuggesting ? '#9ca3af' : '#fff',
                                                                 fontSize: 11.5, fontWeight: 600, cursor: pgSuggesting ? 'default' : 'pointer',
                                                                 transition: 'all .15s',
@@ -3704,7 +3714,7 @@ export default function AdvancedSearchAIPage() {
                                                                 style={{
                                                                     padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
                                                                     border: selected ? 'none' : '1.5px solid #e5e7eb',
-                                                                    background: selected ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#f9fafb',
+                                                                    background: selected ? 'linear-gradient(135deg,#0b1957,#172560)' : '#f9fafb',
                                                                     color: selected ? '#fff' : '#374151',
                                                                     cursor: 'pointer', transition: 'all .12s',
                                                                 }}
@@ -3723,13 +3733,13 @@ export default function AdvancedSearchAIPage() {
                                                             onClick={() => setPgCardValues({ [card.field]: opt })}
                                                             style={{
                                                                 textAlign: 'left', padding: '9px 14px', borderRadius: 10, fontSize: 13,
-                                                                border: fieldVal === opt ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                                                                background: fieldVal === opt ? '#faf5ff' : '#fff',
+                                                                border: fieldVal === opt ? '2px solid #0b1957' : '1.5px solid #e5e7eb',
+                                                                background: fieldVal === opt ? '#f0f3ff' : '#fff',
                                                                 color: '#374151', cursor: 'pointer', fontWeight: 500,
                                                                 display: 'flex', alignItems: 'center', gap: 8,
                                                             }}
                                                         >
-                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#7c3aed' : '#d1d5db'}`, background: fieldVal === opt ? '#7c3aed' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#0b1957' : '#d1d5db'}`, background: fieldVal === opt ? '#0b1957' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
                                                             {opt}
                                                         </button>
                                                     ))}
@@ -3743,15 +3753,15 @@ export default function AdvancedSearchAIPage() {
                                                         {(Array.isArray(fieldVal) ? fieldVal : []).map((tag: string, ti: number) => (
                                                             <div key={ti} style={{
                                                                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                background: '#ede9fe', borderRadius: 16, padding: '4px 10px',
-                                                                fontSize: 12.5, color: '#5b21b6', fontWeight: 600,
+                                                                background: '#dce3f5', borderRadius: 16, padding: '4px 10px',
+                                                                fontSize: 12.5, color: '#0b1957', fontWeight: 600,
                                                             }}>
                                                                 {tag}
                                                                 <button onClick={() => {
                                                                     const updated = [...fieldVal];
                                                                     updated.splice(ti, 1);
                                                                     setPgCardValues({ [card.field]: updated });
-                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#7c3aed', display: 'flex', lineHeight: 1 }}>
+                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0b1957', display: 'flex', lineHeight: 1 }}>
                                                                     <X size={11} />
                                                                 </button>
                                                             </div>
@@ -3775,7 +3785,7 @@ export default function AdvancedSearchAIPage() {
                                                                 flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8,
                                                                 padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
                                                             }}
-                                                            onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                            onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                                             onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                                         />
                                                     </div>
@@ -3805,7 +3815,7 @@ export default function AdvancedSearchAIPage() {
                                                 disabled={!fieldVal && card.type !== 'hours'}
                                                 style={{
                                                     marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
-                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
                                                     color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
                                                     fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
                                                     transition: 'all .15s',
@@ -3838,7 +3848,7 @@ export default function AdvancedSearchAIPage() {
                                             background: pgBusy ? '#f9fafb' : '#fff', color: '#374151',
                                             transition: 'border .15s',
                                         }}
-                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                         onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                     />
                                     <button
@@ -3846,7 +3856,7 @@ export default function AdvancedSearchAIPage() {
                                         disabled={!pgInput.trim() || pgBusy}
                                         style={{
                                             width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
-                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
                                         }}
@@ -3962,6 +3972,8 @@ export default function AdvancedSearchAIPage() {
                 onClose={handleCloseSummaryDialog}
                 employee={selectedEmployee}
                 summary={profileSummary}
+                webPresence={profileWebPresence}
+                recentPosts={profileRecentPosts}
                 loading={summaryLoading}
                 error={summaryError}
             />
@@ -4311,8 +4323,8 @@ export default function AdvancedSearchAIPage() {
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                                         </button>
                                     )}
-                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#dce3f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
@@ -4337,7 +4349,7 @@ export default function AdvancedSearchAIPage() {
                                         key={src.key}
                                         onClick={() => selectCpSource(src.key)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', transition: 'background 0.1s' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf5ff')}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f0f3ff')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'white')}
                                     >
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: src.color, flexShrink: 0 }} />
@@ -4371,9 +4383,9 @@ export default function AdvancedSearchAIPage() {
                                     onClick={toggleCpSelectAll}
                                     style={{ padding: '8px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#fafafa' }}
                                 >
-                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
-                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#7c3aed', borderRadius: '1px' }}/>}
+                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#0b1957', borderRadius: '1px' }}/>}
                                     </div>
                                     <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
                                         {cpSelected.size === cpContacts.length ? 'Deselect all' : `Select all ${cpContacts.length} shown`}
@@ -4400,8 +4412,8 @@ export default function AdvancedSearchAIPage() {
                                     const sub = [c.company || c.company_name, c.email || c.phone].filter(Boolean).join(' · ');
                                     const initl = name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
                                     return (
-                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#faf5ff' : 'white', transition: 'background 0.1s' }}>
-                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#f0f3ff' : 'white', transition: 'background 0.1s' }}>
+                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
                                             </div>
                                             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(name), flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: '#fff' }}>{initl}</div>
@@ -4423,7 +4435,7 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                                 <span style={{ fontSize: '13px', color: '#6b7280' }}>
                                     {cpSelected.size > 0
-                                        ? <><strong style={{ color: '#7c3aed' }}>{cpSelected.size}</strong> selected</>
+                                        ? <><strong style={{ color: '#0b1957' }}>{cpSelected.size}</strong> selected</>
                                         : 'None selected'
                                     }
                                 </span>
@@ -4434,7 +4446,7 @@ export default function AdvancedSearchAIPage() {
                                     <button
                                         onClick={confirmContactPicker}
                                         disabled={cpSelected.size === 0}
-                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#7c3aed' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#0b1957' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                                         Start Campaign{cpSelected.size > 0 ? ` (${cpSelected.size})` : ''}
@@ -4476,14 +4488,15 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
     }, [msg.loading]);
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz">
+                <AgentVisualizer state="thinking" size={36} />
+            </div>
             <div>
-                <div className="adv-ai-name">AI Lead Finder</div>
+                <div className="adv-ai-name">LAD in Action <span className="adv-ai-name-dot" /></div>
                 <div className="adv-thinking-wrap">
                     <span className={`adv-thinking-word${thinkVisible ? ' adv-tw-in' : ' adv-tw-out'}`}>
                         {THINKING_WORDS[thinkIdx]}...
                     </span>
-                    <span className="adv-thinking-dots"><span /><span /><span /></span>
                 </div>
             </div>
         </div>
@@ -4495,7 +4508,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
     );
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz">
+                <AgentVisualizer state="idle" size={36} />
+            </div>
             <div className="adv-ai-body">
                 {msg.webSearchResult && (
                     <div className="adv-web-searched">
@@ -4504,7 +4519,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     </div>
                 )}
                 <div className="adv-ai-name">
-                    AI Lead Finder
+                    LAD in Action
                     <span className="adv-ai-name-dot" />
                 </div>
 
@@ -4517,7 +4532,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             return tokens.map((t, j) => {
                                 if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2,-2)}</strong>;
                                 if (t.startsWith('*')  && t.endsWith('*'))  return <em key={j} className="adv-ai-em">{t.slice(1,-1)}</em>;
-                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#4f46e5'}}>{t.slice(1,-1)}</code>;
+                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#0b1957'}}>{t.slice(1,-1)}</code>;
                                 return t;
                             });
                         };
@@ -5803,9 +5818,9 @@ function CheckpointFormInline({
 
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
-                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>AI Lead Finder</div>
+                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>LAD in Action</div>
 
                 {/* Question header */}
                 <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -6850,7 +6865,7 @@ function TargetingFormInline({
 
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <div className="adv-ai-name">Targeting Filters</div>
@@ -7188,31 +7203,27 @@ const css = `
             .adv-bubble-user {display:flex; justify-content:flex-end; margin-bottom:4px; }
             .adv-user-msg {background:linear-gradient(135deg,#172560 0%,#2563eb 100%); color:#fff; border-radius:20px 20px 4px 20px; padding:12px 18px; max-width:72%; font-size:14.5px; line-height:1.65; box-shadow:0 2px 14px rgba(23,37,96,.2); font-weight:450; }
             .adv-bubble-ai {display:flex; gap:12px; align-items:flex-start; margin-bottom:4px; }
-            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#172560 0%,#4f46e5 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(79,70,229,.28); }
+            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#0b1957 0%,#172560 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(11,25,87,.28); }
+            .adv-ai-avatar-viz {background:transparent; box-shadow:none; overflow:visible; }
             .adv-ai-body {flex:1; max-width:90%; }
-            .adv-ai-name {font-size:11px; font-weight:700; color:#4f46e5; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
+            .adv-ai-name {font-size:11px; font-weight:700; color:#0b1957; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
             .adv-ai-text {font-size:14.5px; line-height:1.78; color:#374151; }
             .adv-ai-text p {margin:0 0 6px; }
             .adv-ai-text strong {color:#111827; font-weight:650; }
-            .adv-ai-text em {color:#4f46e5; font-style:normal; font-weight:500; }
+            .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
             .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:4px 0; }
-            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#4f46e5; flex-shrink:0; margin-top:7px; opacity:.7; }
+            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:7px; opacity:.7; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
-            .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4f46e5; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+            .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
-            /* ── THINKING DOTS ── */
-            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden}
-            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:normal;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
+            /* ── THINKING STATE ── */
+            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden;padding-top:2px}
+            .adv-thinking-word{font-size:13px;color:#6366f1;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease;letter-spacing:.01em}
             .adv-tw-in{opacity:1;transform:translateY(0)}
-            .adv-tw-out{opacity:0;transform:translateY(-7px)}
-            .adv-thinking-dots{display:inline-flex;gap:4px;align-items:center}
-            .adv-thinking-dots span{width:5px;height:5px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#2563eb);display:inline-block;animation:adv-db 1.2s ease-in-out infinite}
-            .adv-thinking-dots span:nth-child(2){animation-delay:.2s}
-            .adv-thinking-dots span:nth-child(3){animation-delay:.4s}
-            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
+            .adv-tw-out{opacity:0;transform:translateY(-6px)}
             /* ── CHAT INPUT ── */
             .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }

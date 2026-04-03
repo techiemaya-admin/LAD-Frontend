@@ -51,14 +51,14 @@ export function useGenerateLeadProfileSummary() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ campaignId, leadId, profileData }: { 
-      campaignId: string; 
+    mutationFn: ({ campaignId, leadId, profileData }: {
+      campaignId: string;
       leadId: string;
       profileData?: any;
     }) =>
       generateLeadProfileSummary(campaignId, leadId, profileData),
     onSuccess: (data, { campaignId, leadId }) => {
-      // Update the lead summary cache
+      // Update the lead summary cache (preserve summary + exists for existing consumers)
       queryClient.setQueryData(
         campaignKeys.leadSummary(campaignId, leadId),
         { summary: data.summary, exists: true }
@@ -66,3 +66,9 @@ export function useGenerateLeadProfileSummary() {
     },
   });
 }
+// Re-export the full response type so callers can access web_presence & recent_posts
+export type GenerateLeadProfileSummaryResult = {
+  summary: string;
+  web_presence?: any;
+  recent_posts?: any[];
+};
