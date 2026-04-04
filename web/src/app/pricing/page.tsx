@@ -66,7 +66,7 @@ export default function PricingPage() {
               <h3 className="text-2xl font-semibold text-gray-900 mb-2">Standard Plans</h3>
               <p className="text-gray-600">Perfect for individuals and new beginners</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* Starter Plan */}
               <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 hover:border-blue-500 transition-all duration-200 hover:shadow-xl flex flex-col">
                 <div className="mb-4">
@@ -201,11 +201,39 @@ export default function PricingPage() {
                   Get Started
                 </button>
               </div>
+
+              {/* Enterprise Business Plan */}
+              <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl border-2 border-indigo-500 p-6 hover:border-indigo-400 transition-all duration-200 hover:shadow-xl flex flex-col relative">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium">Enterprise</span>
+                </div>
+                <div className="mb-4">
+                  <h3 className="text-xl font-bold text-white">Enterprise Business</h3>
+                  <p className="text-sm text-indigo-200 mt-1">Full automation &amp; customization</p>
+                </div>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-white">Contact Us</span>
+                  <p className="text-sm text-indigo-200 mt-2">Custom pricing for your needs</p>
+                </div>
+                <ul className="space-y-3 mb-6 flex-grow">
+                  <li className="flex items-start text-sm"><Check className="h-5 w-5 text-indigo-200 mr-2 flex-shrink-0" /><span className="text-indigo-100 font-bold">Everything in Business</span></li>
+                  <li className="flex items-start text-sm"><Check className="h-5 w-5 text-indigo-200 mr-2 flex-shrink-0" /><span className="text-indigo-100">Custom CRM integrations</span></li>
+                  <li className="flex items-start text-sm"><Check className="h-5 w-5 text-indigo-200 mr-2 flex-shrink-0" /><span className="text-indigo-100">Third-party app integrations</span></li>
+                  <li className="flex items-start text-sm"><Check className="h-5 w-5 text-indigo-200 mr-2 flex-shrink-0" /><span className="text-indigo-100">App customization</span></li>
+                  <li className="flex items-start text-sm"><Check className="h-5 w-5 text-indigo-200 mr-2 flex-shrink-0" /><span className="text-indigo-100">Dedicated Support</span></li>
+                </ul>
+                <button
+                  onClick={() => window.location.href = '/contact'}
+                  className="w-full bg-white text-indigo-700 py-3 rounded-lg font-medium hover:bg-indigo-50 transition-colors cursor-pointer mt-auto"
+                >
+                  Contact for Pricing
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Enterprise Plans */}
-          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-3xl p-8 border-2 border-purple-300">
+          {/* Enterprise Plans (hidden) */}
+          <div className="hidden bg-gradient-to-br from-purple-50 to-blue-50 rounded-3xl p-8 border-2 border-purple-300">
             <div className="text-center mb-8">
               <div className="inline-block bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-4">
                 ENTERPRISE
