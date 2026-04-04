@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useCallback } from 'react';
 import { Conversation, ContactTag, Label, ConversationNote } from '@/types/conversation';
+import { getCurrentUser } from '@/lib/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,6 +86,23 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 }: ConversationContextPanelProps) {
   const { contact, channel, createdAt } = conversation;
   const [newComment, setNewComment] = useState('');
+
+  // Phone masking — loaded from current user's profile
+  const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
+  useEffect(() => {
+    getCurrentUser()
+      .then((u: any) => setMaskPhoneNumbers(!!(u?.maskPhoneNumber ?? u?.user?.maskPhoneNumber)))
+      .catch(() => {});
+  }, []);
+
+  const displayPhone = useCallback((phone: string) => {
+    if (!maskPhoneNumbers || !phone) return phone;
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 4) return '••••';
+    const visible = digits.slice(-4);
+    const masked = Array(digits.length - 4).fill('•').join('');
+    return `+${masked}${visible}`;
+  }, [maskPhoneNumbers]);
 
   // Labels state
   const [allLabels, setAllLabels] = useState<Label[]>([]);
@@ -458,7 +476,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             {contact.phone && (
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span>{contact.phone}</span>
+                <span>{displayPhone(contact.phone)}</span>
               </div>
             )}
             <div className="flex items-center gap-3 text-sm text-muted-foreground">

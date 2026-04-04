@@ -16,6 +16,7 @@ export {
   getConversationMessages,
   sendMessage,
   updateConversationStatus,
+  markConversationRead,
   getConversationStats,
   getConversationsOptions,
   getConversationOptions,

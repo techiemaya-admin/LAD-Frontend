@@ -31,6 +31,7 @@ import { ChatGroupManager, AddToGroupDropdown, type ChatGroup } from './ChatGrou
 import { ImportLeadsDialog } from './ImportLeadsDialog';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { getCurrentUser } from '@/lib/auth';
 import {
   Tooltip,
   TooltipContent,
@@ -139,6 +140,20 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [templateSending, setTemplateSending] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((u: any) => setMaskPhoneNumbers(!!(u?.maskPhoneNumber ?? u?.user?.maskPhoneNumber)))
+      .catch(() => {});
+  }, []);
+
+  const displayPhone = useCallback((phone: string | undefined | null): string => {
+    if (!maskPhoneNumbers || !phone) return phone || '';
+    const digits = phone.replace(/\D/g, '');
+    const last4 = digits.slice(-4);
+    return `+${'•'.repeat(Math.max(digits.length - 4, 4))}${last4}`;
+  }, [maskPhoneNumbers]);
 
   const handleRefresh = useCallback(() => {
     if (!onRefresh || isRefreshing) return;
@@ -957,11 +972,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                             </div>
                             <div className="flex flex-col items-start overflow-hidden">
                               <span className="text-sm font-medium truncate w-full text-left">
-                                {conv.contact?.name || conv.contact?.phone || 'Unknown'}
+                                {conv.contact?.name || displayPhone(conv.contact?.phone) || 'Unknown'}
                               </span>
                               {conv.contact?.phone && conv.contact?.name && (
                                 <span className="text-xs text-muted-foreground truncate w-full text-left">
-                                  {conv.contact.phone}
+                                  {displayPhone(conv.contact.phone)}
                                 </span>
                               )}
                             </div>
