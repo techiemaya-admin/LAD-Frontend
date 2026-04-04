@@ -49,6 +49,21 @@ export default function StandardPlans() {
         "Priority Support",
       ],
       href: "/onboarding"
+    },
+    {
+      name: "Enterprise Business",
+      description: "Full automation & customization",
+      price: null,
+      credits: null,
+      features: [
+        { text: "Everything in Business", bold: true },
+        "Custom CRM integrations",
+        "Third-party app integrations",
+        "App customization",
+        "Dedicated Support",
+      ],
+      href: "/contact",
+      enterprise: true
     }
   ];
 
@@ -110,7 +125,7 @@ export default function StandardPlans() {
           </motion.div>
 
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto"
             variants={containerVariants}
           >
             {plans.map((plan, index) => (
@@ -125,6 +140,8 @@ export default function StandardPlans() {
                 className={`bg-white rounded-2xl border-2 p-6 transition-all duration-200 flex flex-col relative ${
                   plan.popular
                     ? "border-blue-500 hover:shadow-xl transform scale-105"
+                    : (plan as any).enterprise
+                    ? "border-indigo-500 hover:border-indigo-600 hover:shadow-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white"
                     : "border-gray-200 hover:border-blue-500 hover:shadow-xl"
                 }`}
               >
@@ -140,21 +157,42 @@ export default function StandardPlans() {
                     </span>
                   </motion.div>
                 )}
+                {(plan as any).enterprise && (
+                  <motion.div 
+                    className="absolute -top-4 left-1/2 transform -translate-x-1/2"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <span className="bg-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                      Enterprise
+                    </span>
+                  </motion.div>
+                )}
 
                 <div className="mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-white' : 'text-gray-900' }`}>{plan.name}</h3>
+                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-gray-600' }`}>{plan.description}</p>
                 </div>
 
                 <div className="mb-6">
-                  <div className="flex items-baseline">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {plan.price}
-                    </span>
-                  </div>
-                  <div className="text-lg font-semibold text-blue-600 mt-2">
-                    {plan.credits}
-                  </div>
+                  {(plan as any).enterprise ? (
+                    <div>
+                      <span className="text-4xl font-bold text-white">Contact Us</span>
+                      <p className="text-sm text-indigo-200 mt-2">Custom pricing for your needs</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline">
+                        <span className="text-4xl font-bold text-gray-900">
+                          {plan.price}
+                        </span>
+                      </div>
+                      <div className="text-lg font-semibold text-blue-600 mt-2">
+                        {plan.credits}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-6 flex-grow">
@@ -166,8 +204,8 @@ export default function StandardPlans() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * featureIndex }}
                     >
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                      <span className={typeof feature === 'object' && feature.bold ? 'font-bold' : ''}>
+                      <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-green-500' }`} />
+                      <span className={`${ (plan as any).enterprise ? 'text-indigo-100' : '' } ${typeof feature === 'object' && feature.bold ? 'font-bold' : ''}`}>
                         {typeof feature === 'string' ? feature : feature.text}
                       </span>
                     </motion.li>
@@ -176,11 +214,15 @@ export default function StandardPlans() {
 
                 <Link href={plan.href}>
                   <motion.button 
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer mt-auto"
+                    className={`w-full py-3 rounded-lg font-medium transition-colors cursor-pointer mt-auto ${
+                      (plan as any).enterprise
+                        ? 'bg-white text-indigo-700 hover:bg-indigo-50'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    Get Started
+                    {(plan as any).enterprise ? 'Contact for Pricing' : 'Get Started'}
                   </motion.button>
                 </Link>
               </motion.div>
