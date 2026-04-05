@@ -62,6 +62,7 @@ interface LeadProfile {
         education: { school: string; degree: string; field_of_study: string }[];
         skills: string[];
     };
+    inferred?: Record<string, any>;
 }
 
 interface ParsedInboundLead {
@@ -390,6 +391,9 @@ export default function AdvancedSearchAIPage() {
     const [cpActions, setCpActions] = useState<string[]>([]);
     const [cpConnMsg, setCpConnMsg] = useState('');
     const [cpFollowMsg, setCpFollowMsg] = useState('');
+    const [cpEnableDailyWebPresence, setCpEnableDailyWebPresence] = useState(false);
+    const [cpEnableDailyPosts, setCpEnableDailyPosts] = useState(false);
+    const [cpEnableAiPersonalization, setCpEnableAiPersonalization] = useState(false);
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
     
@@ -2862,6 +2866,12 @@ export default function AdvancedSearchAIPage() {
                                 inboundLeads={inboundLeads}
                                 inboundLeadIds={inboundLeadIds}
                                 directContactLeadIds={directContactLeadIds}
+                                enableDailyWebPresence={cpEnableDailyWebPresence}
+                                setEnableDailyWebPresence={setCpEnableDailyWebPresence}
+                                enableDailyPosts={cpEnableDailyPosts}
+                                setEnableDailyPosts={setCpEnableDailyPosts}
+                                enableAiPersonalization={cpEnableAiPersonalization}
+                                setEnableAiPersonalization={setCpEnableAiPersonalization}
                             />
                         </div>
                         )}
@@ -4990,6 +5000,9 @@ function CheckpointFormInline({
     emailProvider, setEmailProvider,
     waBody, setWaBody, waFromNumber, setWaFromNumber, waGenLoading, setWaGenLoading,
     pendingContact, inboundMode, inboundLeads, inboundLeadIds, directContactLeadIds,
+    enableDailyWebPresence, setEnableDailyWebPresence,
+    enableDailyPosts, setEnableDailyPosts,
+    enableAiPersonalization, setEnableAiPersonalization,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -5028,6 +5041,9 @@ function CheckpointFormInline({
     inboundLeads: ParsedInboundLead[];
     inboundLeadIds: string[];       // Real UUIDs from leads table (CSV/image uploads)
     directContactLeadIds: string[]; // Real UUIDs for chat-entered direct contacts
+    enableDailyWebPresence: boolean; setEnableDailyWebPresence: (v: boolean) => void;
+    enableDailyPosts: boolean; setEnableDailyPosts: (v: boolean) => void;
+    enableAiPersonalization: boolean; setEnableAiPersonalization: (v: boolean) => void;
 }) {
     const totalSteps = CP_QUESTIONS.length;
 
@@ -5650,6 +5666,12 @@ function CheckpointFormInline({
                 trigger_condition: triggerCondition || null,
                 campaign_days: campaignDays,
                 campaign_name: name || 'AI Growth Campaign',
+                enable_daily_web_presence: enableDailyWebPresence,
+                enable_daily_posts: enableDailyPosts,
+                enable_ai_personalization: enableAiPersonalization,
+                ai_value_prop: aiMsgValueProp || '',
+                ai_tone: aiMsgTone || 'professional',
+                ai_goal: aiMsgGoal || 'get_meeting',
             };
 
             // Get original ICP input (first user message in chat)
@@ -5735,6 +5757,12 @@ function CheckpointFormInline({
                     leads_per_day: safeLeadsPerDay, daily_lead_limit: safeLeadsPerDay, linkedin_daily_limit: LINKEDIN_DAILY_LIMIT, linkedin_weekly_limit: LINKEDIN_WEEKLY_LIMIT, working_days: 'monday-friday', campaign_days: campaignDays,
                     linkedin_actions: actions, connection_message: connMsg || '', followup_message: followMsg || '',
                     next_channels: nextChannels, trigger_condition: triggerCondition || null,
+                    enable_daily_web_presence: enableDailyWebPresence,
+                    enable_daily_posts: enableDailyPosts,
+                    enable_ai_personalization: enableAiPersonalization,
+                    ai_value_prop: aiMsgValueProp || '',
+                    ai_tone: aiMsgTone || 'professional',
+                    ai_goal: aiMsgGoal || 'get_meeting',
                     location: t.locations?.[0] || '', industries: t.industries || [], job_titles: t.job_titles || [],
                     profile_language: t.profile_language || [],
                     icp_threshold: icpMin,
@@ -6683,6 +6711,122 @@ function CheckpointFormInline({
                                                 </div>
                                             );
                                         })}
+                                    </div>
+
+                                    {/* ── 🤖 AI Daily Personalisation ───────────── */}
+                                    <div style={{ marginTop: '14px', borderTop: '1px solid #bfdbfe', paddingTop: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: enableDailyWebPresence || enableDailyPosts || enableAiPersonalization ? '10px' : '0', cursor: 'pointer' }}
+                                            onClick={() => {
+                                                // If any toggle is on, turn all off; otherwise show the panel
+                                                if (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) {
+                                                    setEnableDailyWebPresence(false);
+                                                    setEnableDailyPosts(false);
+                                                    setEnableAiPersonalization(false);
+                                                } else {
+                                                    setEnableDailyWebPresence(true);
+                                                    setEnableDailyPosts(true);
+                                                    setEnableAiPersonalization(true);
+                                                }
+                                            }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                                                <span style={{ fontSize: '13px' }}>🤖</span>
+                                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#4338ca' }}>AI Daily Personalisation</span>
+                                                <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 400 }}>— unique messages per lead, powered by live data</span>
+                                            </div>
+                                            <div style={{
+                                                width: '36px', height: '20px', borderRadius: '99px', flexShrink: 0,
+                                                background: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '#6366f1' : '#d1d5db',
+                                                position: 'relative', transition: 'background 0.2s',
+                                            }}>
+                                                <div style={{
+                                                    position: 'absolute', top: '2px',
+                                                    left: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '18px' : '2px',
+                                                    width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        {(enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {/* Toggle: Web Presence */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableDailyWebPresence ? '#eef2ff' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyWebPresence ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                }} onClick={() => setEnableDailyWebPresence(!enableDailyWebPresence)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>🌐 Refresh web presence daily</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Re-runs Google search for articles, news & social profiles per lead</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableDailyWebPresence ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableDailyWebPresence ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Toggle: LinkedIn Posts */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableDailyPosts ? '#eef2ff' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyPosts ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                }} onClick={() => setEnableDailyPosts(!enableDailyPosts)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>📝 Fetch live LinkedIn posts</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Pulls the lead's recent LinkedIn posts before each send</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableDailyPosts ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableDailyPosts ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Toggle: AI Generate unique message */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableAiPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                    border: `1px solid ${enableAiPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                    opacity: (!enableDailyWebPresence && !enableDailyPosts) ? 0.5 : 1,
+                                                    pointerEvents: (!enableDailyWebPresence && !enableDailyPosts) ? 'none' : 'auto',
+                                                }} onClick={() => setEnableAiPersonalization(!enableAiPersonalization)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>✨ AI-generate unique message per lead</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Gemini creates a personalised connect + follow-up using live web & post data{(!enableDailyWebPresence && !enableDailyPosts) ? ' — enable web presence or posts first' : ''}</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableAiPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableAiPersonalization ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {(enableDailyWebPresence || enableDailyPosts) && enableAiPersonalization && (
+                                                    <div style={{ fontSize: '11px', color: '#7c3aed', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '7px', padding: '7px 10px', lineHeight: 1.5 }}>
+                                                        ✅ Each lead will receive a <strong>unique AI-generated message</strong> based on their live web presence & LinkedIn posts. Your static template message is used as a fallback.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}

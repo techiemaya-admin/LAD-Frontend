@@ -4,58 +4,58 @@ import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 
-// export default function EnterprisePlans() {
-//   const enterprisePlans = [
-//     {
-//       name: "Enterprise Starter",
-//       description: "Foundation for enterprises",
-//       price: "$49",
-//       credits: "1,000 credits included",
-//       features: [
-//         "AI Chat Agent",
-//         "LinkedIn outreach",
-//         "Lead Data Enrichment",
-//         "Google & Outlook integration",
-//         "Calendar management",
-//         "Unlimited users",
-//         "AI powered chat-based campaign setup",
-//         "CRM pipeline",
-//         "Dedicated Support",
-//       ],
-//     },
-//     {
-//       name: "Enterprise Professional",
-//       description: "Advanced capabilities",
-//       price: "$149",
-//       credits: "3,000 credits included",
-//       features: [
-//         { text: "Everything in Enterprise Starter", bold: true },
-//         "AI Voice Agent",
-//         "AI Chat Agent",
-//         "WhatsApp integration",
-//         "Inbound leads collection into pipeline",
-//         "Campaign analytics",
-//         "AI Recommendations for deal closure",
-//         "Dedicated Support",
-//       ],
-//       recommended: true
-//     },
-//     {
-//       name: "Enterprise Business",
-//       description: "Full automation & customization",
-//       price: "$399",
-//       credits: "12,000 credits included",
-//       features: [
-//         { text: "Everything in Enterprise Professional", bold: true },
-//         "AI Voice Agent",
-//         "AI Chat Agent for LinkedIn, WhatsApp",
-//         "Custom CRM integrations",
-//         "Third-party app integrations",
-//         "App customization",
-//         "Dedicated Support",
-//       ],
-//     }
-//   ];
+export default function EnterprisePlans() {
+  const enterprisePlans = [
+    {
+      name: "Enterprise Starter",
+      description: "Foundation for enterprises",
+      price: "$49",
+      credits: "1,000 credits included",
+      features: [
+        "AI Chat Agent",
+        "LinkedIn outreach",
+        "Lead Data Enrichment",
+        "Google & Outlook integration",
+        "Calendar management",
+        "Unlimited users",
+        "AI powered chat-based campaign setup",
+        "CRM pipeline",
+        "Dedicated Support",
+      ],
+    },
+    {
+      name: "Enterprise Professional",
+      description: "Advanced capabilities",
+      price: "$149",
+      credits: "3,000 credits included",
+      features: [
+        { text: "Everything in Enterprise Starter", bold: true },
+        "AI Voice Agent",
+        "AI Chat Agent",
+        "WhatsApp integration",
+        "Inbound leads collection into pipeline",
+        "Campaign analytics",
+        "AI Recommendations for deal closure",
+        "Dedicated Support",
+      ],
+      recommended: true
+    },
+    {
+      name: "Enterprise Business",
+      description: "Full automation & customization",
+      price: "$399",
+      credits: "12,000 credits included",
+      features: [
+        { text: "Everything in Enterprise Professional", bold: true },
+        "AI Voice Agent",
+        "AI Chat Agent for LinkedIn, WhatsApp",
+        "Custom CRM integrations",
+        "Third-party app integrations",
+        "App customization",
+        "Dedicated Support",
+      ],
+    }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
