@@ -679,7 +679,14 @@ export default function AdvancedSearchAIPage() {
         const { field, type } = pgCurrentCard;
         let value = pgCardValues[field];
         if (type === 'tags') {
-            value = Array.isArray(value) ? value.join(', ') : (value || '');
+            // Flush any pending tag input (supports comma-separated like "CEO, VP of Sales")
+            let committed = Array.isArray(value) ? [...value] : [];
+            if (pgTagInput.trim()) {
+                const pending = pgTagInput.split(',').map((s: string) => s.trim()).filter(Boolean);
+                pending.forEach((t: string) => { if (!committed.includes(t)) committed.push(t); });
+                setPgTagInput('');
+            }
+            value = committed.join(', ');
         } else if (type === 'chips') {
             value = Array.isArray(value) ? value.join(', ') : (value || '');
         }
@@ -688,7 +695,7 @@ export default function AdvancedSearchAIPage() {
         // Send as a card submission message
         const cardMsg = `[Card submission: field=${field} value=${value}]`;
         await pgSendMessage(cardMsg);
-    }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+    }, [pgCurrentCard, pgCardValues, pgTagInput, setPgTagInput, pgSendMessage]);
 
     /** Generate an AI suggestion for the current card field */
     const pgGenerateSuggestion = useCallback(async () => {
@@ -3858,12 +3865,12 @@ export default function AdvancedSearchAIPage() {
                                             {/* Submit card button */}
                                             <button
                                                 onClick={pgSubmitCard}
-                                                disabled={!fieldVal && card.type !== 'hours'}
+                                                disabled={!fieldVal && !pgTagInput.trim() && card.type !== 'hours'}
                                                 style={{
                                                     marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
-                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
-                                                    color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
-                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
+                                                    background: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
+                                                    color: fieldVal || pgTagInput.trim() || card.type === 'hours' ? '#fff' : '#9ca3af',
+                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'pointer' : 'default',
                                                     transition: 'all .15s',
                                                 }}
                                             >
