@@ -23,9 +23,14 @@ interface User {
   phoneNumber?: string;
   capabilities?: string[];
   created_at?: string;
+  maskPhoneNumber?: boolean;
+  metadata?: { mask_phone_number?: boolean; [key: string]: unknown };
 }
 const PAGE_CAPABILITIES = [
   { key: 'view_overview', label: 'View Overview' },
+  { key: 'view_conversations', label: 'View Conversations' },
+  { key: 'view_followup', label: 'View Follow-up' },
+  { key: 'view_community_roi', label: 'View Community ROI' },
   { key: 'view_scraper', label: 'View Scraper' },
   { key: 'view_make_call', label: 'View Make a Call' },
   { key: 'view_call_logs', label: 'View Call Logs' },
@@ -62,6 +67,7 @@ export const TeamManagement: React.FC = () => {
     role: 'sales_rep',
     phoneNumber: '',
     capabilities: [] as string[],
+    maskPhoneNumber: false,
   });
   useEffect(() => {
     fetchUsers();
@@ -108,8 +114,12 @@ export const TeamManagement: React.FC = () => {
         const errorMsg = errorData.details ? `${errorData.error}: ${errorData.details}` : (errorData.error || `HTTP ${response.status}`);
         throw new Error(errorMsg);
       }
-      const data = await response.json();
-      setUsers(Array.isArray(data) ? data : []);
+      const rawData: any[] = await response.json();
+      const mapped = (Array.isArray(rawData) ? rawData : []).map((u: any) => ({
+        ...u,
+        maskPhoneNumber: !!(u.mask_phone_number ?? u.metadata?.mask_phone_number),
+      }));
+      setUsers(mapped);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setError(error.message || 'Failed to load team members');
@@ -131,7 +141,7 @@ export const TeamManagement: React.FC = () => {
       });
       if (response.ok) {
         setShowAddModal(false);
-        setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [] });
+        setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [], maskPhoneNumber: false });
         fetchUsers();
       } else {
         const errorData = await response.json();
@@ -187,6 +197,24 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating capabilities:', error);
     }
   };
+  const toggleMaskPhone = async (userId: string, current: boolean) => {
+    try {
+      const token = safeStorage.getItem('token');
+      const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/mask-phone`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ maskPhoneNumber: !current }),
+      });
+      if (response.ok) {
+        setUsers(users.map(u =>
+          u.id === userId ? { ...u, maskPhoneNumber: !current } : u
+        ));
+      }
+    } catch (err) {
+      console.error('Error toggling phone masking:', err);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
@@ -255,13 +283,14 @@ export const TeamManagement: React.FC = () => {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Capabilities</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Phone Masking</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {!Array.isArray(users) || users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                       {error ? 'Unable to load team members.' : 'No team members found. Add your first team member to get started.'}
                     </td>
                   </tr>
@@ -322,6 +351,22 @@ export const TeamManagement: React.FC = () => {
                             );
                           })}
                         </ul>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
+                          title={user.maskPhoneNumber ? 'Phone numbers are masked — click to unmask' : 'Phone numbers are visible — click to mask'}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                            user.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              user.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">{user.maskPhoneNumber ? 'Masked' : 'Visible'}</p>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -454,13 +499,16 @@ export const TeamManagement: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="tel"
                   value={newUser.phoneNumber}
                   onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="+1 (555) 123-4567"
+                  required
                 />
               </div>
               <div>
@@ -476,6 +524,26 @@ export const TeamManagement: React.FC = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+              {/* Phone Number Masking */}
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Mask Phone Numbers</label>
+                  <p className="text-xs text-gray-500 mt-0.5">When enabled, this user will see contact phone numbers masked (e.g. ••••3456)</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    newUser.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      newUser.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
               <div className="relative capabilities-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Page Access</label>
@@ -537,7 +605,7 @@ export const TeamManagement: React.FC = () => {
               </button>
               <button
                 onClick={handleAddUser}
-                disabled={!newUser.name || !newUser.email || !newUser.password}
+                disabled={!newUser.name || !newUser.email || !newUser.password || !newUser.phoneNumber}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Member

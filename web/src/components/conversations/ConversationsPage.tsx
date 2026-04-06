@@ -271,6 +271,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           groupColor={activeGroup.color}
           onBack={handleBackFromGroup}
           autoOpenInfo={groupInfoAutoOpen}
+          channel={channel}
         />
       ) : (
         <ChatWindow

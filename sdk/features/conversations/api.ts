@@ -270,6 +270,20 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
 }
 
 /**
+ * Mark a conversation as read — resets unread_count to 0 in the DB.
+ * The GET /conversations/:id endpoint resets unread_count as a side effect.
+ */
+export async function markConversationRead(
+  conversationId: string,
+  backendChannel?: 'personal' | 'waba'
+): Promise<void> {
+  await proxyClient.get(
+    `/api/whatsapp-conversations/conversations/${conversationId}`,
+    { channel: backendChannel }
+  );
+}
+
+/**
  * Update conversation status (resolve, mute, reopen)
  */
 export async function updateConversationStatus(

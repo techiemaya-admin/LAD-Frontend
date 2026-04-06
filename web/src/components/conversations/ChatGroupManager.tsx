@@ -16,6 +16,9 @@ import {
   Phone,
   Mail,
   ArrowLeft,
+  RefreshCw,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +50,13 @@ export interface ChatGroup {
   description: string | null;
   conversation_count: number;
   created_at: string | null;
+  /** Present for groups synced from native WhatsApp groups via Baileys */
+  metadata?: {
+    wa_group?: boolean;
+    wa_group_jid?: string;
+    participant_count?: number;
+    wa_synced_at?: string;
+  } | null;
 }
 
 interface ChatGroupManagerProps {
@@ -54,7 +64,11 @@ interface ChatGroupManagerProps {
   onOpenChange: (open: boolean) => void;
   onSelectGroup: (group: ChatGroup) => void;
   onSendTemplateToGroup: (groupId: string, conversationCount: number) => void;
+  /** Called when the user selects multiple groups and hits "Send Template" */
+  onSendTemplateToGroups?: (groups: ChatGroup[]) => void;
   onOpenGroupInfo?: (group: ChatGroup) => void;
+  /** When 'personal', shows the "Sync WA Groups" button to import native WhatsApp groups */
+  channel?: 'personal' | 'waba';
 }
 
 // ── Color palette for new groups ─────────────────────────────────
@@ -76,10 +90,13 @@ function authHeaders(): Record<string, string> {
   };
 }
 
-async function fetchGroups(): Promise<ChatGroup[]> {
-  const res = await fetch(API_BASE, { headers: authHeaders() });
+async function fetchGroups(channel?: 'personal' | 'waba'): Promise<ChatGroup[]> {
+  // Personal WA groups are stored in the Node.js tenant DB, not the WABA Python service.
+  // Append ?channel=personal so the proxy routes to the correct backend.
+  const url = channel === 'personal' ? `${API_BASE}?channel=personal` : API_BASE;
+  const res = await fetch(url, { headers: authHeaders() });
   const data = await res.json();
-  // GET /api/chat-groups returns {data: [...], total, limit, offset} — no `success` field
+  // Both backends return {data: [...]} or {success, data: [...]}
   return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
@@ -265,7 +282,9 @@ export function ChatGroupManager({
   onOpenChange,
   onSelectGroup,
   onSendTemplateToGroup,
+  onSendTemplateToGroups,
   onOpenGroupInfo,
+  channel,
 }: ChatGroupManagerProps) {
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -273,6 +292,14 @@ export function ChatGroupManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Multi-select mode
+  const [isGroupSelectMode, setIsGroupSelectMode] = useState(false);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+
+  // WA group sync state (personal channel only)
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Create form
   const [newName, setNewName] = useState('');
@@ -300,11 +327,11 @@ export function ChatGroupManager({
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    fetchGroups()
+    fetchGroups(channel)
       .then(setGroups)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, channel]);
 
   // Reset on close
   useEffect(() => {
@@ -318,6 +345,8 @@ export function ChatGroupManager({
       setSourceContacts([]);
       setSelectedContacts(new Map());
       setSourceSearch('');
+      setIsGroupSelectMode(false);
+      setSelectedGroupIds(new Set());
     }
   }, [open]);
 
@@ -402,7 +431,7 @@ export function ChatGroupManager({
             }),
           });
           // Refresh group to get updated count
-          const refreshed = await fetchGroups();
+          const refreshed = await fetchGroups(channel);
           setGroups(refreshed);
         } catch (err) {
           console.error('Error importing contacts to group:', err);
@@ -421,7 +450,7 @@ export function ChatGroupManager({
       setSourceContacts([]);
       setSelectedContacts(new Map());
     }
-  }, [newName, newColor, newDesc, selectedContacts]);
+  }, [newName, newColor, newDesc, selectedContacts, channel]);
 
   const handleDelete = useCallback(async (id: string) => {
     const ok = await deleteGroup(id);
@@ -457,18 +486,104 @@ export function ChatGroupManager({
     }
   }, [editingId, editName, editColor, editDesc]);
 
+  /**
+   * Sync native WhatsApp groups from the connected Baileys session into chat_groups.
+   * Only available when channel === 'personal'.
+   */
+  const handleSyncWaGroups = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch('/api/whatsapp-conversations/wa-groups/sync', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage(data.message || `Synced ${data.synced} group${data.synced !== 1 ? 's' : ''}`);
+        // Refresh the groups list to show newly synced groups
+        const refreshed = await fetchGroups(channel);
+        setGroups(refreshed);
+      } else {
+        setSyncMessage(data.error || 'Sync failed — is a Personal WA account connected?');
+      }
+    } catch {
+      setSyncMessage('Failed to reach the service. Check your connection.');
+    } finally {
+      setIsSyncing(false);
+      // Auto-clear message after 5 s
+      setTimeout(() => setSyncMessage(null), 5000);
+    }
+  }, [channel]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-        {/* Header - WhatsApp style teal/dark header */}
+      <DialogContent className="sm:max-w-md h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        {/* Header */}
         <div className="bg-primary/5 border-b border-border px-4 py-3">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <Users className="h-5 w-5 text-primary" />
-              Chat Groups
-              <Badge variant="secondary" className="text-[10px] ml-1">
-                {groups.length}
-              </Badge>
+              {isGroupSelectMode ? (
+                <span>
+                  {selectedGroupIds.size > 0
+                    ? `${selectedGroupIds.size} group${selectedGroupIds.size !== 1 ? 's' : ''} selected`
+                    : 'Select Groups'}
+                </span>
+              ) : (
+                <>
+                  Chat Groups
+                  <Badge variant="secondary" className="text-[10px] ml-1">
+                    {groups.length}
+                  </Badge>
+                </>
+              )}
+
+              {/* Select mode controls */}
+              <div className="ml-auto flex items-center gap-1">
+                {isGroupSelectMode ? (
+                  <>
+                    {selectedGroupIds.size < filteredGroups.length ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-[11px] px-2"
+                        onClick={() => setSelectedGroupIds(new Set(filteredGroups.map(g => g.id)))}
+                      >
+                        Select All
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-[11px] px-2"
+                        onClick={() => setSelectedGroupIds(new Set())}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-[11px] px-2"
+                      onClick={() => { setIsGroupSelectMode(false); setSelectedGroupIds(new Set()); }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[11px] px-2 text-muted-foreground"
+                    onClick={() => { setIsGroupSelectMode(true); setIsCreating(false); }}
+                    title="Select groups to send template"
+                  >
+                    <CheckSquare className="h-3.5 w-3.5 mr-1" />
+                    Select
+                  </Button>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
 
@@ -484,21 +599,59 @@ export function ChatGroupManager({
           </div>
         </div>
 
-        {/* New Group button */}
+        {/* New Group button + optional WA Sync */}
         <div className="px-2 py-2 border-b border-border">
           {!isCreating ? (
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors text-left"
-              onClick={() => setIsCreating(true)}
-            >
-              <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Plus className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">New Group</p>
-                <p className="text-[11px] text-muted-foreground">Create a group to organize conversations</p>
-              </div>
-            </button>
+            <div className="space-y-1">
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                onClick={() => setIsCreating(true)}
+              >
+                <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Plus className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">New Group</p>
+                  <p className="text-[11px] text-muted-foreground">Create a group to organize conversations</p>
+                </div>
+              </button>
+
+              {/* Sync WA Groups — Personal WhatsApp only */}
+              {channel === 'personal' && (
+                <div>
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#dcfce7] transition-colors text-left disabled:opacity-50"
+                    onClick={handleSyncWaGroups}
+                    disabled={isSyncing}
+                  >
+                    <div className="h-11 w-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#dcfce7' }}>
+                      {isSyncing
+                        ? <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#16a34a' }} />
+                        : <RefreshCw className="h-5 w-5" style={{ color: '#16a34a' }} />
+                      }
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: '#15803d' }}>
+                        {isSyncing ? 'Syncing WA Groups…' : 'Sync WA Groups'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Import groups from your connected WhatsApp number
+                      </p>
+                    </div>
+                  </button>
+                  {syncMessage && (
+                    <p className={cn(
+                      'text-[11px] px-4 py-1.5 rounded-lg mx-1 text-center',
+                      syncMessage.toLowerCase().includes('fail') || syncMessage.toLowerCase().includes('error')
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-green-50 text-green-700'
+                    )}>
+                      {syncMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
               {createStep === 'details' ? (
@@ -791,7 +944,7 @@ export function ChatGroupManager({
         </div>
 
         {/* Groups list - WhatsApp style */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -804,8 +957,12 @@ export function ChatGroupManager({
               <p className="text-sm font-medium">
                 {searchQuery ? 'No groups found' : 'No groups yet'}
               </p>
-              <p className="text-xs mt-1">
-                {searchQuery ? 'Try a different search' : 'Create a group to get started'}
+              <p className="text-xs mt-1 text-center px-6">
+                {searchQuery
+                  ? 'Try a different search'
+                  : channel === 'personal'
+                  ? 'Click "Sync WA Groups" to import your WhatsApp groups, or create a new group manually'
+                  : 'Create a group to get started'}
               </p>
             </div>
           ) : (
@@ -883,77 +1040,117 @@ export function ChatGroupManager({
                   ) : (
                     /* WhatsApp-style group row */
                     <div
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer group/row border-b border-border/30 last:border-b-0"
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group/row border-b border-border/30 last:border-b-0",
+                        isGroupSelectMode && selectedGroupIds.has(group.id)
+                          ? "bg-primary/8 hover:bg-primary/12"
+                          : "hover:bg-muted/40"
+                      )}
                       onClick={() => {
-                        onSelectGroup(group);
-                        onOpenChange(false);
+                        if (isGroupSelectMode) {
+                          // Toggle selection
+                          setSelectedGroupIds(prev => {
+                            const next = new Set(prev);
+                            if (next.has(group.id)) next.delete(group.id);
+                            else next.add(group.id);
+                            return next;
+                          });
+                        } else {
+                          onSelectGroup(group);
+                          onOpenChange(false);
+                        }
                       }}
                     >
-                      <GroupAvatar name={group.name} color={group.color} />
+                      {/* Checkbox or Avatar */}
+                      {isGroupSelectMode ? (
+                        <div className="h-11 w-11 flex items-center justify-center flex-shrink-0">
+                          {selectedGroupIds.has(group.id)
+                            ? <CheckSquare className="h-5 w-5 text-primary" />
+                            : <Square className="h-5 w-5 text-muted-foreground" />
+                          }
+                        </div>
+                      ) : (
+                        <GroupAvatar name={group.name} color={group.color} />
+                      )}
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium truncate">{group.name}</span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0" />
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {group.metadata?.wa_group && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold"
+                                style={{ background: '#dcfce7', color: '#15803d' }}>
+                                WA
+                              </span>
+                            )}
+                            {!isGroupSelectMode && (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/row:opacity-100 transition-opacity" />
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <p className="text-xs text-muted-foreground truncate">
                             <Users className="h-3 w-3 inline mr-1" />
-                            {group.conversation_count} conversation{group.conversation_count !== 1 ? 's' : ''}
+                            {group.metadata?.wa_group && group.metadata.participant_count
+                              ? `${group.metadata.participant_count} member${group.metadata.participant_count !== 1 ? 's' : ''}`
+                              : `${group.conversation_count} conversation${group.conversation_count !== 1 ? 's' : ''}`
+                            }
                             {group.description ? ` · ${group.description}` : ''}
                           </p>
                         </div>
                       </div>
 
-                      {/* Action buttons - visible on hover */}
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0">
-                        {onOpenGroupInfo && (
+                      {/* Action buttons - hidden in select mode */}
+                      {!isGroupSelectMode && (
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0">
+                          {onOpenGroupInfo && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Group info"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenGroupInfo(group);
+                                onOpenChange(false);
+                              }}
+                            >
+                              <Info className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            title="Group info"
+                            title="Broadcast to group"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onOpenGroupInfo(group);
+                              onSendTemplateToGroup(group.id, group.conversation_count);
                               onOpenChange(false);
                             }}
                           >
-                            <Info className="h-3.5 w-3.5 text-primary" />
+                            <Send className="h-3.5 w-3.5 text-blue-600" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Broadcast to group"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSendTemplateToGroup(group.id, group.conversation_count);
-                            onOpenChange(false);
-                          }}
-                        >
-                          <Send className="h-3.5 w-3.5 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Edit group"
-                          onClick={(e) => { e.stopPropagation(); startEdit(group); }}
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Delete group"
-                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(group.id); }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Edit group"
+                            onClick={(e) => { e.stopPropagation(); startEdit(group); }}
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Delete group"
+                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(group.id); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -961,6 +1158,46 @@ export function ChatGroupManager({
             </div>
           )}
         </ScrollArea>
+
+        {/* Sticky send-template bar — shown when groups are selected */}
+        {isGroupSelectMode && selectedGroupIds.size > 0 && (
+          <div className="border-t border-border bg-background px-4 py-3 flex items-center gap-3 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">
+                {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''} selected
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {(() => {
+                  const sel = groups.filter(g => selectedGroupIds.has(g.id));
+                  const total = sel.reduce((acc, g) =>
+                    acc + (g.metadata?.wa_group && g.metadata.participant_count
+                      ? g.metadata.participant_count
+                      : g.conversation_count), 0);
+                  return `${total} total recipient${total !== 1 ? 's' : ''}`;
+                })()}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="h-9 gap-2 text-xs font-semibold"
+              onClick={() => {
+                const sel = groups.filter(g => selectedGroupIds.has(g.id));
+                if (onSendTemplateToGroups) {
+                  onSendTemplateToGroups(sel);
+                } else {
+                  // Fallback: fire single-group handler for each
+                  sel.forEach(g => onSendTemplateToGroup(g.id, g.conversation_count));
+                }
+                setIsGroupSelectMode(false);
+                setSelectedGroupIds(new Set());
+                onOpenChange(false);
+              }}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Send Template
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -971,20 +1208,21 @@ export function ChatGroupManager({
 interface AddToGroupDropdownProps {
   selectedIds: Set<string>;
   onDone: () => void;
+  channel?: 'personal' | 'waba';
 }
 
-export function AddToGroupDropdown({ selectedIds, onDone }: AddToGroupDropdownProps) {
+export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupDropdownProps) {
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadGroups = useCallback(() => {
     setLoading(true);
-    fetchGroups()
+    fetchGroups(channel)
       .then(setGroups)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [channel]);
 
   const handleAddToGroup = useCallback(async (groupId: string) => {
     if (selectedIds.size === 0) return;
