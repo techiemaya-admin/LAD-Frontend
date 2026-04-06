@@ -109,6 +109,7 @@ export function useUsageAggregation(params?: {
  * Hook to list ledger transactions
  */
 export function useTransactions(params?: {
+  type?: string;
   from?: string;
   to?: string;
   limit?: number;
@@ -134,6 +135,18 @@ export function useCreditsBalanceLegacy() {
 }
 // Backward compatibility alias
 export const useWalletBalanceLegacy = useCreditsBalanceLegacy;
+/**
+ * Hook for wallet balance with transactions
+ * Fetches balance and transaction history from /wallet/balance
+ */
+export function useWalletBalanceWithTransactions() {
+  return useQuery({
+    queryKey: ['billing', 'wallet-balance-transactions'],
+    queryFn: billingApi.getWalletBalanceWithTransactions,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
+}
 /**
  * LEGACY COMPATIBILITY
  * Hook for credit packages
