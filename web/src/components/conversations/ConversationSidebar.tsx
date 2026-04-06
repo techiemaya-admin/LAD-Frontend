@@ -66,12 +66,12 @@ interface ConversationSidebarProps {
   onShowBroadcastModal?: () => void;
 }
 
+// LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
 const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn', channel: 'linkedin' },
-  { id: 'gmail', label: 'Gmail', channel: 'gmail' },
-  { id: 'outlook', label: 'Outlook', channel: 'outlook' },
+  { id: 'all',       label: 'All' },
+  { id: 'whatsapp',  label: 'WhatsApp',  channel: 'whatsapp' },
+  { id: 'gmail',     label: 'Gmail',     channel: 'gmail' },
+  { id: 'outlook',   label: 'Outlook',   channel: 'outlook' },
   { id: 'instagram', label: 'Instagram', channel: 'instagram' },
 ];
 
