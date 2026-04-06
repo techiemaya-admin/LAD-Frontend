@@ -8,6 +8,7 @@ import { ChatWindow } from './ChatWindow';
 import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
+import { LinkedInConversationView } from './LinkedInConversationView';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
@@ -316,11 +317,12 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba';
+type WaTab = 'personal' | 'waba' | 'linkedin';
 
 const WA_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
-  { id: 'waba',    label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -421,14 +423,15 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal' && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
-        {activeTab === 'waba'     && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'personal'  && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'waba'      && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'linkedin'  && <LinkedInConversationView />}
       </div>
 
-      {/* Broadcast Modal */}
+      {/* Broadcast Modal (WhatsApp-only) */}
       <AnimatePresence>
-        {showBroadcastModal && (
-          <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab} />
+        {showBroadcastModal && activeTab !== 'linkedin' && (
+          <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab as 'personal' | 'waba'} />
         )}
       </AnimatePresence>
 
@@ -456,7 +459,7 @@ export function ConversationsPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 interface BroadcastModalProps {
   onClose: () => void;
-  activeTab: WaTab;
+  activeTab: 'personal' | 'waba';
 }
 
 function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
