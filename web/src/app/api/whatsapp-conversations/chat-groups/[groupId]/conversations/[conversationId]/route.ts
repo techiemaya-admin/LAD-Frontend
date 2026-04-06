@@ -11,9 +11,8 @@ export async function DELETE(
 ) {
   const { groupId, conversationId } = await params;
 
-  // Force WABA channel routing to Python service
   const url = new URL(req.url);
-  url.searchParams.set('channel', 'waba');
+  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
   const wabaReq = new NextRequest(url, req);
 
   return proxyToPythonService(

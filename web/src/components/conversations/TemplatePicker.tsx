@@ -382,6 +382,7 @@ export function TemplatePicker({
                         min={1} max={50}
                         value={batchSize}
                         onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">msgs / batch</p>
@@ -393,6 +394,7 @@ export function TemplatePicker({
                         min={10} max={3600}
                         value={delayMin}
                         onChange={e => setDelayMin(Math.max(10, parseInt(e.target.value) || 10))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">seconds</p>
@@ -404,6 +406,7 @@ export function TemplatePicker({
                         min={0} max={300}
                         value={delayRandom}
                         onChange={e => setDelayRandom(Math.max(0, parseInt(e.target.value) || 0))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">0–N secs</p>

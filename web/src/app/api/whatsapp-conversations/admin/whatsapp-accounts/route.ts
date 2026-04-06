@@ -55,7 +55,7 @@ async function fetchNodeAccounts(req: NextRequest): Promise<WaAccount[]> {
 async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): Promise<WaAccount[]> {
   try {
     const url = new URL(req.url);
-    url.searchParams.set('channel', 'waba');
+    if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
     // Always pass tenant_id so the Python service filters server-side
     if (tenantId) url.searchParams.set('tenant_id', tenantId);
     const wabaReq = new NextRequest(url, req);
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
   try {
     const bodyString = parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined;
     const url = new URL(req.url);
-    url.searchParams.set('channel', 'waba');
+    if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
     const clonedReq = new NextRequest(url, {
       method: req.method,
       headers: req.headers,
