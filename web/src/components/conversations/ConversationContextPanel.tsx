@@ -208,13 +208,13 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   // Fetch all labels
   useEffect(() => {
-    fetchWithTenant(LABELS_API)
+    fetchWithTenant(`${LABELS_API}?channel=${backendChannel}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setAllLabels(data.data || []);
       })
       .catch(() => {});
-  }, []);
+  }, [backendChannel]);
 
   // Sync conversation labels when conversation changes
   useEffect(() => {
@@ -224,19 +224,19 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   // Fetch notes when conversation changes
   useEffect(() => {
     if (!conversation.id) return;
-    fetchWithTenant(`${CONV_API}/${conversation.id}/notes`)
+    fetchWithTenant(`${CONV_API}/${conversation.id}/notes?channel=${backendChannel}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setNotes(data.data || []);
       })
       .catch(() => {});
-  }, [conversation.id]);
+  }, [conversation.id, backendChannel]);
 
   // Fetch business profile when conversation changes
   useEffect(() => {
     if (!conversation.id) return;
     setProfileLoading(true);
-    fetchWithTenant(`${CONV_API}/${conversation.id}/business-profile`)
+    fetchWithTenant(`${CONV_API}/${conversation.id}/business-profile?channel=${backendChannel}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setBusinessProfile(data.data);
@@ -244,14 +244,14 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
       })
       .catch(() => setBusinessProfile(null))
       .finally(() => setProfileLoading(false));
-  }, [conversation.id]);
+  }, [conversation.id, backendChannel]);
 
   // ── Label actions ─────────────────────────────────────────────
 
   const attachLabel = useCallback(
     async (labelId: string) => {
       try {
-        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels`, {
+        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels?channel=${backendChannel}`, {
           method: 'POST',
           body: JSON.stringify({ label_id: labelId }),
         });
@@ -259,25 +259,25 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
         if (label) setConvLabels((prev) => [...prev, label]);
       } catch {}
     },
-    [conversation.id, allLabels]
+    [conversation.id, allLabels, backendChannel]
   );
 
   const detachLabel = useCallback(
     async (labelId: string) => {
       try {
-        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels/${labelId}`, {
+        await fetchWithTenant(`${CONV_API}/${conversation.id}/labels/${labelId}?channel=${backendChannel}`, {
           method: 'DELETE',
         });
         setConvLabels((prev) => prev.filter((l) => l.id !== labelId));
       } catch {}
     },
-    [conversation.id]
+    [conversation.id, backendChannel]
   );
 
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
     try {
-      const res = await fetchWithTenant(LABELS_API, {
+      const res = await fetchWithTenant(`${LABELS_API}?channel=${backendChannel}`, {
         method: 'POST',
         body: JSON.stringify({ name: newLabelName.trim(), color: newLabelColor }),
       });
@@ -287,14 +287,14 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
         setNewLabelName('');
       }
     } catch {}
-  }, [newLabelName, newLabelColor]);
+  }, [newLabelName, newLabelColor, backendChannel]);
 
   // ── Note actions ──────────────────────────────────────────────
 
   const addNote = useCallback(async () => {
     if (!newNote.trim()) return;
     try {
-      const res = await fetchWithTenant(`${CONV_API}/${conversation.id}/notes`, {
+      const res = await fetchWithTenant(`${CONV_API}/${conversation.id}/notes?channel=${backendChannel}`, {
         method: 'POST',
         body: JSON.stringify({ content: newNote.trim(), author_name: 'Agent' }),
       });
@@ -304,13 +304,13 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
         setNewNote('');
       }
     } catch {}
-  }, [newNote, conversation.id]);
+  }, [newNote, conversation.id, backendChannel]);
 
   const updateNote = useCallback(
     async (noteId: string) => {
       if (!editingNoteContent.trim()) return;
       try {
-        const res = await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}`, {
+        const res = await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}?channel=${backendChannel}`, {
           method: 'PUT',
           body: JSON.stringify({ content: editingNoteContent.trim() }),
         });
@@ -322,15 +322,15 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
         }
       } catch {}
     },
-    [editingNoteContent]
+    [editingNoteContent, backendChannel]
   );
 
   const deleteNote = useCallback(async (noteId: string) => {
     try {
-      await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}`, { method: 'DELETE' });
+      await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}?channel=${backendChannel}`, { method: 'DELETE' });
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
     } catch {}
-  }, []);
+  }, [backendChannel]);
 
   const unattachedLabels = allLabels.filter(
     (l) => !convLabels.some((cl) => cl.id === l.id)

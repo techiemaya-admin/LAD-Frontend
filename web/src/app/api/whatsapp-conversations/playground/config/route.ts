@@ -9,7 +9,7 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  url.searchParams.set('channel', 'waba');
+  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
   const newReq = new NextRequest(url, req);
   return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/playground/config');
 }
