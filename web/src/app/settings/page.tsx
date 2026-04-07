@@ -41,7 +41,7 @@ const SettingsPage: React.FC = () => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
-    const allowed: ActiveTab[] = ['company','team','accounts','website','integrations','chat','api','billing','credits'];
+    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits'];
     if (allowed.includes(tabParam as ActiveTab)) {
       setActiveTab(tabParam as ActiveTab);
     }
@@ -124,11 +124,10 @@ const SettingsPage: React.FC = () => {
                   sp.set('tab', tab.id);
                   router.replace(`/settings?${sp.toString()}`);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${
-                  activeTab === tab.id
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
                     ? 'bg-white text-blue-700 shadow-md font-semibold'
                     : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -140,7 +139,7 @@ const SettingsPage: React.FC = () => {
       {/* Content */}
       <div className="space-y-6">
         {activeTab === 'company' && (
-          <CompanySettings 
+          <CompanySettings
             companyName={companyName}
             setCompanyName={(name: string) => dispatch(setCompanyName(name))}
             companyLogo={companyLogo}

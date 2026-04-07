@@ -14,6 +14,7 @@ import {
   getConversationMessagesOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
+  markConversationRead as markConversationReadApi,
   conversationKeys,
   type ConversationQueryOptions,
 } from '../api';
@@ -90,7 +91,19 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
-  }, []);
+
+    // Optimistically zero the unread badge in every conversation-list cache entry
+    // so the sidebar updates immediately without waiting for the next poll.
+    queryClient.setQueriesData<Conversation[]>(
+      { queryKey: conversationKeys.lists() },
+      (old) => (old || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
+    );
+
+    // Fire-and-forget: persist the reset to the DB so polls stay at 0
+    markConversationReadApi(id, hookOptions?.channel).catch(() => {
+      // Non-critical — the next poll will re-sync from DB
+    });
+  }, [queryClient, hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({

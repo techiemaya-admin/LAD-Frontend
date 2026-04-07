@@ -117,7 +117,8 @@ function getLabel(name: string): string {
 // ── Channel tabs ─────────────────────────────────────────────────
 
 const CHANNELS = [
-  { id: 'whatsapp', label: 'WhatsApp', color: 'bg-green-500' },
+  { id: 'waba', label: 'WABA', color: 'bg-green-500' },
+  { id: 'personal_whatsapp', label: 'Personal WhatsApp', color: 'bg-emerald-400' },
   { id: 'linkedin', label: 'LinkedIn', color: 'bg-blue-600' },
   { id: 'gmail', label: 'Gmail', color: 'bg-red-500' },
 ];
@@ -177,7 +178,7 @@ export function ChatSettings() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredPrompts = prompts.filter((p) => (p.channel || 'whatsapp') === activeChannel);
+  const filteredPrompts = prompts.filter((p) => (p.channel || 'waba') === activeChannel);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -449,6 +450,19 @@ export function ChatSettings() {
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 autoFocus
               />
+              {/* Channel selector — pre-fills from active tab but user can override */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Channel:</label>
+                <select
+                  value={newPromptName ? activeChannel : activeChannel}
+                  onChange={(e) => setActiveChannel(e.target.value)}
+                  className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white"
+                >
+                  {CHANNELS.map((ch) => (
+                    <option key={ch.id} value={ch.id}>{ch.label}</option>
+                  ))}
+                </select>
+              </div>
               <textarea
                 placeholder="Enter the prompt text..."
                 value={newPromptText}
@@ -474,9 +488,6 @@ export function ChatSettings() {
                 >
                   Cancel
                 </button>
-                <span className="text-[10px] text-gray-400 ml-auto">
-                  Channel: {CHANNELS.find((c) => c.id === activeChannel)?.label}
-                </span>
               </div>
             </div>
           )}

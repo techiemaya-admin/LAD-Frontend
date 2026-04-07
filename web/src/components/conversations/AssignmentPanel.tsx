@@ -35,6 +35,8 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 interface AssignmentPanelProps {
   conversationId: string;
   onAssignmentChange?: () => void;
+  /** Backend channel for this conversation — controls which service handles assignment */
+  channel?: 'personal' | 'waba';
 }
 
 interface Assignment {
@@ -68,6 +70,7 @@ interface TeamMember {
 export const AssignmentPanel = memo(function AssignmentPanel({
   conversationId,
   onAssignmentChange,
+  channel = 'waba',
 }: AssignmentPanelProps) {
   // Assignment state
   const [assignment, setAssignment] = useState<Assignment | null>(null);
@@ -92,7 +95,7 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       setError(null);
 
       const response = await fetchWithTenant(
-        `/api/threads/${conversationId}/assignment`
+        `/api/threads/${conversationId}/assignment?channel=${channel}`
       );
 
       if (!response.ok) {
@@ -113,7 +116,7 @@ export const AssignmentPanel = memo(function AssignmentPanel({
   // Load team members
   const loadTeamMembers = useCallback(async () => {
     try {
-      const response = await fetchWithTenant('/api/threads/team/workload');
+      const response = await fetchWithTenant(`/api/threads/team/workload?channel=${channel}`);
 
       if (!response.ok) {
         throw new Error('Failed to load team members');
@@ -152,7 +155,7 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       setError(null);
 
       const response = await fetchWithTenant(
-        `/api/threads/${conversationId}/assign`,
+        `/api/threads/${conversationId}/assign?channel=${channel}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -192,7 +195,7 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       setError(null);
 
       const response = await fetchWithTenant(
-        `/api/threads/${conversationId}/unassign`,
+        `/api/threads/${conversationId}/unassign?channel=${channel}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

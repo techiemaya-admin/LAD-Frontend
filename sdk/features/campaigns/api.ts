@@ -316,12 +316,21 @@ export async function generateLeadProfileSummary(
   campaignId: string,
   leadId: string,
   profileData?: any
-): Promise<{ summary: string }> {
-  const response = await apiClient.post<{ success: boolean; summary: string }>(
+): Promise<{ summary: string; web_presence?: any; recent_posts?: any[] }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    summary: string;
+    web_presence?: any;
+    recent_posts?: any[];
+  }>(
     `/api/campaigns/${campaignId}/leads/${leadId}/summary`,
     profileData ? { leadId, campaignId, profileData } : {}
   );
-  return { summary: response.data.summary };
+  return {
+    summary: response.data.summary,
+    web_presence: response.data.web_presence ?? null,
+    recent_posts: response.data.recent_posts ?? [],
+  };
 }
 
 /**

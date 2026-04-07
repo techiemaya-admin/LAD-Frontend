@@ -234,8 +234,13 @@ export default function CampaignsListPage() {
           </Button>
 
           <Button
+<<<<<<< setting-page-billing
             onClick={() => router.push("/onboarding")}
             className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] w-full sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+=======
+            onClick={() => router.push("/onboarding/advanced-search-ai")}
+            className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] w-full sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
+>>>>>>> develop
           >
             <Plus />
              Campaign

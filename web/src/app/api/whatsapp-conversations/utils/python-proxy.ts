@@ -1,7 +1,8 @@
 /**
  * Proxy utility for forwarding Next.js API requests to the appropriate backend:
  *   - channel=personal  → LAD_backend (Node.js) for personal WhatsApp (Baileys)
- *   - channel=waba       → LAD-WABA-Comms (Python FastAPI) for WhatsApp Business API
+ *   - channel=waba      → LAD-WABA-Comms (Python FastAPI) for WhatsApp Business API
+ *   - channel=linkedin  → LAD_backend (Node.js) for LinkedIn via Unipile
  *
  * The channel is determined by the `channel` query param or `X-WhatsApp-Channel` header.
  */
@@ -76,6 +77,11 @@ export async function proxyToPythonService(
     // WhatsApp Business API → LAD-WABA-Comms
     resolvedBaseUrl = getWABAServiceUrl();
     resolvedPath = path;
+  } else if (channel === 'linkedin') {
+    // LinkedIn → LAD_backend (Unipile LinkedIn Conversations)
+    // Transform: /api/conversations → /api/linkedin-conversations/conversations
+    resolvedBaseUrl = getBackendUrl();
+    resolvedPath = '/api/linkedin-conversations' + path.replace(/^\/api/, '');
   } else {
     // Fallback: use the passed-in baseUrl (backwards compat)
     resolvedBaseUrl = baseUrl;

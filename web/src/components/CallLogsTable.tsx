@@ -965,38 +965,39 @@ export function CallLogsTable({
           </div>
         )}
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                    }`}
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  {header.isPlaceholder ? null : (
-                    <div className="flex items-center gap-2">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && (
-                        <span>
-                          {{
-                            asc: <ArrowUp className="w-4 h-4 text-primary" />,
-                            desc: <ArrowDown className="w-4 h-4 text-primary" />,
-                          }[header.column.getIsSorted() as string] ?? (
-                              <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
-                            )}
-                        </span>
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+        <div className="min-w-[1000px] w-full">
+          <Table>
+            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0] hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={`font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                        }`}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div className="flex items-center gap-2">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() && (
+                            <span>
+                              {{
+                                asc: <ArrowUp className="w-4 h-4 text-primary" />,
+                                desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                              }[header.column.getIsSorted() as string] ?? (
+                                  <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                                )}
+                            </span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                </TableHead>
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
+            </TableHeader>
         <TableBody>
           {isLoading ? (
             // Skeleton rows
@@ -1209,7 +1210,8 @@ export function CallLogsTable({
             ))
           )}
         </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (

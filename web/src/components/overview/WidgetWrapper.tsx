@@ -58,7 +58,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
     >
       {/* Widget Header */}
       <div 
-        className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border/30 bg-gradient-to-r from-slate-50 to-transparent"
+        className="flex items-center justify-between px-2 sm:px-5 py-2 sm:py-4 border-b border-border/30 bg-gradient-to-r from-slate-50 to-transparent"
         {...(isEditMode ? listeners : {})}
       >
         <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
             </div>
           )}
           {icon && <div className="text-muted-foreground">{icon}</div>}
-          <h3 className="font-semibold text-sm font-display">{title}</h3>
+          <h3 className="font-semibold text-xs sm:text-sm font-display">{title}</h3>
         </div>
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {headerActions}
@@ -103,7 +103,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
         </div>
       </div>
       {/* Widget Content */}
-      <div className="flex-1 p-4 sm:p-5 overflow-auto custom-scrollbar">
+      <div className="flex-1 p-2 sm:p-5 overflow-auto custom-scrollbar">
         {children}
       </div>
     </div>
