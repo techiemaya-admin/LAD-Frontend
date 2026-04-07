@@ -37,6 +37,7 @@ interface LeadTargeting {
     decision_maker_education?: string[];
     decision_maker_skills?: string[];
     posted_recently?: boolean; // true = only show leads who posted on LinkedIn in the last 3 months
+    nationality_filter?: string[]; // nationalities extracted by AI from chat (e.g. ["Indian"])
 }
 
 interface LeadProfile {
@@ -2061,25 +2062,29 @@ export default function AdvancedSearchAIPage() {
                 setIsSearching(true);
                 setActivities([]);
 
+                // Use targetingOverride (from Targeting card confirm) when available,
+                // because setTargeting() is async and the React state may not yet reflect
+                // the new nationality / filters when the search fires immediately after confirm.
+                const effectiveTargeting = opts?.targetingOverride || targeting;
                 const d = await linkedInSearch.search({
                     query: searchQuery,
                     count: leadCount,
                     targeting: ext || undefined,
-                    targeting_filters: targeting && (
-                        targeting.decision_maker_nationality?.length ||
-                        targeting.decision_maker_experience_level?.length ||
-                        targeting.decision_maker_skills?.length ||
-                        targeting.decision_maker_education?.length ||
-                        targeting.company_size?.length ||
-                        targeting.posted_recently
+                    targeting_filters: effectiveTargeting && (
+                        effectiveTargeting.decision_maker_nationality?.length ||
+                        effectiveTargeting.decision_maker_experience_level?.length ||
+                        effectiveTargeting.decision_maker_skills?.length ||
+                        effectiveTargeting.decision_maker_education?.length ||
+                        effectiveTargeting.company_size?.length ||
+                        effectiveTargeting.posted_recently
                     ) ? {
-                        nationality: targeting.decision_maker_nationality,
-                        experience_level: targeting.decision_maker_experience_level,
-                        skills: targeting.decision_maker_skills,
-                        education: targeting.decision_maker_education,
-                        company_size: targeting.company_size,
+                        nationality: effectiveTargeting.decision_maker_nationality,
+                        experience_level: effectiveTargeting.decision_maker_experience_level,
+                        skills: effectiveTargeting.decision_maker_skills,
+                        education: effectiveTargeting.decision_maker_education,
+                        company_size: effectiveTargeting.company_size,
                         // Only send posted_recently when explicitly set by user
-                        posted_recently: targeting.posted_recently === true ? true : undefined,
+                        posted_recently: effectiveTargeting.posted_recently === true ? true : undefined,
                     } : undefined,
                     icp_description: icpDesc,
                     search_enrichment: buildSearchEnrichment(),
@@ -2100,6 +2105,8 @@ export default function AdvancedSearchAIPage() {
                             locations: toArr(d.intent.locations), keywords: toArr(d.intent.keywords),
                             profile_language: toArr(d.intent.profile_language),
                             company_names: toArr(d.intent.company_names),
+                            // Carry nationality_filter so subsequent paginated searches pass it through
+                            nationality_filter: toArr(d.intent.nationality_filter),
                         };
                         const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0 || (newExt.keywords && newExt.keywords.length > 0) || (newExt.company_names && newExt.company_names.length > 0);
                         if (hasData) {
@@ -2150,7 +2157,7 @@ export default function AdvancedSearchAIPage() {
                         // This frontend pass: (1) annotates leads with inferred_nationality for
                         // the UI badge display, (2) acts as a secondary safety net to catch any
                         // profiles the backend may have missed.
-                        const nationalityFilters = (ext || targeting)?.decision_maker_nationality;
+                        const nationalityFilters = effectiveTargeting?.decision_maker_nationality || (ext || targeting)?.decision_maker_nationality;
                         if (nationalityFilters && nationalityFilters.length > 0 && realLeads.length > 0) {
                             // Fire async — annotate after leads are shown (backend already filtered)
                             (async () => {
@@ -7700,6 +7707,7 @@ function buildSummary(t: LeadTargeting): string {
     if (t.job_titles.length) p.push(`🎯 **Job Titles:** ${t.job_titles.join(', ')}`);
     if (t.industries.length) p.push(`🏢 **Industries:** ${t.industries.join(', ')}`);
     if (t.locations.length) p.push(`📍 **Locations:** ${t.locations.join(', ')}`);
+    if (t.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${t.nationality_filter.join(', ')} (results filtered by inferred nationality)`);
     if (t.keywords.length) p.push(`🔑 **Keywords:** ${t.keywords.join(', ')}`);
     if (t.functions?.length) p.push(`⚙️ **Functions:** ${t.functions.join(', ')}`);
     if (t.seniority?.length) p.push(`⭐ **Seniority:** ${t.seniority.join(', ')}`);
@@ -7720,6 +7728,7 @@ function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string)
     if (intent.company_names?.length) p.push(`🏢 **Company:** ${intent.company_names.join(', ')}`);
     if (intent.locations?.length) p.push(`📍 **Location:** ${intent.locations.join(', ')}`);
     if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
+    if (intent.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${intent.nationality_filter.join(', ')}`);
     if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
     if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
 
