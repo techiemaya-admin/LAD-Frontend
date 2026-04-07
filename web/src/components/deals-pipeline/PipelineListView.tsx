@@ -562,7 +562,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     switch (column) {
       case 'serialNo':
         return (
-          <p className="text-sm font-medium text-[#64748B]">
+          <p className="font-mono text-xs text-[#64748B]">
             {(currentPage - 1) * pageSize + (paginatedLeads.findIndex(l => l.id === lead.id) + 1)}
           </p>
         );
@@ -882,10 +882,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Header with Search and Controls */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           
           {/* Row 1: View mode toggle */}
           <div className="w-full lg:w-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">

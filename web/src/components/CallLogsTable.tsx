@@ -839,7 +839,7 @@ export function CallLogsTable({
   };
 
   return (
-    <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div id="call-logs-table" className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
       <div className="p-4 border-b border-[#E2E8F0]">
         <div className="flex flex-col gap-4">
