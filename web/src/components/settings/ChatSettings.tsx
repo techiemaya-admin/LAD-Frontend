@@ -117,7 +117,7 @@ function getLabel(name: string): string {
 // ── Channel tabs ─────────────────────────────────────────────────
 
 const CHANNELS = [
-  { id: 'whatsapp', label: 'WABA', color: 'bg-green-500' },
+  { id: 'waba', label: 'WABA', color: 'bg-green-500' },
   { id: 'personal_whatsapp', label: 'Personal WhatsApp', color: 'bg-emerald-400' },
   { id: 'linkedin', label: 'LinkedIn', color: 'bg-blue-600' },
   { id: 'gmail', label: 'Gmail', color: 'bg-red-500' },
@@ -178,7 +178,7 @@ export function ChatSettings() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredPrompts = prompts.filter((p) => (p.channel || 'whatsapp') === activeChannel);
+  const filteredPrompts = prompts.filter((p) => (p.channel || 'waba') === activeChannel);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
