@@ -399,38 +399,42 @@ export function CallLogsTable({
         const isIndeterminate = selectAllMode === 'page' && !allPageSelected;
 
         return (
-          <input
-            type="checkbox"
-            ref={(el) => {
-              if (el) {
-                el.checked = isChecked;
-                el.indeterminate = isIndeterminate;
-              }
-            }}
-            onChange={(e) => {
-              e.stopPropagation();
-              onSelectAll(!isChecked, visibleIds);
-            }}
-            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-          />
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              ref={(el) => {
+                if (el) {
+                  el.checked = isChecked;
+                  el.indeterminate = isIndeterminate;
+                }
+              }}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelectAll(!isChecked, visibleIds);
+              }}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+            />
+          </div>
         );
       },
       cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            onSelectCall(row.original.id);
-          }}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-        />
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelectCall(row.original.id);
+            }}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+          />
+        </div>
       ),
     },
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
-      header: 'Serial No',
+      header: 'S/No',
       size: 60,
       maxSize: 80,
       enableSortingRemoval: false,
@@ -609,18 +613,18 @@ export function CallLogsTable({
         );
       },
     },
-    {
-      id: 'cost',
-      header: 'Cost',
-      cell: ({ row }) => {
-        const cost = row.original.cost || row.original.call_cost;
-        return (
-          <span className="font-mono text-sm">
-            {cost ? `$${Number(cost).toFixed(2)}` : "—"}
-          </span>
-        );
-      },
-    },
+    // {
+    //   id: 'cost',
+    //   header: 'Cost',
+    //   cell: ({ row }) => {
+    //     const cost = row.original.cost || row.original.call_cost;
+    //     return (
+    //       <span className="font-mono text-sm">
+    //         {cost ? `$${Number(cost).toFixed(2)}` : "—"}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       id: 'schedule',
       header: 'Schedule',

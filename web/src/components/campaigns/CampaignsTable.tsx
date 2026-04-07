@@ -87,11 +87,8 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     columnHelper.accessor('name', {
       id: 'name',
       header: 'Campaign Name',
-      cell: ({ getValue, row }) => (
-        <span
-          className="text-sm font-semibold text-[#6366F1] cursor-pointer hover:underline capitalize"
-          onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
-        >
+      cell: ({ getValue }) => (
+        <span className="text-sm font-semibold capitalize">
           {getValue()}
         </span>
       ),
@@ -133,19 +130,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       id: 'activity',
       header: 'Activity',
       cell: ({ row }) => renderActivityBreakdown(row.original),
-    }),
-    columnHelper.display({
-      id: 'credit',
-      header: 'Credits Used',
-      cell: ({ row }) => {
-        const credits = row.original.total_credits_deducted || 0;
-        return (
-          <span className="text-sm text-gray-600 flex items-center gap-1">
-            <Coins className="h-4 w-4 text-amber-600" />
-            {credits}
-          </span>
-        );
-      },
     }),
     columnHelper.accessor(
       (row) => row.created_at as string,
@@ -357,7 +341,11 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-gray-50">
+                    <TableRow 
+                      key={row.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
