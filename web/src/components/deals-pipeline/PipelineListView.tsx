@@ -489,10 +489,14 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }
   };
   const paginatedLeads = useMemo(() => {
+    // If pagination is managed by parent (server-side), leads are already sliced.
+    if (isControlledPagination) {
+      return filteredAndSortedLeads;
+    }
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredAndSortedLeads.slice(startIndex, endIndex);
-  }, [filteredAndSortedLeads, currentPage, pageSize]);
+  }, [filteredAndSortedLeads, currentPage, pageSize, isControlledPagination]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
