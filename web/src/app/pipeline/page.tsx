@@ -125,14 +125,15 @@ export default function PipelinePage(): JSX.Element {
   return (
     <div className="p-4 sm:p-6 bg-[#F8F9FE] h-full overflow-auto">
       {/* Header */}
-      <div className="mb-6 mt-10">
-        <div className="flex items-center gap-3 mb-5">
-          <labels.icon className="w-8 h-8 text-[#1e293b]" />
-          <div>
-            <h1 className="text-3xl font-bold text-[#1e293b]">{labels.title}</h1>
-            <p className="text-[#6b7280]">{labels.subtitle}</p>
+      <div className="mb-6 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <labels.icon className="w-8 h-8 text-[#1E293B]" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">{labels.title}</h1>
           </div>
+          <p className="text-sm text-[#64748B] ml-2">{labels.subtitle}</p>
         </div>
+      </div>
 
         <PipelineStatsCards
           loading={isLoading}
@@ -143,7 +144,7 @@ export default function PipelinePage(): JSX.Element {
           onCardClick={handleStatsCardClick}
           selectedCard={selectedCard}
         />
-      </div>
+
 
       <div ref={boardRef}>
         <PipelineBoard

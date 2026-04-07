@@ -10,11 +10,11 @@ import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
 import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
 import {
-  useLinkedInSearch,
-  useAIChat,
-  useCampaignCreation,
-  useVoiceAgent,
-  useBilling,
+    useLinkedInSearch,
+    useAIChat,
+    useCampaignCreation,
+    useVoiceAgent,
+    useBilling,
 } from '@lad/frontend-features/ai-icp-assistant';
 
 /* ═══════════════════════════════════════════════
@@ -116,11 +116,11 @@ function toArr(v: any): string[] {
 }
 
 function buildOutreachJourney(leads: LeadProfile[], targeting: LeadTargeting | null): OutreachStep[] {
-    const hasEmail   = leads.some(l => l.email);
-    const hasPhone   = leads.some(l => l.phone);
-    const hasLi      = leads.some(l => l.profile_url?.startsWith('http'));
-    const locs       = (targeting?.locations || []).map(l => l.toLowerCase());
-    const isGCC      = locs.some(l => ['uae','dubai','saudi','gcc','qatar','kuwait','bahrain','oman','riyadh','abu dhabi'].some(g => l.includes(g)));
+    const hasEmail = leads.some(l => l.email);
+    const hasPhone = leads.some(l => l.phone);
+    const hasLi = leads.some(l => l.profile_url?.startsWith('http'));
+    const locs = (targeting?.locations || []).map(l => l.toLowerCase());
+    const isGCC = locs.some(l => ['uae', 'dubai', 'saudi', 'gcc', 'qatar', 'kuwait', 'bahrain', 'oman', 'riyadh', 'abu dhabi'].some(g => l.includes(g)));
     const isEnterprise = (targeting?.company_size || []).some(s => s.includes('1000'));
 
     return [
@@ -437,7 +437,7 @@ export default function AdvancedSearchAIPage() {
     const [cpEnableAiPersonalization, setCpEnableAiPersonalization] = useState(false);
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
-    
+
     // Dynamically build workflow preview
     useEffect(() => {
         const steps: any[] = [];
@@ -582,39 +582,45 @@ export default function AdvancedSearchAIPage() {
 
     // Contact source definitions (mirrors ChatGroupManager)
     const CP_SOURCES = [
-        { key: 'crm',       label: 'CRM Contacts',       color: '#3b82f6', icon: 'crm',       fetchContacts: async (search: string) => {
-            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
-            const res = await fetch(`/api/social-integration/gohighlevel/contacts/local?${params}`, { credentials: 'include' });
-            const data = await res.json();
-            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.source_id || c.phone || `crm-${i}`), name: c.name || '', phone: c.phone || '', email: c.email || '', company: c.company_name || '' }));
-        }},
-        { key: 'personal_wa', label: 'Personal WA',      color: '#25D366', icon: 'personal_wa', fetchContacts: async (search: string) => {
-            const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
-            const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { credentials: 'include' });
-            const data = await res.json();
-            return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.phone || `pwa-${i}`), name: c.name || '', phone: c.phone || '', email: '', company: '' }));
-        }},
-        { key: 'waba',      label: 'WA Business',         color: '#128C7E', icon: 'waba',      fetchContacts: async (search: string) => {
-            const params = new URLSearchParams({ limit: '100', offset: '0', channel: 'waba' }); if (search) params.set('search', search);
-            const res = await fetch(`/api/whatsapp-conversations/conversations?${params}`, { credentials: 'include' });
-            const data = await res.json();
-            return (data.conversations || data.data || []).map((c: any, i: number) => ({ id: String(c.id || `waba-${i}`), name: c.lead_name || c.contact_name || c.name || '', phone: c.lead_phone || c.phone || '', email: c.lead_email || c.email || '', company: '' }));
-        }},
-        { key: 'google',    label: 'Google Contacts',     color: '#ea4335', icon: 'google',    fetchContacts: async () => [] },
-        { key: 'microsoft', label: 'Microsoft Contacts',  color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
+        {
+            key: 'crm', label: 'CRM Contacts', color: '#3b82f6', icon: 'crm', fetchContacts: async (search: string) => {
+                const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+                const res = await fetch(`/api/social-integration/gohighlevel/contacts/local?${params}`, { credentials: 'include' });
+                const data = await res.json();
+                return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.source_id || c.phone || `crm-${i}`), name: c.name || '', phone: c.phone || '', email: c.email || '', company: c.company_name || '' }));
+            }
+        },
+        {
+            key: 'personal_wa', label: 'Personal WA', color: '#25D366', icon: 'personal_wa', fetchContacts: async (search: string) => {
+                const params = new URLSearchParams({ page: '1', limit: '100' }); if (search) params.set('search', search);
+                const res = await fetch(`/api/personal-whatsapp/contacts?${params}`, { credentials: 'include' });
+                const data = await res.json();
+                return (data.data || []).map((c: any, i: number) => ({ id: String(c.id || c.phone || `pwa-${i}`), name: c.name || '', phone: c.phone || '', email: '', company: '' }));
+            }
+        },
+        {
+            key: 'waba', label: 'WA Business', color: '#128C7E', icon: 'waba', fetchContacts: async (search: string) => {
+                const params = new URLSearchParams({ limit: '100', offset: '0', channel: 'waba' }); if (search) params.set('search', search);
+                const res = await fetch(`/api/whatsapp-conversations/conversations?${params}`, { credentials: 'include' });
+                const data = await res.json();
+                return (data.conversations || data.data || []).map((c: any, i: number) => ({ id: String(c.id || `waba-${i}`), name: c.lead_name || c.contact_name || c.name || '', phone: c.lead_phone || c.phone || '', email: c.lead_email || c.email || '', company: '' }));
+            }
+        },
+        { key: 'google', label: 'Google Contacts', color: '#ea4335', icon: 'google', fetchContacts: async () => [] },
+        { key: 'microsoft', label: 'Microsoft Contacts', color: '#00a4ef', icon: 'microsoft', fetchContacts: async () => [] },
     ];
 
     // ── AI Playground state ──────────────────────────────────────────────────
     // ── AI Playground (chat-based business profiling) ────────────────────────
-    const [showPlayground, setShowPlayground]           = useState(false);
-    const [pgChatHistory, setPgChatHistory]             = useState<Array<{ role: 'user'|'assistant'; content: string; card?: any }>>([]);
-    const [pgInput, setPgInput]                         = useState('');
-    const [pgBusy, setPgBusy]                           = useState(false);
-    const [pgCurrentCard, setPgCurrentCard]             = useState<any>(null);
-    const [pgCardValues, setPgCardValues]               = useState<Record<string, any>>({});  // working values for active card
-    const [pgTagInput, setPgTagInput]                   = useState('');  // tag input buffer
-    const [pgIsComplete, setPgIsComplete]               = useState(false);
-    const [pgSuggesting, setPgSuggesting]               = useState(false);  // AI suggestion loading
+    const [showPlayground, setShowPlayground] = useState(false);
+    const [pgChatHistory, setPgChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string; card?: any }>>([]);
+    const [pgInput, setPgInput] = useState('');
+    const [pgBusy, setPgBusy] = useState(false);
+    const [pgCurrentCard, setPgCurrentCard] = useState<any>(null);
+    const [pgCardValues, setPgCardValues] = useState<Record<string, any>>({});  // working values for active card
+    const [pgTagInput, setPgTagInput] = useState('');  // tag input buffer
+    const [pgIsComplete, setPgIsComplete] = useState(false);
+    const [pgSuggesting, setPgSuggesting] = useState(false);  // AI suggestion loading
     const pgMessagesEndRef = useRef<HTMLDivElement>(null);
     const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
         companyName: '', industry: '', website: '', companyDescription: '',
@@ -708,7 +714,7 @@ export default function AdvancedSearchAIPage() {
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({ profile: finalProfile }),
-                    }).catch(() => {});
+                    }).catch(() => { });
                 }
             }
         } catch { }
@@ -771,7 +777,7 @@ export default function AdvancedSearchAIPage() {
         setPgCardValues({});
         setPgBusy(true);
         // Reset history on backend
-        await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => {});
+        await fetch('/api/ai-playground/reset', { method: 'POST', credentials: 'include' }).catch(() => { });
         // Bootstrap: get AI greeting without showing a user message bubble
         try {
             const res = await fetch('/api/ai-playground/chat', {
@@ -1033,7 +1039,7 @@ export default function AdvancedSearchAIPage() {
                 }
             }
         } catch { }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
 
     // ── Clear / Restart campaign setup ──────────────────────────────────────
@@ -1347,7 +1353,7 @@ export default function AdvancedSearchAIPage() {
             setCpContacts([]);
         }
         setCpLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const openContactPicker = useCallback(() => {
@@ -1420,13 +1426,13 @@ export default function AdvancedSearchAIPage() {
 
         const sourceName = CP_SOURCES.find(s => s.key === cpSourceKey)?.label || 'Contacts';
         setMessages(p => [...p,
-            { id: `u-${Date.now()}`, role: 'user', text: `👥 Selected ${asInbound.length} contact${asInbound.length !== 1 ? 's' : ''} from ${sourceName}`, ts: new Date() },
-            { id: `a-${Date.now()}`, role: 'ai', text: '', ts: new Date(), inboundAction: 'summary', inboundSummary: counts },
+        { id: `u-${Date.now()}`, role: 'user', text: `👥 Selected ${asInbound.length} contact${asInbound.length !== 1 ? 's' : ''} from ${sourceName}`, ts: new Date() },
+        { id: `a-${Date.now()}`, role: 'ai', text: '', ts: new Date(), inboundAction: 'summary', inboundSummary: counts },
         ]);
 
         // Auto-start campaign checkpoint flow
         setTimeout(() => setCpStep(0), 300);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cpContacts, cpSelected, cpSourceKey]);
 
     /* ── Core send logic ── */
@@ -2029,7 +2035,7 @@ export default function AdvancedSearchAIPage() {
                         ...(ext.company_names || []),
                         ...(ext.industries || []),
                         ...(ext.locations || []),
-                      ].filter(Boolean).join(' ')
+                    ].filter(Boolean).join(' ')
                     : text;
             }
 
@@ -2124,24 +2130,25 @@ export default function AdvancedSearchAIPage() {
                         realLeads = d.results.map((item: any, idx: number) => {
                             const profileUrl = resolveProfileUrl(item);
                             return {
-                            id: item.id || item.provider_id || `lead-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (profileUrl ? 'LinkedIn User' : 'Contact'),
-                            first_name: item.first_name || '',
-                            last_name: item.last_name || '',
-                            headline: item.headline || '',
-                            location: item.location || '',
-                            current_company: item.current_company || '',
-                            profile_url: profileUrl,
-                            profile_picture: item.profile_picture || '',
-                            industry: item.industry || '',
-                            network_distance: item.network_distance || '',
-                            locked: idx >= 5,
-                            icp_score: item.icp_score != null ? item.icp_score : undefined,
-                            match_level: item.match_level || undefined,
-                            icp_reasoning: item.icp_reasoning || undefined,
-                            enriched_profile: item.enriched_profile || undefined,
-                            inferred: item.inferred || undefined,
-                        };});
+                                id: item.id || item.provider_id || `lead-${idx}`,
+                                name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (profileUrl ? 'LinkedIn User' : 'Contact'),
+                                first_name: item.first_name || '',
+                                last_name: item.last_name || '',
+                                headline: item.headline || '',
+                                location: item.location || '',
+                                current_company: item.current_company || '',
+                                profile_url: profileUrl,
+                                profile_picture: item.profile_picture || '',
+                                industry: item.industry || '',
+                                network_distance: item.network_distance || '',
+                                locked: idx >= 5,
+                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                match_level: item.match_level || undefined,
+                                icp_reasoning: item.icp_reasoning || undefined,
+                                enriched_profile: item.enriched_profile || undefined,
+                                inferred: item.inferred || undefined,
+                            };
+                        });
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
 
@@ -2202,23 +2209,24 @@ export default function AdvancedSearchAIPage() {
                         const fl = d.filtered_leads.map((item: any, idx: number) => {
                             const profileUrl = resolveProfileUrl(item);
                             return {
-                            id: item.id || item.provider_id || `fl-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
-                            first_name: item.first_name || '',
-                            last_name: item.last_name || '',
-                            headline: item.headline || '',
-                            location: item.location || '',
-                            current_company: item.current_company || '',
-                            profile_url: profileUrl,
-                            profile_picture: item.profile_picture || '',
-                            industry: item.industry || '',
-                            network_distance: item.network_distance || '',
-                            locked: false,
-                            icp_score: item.icp_score != null ? item.icp_score : undefined,
-                            match_level: item.match_level || undefined,
-                            icp_reasoning: item.icp_reasoning || undefined,
-                            enriched_profile: item.enriched_profile || undefined,
-                        };});
+                                id: item.id || item.provider_id || `fl-${idx}`,
+                                name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
+                                first_name: item.first_name || '',
+                                last_name: item.last_name || '',
+                                headline: item.headline || '',
+                                location: item.location || '',
+                                current_company: item.current_company || '',
+                                profile_url: profileUrl,
+                                profile_picture: item.profile_picture || '',
+                                industry: item.industry || '',
+                                network_distance: item.network_distance || '',
+                                locked: false,
+                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                match_level: item.match_level || undefined,
+                                icp_reasoning: item.icp_reasoning || undefined,
+                                enriched_profile: item.enriched_profile || undefined,
+                            };
+                        });
                         setFilteredLeads(fl);
                         // Auto-expand when all results were filtered (no qualified leads found)
                         setShowFilteredLeads(realLeads.length === 0);
@@ -2626,23 +2634,24 @@ export default function AdvancedSearchAIPage() {
                 const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => {
                     const profileUrl = resolveProfileUrl(item);
                     return {
-                    id: item.id || item.provider_id || `lead-${existingCount + idx}`,
-                    name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
-                    first_name: item.first_name || '',
-                    last_name: item.last_name || '',
-                    headline: item.headline || '',
-                    location: item.location || '',
-                    current_company: item.current_company || '',
-                    profile_url: profileUrl,
-                    profile_picture: item.profile_picture || '',
-                    industry: item.industry || '',
-                    network_distance: item.network_distance || '',
-                    locked: (existingCount + idx) >= 5,
-                    icp_score: item.icp_score != null ? item.icp_score : undefined,
-                    match_level: item.match_level || undefined,
-                    icp_reasoning: item.icp_reasoning || undefined,
-                    enriched_profile: item.enriched_profile || undefined,
-                };});
+                        id: item.id || item.provider_id || `lead-${existingCount + idx}`,
+                        name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
+                        first_name: item.first_name || '',
+                        last_name: item.last_name || '',
+                        headline: item.headline || '',
+                        location: item.location || '',
+                        current_company: item.current_company || '',
+                        profile_url: profileUrl,
+                        profile_picture: item.profile_picture || '',
+                        industry: item.industry || '',
+                        network_distance: item.network_distance || '',
+                        locked: (existingCount + idx) >= 5,
+                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                        match_level: item.match_level || undefined,
+                        icp_reasoning: item.icp_reasoning || undefined,
+                        enriched_profile: item.enriched_profile || undefined,
+                    };
+                });
                 setLeads(prev => [...prev, ...moreLeads]);
                 setSearchCursor(d.cursor || null);
                 if (d.total) setTotalResults(d.total);
@@ -2766,8 +2775,8 @@ export default function AdvancedSearchAIPage() {
                     >
                         {/* Refresh / restart icon */}
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                            <path d="M3 3v5h5"/>
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
                         </svg>
                         New Setup
                     </button>
@@ -2798,29 +2807,29 @@ export default function AdvancedSearchAIPage() {
                     {/* Web search badge when enabled */}
                     {webSearchEnabled && (
                         <div className="adv-websearch-badge">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                             Web search
-                            <button onClick={(e) => { e.stopPropagation(); setWebSearchEnabled(false); }} style={{background:'none',border:'none',cursor:'pointer',padding:'0 0 0 4px',color:'#6b7280',fontSize:'11px'}}>x</button>
+                            <button onClick={(e) => { e.stopPropagation(); setWebSearchEnabled(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', color: '#6b7280', fontSize: '11px' }}>x</button>
                         </div>
                     )}
 
                     {/* Input bottom row */}
                     <div className="adv-input-foot">
                         {/* + button with dropdown */}
-                        <div style={{position:'relative'}}>
+                        <div style={{ position: 'relative' }}>
                             <button
                                 className="adv-attach-btn"
                                 onClick={(e) => { e.stopPropagation(); setShowAttachMenu(!showAttachMenu); }}
                                 title="Add attachments or tools"
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                             </button>
 
                             {showAttachMenu && (
                                 <div className="adv-attach-menu" onClick={e => e.stopPropagation()}>
                                     <div className="adv-attach-item" onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }}>
-                                        <div className="adv-attach-icon" style={{background:'#dcfce7'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        <div className="adv-attach-icon" style={{ background: '#dcfce7' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Import leads</div>
@@ -2828,8 +2837,8 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                     </div>
                                     <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowAttachMenu(false); }}>
-                                        <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        <div className="adv-attach-icon" style={{ background: '#dce3f5' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Select contacts</div>
@@ -2837,18 +2846,18 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                     </div>
                                     <div className={`adv-attach-item${webSearchEnabled ? ' adv-attach-active' : ''}`} onClick={() => { setWebSearchEnabled(!webSearchEnabled); setShowAttachMenu(false); }}>
-                                        <div className="adv-attach-icon" style={{background: webSearchEnabled ? '#dbeafe' : '#e0f2fe'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={webSearchEnabled ? '#2563eb' : '#0284c7'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                        <div className="adv-attach-icon" style={{ background: webSearchEnabled ? '#dbeafe' : '#e0f2fe' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={webSearchEnabled ? '#2563eb' : '#0284c7'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Web search {webSearchEnabled ? '\u2713' : ''}</div>
                                             <div className="adv-attach-sub">Search LinkedIn &amp; web for leads</div>
                                         </div>
                                     </div>
-                                    <div className="adv-attach-divider"/>
+                                    <div className="adv-attach-divider" />
                                     <div className="adv-attach-item" onClick={() => { setShowAttachMenu(false); router.push('/settings'); }}>
-                                        <div className="adv-attach-icon" style={{background:'#fef3c7'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                        <div className="adv-attach-icon" style={{ background: '#fef3c7' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Connect tools</div>
@@ -2877,15 +2886,15 @@ export default function AdvancedSearchAIPage() {
                 {/* Suggestion chips */}
                 <div className="adv-chips-row">
                     <button className="adv-chip" onClick={() => { setInput('Marketing directors at fintech startups in London'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                         Find leads in fintech
                     </button>
                     <button className="adv-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
                         Target specific company
                     </button>
                     <button className="adv-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
                         VP of Sales in UAE
                     </button>
                 </div>
@@ -2897,9 +2906,9 @@ export default function AdvancedSearchAIPage() {
                         <div className="adv-recent-list">
                             {[...searchHistory].reverse().slice(0, 3).map((q, i) => (
                                 <button key={i} className="adv-recent-item" onClick={() => { setInput(q); taRef.current?.focus(); }}>
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                                     <span>{q}</span>
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
                                 </button>
                             ))}
                         </div>
@@ -2908,7 +2917,7 @@ export default function AdvancedSearchAIPage() {
             </div>
 
             {/* Hidden file input — accepts all supported lead import formats */}
-            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.pdf" style={{display:'none'}} onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
+            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
 
             <style>{css}</style>
         </div>
@@ -2931,6 +2940,7 @@ export default function AdvancedSearchAIPage() {
                     <button
                         onClick={() => setShowPlayground(true)}
                         title="Configure AI context: company, ICP, sales script, etc."
+                        className="adv-icp-discover-btn"
                         style={{
                             position: 'absolute', top: '16px', right: '20px', zIndex: 10,
                             display: 'flex', alignItems: 'center', gap: '7px',
@@ -2949,7 +2959,7 @@ export default function AdvancedSearchAIPage() {
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                         </svg>
                         ICP Discovery
                         {Object.values(businessProfile).some(v => v) && (
@@ -2972,124 +2982,124 @@ export default function AdvancedSearchAIPage() {
                         )}
 
                         <div className="adv-msgs-inner">
-                        {messages.map((m, idx) => {
-                            // Show real activities in the AI's thinking indicator (replace "Thinking...")
-                            const displayMsg = isSearching && idx === messages.length - 1 && messages[idx].role === 'ai'
-                                ? {
-                                    ...m,
-                                    content: activities.length > 0
-                                        ? activities[activities.length - 1].message
-                                        : 'Qualifying...'
-                                }
-                                : m;
-                            return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
-                        })}
+                            {messages.map((m, idx) => {
+                                // Show real activities in the AI's thinking indicator (replace "Thinking...")
+                                const displayMsg = isSearching && idx === messages.length - 1 && messages[idx].role === 'ai'
+                                    ? {
+                                        ...m,
+                                        content: activities.length > 0
+                                            ? activities[activities.length - 1].message
+                                            : 'Qualifying...'
+                                    }
+                                    : m;
+                                return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
+                            })}
                         </div>
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
                         {cpStep >= 0 && (
-                        <div className="adv-msgs-inner">
-                            <CheckpointFormInline
-                                step={cpStep}
-                                setStep={setCpStep}
-                                icpThreshold={cpIcpThreshold}
-                                setIcpThreshold={setCpIcpThreshold}
-                                actions={cpActions}
-                                setActions={setCpActions}
-                                connMsg={cpConnMsg}
-                                setConnMsg={setCpConnMsg}
-                                followMsg={cpFollowMsg}
-                                setFollowMsg={setCpFollowMsg}
-                                nextChannels={cpNextChannels}
-                                setNextChannels={setCpNextChannels}
-                                triggerCondition={cpTriggerCondition}
-                                setTriggerCondition={setCpTriggerCondition}
-                                days={cpDays}
-                                setDays={setCpDays}
-                                name={cpName}
-                                setName={setCpName}
-                                genLoading={cpGenLoading}
-                                setGenLoading={setCpGenLoading}
-                                launching={cpLaunching}
-                                setLaunching={setCpLaunching}
-                                voiceAgents={cpVoiceAgents}
-                                setVoiceAgents={setCpVoiceAgents}
-                                voiceNumbers={cpVoiceNumbers}
-                                setVoiceNumbers={setCpVoiceNumbers}
-                                selectedAgentId={cpSelectedAgentId}
-                                setSelectedAgentId={setCpSelectedAgentId}
-                                selectedVoiceId={cpSelectedVoiceId}
-                                setSelectedVoiceId={setCpSelectedVoiceId}
-                                selectedFromNumber={cpSelectedFromNumber}
-                                setSelectedFromNumber={setCpSelectedFromNumber}
-                                emailSubject={cpEmailSubject}
-                                setEmailSubject={setCpEmailSubject}
-                                emailBody={cpEmailBody}
-                                setEmailBody={setCpEmailBody}
-                                selectedEmailTemplateId={cpSelectedEmailTemplateId}
-                                setSelectedEmailTemplateId={setCpSelectedEmailTemplateId}
-                                saveTemplateMode={cpSaveTemplateMode}
-                                setSaveTemplateMode={setCpSaveTemplateMode}
-                                saveTemplateName={cpSaveTemplateName}
-                                setSaveTemplateName={setCpSaveTemplateName}
-                                emailGenLoading={cpEmailGenLoading}
-                                setEmailGenLoading={setCpEmailGenLoading}
-                                emailFromAddress={cpEmailFromAddress}
-                                setEmailFromAddress={setCpEmailFromAddress}
-                                emailProvider={cpEmailProvider}
-                                setEmailProvider={setCpEmailProvider}
-                                waBody={cpWaBody}
-                                setWaBody={setCpWaBody}
-                                waFromNumber={cpWaFromNumber}
-                                setWaFromNumber={setCpWaFromNumber}
-                                waGenLoading={cpWaGenLoading}
-                                setWaGenLoading={setCpWaGenLoading}
-                                targeting={targeting}
-                                leads={leads}
-                                leadFeedback={leadFeedback}
-                                searchSessions={searchSessions}
-                                chatMessages={messages}
-                                pendingContact={pendingContact}
-                                inboundMode={inboundMode}
-                                inboundLeads={inboundLeads}
-                                inboundLeadIds={inboundLeadIds}
-                                directContactLeadIds={directContactLeadIds}
-                                enableDailyWebPresence={cpEnableDailyWebPresence}
-                                setEnableDailyWebPresence={setCpEnableDailyWebPresence}
-                                enableDailyPosts={cpEnableDailyPosts}
-                                setEnableDailyPosts={setCpEnableDailyPosts}
-                                enableAiPersonalization={cpEnableAiPersonalization}
-                                setEnableAiPersonalization={setCpEnableAiPersonalization}
-                            />
-                        </div>
+                            <div className="adv-msgs-inner">
+                                <CheckpointFormInline
+                                    step={cpStep}
+                                    setStep={setCpStep}
+                                    icpThreshold={cpIcpThreshold}
+                                    setIcpThreshold={setCpIcpThreshold}
+                                    actions={cpActions}
+                                    setActions={setCpActions}
+                                    connMsg={cpConnMsg}
+                                    setConnMsg={setCpConnMsg}
+                                    followMsg={cpFollowMsg}
+                                    setFollowMsg={setCpFollowMsg}
+                                    nextChannels={cpNextChannels}
+                                    setNextChannels={setCpNextChannels}
+                                    triggerCondition={cpTriggerCondition}
+                                    setTriggerCondition={setCpTriggerCondition}
+                                    days={cpDays}
+                                    setDays={setCpDays}
+                                    name={cpName}
+                                    setName={setCpName}
+                                    genLoading={cpGenLoading}
+                                    setGenLoading={setCpGenLoading}
+                                    launching={cpLaunching}
+                                    setLaunching={setCpLaunching}
+                                    voiceAgents={cpVoiceAgents}
+                                    setVoiceAgents={setCpVoiceAgents}
+                                    voiceNumbers={cpVoiceNumbers}
+                                    setVoiceNumbers={setCpVoiceNumbers}
+                                    selectedAgentId={cpSelectedAgentId}
+                                    setSelectedAgentId={setCpSelectedAgentId}
+                                    selectedVoiceId={cpSelectedVoiceId}
+                                    setSelectedVoiceId={setCpSelectedVoiceId}
+                                    selectedFromNumber={cpSelectedFromNumber}
+                                    setSelectedFromNumber={setCpSelectedFromNumber}
+                                    emailSubject={cpEmailSubject}
+                                    setEmailSubject={setCpEmailSubject}
+                                    emailBody={cpEmailBody}
+                                    setEmailBody={setCpEmailBody}
+                                    selectedEmailTemplateId={cpSelectedEmailTemplateId}
+                                    setSelectedEmailTemplateId={setCpSelectedEmailTemplateId}
+                                    saveTemplateMode={cpSaveTemplateMode}
+                                    setSaveTemplateMode={setCpSaveTemplateMode}
+                                    saveTemplateName={cpSaveTemplateName}
+                                    setSaveTemplateName={setCpSaveTemplateName}
+                                    emailGenLoading={cpEmailGenLoading}
+                                    setEmailGenLoading={setCpEmailGenLoading}
+                                    emailFromAddress={cpEmailFromAddress}
+                                    setEmailFromAddress={setCpEmailFromAddress}
+                                    emailProvider={cpEmailProvider}
+                                    setEmailProvider={setCpEmailProvider}
+                                    waBody={cpWaBody}
+                                    setWaBody={setCpWaBody}
+                                    waFromNumber={cpWaFromNumber}
+                                    setWaFromNumber={setCpWaFromNumber}
+                                    waGenLoading={cpWaGenLoading}
+                                    setWaGenLoading={setCpWaGenLoading}
+                                    targeting={targeting}
+                                    leads={leads}
+                                    leadFeedback={leadFeedback}
+                                    searchSessions={searchSessions}
+                                    chatMessages={messages}
+                                    pendingContact={pendingContact}
+                                    inboundMode={inboundMode}
+                                    inboundLeads={inboundLeads}
+                                    inboundLeadIds={inboundLeadIds}
+                                    directContactLeadIds={directContactLeadIds}
+                                    enableDailyWebPresence={cpEnableDailyWebPresence}
+                                    setEnableDailyWebPresence={setCpEnableDailyWebPresence}
+                                    enableDailyPosts={cpEnableDailyPosts}
+                                    setEnableDailyPosts={setCpEnableDailyPosts}
+                                    enableAiPersonalization={cpEnableAiPersonalization}
+                                    setEnableAiPersonalization={setCpEnableAiPersonalization}
+                                />
+                            </div>
                         )}
 
                         {/* ── Inline Targeting Form (typeform-style) ── */}
                         {tgStep >= 0 && (
-                        <div className="adv-msgs-inner">
-                            <TargetingFormInline
-                                step={tgStep}
-                                setStep={setTgStep}
-                                nationality={tgNationality}
-                                setNationality={setTgNationality}
-                                experienceLevel={tgExperienceLevel}
-                                setExperienceLevel={setTgExperienceLevel}
-                                companySize={tgCompanySize}
-                                setCompanySize={setTgCompanySize}
-                                companyAge={tgCompanyAge}
-                                setCompanyAge={setTgCompanyAge}
-                                education={tgEducation}
-                                setEducation={setTgEducation}
-                                skills={tgSkills}
-                                setSkills={setTgSkills}
-                                postedRecently={tgPostedRecently}
-                                setPostedRecently={setTgPostedRecently}
-                                currentTargeting={targeting}
-                                onConfirm={handleTargetingConfirm}
-                                loading={busy}
-                                setLoading={setBusy}
-                            />
-                        </div>
+                            <div className="adv-msgs-inner">
+                                <TargetingFormInline
+                                    step={tgStep}
+                                    setStep={setTgStep}
+                                    nationality={tgNationality}
+                                    setNationality={setTgNationality}
+                                    experienceLevel={tgExperienceLevel}
+                                    setExperienceLevel={setTgExperienceLevel}
+                                    companySize={tgCompanySize}
+                                    setCompanySize={setTgCompanySize}
+                                    companyAge={tgCompanyAge}
+                                    setCompanyAge={setTgCompanyAge}
+                                    education={tgEducation}
+                                    setEducation={setTgEducation}
+                                    skills={tgSkills}
+                                    setSkills={setTgSkills}
+                                    postedRecently={tgPostedRecently}
+                                    setPostedRecently={setTgPostedRecently}
+                                    currentTargeting={targeting}
+                                    onConfirm={handleTargetingConfirm}
+                                    loading={busy}
+                                    setLoading={setBusy}
+                                />
+                            </div>
                         )}
 
                         <div ref={endRef} />
@@ -3103,15 +3113,15 @@ export default function AdvancedSearchAIPage() {
                                 placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
                                 className="adv-chat-ta" />
                             <div className="adv-chat-input-foot">
-                                <div style={{position:'relative'}}>
+                                <div style={{ position: 'relative' }}>
                                     <button className="adv-chat-attach-btn" title="Add files or tools" onClick={(e) => { e.stopPropagation(); setShowChatAttachMenu(!showChatAttachMenu); }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                                     </button>
                                     {showChatAttachMenu && (
                                         <div className="adv-attach-menu" onClick={e => e.stopPropagation()}>
                                             <div className="adv-attach-item" onClick={() => { fileInputRef.current?.click(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{background:'#dcfce7'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                <div className="adv-attach-icon" style={{ background: '#dcfce7' }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                                 </div>
                                                 <div>
                                                     <div className="adv-attach-label">Import leads</div>
@@ -3119,18 +3129,18 @@ export default function AdvancedSearchAIPage() {
                                                 </div>
                                             </div>
                                             <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                                <div className="adv-attach-icon" style={{ background: '#dce3f5' }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
                                                 </div>
                                                 <div>
                                                     <div className="adv-attach-label">Select contacts</div>
                                                     <div className="adv-attach-sub">Pick from your existing contacts</div>
                                                 </div>
                                             </div>
-                                            <div className="adv-attach-divider"/>
+                                            <div className="adv-attach-divider" />
                                             <div className="adv-attach-item" onClick={() => { setShowChatAttachMenu(false); router.push('/settings'); }}>
-                                                <div className="adv-attach-icon" style={{background:'#fef3c7'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                                <div className="adv-attach-icon" style={{ background: '#fef3c7' }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
                                                 </div>
                                                 <div>
                                                     <div className="adv-attach-label">Connect tools</div>
@@ -3156,7 +3166,7 @@ export default function AdvancedSearchAIPage() {
                                 >
                                     {/* Star icon for Premium */}
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                     </svg>
                                     {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
                                 </button>
@@ -3171,19 +3181,19 @@ export default function AdvancedSearchAIPage() {
                     {messages.length === 0 && (
                         <div className="adv-gemini-chips">
                             <button className="adv-gemini-chip" onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                                 Find leads in fintech
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
                                 Target specific company
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
                                 VP of Sales in UAE
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('Find decision makers in healthcare startups in Dubai'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
                                 Healthcare leads in Dubai
                             </button>
                         </div>
@@ -3193,39 +3203,50 @@ export default function AdvancedSearchAIPage() {
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
                 </div>
 
-                {/* MOBILE NAVIGATION SIDEBAR (Right side, top-anchored, mobile only) */}
+                {/* MOBILE ICP BUTTON (Always visible on mobile) */}
+                <div className="adv-mobile-icp-box">
+                    <button 
+                        className="adv-mobile-icp-btn"
+                        onClick={() => setShowPlayground(true)}
+                        title="ICP Discovery"
+                    >
+                        <Sparkles size={22} color="#fff" />
+                    </button>
+                </div>
+
+                {/* MOBILE NAVIGATION SIDEBAR (Leads/Flow) - only when active results exist */}
                 {(messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
                     <div className="adv-mobile-nav">
                         {showPanel && (
-                            <button 
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel(false)}
-                                title="Chat"
-                            >
-                                <MessageSquare size={20} />
-                                <span className="adv-nav-label">Chat</span>
-                            </button>
-                        )}
-                        {showPanel !== 'leads' && (
-                            <button 
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel('leads')}
-                                title="Leads"
-                            >
-                                <Users size={20} />
-                                <span className="adv-nav-label">Leads</span>
-                            </button>
-                        )}
-                        {showPanel !== 'workflow' && (
-                            <button 
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel('workflow')}
-                                title="Workflow"
-                            >
-                                <Zap size={20} />
-                                <span className="adv-nav-label">Flow</span>
-                            </button>
-                        )}
+                        <button
+                            className="adv-nav-btn"
+                            onClick={() => setShowPanel(false)}
+                            title="Chat"
+                        >
+                            <MessageSquare size={20} />
+                            <span className="adv-nav-label">Chat</span>
+                        </button>
+                    )}
+                    {showPanel !== 'leads' && (
+                        <button
+                            className="adv-nav-btn"
+                            onClick={() => setShowPanel('leads')}
+                            title="Leads"
+                        >
+                            <Users size={20} />
+                            <span className="adv-nav-label">Leads</span>
+                        </button>
+                    )}
+                    {showPanel !== 'workflow' && (
+                        <button
+                            className="adv-nav-btn"
+                            onClick={() => setShowPanel('workflow')}
+                            title="Workflow"
+                        >
+                            <Zap size={20} />
+                            <span className="adv-nav-label">Flow</span>
+                        </button>
+                    )}
                     </div>
                 )}
 
@@ -3272,435 +3293,435 @@ export default function AdvancedSearchAIPage() {
                         </div>
 
                         {showPanel === 'leads' ? (
-                        <div className="adv-panel-body">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 className="adv-panel-title" style={{ margin: 0 }}>
-                                    {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
-                                </h2>
-                                {!inboundMode && totalResults > 0 && (
-                                    <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                                        {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
-                                    </span>
-                                )}
-                                {inboundMode && inboundLeads.length > 0 && (
-                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                        {inboundLeads.length} contacts
-                                    </span>
-                                )}
-                                {!inboundMode && leads.length > 0 && totalResults === 0 && (
-                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                        {leads.length} contact{leads.length !== 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="adv-panel-desc">
-                                <span className="adv-navy">✦</span>
-                                {inboundMode
-                                    ? ' Leads imported from your file — ready to launch a campaign'
-                                    : targeting
-                                        ? `${targeting.job_titles?.length > 0 ? ` ${targeting.job_titles.join(', ')}` : ''}${targeting.industries?.length > 0 ? ` in ${targeting.industries.join(', ')}` : ''}${targeting.locations?.length > 0 ? ` located in ${targeting.locations.join(', ')}` : ''} who are focused on growth and lead generation.`
-                                        : ' Contacts ready for outreach — review and launch your campaign.'
-                                }
-                            </p>
-
-                            {/* Inbound leads (CSV upload) */}
-                            {inboundMode && inboundLeads.length > 0 && (
-                                <div className="adv-leads-list">
-                                    {inboundLeads.map((lead, i) => (
-                                        <div key={i} className="adv-lead-card">
-                                            <div className="adv-lead-avatar" style={{ background: avatarColor(`${lead.firstName} ${lead.lastName}`) }}>
-                                                {initials(`${lead.firstName} ${lead.lastName}`) || '?'}
-                                            </div>
-                                            <div className="adv-lead-info">
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span className="adv-lead-name">{[lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unknown'}</span>
-                                                    <span className="adv-verified">✓</span>
-                                                </div>
-                                                <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
-                                                {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
-                                                {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
-                                                {lead.linkedinProfile && (
-                                                    <div style={{ fontSize: '12px', color: '#0a66c2' }}>
-                                                        <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
-                                                            style={{ color: '#0a66c2', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                                                            LinkedIn Profile
-                                                        </a>
-                                                    </div>
-                                                )}
-                                                {lead.notes && lead.notes.length > 0 && (
-                                                    <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#374151',
-                                                        marginTop: '6px',
-                                                        padding: '8px 10px',
-                                                        background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid #c7d7f5',
-                                                        lineHeight: '1.6',
-                                                        maxWidth: '300px',
-                                                    }}>
-                                                        <span style={{ color: '#172560', fontWeight: 700, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                                            AI Research Summary
-                                                        </span>
-                                                        {lead.notes.length > 200 ? lead.notes.substring(0, 200) + '…' : lead.notes}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button
-                                                    onClick={() => openEditLead(i)}
-                                                    style={{
-                                                        padding: '6px 12px',
-                                                        background: '#f3f4f6',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '6px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500',
-                                                        color: '#4b5563',
-                                                        transition: 'all 0.2s',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = '#e5e7eb';
-                                                        e.currentTarget.style.borderColor = '#d1d5db';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = '#f3f4f6';
-                                                        e.currentTarget.style.borderColor = '#e5e7eb';
-                                                    }}
-                                                >
-                                                    ✏️ Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => openDeleteConfirmation(i)}
-                                                    style={{
-                                                        padding: '6px 12px',
-                                                        background: '#fee2e2',
-                                                        border: '1px solid #fecaca',
-                                                        borderRadius: '6px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500',
-                                                        color: '#dc2626',
-                                                        transition: 'all 0.2s',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = '#fecaca';
-                                                        e.currentTarget.style.borderColor = '#fca5a5';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = '#fee2e2';
-                                                        e.currentTarget.style.borderColor = '#fecaca';
-                                                    }}
-                                                >
-                                                    🗑️ Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* LinkedIn search leads */}
-                            {!inboundMode && (
-                            <div className="adv-leads-list">
-                                {leads.map((lead, i) => (
-                                    <div key={i} className={`adv-lead-card ${lead.locked ? 'adv-lead-locked' : ''}`}>
-                                        {lead.profile_picture ? (
-                                            <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" />
-                                        ) : (
-                                            <div className="adv-lead-avatar" style={{ background: avatarColor(lead.name) }}>
-                                                {initials(lead.name)}
-                                            </div>
-                                        )}
-                                        <div className="adv-lead-info">
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {lead.profile_url && lead.profile_url.startsWith('http') ? (
-                                                    <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }} onClick={e => e.stopPropagation()}>
-                                                        {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
-                                                    </a>
-                                                ) : (
-                                                    <span className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
-                                                )}
-                                                {!targetingFiltersActive && lead.icp_score !== undefined && (
-                                                    <span style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
-                                                        padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                        background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
-                                                        color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
-                                                    }}>
-                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="adv-lead-title">
-                                                {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
-                                            </div>
-                                            {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
-                                            {lead.inferred_nationality && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
-                                                    <span style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
-                                                        padding: '1px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
-                                                        background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
-                                                    }}>
-                                                        🌍 {lead.inferred_nationality}
-                                                        {lead.nationality_confidence && lead.nationality_confidence >= 70 && (
-                                                            <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '2px' }}>·{lead.nationality_confidence}%</span>
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {!targetingFiltersActive && lead.icp_reasoning && (
-                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
-                                                    {lead.icp_reasoning}
-                                                </div>
-                                            )}
-                                            {lead.enriched_profile?.skills && lead.enriched_profile.skills.length > 0 && (
-                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
-                                                    {lead.enriched_profile.skills.slice(0, 4).map((skill, si) => (
-                                                        <span key={si} style={{
-                                                            padding: '1px 6px', borderRadius: '8px', fontSize: '10px',
-                                                            background: '#f3f4f6', color: '#4b5563', border: '1px solid #e5e7eb',
-                                                        }}>{skill}</span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {lead.profile_url ? (
-                                                <div className="adv-lead-platform">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
-                                                </div>
-                                            ) : lead.phone ? (
-                                                <div className="adv-lead-platform" style={{ fontSize: '13px' }}>📞</div>
-                                            ) : lead.email ? (
-                                                <div className="adv-lead-platform" style={{ fontSize: '13px' }}>✉️</div>
-                                            ) : null}
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                                            <button
-                                                className="adv-lead-action"
-                                                title="Generate Summary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (!lead.locked) handleViewSummary(lead);
-                                                }}
-                                                style={{ pointerEvents: lead.locked ? 'none' : 'auto', border: 'none', background: 'transparent', cursor: lead.locked ? 'default' : 'pointer' }}
-                                            >
-                                                {lead.locked ? (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-                                                ) : (
-                                                    <Sparkles size={18} color="#172560" />
-                                                )}
-                                            </button>
-                                            {!lead.locked && (
-                                                <div style={{ display: 'flex', gap: '2px' }}>
-                                                    <button
-                                                        title="Good match"
-                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
-                                                        style={{
-                                                            border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : 'transparent',
-                                                            borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
-                                                            transition: 'all 0.15s',
-                                                        }}
-                                                    >
-                                                        👍
-                                                    </button>
-                                                    <button
-                                                        title="Bad match"
-                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
-                                                        style={{
-                                                            border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
-                                                            borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
-                                                            transition: 'all 0.15s',
-                                                        }}
-                                                    >
-                                                        👎
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            )} {/* end !inboundMode leads list */}
-
-                            {/* ── Filtered-out leads (below ICP threshold) ── */}
-                            {!inboundMode && filteredLeads.length > 0 && (
-                                <div style={{ marginTop: '12px' }}>
-                                    {/* Banner */}
-                                    <div style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        padding: '8px 12px', borderRadius: '8px',
-                                        background: '#fefce8', border: '1px solid #fde68a',
-                                    }}>
-                                        <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                            Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+                            <div className="adv-panel-body">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h2 className="adv-panel-title" style={{ margin: 0 }}>
+                                        {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
+                                    </h2>
+                                    {!inboundMode && totalResults > 0 && (
+                                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                                            {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
                                         </span>
-                                        <button
-                                            onClick={() => setShowFilteredLeads(v => !v)}
-                                            style={{
-                                                fontSize: '12px', fontWeight: 600, color: '#b45309',
-                                                background: 'transparent', border: 'none', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px',
-                                                borderRadius: '4px',
-                                            }}
-                                        >
-                                            {showFilteredLeads ? 'Hide' : 'Show all'}
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transform: showFilteredLeads ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                                                <polyline points="6 9 12 15 18 9"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    {/* Collapsible lead cards */}
-                                    {showFilteredLeads && (
-                                        <div className="adv-leads-list" style={{ marginTop: '6px', opacity: 0.85 }}>
-                                            {filteredLeads.map((lead, i) => (
-                                                <div key={i} className="adv-lead-card" style={{ background: '#fafafa', border: '1px solid #f3f4f6' }}>
-                                                    {/* Avatar */}
-                                                    {lead.profile_picture ? (
-                                                        <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" style={{ filter: 'grayscale(30%)' }} />
-                                                    ) : (
-                                                        <div className="adv-lead-avatar" style={{ background: '#d1d5db', color: '#6b7280' }}>
-                                                            {(lead.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Info */}
-                                                    <div className="adv-lead-info">
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            {lead.profile_url && lead.profile_url.startsWith('http') ? (
-                                                                <a href={lead.profile_url} target="_blank" rel="noopener noreferrer"
-                                                                   className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }} onClick={e => e.stopPropagation()}>
-                                                                    {lead.name}
-                                                                </a>
-                                                            ) : (
-                                                                <span className="adv-lead-name" style={{ color: '#374151' }}>{lead.name}</span>
-                                                            )}
-                                                            {lead.icp_score !== undefined && (
-                                                                <span style={{
-                                                                    display: 'inline-flex', alignItems: 'center', gap: '3px',
-                                                                    padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                                    background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
-                                                                    color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
-                                                                }}>
-                                                                    {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="adv-lead-title" style={{ color: '#9ca3af' }}>
-                                                            {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : 'Contact')}
-                                                        </div>
-                                                        {lead.location && <div className="adv-lead-location" style={{ color: '#9ca3af' }}>📍 {lead.location}</div>}
-                                                        {lead.icp_reasoning && (
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
-                                                                {lead.icp_reasoning}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Feedback buttons */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                                                        <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>Good fit?</div>
-                                                        <div style={{ display: 'flex', gap: '2px' }}>
-                                                            <button
-                                                                title="Actually a good fit"
-                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
-                                                                style={{
-                                                                    border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : '#f3f4f6',
-                                                                    borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
-                                                                    transition: 'all 0.15s',
-                                                                }}
-                                                            >👍</button>
-                                                            <button
-                                                                title="Confirmed bad fit"
-                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
-                                                                style={{
-                                                                    border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
-                                                                    borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
-                                                                    transition: 'all 0.15s',
-                                                                }}
-                                                            >👎</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                    )}
+                                    {inboundMode && inboundLeads.length > 0 && (
+                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                            {inboundLeads.length} contacts
+                                        </span>
+                                    )}
+                                    {!inboundMode && leads.length > 0 && totalResults === 0 && (
+                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                            {leads.length} contact{leads.length !== 1 ? 's' : ''}
+                                        </span>
                                     )}
                                 </div>
-                            )}
-                            {/* ── end filtered-out leads ── */}
+                                <p className="adv-panel-desc">
+                                    <span className="adv-navy">✦</span>
+                                    {inboundMode
+                                        ? ' Leads imported from your file — ready to launch a campaign'
+                                        : targeting
+                                            ? `${targeting.job_titles?.length > 0 ? ` ${targeting.job_titles.join(', ')}` : ''}${targeting.industries?.length > 0 ? ` in ${targeting.industries.join(', ')}` : ''}${targeting.locations?.length > 0 ? ` located in ${targeting.locations.join(', ')}` : ''} who are focused on growth and lead generation.`
+                                            : ' Contacts ready for outreach — review and launch your campaign.'
+                                    }
+                                </p>
 
-                            {!inboundMode && leads.some(l => l.locked) && (
-                                <div className="adv-panel-footer" style={{ display: 'flex', justifyContent: 'center', padding: '16px 0', borderTop: '0px solid #e5e7eb', marginTop: '8px' }}>
-                                    <button
-                                        onClick={() => {
-                                            if (creditBalance !== null && creditBalance <= 0) {
-                                                setShowRechargeModal(true);
-                                            } else {
-                                                setLeads(prev => prev.map(l => ({ ...l, locked: false })));
-                                            }
-                                        }}
-                                        style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#ffffff',
-                                            padding: '10px 20px',
-                                            borderRadius: '24px',
-                                            fontWeight: '600',
-                                            fontSize: '14px',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            boxShadow: '0 4px 12px rgba(30, 27, 75, 0.2)'
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 27, 75, 0.3)'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 27, 75, 0.2)'; }}
-                                    >
-                                        <Gem size={16} color="#fbbf24" fill="#fbbf24" />
-                                        Unlock Results
-                                    </button>
-                                </div>
-                            )}
+                                {/* Inbound leads (CSV upload) */}
+                                {inboundMode && inboundLeads.length > 0 && (
+                                    <div className="adv-leads-list">
+                                        {inboundLeads.map((lead, i) => (
+                                            <div key={i} className="adv-lead-card">
+                                                <div className="adv-lead-avatar" style={{ background: avatarColor(`${lead.firstName} ${lead.lastName}`) }}>
+                                                    {initials(`${lead.firstName} ${lead.lastName}`) || '?'}
+                                                </div>
+                                                <div className="adv-lead-info">
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span className="adv-lead-name">{[lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unknown'}</span>
+                                                        <span className="adv-verified">✓</span>
+                                                    </div>
+                                                    <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
+                                                    {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
+                                                    {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
+                                                    {lead.linkedinProfile && (
+                                                        <div style={{ fontSize: '12px', color: '#0a66c2' }}>
+                                                            <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
+                                                                style={{ color: '#0a66c2', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                                                                LinkedIn Profile
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                    {lead.notes && lead.notes.length > 0 && (
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#374151',
+                                                            marginTop: '6px',
+                                                            padding: '8px 10px',
+                                                            background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid #c7d7f5',
+                                                            lineHeight: '1.6',
+                                                            maxWidth: '300px',
+                                                        }}>
+                                                            <span style={{ color: '#172560', fontWeight: 700, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                                                                AI Research Summary
+                                                            </span>
+                                                            {lead.notes.length > 200 ? lead.notes.substring(0, 200) + '…' : lead.notes}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => openEditLead(i)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            background: '#f3f4f6',
+                                                            border: '1px solid #e5e7eb',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px',
+                                                            fontWeight: '500',
+                                                            color: '#4b5563',
+                                                            transition: 'all 0.2s',
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.background = '#e5e7eb';
+                                                            e.currentTarget.style.borderColor = '#d1d5db';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.background = '#f3f4f6';
+                                                            e.currentTarget.style.borderColor = '#e5e7eb';
+                                                        }}
+                                                    >
+                                                        ✏️ Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openDeleteConfirmation(i)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            background: '#fee2e2',
+                                                            border: '1px solid #fecaca',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px',
+                                                            fontWeight: '500',
+                                                            color: '#dc2626',
+                                                            transition: 'all 0.2s',
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.background = '#fecaca';
+                                                            e.currentTarget.style.borderColor = '#fca5a5';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.background = '#fee2e2';
+                                                            e.currentTarget.style.borderColor = '#fecaca';
+                                                        }}
+                                                    >
+                                                        🗑️ Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
-                            {/* Get More Leads button — show when there are leads and either a
+                                {/* LinkedIn search leads */}
+                                {!inboundMode && (
+                                    <div className="adv-leads-list">
+                                        {leads.map((lead, i) => (
+                                            <div key={i} className={`adv-lead-card ${lead.locked ? 'adv-lead-locked' : ''}`}>
+                                                {lead.profile_picture ? (
+                                                    <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" />
+                                                ) : (
+                                                    <div className="adv-lead-avatar" style={{ background: avatarColor(lead.name) }}>
+                                                        {initials(lead.name)}
+                                                    </div>
+                                                )}
+                                                <div className="adv-lead-info">
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                            <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }} onClick={e => e.stopPropagation()}>
+                                                                {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
+                                                        )}
+                                                        {!targetingFiltersActive && lead.icp_score !== undefined && (
+                                                            <span style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                                padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                                                                background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                                color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
+                                                            }}>
+                                                                {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="adv-lead-title">
+                                                        {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
+                                                    </div>
+                                                    {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
+                                                    {lead.inferred_nationality && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                                                            <span style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                                padding: '1px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+                                                                background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                                                            }}>
+                                                                🌍 {lead.inferred_nationality}
+                                                                {lead.nationality_confidence && lead.nationality_confidence >= 70 && (
+                                                                    <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '2px' }}>·{lead.nationality_confidence}%</span>
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {!targetingFiltersActive && lead.icp_reasoning && (
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
+                                                            {lead.icp_reasoning}
+                                                        </div>
+                                                    )}
+                                                    {lead.enriched_profile?.skills && lead.enriched_profile.skills.length > 0 && (
+                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                                                            {lead.enriched_profile.skills.slice(0, 4).map((skill, si) => (
+                                                                <span key={si} style={{
+                                                                    padding: '1px 6px', borderRadius: '8px', fontSize: '10px',
+                                                                    background: '#f3f4f6', color: '#4b5563', border: '1px solid #e5e7eb',
+                                                                }}>{skill}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {lead.profile_url ? (
+                                                        <div className="adv-lead-platform">
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                                                        </div>
+                                                    ) : lead.phone ? (
+                                                        <div className="adv-lead-platform" style={{ fontSize: '13px' }}>📞</div>
+                                                    ) : lead.email ? (
+                                                        <div className="adv-lead-platform" style={{ fontSize: '13px' }}>✉️</div>
+                                                    ) : null}
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                                    <button
+                                                        className="adv-lead-action"
+                                                        title="Generate Summary"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!lead.locked) handleViewSummary(lead);
+                                                        }}
+                                                        style={{ pointerEvents: lead.locked ? 'none' : 'auto', border: 'none', background: 'transparent', cursor: lead.locked ? 'default' : 'pointer' }}
+                                                    >
+                                                        {lead.locked ? (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                                                        ) : (
+                                                            <Sparkles size={18} color="#172560" />
+                                                        )}
+                                                    </button>
+                                                    {!lead.locked && (
+                                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                                            <button
+                                                                title="Good match"
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
+                                                                style={{
+                                                                    border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : 'transparent',
+                                                                    borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >
+                                                                👍
+                                                            </button>
+                                                            <button
+                                                                title="Bad match"
+                                                                onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
+                                                                style={{
+                                                                    border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
+                                                                    borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >
+                                                                👎
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )} {/* end !inboundMode leads list */}
+
+                                {/* ── Filtered-out leads (below ICP threshold) ── */}
+                                {!inboundMode && filteredLeads.length > 0 && (
+                                    <div style={{ marginTop: '12px' }}>
+                                        {/* Banner */}
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '8px 12px', borderRadius: '8px',
+                                            background: '#fefce8', border: '1px solid #fde68a',
+                                        }}>
+                                            <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                                                Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+                                            </span>
+                                            <button
+                                                onClick={() => setShowFilteredLeads(v => !v)}
+                                                style={{
+                                                    fontSize: '12px', fontWeight: 600, color: '#b45309',
+                                                    background: 'transparent', border: 'none', cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px',
+                                                    borderRadius: '4px',
+                                                }}
+                                            >
+                                                {showFilteredLeads ? 'Hide' : 'Show all'}
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transform: showFilteredLeads ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                                                    <polyline points="6 9 12 15 18 9" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {/* Collapsible lead cards */}
+                                        {showFilteredLeads && (
+                                            <div className="adv-leads-list" style={{ marginTop: '6px', opacity: 0.85 }}>
+                                                {filteredLeads.map((lead, i) => (
+                                                    <div key={i} className="adv-lead-card" style={{ background: '#fafafa', border: '1px solid #f3f4f6' }}>
+                                                        {/* Avatar */}
+                                                        {lead.profile_picture ? (
+                                                            <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" style={{ filter: 'grayscale(30%)' }} />
+                                                        ) : (
+                                                            <div className="adv-lead-avatar" style={{ background: '#d1d5db', color: '#6b7280' }}>
+                                                                {(lead.name || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Info */}
+                                                        <div className="adv-lead-info">
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                                    <a href={lead.profile_url} target="_blank" rel="noopener noreferrer"
+                                                                        className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }} onClick={e => e.stopPropagation()}>
+                                                                        {lead.name}
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="adv-lead-name" style={{ color: '#374151' }}>{lead.name}</span>
+                                                                )}
+                                                                {lead.icp_score !== undefined && (
+                                                                    <span style={{
+                                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                                        padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                                                                        background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                                        color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
+                                                                    }}>
+                                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="adv-lead-title" style={{ color: '#9ca3af' }}>
+                                                                {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : 'Contact')}
+                                                            </div>
+                                                            {lead.location && <div className="adv-lead-location" style={{ color: '#9ca3af' }}>📍 {lead.location}</div>}
+                                                            {lead.icp_reasoning && (
+                                                                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
+                                                                    {lead.icp_reasoning}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Feedback buttons */}
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                                            <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>Good fit?</div>
+                                                            <div style={{ display: 'flex', gap: '2px' }}>
+                                                                <button
+                                                                    title="Actually a good fit"
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
+                                                                    style={{
+                                                                        border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : '#f3f4f6',
+                                                                        borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                        transition: 'all 0.15s',
+                                                                    }}
+                                                                >👍</button>
+                                                                <button
+                                                                    title="Confirmed bad fit"
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
+                                                                    style={{
+                                                                        border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : '#f3f4f6',
+                                                                        borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                                        transition: 'all 0.15s',
+                                                                    }}
+                                                                >👎</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {/* ── end filtered-out leads ── */}
+
+                                {!inboundMode && leads.some(l => l.locked) && (
+                                    <div className="adv-panel-footer" style={{ display: 'flex', justifyContent: 'center', padding: '16px 0', borderTop: '0px solid #e5e7eb', marginTop: '8px' }}>
+                                        <button
+                                            onClick={() => {
+                                                if (creditBalance !== null && creditBalance <= 0) {
+                                                    setShowRechargeModal(true);
+                                                } else {
+                                                    setLeads(prev => prev.map(l => ({ ...l, locked: false })));
+                                                }
+                                            }}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                color: '#ffffff',
+                                                padding: '10px 20px',
+                                                borderRadius: '24px',
+                                                fontWeight: '600',
+                                                fontSize: '14px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 4px 12px rgba(30, 27, 75, 0.2)'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 27, 75, 0.3)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 27, 75, 0.2)'; }}
+                                        >
+                                            <Gem size={16} color="#fbbf24" fill="#fbbf24" />
+                                            Unlock Results
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Get More Leads button — show when there are leads and either a
                                 cursor token is available or the backend reported more total
                                 results than we're currently displaying */}
-                            {!inboundMode && leads.length > 0 && !noMoreLeads && (
-                                <div style={{
-                                    display: 'flex', justifyContent: 'center',
-                                    padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
-                                }}>
-                                    <button
-                                        disabled={loadingMore}
-                                        onClick={loadMoreLeads}
-                                        style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                            padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
-                                            border: '1px solid #e5e7eb',
-                                            background: loadingMore ? '#f9fafb' : '#172560',
-                                            color: loadingMore ? '#9ca3af' : '#fff',
-                                            cursor: loadingMore ? 'default' : 'pointer',
-                                            transition: 'all 0.15s',
-                                        }}
-                                    >
-                                        {loadingMore ? (
-                                            <>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
-                                                Loading more leads...
-                                            </>
-                                        ) : (
-                                            <>Get More Leads →</>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                {!inboundMode && leads.length > 0 && !noMoreLeads && (
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'center',
+                                        padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
+                                    }}>
+                                        <button
+                                            disabled={loadingMore}
+                                            onClick={loadMoreLeads}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                                padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
+                                                border: '1px solid #e5e7eb',
+                                                background: loadingMore ? '#f9fafb' : '#172560',
+                                                color: loadingMore ? '#9ca3af' : '#fff',
+                                                cursor: loadingMore ? 'default' : 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            {loadingMore ? (
+                                                <>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                                                    Loading more leads...
+                                                </>
+                                            ) : (
+                                                <>Get More Leads →</>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                                 {/* Workflow panel header */}
@@ -3750,7 +3771,7 @@ export default function AdvancedSearchAIPage() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                                             </svg>
                                         </div>
                                         <div>
@@ -3770,7 +3791,7 @@ export default function AdvancedSearchAIPage() {
                                                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                                             }}
                                         >
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
                                             Restart
                                         </button>
                                         <button onClick={() => setShowPlayground(false)} style={{
@@ -3882,7 +3903,7 @@ export default function AdvancedSearchAIPage() {
                                             <AgentVisualizer state="thinking" size={32} />
                                         </div>
                                         <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
-                                            {[0,1,2].map(i => (
+                                            {[0, 1, 2].map(i => (
                                                 <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#0b1957', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
                                             ))}
                                         </div>
@@ -4116,7 +4137,7 @@ export default function AdvancedSearchAIPage() {
                                             cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
                                         }}
                                     >
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                                     </button>
                                 </div>
                             )}
@@ -4134,7 +4155,7 @@ export default function AdvancedSearchAIPage() {
                                             boxShadow: '0 4px 14px rgba(16,185,129,.35)',
                                         }}
                                     >
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>
                                         ✅ Profile Complete — Apply Context
                                     </button>
                                 </div>
@@ -4575,11 +4596,11 @@ export default function AdvancedSearchAIPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {cpPickerStep === 'contacts' && (
                                         <button onClick={() => setCpPickerStep('source')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px 4px', marginLeft: '-4px', display: 'flex', alignItems: 'center' }}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
                                         </button>
                                     )}
                                     <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#dce3f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
@@ -4591,7 +4612,7 @@ export default function AdvancedSearchAIPage() {
                                     </div>
                                 </div>
                                 <button onClick={() => setShowContactPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                 </button>
                             </div>
                         </div>
@@ -4609,7 +4630,7 @@ export default function AdvancedSearchAIPage() {
                                     >
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: src.color, flexShrink: 0 }} />
                                         <span style={{ fontSize: '14px', fontWeight: 500, color: '#111827', flex: 1 }}>{src.label}</span>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                                     </div>
                                 ))}
                             </div>
@@ -4620,7 +4641,7 @@ export default function AdvancedSearchAIPage() {
                             {/* Search bar */}
                             <div style={{ padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
                                 <div style={{ position: 'relative' }}>
-                                    <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                                     <input
                                         autoFocus
                                         type="text"
@@ -4639,8 +4660,8 @@ export default function AdvancedSearchAIPage() {
                                     style={{ padding: '8px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#fafafa' }}
                                 >
                                     <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
-                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#0b1957', borderRadius: '1px' }}/>}
+                                        {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5" /></svg>}
+                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#0b1957', borderRadius: '1px' }} />}
                                     </div>
                                     <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
                                         {cpSelected.size === cpContacts.length ? 'Deselect all' : `Select all ${cpContacts.length} shown`}
@@ -4652,12 +4673,12 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                                 {cpLoading ? (
                                     <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
-                                        <svg style={{ margin: '0 auto 8px', display: 'block', animation: 'spin 1s linear infinite' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".3"/><path d="M21 12a9 9 0 00-9-9"/></svg>
+                                        <svg style={{ margin: '0 auto 8px', display: 'block', animation: 'spin 1s linear infinite' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".3" /><path d="M21 12a9 9 0 00-9-9" /></svg>
                                         Loading contacts…
                                     </div>
                                 ) : cpContacts.length === 0 ? (
                                     <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="1.5" style={{ margin: '0 auto 8px', display: 'block' }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="1.5" style={{ margin: '0 auto 8px', display: 'block' }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
                                         <div style={{ fontSize: '13px', fontWeight: 500, color: '#6b7280' }}>No contacts found</div>
                                         <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>{cpSearch ? 'Try a different search term' : 'No contacts in this source'}</div>
                                     </div>
@@ -4669,7 +4690,7 @@ export default function AdvancedSearchAIPage() {
                                     return (
                                         <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#f0f3ff' : 'white', transition: 'background 0.1s' }}>
                                             <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+                                                {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5" /></svg>}
                                             </div>
                                             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(name), flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: '#fff' }}>{initl}</div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -4678,7 +4699,7 @@ export default function AdvancedSearchAIPage() {
                                             </div>
                                             {c.phone && (
                                                 <span style={{ fontSize: '11px', color: '#6b7280', flexShrink: 0 }}>
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '2px' }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.1 10.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '2px' }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.1 10.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                                                 </span>
                                             )}
                                         </div>
@@ -4703,7 +4724,7 @@ export default function AdvancedSearchAIPage() {
                                         disabled={cpSelected.size === 0}
                                         style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#0b1957' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                                         Start Campaign{cpSelected.size > 0 ? ` (${cpSelected.size})` : ''}
                                     </button>
                                 </div>
@@ -4769,7 +4790,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
             <div className="adv-ai-body">
                 {msg.webSearchResult && (
                     <div className="adv-web-searched">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                         Searched the web
                     </div>
                 )}
@@ -4785,9 +4806,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         const renderInline = (raw: string) => {
                             const tokens = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
                             return tokens.map((t, j) => {
-                                if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2,-2)}</strong>;
-                                if (t.startsWith('*')  && t.endsWith('*'))  return <em key={j} className="adv-ai-em">{t.slice(1,-1)}</em>;
-                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#0b1957'}}>{t.slice(1,-1)}</code>;
+                                if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2, -2)}</strong>;
+                                if (t.startsWith('*') && t.endsWith('*')) return <em key={j} className="adv-ai-em">{t.slice(1, -1)}</em>;
+                                if (t.startsWith('`') && t.endsWith('`')) return <code key={j} style={{ background: '#f3f4f6', padding: '1px 5px', borderRadius: '4px', fontSize: '13px', fontFamily: 'monospace', color: '#0b1957' }}>{t.slice(1, -1)}</code>;
                                 return t;
                             });
                         };
@@ -4797,7 +4818,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
 
                         // ### Heading
                         if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
-                        if (trimmed.startsWith('## '))  return <div key={i} className="adv-ai-h3" style={{fontSize:'14.5px'}}>{renderInline(trimmed.slice(3))}</div>;
+                        if (trimmed.startsWith('## ')) return <div key={i} className="adv-ai-h3" style={{ fontSize: '14.5px' }}>{renderInline(trimmed.slice(3))}</div>;
 
                         // --- Divider
                         if (/^-{3,}$/.test(trimmed)) return <hr key={i} className="adv-ai-hr" />;
@@ -4807,7 +4828,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         if (numMatch) return (
                             <div key={i} className="adv-ai-num-item">
                                 <span className="adv-ai-num-badge">{numMatch[1]}</span>
-                                <span style={{flex:1,lineHeight:'1.65'}}>{renderInline(numMatch[2])}</span>
+                                <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(numMatch[2])}</span>
                             </div>
                         );
 
@@ -4817,7 +4838,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             return (
                                 <div key={i} className="adv-ai-bullet">
                                     <span className="adv-ai-bullet-dot" />
-                                    <span style={{flex:1,lineHeight:'1.65'}}>{renderInline(content)}</span>
+                                    <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(content)}</span>
                                 </div>
                             );
                         }
@@ -4853,7 +4874,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                     >
                                         {/* Globe icon */}
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
-                                            <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                            <circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                                         </svg>
                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {src.title || hostname}
@@ -4998,6 +5019,11 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             {msg.inboundSummary.phone > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#9a3412', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #fed7aa' }}>📞 Phone ({msg.inboundSummary.phone})</span>}
                             {msg.inboundSummary.website > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#6b21a8', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #e9d5ff' }}>🌐 Website ({msg.inboundSummary.website})</span>}
                         </div>
+                        <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                            <button className="adv-act-btn" style={{
+                                width: '100%', padding: "10px 14px", background: "#172560", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, color: "#fff", cursor: 'pointer', boxShadow: '0 4px 12px rgba(23,37,96,0.2)'
+                            }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
+                        </div>
                     </div>
                 )}
 
@@ -5012,30 +5038,30 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.outreach_journey && msg.outreach_journey.length > 0 && (
                     <div style={{ marginTop: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                             Suggested Outreach Journey
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
+                        <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
                             {msg.outreach_journey.map((step, si) => {
                                 const icons: Record<string, React.ReactNode> = {
                                     linkedin: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                                     ),
                                     email: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                                     ),
                                     whatsapp: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
                                     ),
                                     voice: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                                     ),
                                 };
                                 const bgColor = step.recommended
                                     ? step.channel === 'linkedin' ? '#0a66c2'
                                         : step.channel === 'email' ? '#4f46e5'
-                                        : step.channel === 'whatsapp' ? '#25d366'
-                                        : '#f97316'
+                                            : step.channel === 'whatsapp' ? '#25d366'
+                                                : '#f97316'
                                     : '#f3f4f6';
                                 return (
                                     <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -5094,7 +5120,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                         {si < msg.outreach_journey!.length - 1 && (
                                             <div style={{ display: 'flex', alignItems: 'center', paddingTop: '14px', flexShrink: 0 }}>
                                                 <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
-                                                    <path d="M0 8h20M16 4l4 4-4 4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    <path d="M0 8h20M16 4l4 4-4 4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                 </svg>
                                             </div>
                                         )}
@@ -5198,23 +5224,23 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
 const TRIGGER_OPTIONS_MAP: Record<string, Array<{ id: string; label: string; desc: string }>> = {
     linkedin: [
         { id: 'connection_accepted', label: 'After connection accepted', desc: 'Trigger when the lead accepts your LinkedIn connection' },
-        { id: 'message_replied',     label: 'After responding to message', desc: 'Trigger when the lead replies to your LinkedIn message' },
-        { id: 'profile_visited',     label: 'After profile visit', desc: 'Trigger for all visited profiles with ICP score above your threshold' },
+        { id: 'message_replied', label: 'After responding to message', desc: 'Trigger when the lead replies to your LinkedIn message' },
+        { id: 'profile_visited', label: 'After profile visit', desc: 'Trigger for all visited profiles with ICP score above your threshold' },
     ],
     email: [
-        { id: 'email_read',    label: 'After Email Read', desc: 'Trigger when the lead opens your email' },
+        { id: 'email_read', label: 'After Email Read', desc: 'Trigger when the lead opens your email' },
         { id: 'email_replied', label: 'After Responded to Email', desc: 'Trigger when the lead replies to your email' },
         { id: 'no_dependency', label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
     ],
     whatsapp: [
-        { id: 'wa_read',       label: 'After Message Read', desc: 'Trigger when the lead reads your WhatsApp message' },
-        { id: 'wa_replied',    label: 'After Responded to WhatsApp', desc: 'Trigger when the lead replies to your WhatsApp message' },
+        { id: 'wa_read', label: 'After Message Read', desc: 'Trigger when the lead reads your WhatsApp message' },
+        { id: 'wa_replied', label: 'After Responded to WhatsApp', desc: 'Trigger when the lead replies to your WhatsApp message' },
         { id: 'no_dependency', label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
     ],
     voice_call: [
         { id: 'call_completed', label: 'After Call Completed', desc: 'Trigger after the AI voice call finishes' },
-        { id: 'call_answered',  label: 'After Call Answered', desc: 'Trigger only when the lead answers the call' },
-        { id: 'no_dependency',  label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
+        { id: 'call_answered', label: 'After Call Answered', desc: 'Trigger only when the lead answers the call' },
+        { id: 'no_dependency', label: 'No Step Dependency', desc: 'Trigger the next channel immediately without waiting' },
     ],
 };
 
@@ -5355,7 +5381,7 @@ function CheckpointFormInline({
                     if (limit) setLinkedInDailyLimit(limit);
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // SDK hook — connected Gmail / Outlook accounts from integration tab
@@ -5374,7 +5400,7 @@ function CheckpointFormInline({
                     if (!waAccountId) setWaAccountId(d.accounts[0].id);
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }, [nextChannels]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // WhatsApp message templates (from communication_templates table)
@@ -5411,7 +5437,7 @@ function CheckpointFormInline({
         fetch('/api/campaigns/whatsapp-templates', { credentials: 'include' })
             .then(r => r.json())
             .then(d => { if (d.success) setWaTemplates(d.data || []); })
-            .catch(() => {});
+            .catch(() => { });
     }, [nextChannels, waTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // LinkedIn follow-up config (when linkedin selected as next channel in step 3)
@@ -5420,11 +5446,11 @@ function CheckpointFormInline({
     const [liFollowGenLoading, setLiFollowGenLoading] = useState(false);
 
     // AI Generate inline context panel state (one per message type)
-    const [showAiConnPanel, setShowAiConnPanel]     = useState(false);
+    const [showAiConnPanel, setShowAiConnPanel] = useState(false);
     const [showAiFollowPanel, setShowAiFollowPanel] = useState(false);
-    const [aiMsgValueProp, setAiMsgValueProp]       = useState('');
-    const [aiMsgTone, setAiMsgTone]                 = useState('professional');  // 'professional' | 'casual' | 'direct'
-    const [aiMsgGoal, setAiMsgGoal]                 = useState('get_meeting');   // 'get_meeting' | 'share_resource' | 'explore_collab' | 'general'
+    const [aiMsgValueProp, setAiMsgValueProp] = useState('');
+    const [aiMsgTone, setAiMsgTone] = useState('professional');  // 'professional' | 'casual' | 'direct'
+    const [aiMsgGoal, setAiMsgGoal] = useState('get_meeting');   // 'get_meeting' | 'share_resource' | 'explore_collab' | 'general'
 
     // LinkedIn message templates (communication_templates table, channel='linkedin')
     const [liTemplates, setLiTemplates] = useState<any[]>([]);
@@ -5454,7 +5480,7 @@ function CheckpointFormInline({
         fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
             .then(r => r.json())
             .then(d => { if (d.success) setLiTemplates(d.data || []); })
-            .catch(() => {});
+            .catch(() => { });
     }, [nextChannels, liTemplatesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Toggle a LinkedIn channel action (multi-select) with dependency auto-select:
@@ -5546,7 +5572,7 @@ function CheckpointFormInline({
             });
             const d = await res.json();
             if (d.success) setWaNewTmplMediaUrl(d.url);
-        } catch {}
+        } catch { }
         setWaNewTmplMediaUploading(false);
     };
 
@@ -5588,7 +5614,7 @@ function CheckpointFormInline({
                 setWaNewTmplMediaType('none'); setWaNewTmplMediaUrl(''); setWaNewTmplMediaFilename('');
                 setWaNewTmplLocLat(''); setWaNewTmplLocLng(''); setWaNewTmplLocName('');
             }
-        } catch {}
+        } catch { }
         setWaNewTmplSaving(false);
     };
 
@@ -5600,7 +5626,7 @@ function CheckpointFormInline({
             await fetch(`/api/campaigns/whatsapp-templates/${id}`, { method: 'DELETE', credentials: 'include' });
             setWaTemplates(prev => prev.filter(t => t.id !== id));
             if (selectedWaTemplateId === id) { setSelectedWaTemplateId(''); }
-        } catch {}
+        } catch { }
     };
 
     // SDK hooks — campaign creation and AI chat (needed for launchCampaign, generateMsg, generateEmail)
@@ -5772,9 +5798,9 @@ function CheckpointFormInline({
                     type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
                     targeting,
                     context: {
-                        value_prop:          aiMsgValueProp || '',
-                        tone:                aiMsgTone,
-                        goal:                aiMsgGoal,
+                        value_prop: aiMsgValueProp || '',
+                        tone: aiMsgTone,
+                        goal: aiMsgGoal,
                         sample_linkedin_url: sampleLinkedInUrl,
                     },
                 }),
@@ -5827,28 +5853,28 @@ function CheckpointFormInline({
                 const conditionTitleMap: Record<string, string> = {
                     // LinkedIn triggers
                     connection_accepted: 'Wait for Connection Accepted',
-                    message_replied:     'Wait for Message Reply',
-                    profile_visited:     'Wait for Profile Visit',
+                    message_replied: 'Wait for Message Reply',
+                    profile_visited: 'Wait for Profile Visit',
                     // Email triggers
-                    email_read:    'Wait for Email Read',
+                    email_read: 'Wait for Email Read',
                     email_replied: 'Wait for Email Reply',
                     // WhatsApp triggers
-                    wa_read:    'Wait for WhatsApp Read',
+                    wa_read: 'Wait for WhatsApp Read',
                     wa_replied: 'Wait for WhatsApp Reply',
                     // Voice triggers
                     call_completed: 'Wait for Call Completed',
-                    call_answered:  'Wait for Call Answered',
+                    call_answered: 'Wait for Call Answered',
                 };
                 const conditionActionMap: Record<string, string> = {
                     connection_accepted: 'CONNECTION_ACCEPTED',
-                    message_replied:     'REPLY_RECEIVED',
-                    profile_visited:     'PROFILE_VISITED',
-                    email_read:          'EMAIL_READ',
-                    email_replied:       'EMAIL_REPLIED',
-                    wa_read:             'WA_READ',
-                    wa_replied:          'WA_REPLIED',
-                    call_completed:      'CALL_COMPLETED',
-                    call_answered:       'CALL_ANSWERED',
+                    message_replied: 'REPLY_RECEIVED',
+                    profile_visited: 'PROFILE_VISITED',
+                    email_read: 'EMAIL_READ',
+                    email_replied: 'EMAIL_REPLIED',
+                    wa_read: 'WA_READ',
+                    wa_replied: 'WA_REPLIED',
+                    call_completed: 'CALL_COMPLETED',
+                    call_answered: 'CALL_ANSWERED',
                 };
                 // Determine which channel this trigger belongs to (primary channel)
                 const triggerChannel = primaryTriggerChannel ?? 'linkedin';
@@ -6180,8 +6206,8 @@ function CheckpointFormInline({
                                     {hasPhone && hasEmail
                                         ? `📱✉️ Phone & email detected — select how you want to reach this contact${hasLinkedInInfo ? ' (LinkedIn available)' : ''}`
                                         : hasPhone
-                                        ? `📱 Phone detected — WhatsApp or Voice Call recommended${hasLinkedInInfo ? ' · LinkedIn available' : ''}`
-                                        : `✉️ Email detected — Email outreach recommended${hasLinkedInInfo ? ' · LinkedIn available' : ''}`}
+                                            ? `📱 Phone detected — WhatsApp or Voice Call recommended${hasLinkedInInfo ? ' · LinkedIn available' : ''}`
+                                            : `✉️ Email detected — Email outreach recommended${hasLinkedInInfo ? ' · LinkedIn available' : ''}`}
                                 </div>
                             )}
                             {[
@@ -6206,13 +6232,13 @@ function CheckpointFormInline({
                                 </div>
                             ))}
                             {!isDirectContact && (
-                            <div onClick={() => { setNextChannels([]); setStep(step + 1); }} style={optStyle(nextChannels.length === 0)}>
-                                <div style={numBadge(4, nextChannels.length === 0)}>{nextChannels.length === 0 ? '✓' : 4}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600 }}>Skip</div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>No additional channels — LinkedIn only</div>
+                                <div onClick={() => { setNextChannels([]); setStep(step + 1); }} style={optStyle(nextChannels.length === 0)}>
+                                    <div style={numBadge(4, nextChannels.length === 0)}>{nextChannels.length === 0 ? '✓' : 4}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 600 }}>Skip</div>
+                                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>No additional channels — LinkedIn only</div>
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
                             {/* Email Config (inline when email selected) */}
@@ -7197,49 +7223,49 @@ function CheckpointFormInline({
                     const dispTotal = skipsIcp ? 3 : totalSteps;
                     const isFirstStep = skipsIcp ? step <= 1 : step <= 0;
                     return (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
-                    <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                            disabled={isFirstStep}
-                            onClick={handleBack}
-                            style={{
-                                width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
-                                background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                            }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#172560'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                        </button>
-                        {step < totalSteps - 1 ? (
-                            <button
-                                disabled={!canNext()}
-                                onClick={handleNext}
-                                style={{
-                                    width: '36px', height: '36px', borderRadius: '10px', border: 'none',
-                                    background: canNext() ? '#172560' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                }}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
-                            </button>
-                        ) : (
-                            <button
-                                disabled={!canNext() || launching}
-                                onClick={launchCampaign}
-                                style={{
-                                    padding: '8px 20px', borderRadius: '10px', border: 'none',
-                                    background: canNext() && !launching ? '#10b981' : '#e5e7eb',
-                                    color: canNext() && !launching ? '#fff' : '#9ca3af',
-                                    fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
-                                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
-                                }}
-                            >
-                                {launching ? 'Launching...' : 'Launch Campaign'}
-                            </button>
-                        )}
-                    </div>
-                </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
+                            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                    disabled={isFirstStep}
+                                    onClick={handleBack}
+                                    style={{
+                                        width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
+                                        background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                                    }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#172560'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                                </button>
+                                {step < totalSteps - 1 ? (
+                                    <button
+                                        disabled={!canNext()}
+                                        onClick={handleNext}
+                                        style={{
+                                            width: '36px', height: '36px', borderRadius: '10px', border: 'none',
+                                            background: canNext() ? '#172560' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled={!canNext() || launching}
+                                        onClick={launchCampaign}
+                                        style={{
+                                            padding: '8px 20px', borderRadius: '10px', border: 'none',
+                                            background: canNext() && !launching ? '#10b981' : '#e5e7eb',
+                                            color: canNext() && !launching ? '#fff' : '#9ca3af',
+                                            fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {launching ? 'Launching...' : 'Launch Campaign'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     );
                 })()}
 
@@ -7600,18 +7626,18 @@ function AiMsgContextPanel({
 }) {
     const tones = [
         { id: 'professional', label: '🤝 Professional' },
-        { id: 'casual',       label: '😊 Casual' },
-        { id: 'direct',       label: '⚡ Direct' },
+        { id: 'casual', label: '😊 Casual' },
+        { id: 'direct', label: '⚡ Direct' },
     ];
     const goals = [
-        { id: 'get_meeting',    label: '📅 Book a call' },
+        { id: 'get_meeting', label: '📅 Book a call' },
         { id: 'share_resource', label: '📄 Share a resource' },
         { id: 'explore_collab', label: '🤝 Explore collab' },
-        { id: 'general',        label: '💬 Start a chat' },
+        { id: 'general', label: '💬 Start a chat' },
     ];
     const targetingTags = [
-        ...(targeting?.job_titles  || []).slice(0, 2),
-        ...(targeting?.industries  || []).slice(0, 2),
+        ...(targeting?.job_titles || []).slice(0, 2),
+        ...(targeting?.industries || []).slice(0, 2),
     ].filter(Boolean);
 
     return (
@@ -7858,12 +7884,25 @@ const css = `
             .adv-tag-label {font - size:11px; font-weight:600; color:#0f1842; min-width:70px; }
             .adv-tag {font - size:11px; background:rgba(255,255,255,.85); color:#0a112e; padding:3px 11px; border-radius:20px; border:1px solid #c2d6eb; }
 
-            /* ── MOBILE NAV SIDEBAR ── */
+            /* ── MOBILE NAV SIDEBARS ── */
+            .adv-mobile-icp-box {
+                display: none;
+                position: fixed;
+                right: 12px;
+                top: 12px;
+                flex-direction: column;
+                z-index: 101;
+                background: transparent;
+                padding: 0;
+                border: none;
+                border-radius: 20px;
+                animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+            }
             .adv-mobile-nav {
                 display: none;
                 position: fixed;
                 right: 12px;
-                top: 80px;
+                top: 84px; /* Lowered to make room for ICP box */
                 flex-direction: column;
                 gap: 12px;
                 z-index: 100;
@@ -8091,14 +8130,40 @@ const css = `
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
                 .adv-chat-left {min-width: 100%; }
                 .adv-mobile-nav { display: flex; }
-                /* Padding to prevent content overlap with sidebar */
-                .adv-chat-msgs { padding-right: 68px !important; }
-                .adv-panel-body { padding-right: 68px !important; }
-                .adv-chat-input-wrap { padding-right: 68px !important; }
-                
-                /* Hide Leads/Workflow cards and action buttons in chat on mobile */
+                .adv-mobile-icp-box { display: flex; }
+                /* Symmetric padding to keep content centered on mobile */
+                .adv-chat-msgs { padding-left: 20px !important; padding-right: 20px !important; }
+                .adv-panel-body { padding-left: 20px !important; padding-right: 20px !important; }
+                .adv-chat-input-wrap { padding-left: 20px !important; padding-right: 20px !important; }
+                .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; }
+                .adv-action-btns { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; }
+                .adv-rc { display: flex !important; }
                 .adv-rc-leads { display: none !important; }
-                .adv-action-btns { display: none !important; }
+                .adv-icp-discover-btn { display: none !important; }
+                .adv-mobile-nav { top: 160px !important; }
+                .adv-mobile-icp-box { top: 90px !important; }
+                .adv-mobile-icp-btn {
+                    background: #172560;
+                    color: #fff;
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: none;
+                    cursor: pointer;
+                    box-shadow: 0 4px 14px rgba(23, 37, 96, 0.3);
+                    transition: all 0.2s;
+                }
+                .adv-mobile-icp-btn:hover {
+                    background: #0f1842;
+                    transform: scale(1.05);
+                }
+                .adv-ai-body { max-width: 100%; }
+                .adv-action-btns { margin-top: 16px; width: 100%; justify-content: center !important; }
+                .adv-act-btn { flex: 1; text-align: center; justify-content: center; }
+                .adv-journey-stepper { justify-content: center !important; }
             }
             @media (max-width: 480px) {
                 .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }
