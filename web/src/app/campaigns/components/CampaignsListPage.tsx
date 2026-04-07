@@ -246,7 +246,9 @@ export default function CampaignsListPage() {
       {stats && <CampaignStatsCards stats={stats} />}
 
       {/* LinkedIn Rate Limits Section */}
-      {stats?.linkedin_rate_limits && (
+      {(stats as any)?.linkedin_rate_limits && (() => {
+        const linkedinStats = (stats as any).linkedin_rate_limits;
+        return (
         <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0]">
           <div className="flex items-center gap-4 mb-6">
             <Avatar className="w-11 h-11 bg-[#0A66C2]/10 border border-[#0A66C2]/30 shadow-sm">
@@ -263,7 +265,7 @@ export default function CampaignsListPage() {
               </p>
             </div>
             <Badge className="font-semibold bg-[#0A66C2]/10 text-[#0A66C2] text-xs">
-              {stats.linkedin_rate_limits.usage.weekly_percentage}% Used
+              {linkedinStats.usage.weekly_percentage}% Used
             </Badge>
           </div>
 
@@ -291,18 +293,18 @@ export default function CampaignsListPage() {
                 </div>
                 <div className="flex items-baseline gap-2 mb-3">
                   <p className="text-3xl font-bold text-[#0b1957]">
-                    {stats.linkedin_rate_limits.daily.max}
+                    {linkedinStats.daily.max}
                   </p>
                   <p className="text-sm text-[#64748B]">connections/day</p>
                 </div>
                 <div className="pt-4 border-t border-[#E2E8F0]">
                   <p className="text-xs text-[#64748B] mb-1">
                     Total accounts:{" "}
-                    {stats.linkedin_rate_limits.daily.account_count}
+                    {linkedinStats.daily.account_count}
                   </p>
                   <p className="text-xs font-medium text-[#0b1957]">
                     Total daily capacity:{" "}
-                    {stats.linkedin_rate_limits.daily.total}
+                    {linkedinStats.daily.total}
                   </p>
                 </div>
               </CardContent>
@@ -330,17 +332,17 @@ export default function CampaignsListPage() {
                 </div>
                 <div className="flex items-baseline gap-2 mb-3">
                   <p className="text-3xl font-bold text-[#0b1957]">
-                    {stats.linkedin_rate_limits.weekly.max}
+                    {linkedinStats.weekly.max}
                   </p>
                   <p className="text-sm text-[#64748B]">connections/week</p>
                 </div>
                 <div className="pt-4 border-t border-[#E2E8F0]">
                   <p className="text-xs text-[#64748B] mb-1">
-                    Total capacity: {stats.linkedin_rate_limits.weekly.total}
+                    Total capacity: {linkedinStats.weekly.total}
                   </p>
                   <p className="text-xs font-medium text-[#0b1957]">
                     Used this week:{" "}
-                    {stats.linkedin_rate_limits.usage.sent_last_7_days}
+                    {linkedinStats.usage.sent_last_7_days}
                   </p>
                 </div>
               </CardContent>
@@ -367,20 +369,20 @@ export default function CampaignsListPage() {
 
                 {/* Simple Bar Chart for 7-Day Activity */}
                 <div className="space-y-3">
-                  {stats?.linkedin_rate_limits?.usage?.daily_breakdown?.length >
+                  {linkedinStats?.usage?.daily_breakdown?.length >
                   0 ? (
                     (() => {
                       const maxInBreakdown = Math.max(
-                        ...(stats?.linkedin_rate_limits?.usage?.daily_breakdown?.map(
+                        ...(linkedinStats?.usage?.daily_breakdown?.map(
                           (d: any) => parseInt(d.sent),
                         ) || [1]),
                       );
                       const maxCapacity = Math.max(
-                        stats?.linkedin_rate_limits?.daily?.total || 1,
+                        linkedinStats?.daily?.total || 1,
                         maxInBreakdown,
                       );
 
-                      return stats?.linkedin_rate_limits?.usage?.daily_breakdown?.map(
+                      return linkedinStats?.usage?.daily_breakdown?.map(
                         (day: any, idx: number) => {
                           const percentage =
                             (parseInt(day.sent) / maxCapacity) * 100;
@@ -426,14 +428,14 @@ export default function CampaignsListPage() {
                   <div className="text-center">
                     <p className="text-xs text-[#64748B] mb-1">Total Sent</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {stats?.linkedin_rate_limits?.usage?.sent_last_7_days ??
+                      {linkedinStats?.usage?.sent_last_7_days ??
                         0}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-[#64748B] mb-1">Weekly Limit</p>
                     <p className="text-2xl font-bold text-[#0b1957]">
-                      {stats?.linkedin_rate_limits?.weekly?.total ?? 0}
+                      {linkedinStats?.weekly?.total ?? 0}
                     </p>
                   </div>
                   <div className="text-center">
@@ -442,14 +444,14 @@ export default function CampaignsListPage() {
                       className={`text-2xl font-bold ${
                         parseInt(
                           String(
-                            stats?.linkedin_rate_limits?.usage
+                            linkedinStats?.usage
                               ?.weekly_percentage ?? 0,
                           ),
                         ) > 90
                           ? "text-red-600"
                           : parseInt(
                                 String(
-                                  stats?.linkedin_rate_limits?.usage
+                                  linkedinStats?.usage
                                     ?.weekly_percentage ?? 0,
                                 ),
                               ) > 70
@@ -457,7 +459,7 @@ export default function CampaignsListPage() {
                             : "text-green-600"
                       }`}
                     >
-                      {stats?.linkedin_rate_limits?.usage?.weekly_percentage ??
+                      {linkedinStats?.usage?.weekly_percentage ??
                         0}
                       %
                     </p>
@@ -467,7 +469,8 @@ export default function CampaignsListPage() {
             </Card>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Active Filter Banner */}
       {statusFilter !== "all" && (
