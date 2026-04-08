@@ -43,6 +43,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
@@ -289,6 +290,10 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           onExport={handleExport}
           onBlock={handleBlock}
           onDelete={handleDelete}
+          onOpenAssignmentPanel={() => {
+            setContextPanelTab('assignment');
+            if (!isContextPanelOpen) setIsContextPanelOpen(true);
+          }}
         />
       )}
 
@@ -306,6 +311,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               conversation={typedSelectedConversation}
               onClose={toggleContextPanel}
               backendChannel={channel}
+              defaultTab={contextPanelTab}
             />
           </motion.div>
         )}

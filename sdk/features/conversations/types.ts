@@ -40,8 +40,13 @@ export interface Message {
     name: string;
   };
   attachments?: Attachment[];
+  /** 'user' = lead | 'assistant' = AI | 'human_agent' = human takeover */
   role?: string;
   intent?: string;
+  /** Display name of the human agent who sent this message (if role='human_agent') */
+  senderName?: string;
+  /** User ID of the human agent (if stored in message metadata) */
+  humanAgentId?: string;
 }
 
 export interface Attachment {
