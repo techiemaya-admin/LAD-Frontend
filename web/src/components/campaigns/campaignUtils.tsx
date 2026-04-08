@@ -230,8 +230,9 @@ export const renderActionChips = (campaign: Campaign) => {
     const config = PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] || { name: platform, color: '#64748B', bgColor: '#F1F5F9' };
     const actionText = actionNames.join(', ');
 
-    // For LinkedIn, add metrics to the tooltip
-    let tooltipContent = `${config.name}: ${actionText}`;
+    // Build detailed tooltip content for each platform
+    let tooltipContent: React.ReactElement | string = `${config.name}: ${actionText}`;
+
     if (platform === 'linkedin') {
       const li = pd.linkedin || {};
       const visits = li.profile_views ?? 0;
@@ -252,6 +253,102 @@ export const renderActionChips = (campaign: Campaign) => {
             <div className="flex items-center gap-1.5">
               <CheckCircle className="w-3 h-3 text-green-500" />
               <span>Connections: <strong>{accepted}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'email') {
+      const em = pd.email || {};
+      const sent = em.sent ?? 0;
+      const opens = em.opened ?? 0;
+      const replies = em.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#F59E0B]" />
+              <span>Emails Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-gray-400" />
+              <span>Emails Opened: <strong>{opens}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Email Replies: <strong>{replies}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'whatsapp') {
+      const wa = pd.whatsapp || {};
+      const sent = wa.sent ?? 0;
+      const delivered = wa.delivered ?? 0;
+      const replies = wa.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#25D366]" />
+              <span>Messages Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-[#25D366]" />
+              <span>Delivered: <strong>{delivered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Replies: <strong>{replies}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'voice') {
+      const vc = pd.voice || {};
+      const calls = vc.sent ?? 0;
+      const answered = vc.connected ?? 0;
+      const voiceMsgs = vc.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Phone className="w-3 h-3 text-[#8B5CF6]" />
+              <span>Calls Made: <strong>{calls}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Calls Answered: <strong>{answered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Voicemails / Callbacks: <strong>{voiceMsgs}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'instagram') {
+      const ig = pd.instagram || {};
+      const sent = ig.sent ?? 0;
+      const delivered = ig.delivered ?? 0;
+      const replies = ig.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#E4405F]" />
+              <span>Messages Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-[#E4405F]" />
+              <span>Delivered: <strong>{delivered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Replies: <strong>{replies}</strong></span>
             </div>
           </div>
         </div>
