@@ -279,15 +279,14 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="px-6">
-              <Table>
+            <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-white">
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
-                        className={`font-semibold text-[#1E293B] whitespace-nowrap ${
+                        className={`font-semibold text-[#1E293B] whitespace-nowrap px-6 ${
                           header.column.getCanSort() ? 'cursor-pointer select-none' : ''
                         }`}
                         onClick={header.column.getToggleSortingHandler()}
@@ -334,7 +333,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                       onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} className="px-6">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -343,7 +342,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 )}
               </TableBody>
             </Table>
-            </div>
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
