@@ -8,18 +8,6 @@ import { useEffect, useState } from 'react';
 export default function HeroSection() {
   const [displayedStats, setDisplayedStats] = useState([0, 0, 0]);
 
-  // Animated gradient background
-  const backgroundVariants = {
-    animate: {
-      backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
-      transition: {
-        duration: 15,
-        repeat: Infinity,
-        ease: 'linear'
-      }
-    }
-  };
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -83,16 +71,11 @@ export default function HeroSection() {
       animate="visible"
       variants={containerVariants}
     >
-      {/* Animated gradient background */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-[#dbdbdb] via-[#f0f0f0] to-[#dbdbdb]"
-        style={{ backgroundSize: '200% 200%' }}
-        animate="animate"
-        variants={backgroundVariants}
+      {/* Solid background */}
+      <div
+        className="absolute inset-0 bg-[#dadada]"
       />
 
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 opacity-60 bg-gradient-to-t from-white via-transparent to-transparent" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
