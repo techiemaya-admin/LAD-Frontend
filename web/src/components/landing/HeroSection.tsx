@@ -3,36 +3,109 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 export default function HeroSection() {
+  const [displayedStats, setDisplayedStats] = useState([0, 0, 0]);
+
+  // Animated gradient background
+  const backgroundVariants = {
+    animate: {
+      backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
+      transition: {
+        duration: 15,
+        repeat: Infinity,
+        ease: 'linear'
+      }
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        delayChildren: 0.3,
-        staggerChildren: 0.2
+        delayChildren: 0.2,
+        staggerChildren: 0.1
       }
     }
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { y: 30, opacity: 0 },
     visible: {
       y: 0,
-      opacity: 1
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 100,
+        damping: 20
+      }
     }
   };
 
+  // Floating animation for hero image
+  const floatVariants = {
+    animate: {
+      y: [-20, 20, -20],
+      rotate: [-2, 2, -2],
+      transition: {
+        duration: 6,
+        repeat: Infinity,
+        ease: 'easeInOut'
+      }
+    }
+  };
+
+  // Stat counter animation
+  const statVariants = {
+    hidden: { opacity: 0, scale: 0.5 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 100,
+        damping: 15
+      }
+    },
+    hover: {
+      scale: 1.1,
+      backgroundColor: 'rgba(11, 25, 87, 0.05)',
+      transition: { duration: 0.2 }
+    }
+  };
+
+  // Counter hook for animated numbers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayedStats(prev => [
+        prev[0] < 10 ? prev[0] + 0.5 : 10,
+        prev[1] < 95 ? prev[1] + 2 : 95,
+        prev[2] < 24 ? prev[2] + 0.8 : 24
+      ]);
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <motion.section 
+    <motion.section
       className="relative overflow-hidden py-20"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-[#dbdbdb]" />
+      {/* Animated gradient background */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-br from-[#dbdbdb] via-[#f0f0f0] to-[#dbdbdb]"
+        style={{ backgroundSize: '200% 200%' }}
+        animate="animate"
+        variants={backgroundVariants}
+      />
+
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 opacity-60 bg-gradient-to-t from-white via-transparent to-transparent" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -70,21 +143,33 @@ export default function HeroSection() {
               and traders.
             </motion.p>
 
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="flex flex-wrap gap-4"
             >
               <Link href="/onboarding">
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-8 py-4 bg-[#0b1957] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+                  animate={{
+                    boxShadow: [
+                      '0 10px 20px rgba(11, 25, 87, 0.1)',
+                      '0 15px 30px rgba(11, 25, 87, 0.2)',
+                      '0 10px 20px rgba(11, 25, 87, 0.1)'
+                    ]
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: 'easeInOut'
+                  }}
+                  className="px-8 py-4 bg-[#0b1957] text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
                 >
                   Get Started
                 </motion.button>
               </Link>
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)' }}
                 whileTap={{ scale: 0.95 }}
                 className="px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
               >
@@ -92,26 +177,35 @@ export default function HeroSection() {
               </motion.button>
             </motion.div>
 
-            {/* Stats */}
-            <motion.div 
+            {/* Stats with animated counters */}
+            <motion.div
               variants={itemVariants}
               className="grid grid-cols-3 gap-6 pt-8"
             >
               {[
-                { value: "10x", label: "Faster Closures" },
-                { value: "95%", label: "Success Rate" },
-                { value: "24/7", label: "AI Availability" },
+                { value: displayedStats[0].toFixed(0), suffix: "x", label: "Faster Closures" },
+                { value: displayedStats[1].toFixed(0), suffix: "%", label: "Success Rate" },
+                { value: displayedStats[2].toFixed(0), suffix: "/7", label: "AI Availability" },
               ].map((stat, i) => (
                 <motion.div
                   key={i}
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center"
+                  variants={statVariants}
+                  whileHover="hover"
+                  className="text-center p-4 rounded-xl backdrop-blur-sm bg-white/30 dark:bg-gray-800/30 border border-white/20 dark:border-gray-700/20 transition-colors"
                 >
-                  <div className="text-3xl font-bold text-[#0b1957]">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <motion.div
+                    className="text-3xl font-bold text-[#0b1957] dark:text-white"
+                    animate={{
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                      duration: 0.3,
+                      ease: 'easeOut'
+                    }}
+                  >
+                    {stat.value}{stat.suffix}
+                  </motion.div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 font-medium">
                     {stat.label}
                   </div>
                 </motion.div>
@@ -119,19 +213,33 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Right: Image */}
+          {/* Right: Image with floating animation */}
           <motion.div
             variants={itemVariants}
-            whileHover={{ scale: 1.02 }}
-            className="mt-8"
+            animate="animate"
+            variants={floatVariants}
+            whileHover={{ scale: 1.05 }}
+            className="mt-8 relative"
           >
+            {/* Glow effect behind image */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-3xl blur-3xl"
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+            />
             <Image
               src="/lad.png"
               alt="LAD Platform"
               width={600}
               height={400}
               priority
-              className="w-full"
+              className="w-full relative z-10 rounded-2xl shadow-2xl"
             />
           </motion.div>
         </div>
