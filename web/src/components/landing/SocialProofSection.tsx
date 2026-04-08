@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Star, Check } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 export default function SocialProofSection() {
   const testimonials = [
@@ -43,41 +43,6 @@ export default function SocialProofSection() {
     }
   ];
 
-  const caseStudies = [
-    {
-      title: 'B2B SaaS: 300% Revenue Growth',
-      description: 'Startup scaled from $50K to $150K MRR in 90 days using LAD',
-      stat1: { label: 'Pipeline Growth', value: '300%' },
-      stat2: { label: 'New Team Members', value: 'Zero' },
-      stat3: { label: 'Cost Reduction', value: '92%' },
-      color: 'from-blue-500 to-cyan-500'
-    },
-    {
-      title: 'Wholesale: 500+ Deals Monthly',
-      description: 'Automated bulk negotiations across 50+ suppliers with LAD',
-      stat1: { label: 'Monthly Deals', value: '500+' },
-      stat2: { label: 'Time Saved', value: '400 hrs/mo' },
-      stat3: { label: 'Revenue/Agent', value: '2x' },
-      color: 'from-green-500 to-emerald-500'
-    },
-    {
-      title: 'Real Estate: 50+ Viewings Weekly',
-      description: 'AI handles buyer qualification and viewing scheduling automatically',
-      stat1: { label: 'Weekly Viewings', value: '50+' },
-      stat2: { label: 'Conversion Rate', value: '70%' },
-      stat3: { label: 'Response Time', value: '< 1min' },
-      color: 'from-purple-500 to-pink-500'
-    }
-  ];
-
-  const features = [
-    'SOC 2 Certified',
-    'GDPR Compliant',
-    '99.9% Uptime SLA',
-    'ISO 27001',
-    'Enterprise Security',
-    'Dedicated Support'
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -183,86 +148,6 @@ export default function SocialProofSection() {
           ))}
         </motion.div>
 
-        {/* Case Studies Section */}
-        <motion.div
-          variants={itemVariants}
-          className="mb-16"
-        >
-          <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-            Case Studies
-          </h3>
-          <motion.div
-            className="grid md:grid-cols-3 gap-6"
-            variants={containerVariants}
-          >
-            {caseStudies.map((caseStudy, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                whileHover={{ scale: 1.05 }}
-                className="p-6 rounded-xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow"
-              >
-                {/* Top accent bar */}
-                <div className={`w-full h-1 bg-gradient-to-r ${caseStudy.color} rounded-full mb-4`} />
-
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {caseStudy.title}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
-                  {caseStudy.description}
-                </p>
-
-                {/* Stats */}
-                <div className="space-y-3">
-                  {[caseStudy.stat1, caseStudy.stat2, caseStudy.stat3].map((stat, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="flex justify-between items-center p-3 bg-white/50 dark:bg-gray-700/50 rounded-lg"
-                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.7)' }}
-                    >
-                      <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">
-                        {stat.label}
-                      </span>
-                      <span className="text-xl font-bold text-[#0b1957] dark:text-blue-400">
-                        {stat.value}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
-        {/* Trust & Security Badges */}
-        <motion.div
-          variants={itemVariants}
-          className="text-center"
-        >
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
-            Enterprise Grade Security & Compliance
-          </h3>
-          <motion.div
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
-            variants={containerVariants}
-          >
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                whileHover={{ scale: 1.1, y: -5 }}
-                className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-gray-700"
-              >
-                <div className="flex items-center justify-center mb-2">
-                  <Check className="w-6 h-6 text-green-500" />
-                </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white text-center">
-                  {feature}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
 
         {/* Stats Counter */}
         <motion.div
