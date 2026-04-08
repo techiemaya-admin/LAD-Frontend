@@ -44,19 +44,6 @@ export default function HeroSection() {
     }
   };
 
-  // Floating animation for hero image
-  const floatVariants = {
-    animate: {
-      y: [-20, 20, -20],
-      rotate: [-2, 2, -2],
-      transition: {
-        duration: 6,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }
-    }
-  };
-
   // Stat counter animation
   const statVariants = {
     hidden: { opacity: 0, scale: 0.5 },
@@ -213,12 +200,9 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Right: Image with floating animation */}
+          {/* Right: Image */}
           <motion.div
             variants={itemVariants}
-            animate="animate"
-            variants={floatVariants}
-            whileHover={{ scale: 1.05 }}
             className="mt-8"
           >
             <Image
