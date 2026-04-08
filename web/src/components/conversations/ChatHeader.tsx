@@ -35,6 +35,7 @@ import {
   Trash2,
   Star,
   MailCheck,
+  Search,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSettings } from './MessageSettings';
@@ -142,14 +143,27 @@ export const ChatHeader = memo(function ChatHeader({
         </div>
 
         {/* Right section - Actions */}
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:flex">
-            <Phone className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          {/* Label chat button */}
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 hidden sm:flex text-xs">
+            <span>Label chat</span>
+            <MoreVertical className="h-3 w-3" />
           </Button>
+
+          {/* Call button */}
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 hidden sm:flex text-xs">
+            <Phone className="h-3.5 w-3.5" />
+            <span>Call</span>
+            <MoreVertical className="h-3 w-3" />
+          </Button>
+
           <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:flex">
             <Video className="h-4 w-4" />
           </Button>
 
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Search className="h-4 w-4" />
+          </Button>
 
           <MessageSettings />
 
