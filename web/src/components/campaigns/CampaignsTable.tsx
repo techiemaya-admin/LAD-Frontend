@@ -175,7 +175,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Filters Section */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+      <div className="p-4 border-b border-[#E2E8F0] bg-white">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
           <div className="relative min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
@@ -283,7 +283,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
               <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-[#F8FAFC]">
+                  <TableRow key={headerGroup.id} className="bg-white">
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
