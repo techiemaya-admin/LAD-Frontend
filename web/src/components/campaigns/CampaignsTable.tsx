@@ -49,6 +49,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     pageIndex: 0,
     pageSize: 10,
   });
+  const [columnSizing, setColumnSizing] = React.useState({
+    name: 300,
+  });
   
   // Local filter states
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -87,6 +90,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     columnHelper.accessor('name', {
       id: 'name',
       header: 'Campaign Name',
+      size: 300,
       cell: ({ getValue }) => (
         <span className="text-sm font-semibold capitalize">
           {getValue()}
@@ -155,15 +159,22 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
+    onColumnSizingChange: setColumnSizing,
     state: {
       sorting,
       columnFilters,
       pagination,
+      columnSizing,
+    },
+    columnSizingInfo: {
+      start: 0,
+      delta: 0,
     },
   });
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="px-6 py-4">
+      <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Filters Section */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
@@ -405,6 +416,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             )}
           </div>
         )}
+      </div>
     </div>
   );
 }
