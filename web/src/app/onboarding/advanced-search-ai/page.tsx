@@ -359,6 +359,40 @@ function isConfirmation(text: string): boolean {
     return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
 }
 
+/**
+ * Detect whether a user query is a generic COMPANY-TYPE search
+ * (e.g. "decision makers in hotels with swimming pools in Dubai")
+ * rather than a direct LinkedIn role/industry/location search.
+ *
+ * When true, the query is routed to the enriched prospect discovery pipeline
+ * (Claude company discovery → Serper → Unipile → Apollo → ICP scoring)
+ * instead of searching LinkedIn directly.
+ */
+function isGenericCompanySearchQuery(text: string): boolean {
+    const lower = text.toLowerCase();
+
+    // Must contain a company category noun
+    const hasCompanyType = /\b(hotel|resort|hospital|clinic|pharmacy|school|university|college|bank|restaurant|cafe|coffee\s*shop|salon|spa|gym|fitness\s*(studio|center|club)|mall|shopping\s*(center|centre)|construction\s*(firm|company|compan)|real\s*estate|property\s*(developer|management|firm)|law\s*firm|accounting\s*firm|insurance\s*(compan|firm|broker)|retail(er|er|\s*store|\s*shop|\s*chain)?|supermarket|car\s*(dealership|showroom)|automotive|manufactur|factory|factories|startup|tech\s*compan|software\s*compan|recruitment\s*agenc|staffing\s*agenc|advertising\s*agenc|marketing\s*agenc|logistics\s*compan|travel\s*agenc|tourism\s*compan)\b/i.test(text);
+    if (!hasCompanyType) return false;
+
+    // Must contain a location reference
+    const hasLocation = /\b(in|from|across|based in|located in|around|within)\s+\w+/i.test(text)
+        || /\b(dubai|uae|abu dhabi|sharjah|ajman|riyadh|jeddah|saudi|ksa|qatar|doha|kuwait|bahrain|oman|muscat|london|uk|new york|usa|singapore|india|mumbai|delhi|cairo|egypt|beirut|jordan|istanbul|turkey|australia|canada|germany|france|paris)\b/i.test(lower);
+    if (!hasLocation) return false;
+
+    // Attribute qualifier: "which have", "with pools", "having", "that offer" etc.
+    const hasAttributeQualifier = /\b(with\b|having\b|which\s+(have|has|had|contain|offer|provide|include|feature)|that\s+(have|has|had|offer|provide|sell|serve|include|feature|contain|are|is)|featuring\b|equipped\s+with|known\s+for|famous\s+for|speciali[sz]ing\s+in|\d+[-\s]?star|5[-\s]?star|luxury\b|boutique\b|premium\b|high[-\s]end)\b/i.test(text);
+    if (hasAttributeQualifier) return true;
+
+    // Generic company plural nouns
+    if (/\b(companies|businesses|firms|agencies|stores|establishments|outlets|chains|brands|operators|venues|properties|facilities)\b/i.test(lower)) return true;
+
+    // Decision maker + company type (strongly indicates generic company search)
+    if (/\b(decision[\s-]?maker|gm\b|general\s*manager|managing\s*director|md\b|ceo\b|owner\b|proprietor|director\s+of|head\s+of|vp\s+of|vice\s*president|operations\s*manager)\b/i.test(lower)) return true;
+
+    return false;
+}
+
 /* ═══════════════════════════════════════════════
    TARGETING FILTER OPTIONS (CONSTANTS)
    ═══════════════════════════════════════════════ */
@@ -560,6 +594,14 @@ export default function AdvancedSearchAIPage() {
     const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
+
+    // Generic prospect search (company-type intent queries)
+    // ── lastSearchType: distinguishes LinkedIn search from generic prospect search ──
+    const [lastSearchType, setLastSearchType] = useState<'linkedin' | 'generic_prospect'>('linkedin');
+    // ── seenProspectIds: LinkedIn URLs / provider IDs already returned so "Get More" deduplicates ──
+    const [seenProspectIds, setSeenProspectIds] = useState<string[]>([]);
+    // ── lastProspectQuery: the original natural-language query for "Get More" re-runs ──
+    const [lastProspectQuery, setLastProspectQuery] = useState<string>('');
 
     // Premium (Sales Navigator) search toggle
     const [useSalesNav, setUseSalesNav] = useState(false);
@@ -1902,6 +1944,86 @@ export default function AdvancedSearchAIPage() {
                         if (chatD.summaryUpdate) {
                             setConversationSummary(prev => prev ? `${prev}\n${chatD.summaryUpdate}` : chatD.summaryUpdate);
                         }
+                        // ── Generic prospect search: route to enriched discovery pipeline ──
+                        if (chatD.newSearch && chatD.searchType === 'generic_prospect') {
+                            // Show the AI's loading message immediately
+                            setMessages(p => p.filter(m => m.id !== lid).concat({
+                                id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(),
+                            }));
+                            setIsSearching(true);
+                            setActivities([]);
+
+                            const prospectQuery = chatD.originalQuery || text;
+                            setLastProspectQuery(prospectQuery);
+                            setLastSearchType('generic_prospect');
+                            setSeenProspectIds([]);
+                            setLeads([]);
+
+                            try {
+                                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        query:      prospectQuery,
+                                        icpProfile: businessProfile,
+                                        sessionId:  `gps-${Date.now()}`,
+                                        seenIds:    [],
+                                        batchSize:  leadCount,
+                                    }),
+                                });
+                                const d = await resp.json();
+                                setIsSearching(false);
+                                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                                    const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                        id:               item.id || `gps-${idx}`,
+                                        name:             item.name || 'Unknown',
+                                        first_name:       item.first_name || '',
+                                        last_name:        item.last_name  || '',
+                                        headline:         item.headline   || item.decision_maker_title || '',
+                                        location:         item.location   || '',
+                                        current_company:  item.current_company || '',
+                                        profile_url:      item.profile_url || '',
+                                        profile_picture:  item.profile_picture || '',
+                                        industry:         item.industry || item.company_type || '',
+                                        network_distance: '',
+                                        locked:           idx >= 5,
+                                        phone:            item.phone || item.company_phone || '',
+                                        email:            item.email || '',
+                                        icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                        match_level:      item.match_level  || undefined,
+                                        icp_reasoning:    item.icp_reasoning || undefined,
+                                        enriched_profile: item.enriched_profile || undefined,
+                                    }));
+                                    setLeads(prospectLeads);
+                                    setShowPanel('leads');
+                                    // Track seen IDs for "get more" dedup
+                                    setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                                    setNoMoreLeads(!d.hasMore);
+                                    setTotalResults(d.total || prospectLeads.length);
+                                    setMessages(p => p.concat({
+                                        id: `a-sr-${Date.now()}`, role: 'ai',
+                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        ts: new Date(),
+                                    }));
+                                } else {
+                                    setMessages(p => p.concat({
+                                        id: `a-err-${Date.now()}`, role: 'ai',
+                                        text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — for example: *"General Managers at 5-star hotels in Dubai"* or *"CEOs of construction companies in Saudi Arabia"*.`,
+                                        ts: new Date(),
+                                    }));
+                                }
+                            } catch (prospectErr) {
+                                setIsSearching(false);
+                                console.error('[ProspectSearch] error', prospectErr);
+                                setMessages(p => p.concat({
+                                    id: `a-err-${Date.now()}`, role: 'ai',
+                                    text: `⚠️ Prospect search failed. Please try again or rephrase your query.`,
+                                    ts: new Date(),
+                                }));
+                            }
+                            setBusy(false);
+                            return;
+                        }
                     }
                 } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
 
@@ -1932,6 +2054,91 @@ export default function AdvancedSearchAIPage() {
                         // Clear the AI response so we show search results, not the chat response
                         aiResponseText = '';
                     }
+                }
+
+                // ── FRONTEND GENERIC PROSPECT SEARCH SAFETY NET ──────────────────
+                // If the backend didn't return searchType:'generic_prospect' but the query
+                // clearly describes a company TYPE + attribute/location, intercept here and
+                // route directly to the enriched prospect discovery pipeline.
+                // This catches cases where the backend classified the intent as CONTEXT_SEARCH
+                // or extracted LinkedIn keywords instead of detecting the generic pattern.
+                if (shouldRunSearch && isGenericCompanySearchQuery(text)) {
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai',
+                        text: `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts. This may take a moment as I research each prospect.\n\n⚡ *Searching across the web, LinkedIn, and company databases...*`,
+                        ts: new Date(),
+                    }));
+                    setIsSearching(true);
+                    setActivities([]);
+                    setLastProspectQuery(text);
+                    setLastSearchType('generic_prospect');
+                    setSeenProspectIds([]);
+                    setLeads([]);
+
+                    try {
+                        const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query:      text,
+                                icpProfile: businessProfile,
+                                sessionId:  `gps-${Date.now()}`,
+                                seenIds:    [],
+                                batchSize:  leadCount,
+                            }),
+                        });
+                        const d = await resp.json();
+                        setIsSearching(false);
+                        if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                            const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                id:               item.id || `gps-${idx}`,
+                                name:             item.name || 'Unknown',
+                                first_name:       item.first_name || '',
+                                last_name:        item.last_name  || '',
+                                headline:         item.headline   || '',
+                                location:         item.location   || '',
+                                current_company:  item.current_company || '',
+                                profile_url:      item.profile_url || '',
+                                profile_picture:  item.profile_picture || '',
+                                industry:         item.industry || item.company_type || '',
+                                network_distance: '',
+                                locked:           idx >= 5,
+                                phone:            item.phone || item.company_phone || '',
+                                email:            item.email || '',
+                                icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                match_level:      item.match_level  || undefined,
+                                icp_reasoning:    item.icp_reasoning || undefined,
+                                enriched_profile: item.enriched_profile || undefined,
+                            }));
+                            setLeads(prospectLeads);
+                            setShowPanel('leads');
+                            setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                            setNoMoreLeads(!d.hasMore);
+                            setTotalResults(d.total || prospectLeads.length);
+                            const strongMatches = prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length;
+                            setMessages(p => p.concat({
+                                id: `a-sr-${Date.now()}`, role: 'ai',
+                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                ts: new Date(),
+                            }));
+                        } else {
+                            setMessages(p => p.concat({
+                                id: `a-err-${Date.now()}`, role: 'ai',
+                                text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — e.g. *"GMs at 5-star hotels in Dubai"* or *"owners of gyms in Abu Dhabi"*.`,
+                                ts: new Date(),
+                            }));
+                        }
+                    } catch (prospectErr) {
+                        setIsSearching(false);
+                        console.error('[ProspectSearch] error', prospectErr);
+                        setMessages(p => p.concat({
+                            id: `a-err-${Date.now()}`, role: 'ai',
+                            text: `⚠️ Prospect search failed. Please try again.`,
+                            ts: new Date(),
+                        }));
+                    }
+                    setBusy(false);
+                    return;
                 }
 
                 if (!shouldRunSearch && aiResponseText) {
@@ -2119,6 +2326,7 @@ export default function AdvancedSearchAIPage() {
                     setLastSearchQuery(searchQuery);
                     setLastIcpDescription(icpBase);
                     setLastTargeting(ext);
+                    setLastSearchType('linkedin'); // mark as LinkedIn search for loadMore routing
                     addSearchSession(searchQuery, ext, icpBase);
                     setSearchPage(1);
                     setTotalResults(d.total || 0);
@@ -2560,6 +2768,9 @@ export default function AdvancedSearchAIPage() {
         setLastSearchQuery('');
         setLastIcpDescription('');
         setLastTargeting(null);
+        setLastSearchType('linkedin');
+        setSeenProspectIds([]);
+        setLastProspectQuery('');
         setCpStep(-1);
         setTgStep(-1);
         setTgNationality([]);
@@ -2574,6 +2785,59 @@ export default function AdvancedSearchAIPage() {
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
+        // ── Generic prospect search: "Get More" calls prospect-search with seenIds ──
+        if (lastSearchType === 'generic_prospect') {
+            if (loadingMore || !lastProspectQuery) return;
+            setLoadingMore(true);
+            try {
+                setIsSearching(true);
+                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query:      lastProspectQuery,
+                        icpProfile: businessProfile,
+                        sessionId:  `gps-more-${Date.now()}`,
+                        seenIds:    seenProspectIds,
+                        batchSize:  leadCount,
+                    }),
+                });
+                const d = await resp.json();
+                setIsSearching(false);
+                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                    const existingCount = leads.length;
+                    const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                        id:               item.id || `gps-more-${existingCount + idx}`,
+                        name:             item.name || 'Unknown',
+                        first_name:       item.first_name || '',
+                        last_name:        item.last_name  || '',
+                        headline:         item.headline || '',
+                        location:         item.location || '',
+                        current_company:  item.current_company || '',
+                        profile_url:      item.profile_url || '',
+                        profile_picture:  item.profile_picture || '',
+                        industry:         item.industry || '',
+                        network_distance: '',
+                        locked:           (existingCount + idx) >= 5,
+                        phone:            item.phone || '',
+                        email:            item.email || '',
+                        icp_score:        item.icp_score != null ? item.icp_score : undefined,
+                        match_level:      item.match_level || undefined,
+                        icp_reasoning:    item.icp_reasoning || undefined,
+                        enriched_profile: item.enriched_profile || undefined,
+                    }));
+                    setLeads(prev => [...prev, ...moreLeads]);
+                    setSeenProspectIds(prev => [...prev, ...moreLeads.map(l => l.profile_url || l.id)]);
+                    if (!d.hasMore) setNoMoreLeads(true);
+                } else {
+                    setNoMoreLeads(true);
+                }
+            } catch (e) { console.error('[LoadMore:GenericProspect] error', e); setIsSearching(false); }
+            setLoadingMore(false);
+            return;
+        }
+
+        // ── Standard LinkedIn search "Get More" ───────────────────────────────────
         if (loadingMore || !lastSearchQuery) return;
 
         setLoadingMore(true);
