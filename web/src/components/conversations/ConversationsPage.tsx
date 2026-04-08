@@ -42,7 +42,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
   } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
@@ -398,7 +398,7 @@ export function ConversationsPage() {
               className={cn(
                 'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
                 activeTab === id
-                  ? 'bg-slate-900 text-white shadow-sm'
+                  ? 'bg-[#25D366] text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
             >
