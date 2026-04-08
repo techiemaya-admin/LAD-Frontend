@@ -219,27 +219,15 @@ export default function HeroSection() {
             animate="animate"
             variants={floatVariants}
             whileHover={{ scale: 1.05 }}
-            className="mt-8 relative"
+            className="mt-8"
           >
-            {/* Glow effect behind image */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-3xl blur-3xl"
-              animate={{
-                opacity: [0.5, 0.8, 0.5],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-            />
             <Image
               src="/lad.png"
               alt="LAD Platform"
               width={600}
               height={400}
               priority
-              className="w-full relative z-10 rounded-2xl shadow-2xl"
+              className="w-full rounded-2xl shadow-2xl"
             />
           </motion.div>
         </div>
