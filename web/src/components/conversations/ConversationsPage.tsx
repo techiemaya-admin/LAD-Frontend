@@ -369,6 +369,20 @@ function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTa
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Get brand color for tab
+// ─────────────────────────────────────────────────────────────────────────────
+function getTabColor(tabId: WaTab): string {
+  switch (tabId) {
+    case 'personal':
+      return '#25D366'; // WhatsApp green
+    case 'waba':
+      return '#128C7E'; // WhatsApp Business teal
+    case 'linkedin':
+      return '#0077B5'; // LinkedIn blue
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Page shell — handles only tab + AI playground state
 // ─────────────────────────────────────────────────────────────────────────────
 export function ConversationsPage() {
@@ -398,9 +412,10 @@ export function ConversationsPage() {
               className={cn(
                 'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
                 activeTab === id
-                  ? 'bg-[#25D366] text-white shadow-sm'
+                  ? 'text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
+              style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
             >
               <ChannelIcon
                 channel={sublabel as any}
