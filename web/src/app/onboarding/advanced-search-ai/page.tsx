@@ -36,6 +36,8 @@ interface LeadTargeting {
     company_age?: string[];
     decision_maker_education?: string[];
     decision_maker_skills?: string[];
+    posted_recently?: boolean; // true = only show leads who posted on LinkedIn in the last 3 months
+    nationality_filter?: string[]; // nationalities extracted by AI from chat (e.g. ["Indian"])
 }
 
 interface LeadProfile {
@@ -63,6 +65,8 @@ interface LeadProfile {
         skills: string[];
     };
     inferred?: Record<string, any>;
+    inferred_nationality?: string;
+    nationality_confidence?: number;
 }
 
 interface ParsedInboundLead {
@@ -157,6 +161,44 @@ function avatarColor(name: string): string {
     let h = 0;
     for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
     return colors[Math.abs(h) % colors.length];
+}
+
+/**
+ * Resolve the best LinkedIn profile URL from an API result item.
+ * Priority:
+ *  1. profile_url (already normalised by backend to public_profile_url when available)
+ *  2. public_profile_url (explicit standard LinkedIn URL)
+ *  3. linkedin_url (alternative field name)
+ *  4. Constructed from public_identifier (slug)
+ * Only keeps URLs that point to a real LinkedIn profile (linkedin.com/in/).
+ */
+function resolveProfileUrl(item: any): string {
+    const candidates = [
+        item.profile_url,
+        item.public_profile_url,
+        item.linkedin_url,
+    ].filter((u): u is string => typeof u === 'string' && u.startsWith('http'));
+
+    // Prefer standard linkedin.com/in/ URLs over sales/lead/ URLs
+    const standard = candidates.find(u => u.includes('linkedin.com/in/'));
+    if (standard) return standard;
+    // Fallback: any http URL (covers Sales Nav URLs too)
+    if (candidates.length > 0) return candidates[0];
+    // Last resort: construct from public_identifier slug
+    if (item.public_identifier && typeof item.public_identifier === 'string') {
+        return `https://www.linkedin.com/in/${item.public_identifier}`;
+    }
+    return '';
+}
+
+/**
+ * Compute the display match level from the actual icp_score.
+ * Gemini's match_level label can be inconsistent (e.g. 'weak' for score 52).
+ * Using the score directly ensures the badge colour reflects what the user sees.
+ */
+function scoreToMatchLevel(score: number | undefined): 'strong' | 'moderate' {
+    if ((score ?? 0) >= 70) return 'strong';
+    return 'moderate'; // yellow for everything else — never show red on lead badges
 }
 
 function initials(name: string): string {
@@ -315,6 +357,40 @@ function isInboundIntent(text: string): boolean {
 /** Returns true when the user's reply is a confirmation of a search preview. */
 function isConfirmation(text: string): boolean {
     return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
+}
+
+/**
+ * Detect whether a user query is a generic COMPANY-TYPE search
+ * (e.g. "decision makers in hotels with swimming pools in Dubai")
+ * rather than a direct LinkedIn role/industry/location search.
+ *
+ * When true, the query is routed to the enriched prospect discovery pipeline
+ * (Claude company discovery → Serper → Unipile → Apollo → ICP scoring)
+ * instead of searching LinkedIn directly.
+ */
+function isGenericCompanySearchQuery(text: string): boolean {
+    const lower = text.toLowerCase();
+
+    // Must contain a company category noun
+    const hasCompanyType = /\b(hotel|resort|hospital|clinic|pharmacy|school|university|college|bank|restaurant|cafe|coffee\s*shop|salon|spa|gym|fitness\s*(studio|center|club)|mall|shopping\s*(center|centre)|construction\s*(firm|company|compan)|real\s*estate|property\s*(developer|management|firm)|law\s*firm|accounting\s*firm|insurance\s*(compan|firm|broker)|retail(er|er|\s*store|\s*shop|\s*chain)?|supermarket|car\s*(dealership|showroom)|automotive|manufactur|factory|factories|startup|tech\s*compan|software\s*compan|recruitment\s*agenc|staffing\s*agenc|advertising\s*agenc|marketing\s*agenc|logistics\s*compan|travel\s*agenc|tourism\s*compan)\b/i.test(text);
+    if (!hasCompanyType) return false;
+
+    // Must contain a location reference
+    const hasLocation = /\b(in|from|across|based in|located in|around|within)\s+\w+/i.test(text)
+        || /\b(dubai|uae|abu dhabi|sharjah|ajman|riyadh|jeddah|saudi|ksa|qatar|doha|kuwait|bahrain|oman|muscat|london|uk|new york|usa|singapore|india|mumbai|delhi|cairo|egypt|beirut|jordan|istanbul|turkey|australia|canada|germany|france|paris)\b/i.test(lower);
+    if (!hasLocation) return false;
+
+    // Attribute qualifier: "which have", "with pools", "having", "that offer" etc.
+    const hasAttributeQualifier = /\b(with\b|having\b|which\s+(have|has|had|contain|offer|provide|include|feature)|that\s+(have|has|had|offer|provide|sell|serve|include|feature|contain|are|is)|featuring\b|equipped\s+with|known\s+for|famous\s+for|speciali[sz]ing\s+in|\d+[-\s]?star|5[-\s]?star|luxury\b|boutique\b|premium\b|high[-\s]end)\b/i.test(text);
+    if (hasAttributeQualifier) return true;
+
+    // Generic company plural nouns
+    if (/\b(companies|businesses|firms|agencies|stores|establishments|outlets|chains|brands|operators|venues|properties|facilities)\b/i.test(lower)) return true;
+
+    // Decision maker + company type (strongly indicates generic company search)
+    if (/\b(decision[\s-]?maker|gm\b|general\s*manager|managing\s*director|md\b|ceo\b|owner\b|proprietor|director\s+of|head\s+of|vp\s+of|vice\s*president|operations\s*manager)\b/i.test(lower)) return true;
+
+    return false;
 }
 
 /* ═══════════════════════════════════════════════
@@ -499,13 +575,14 @@ export default function AdvancedSearchAIPage() {
     const [cpWaGenLoading, setCpWaGenLoading] = useState(false);
 
     // Targeting form state (inline in chat)
-    const [tgStep, setTgStep] = useState(-1); // -1 = not started, 0-6 = steps
+    const [tgStep, setTgStep] = useState(-1); // -1 = not started, 0-7 = steps
     const [tgNationality, setTgNationality] = useState<string[]>([]);
     const [tgExperienceLevel, setTgExperienceLevel] = useState<string[]>([]);
     const [tgCompanySize, setTgCompanySize] = useState<string[]>([]);
     const [tgCompanyAge, setTgCompanyAge] = useState<string[]>([]);
     const [tgEducation, setTgEducation] = useState<string[]>([]);
     const [tgSkills, setTgSkills] = useState<string[]>([]);
+    const [tgPostedRecently, setTgPostedRecently] = useState<boolean>(false); // posted on LinkedIn in last 3 months
 
     // convId — stable UUID that identifies this browser session's conversation.
     // Initialised once on mount; reset when the user clicks "New search".
@@ -517,6 +594,14 @@ export default function AdvancedSearchAIPage() {
     const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
+
+    // Generic prospect search (company-type intent queries)
+    // ── lastSearchType: distinguishes LinkedIn search from generic prospect search ──
+    const [lastSearchType, setLastSearchType] = useState<'linkedin' | 'generic_prospect'>('linkedin');
+    // ── seenProspectIds: LinkedIn URLs / provider IDs already returned so "Get More" deduplicates ──
+    const [seenProspectIds, setSeenProspectIds] = useState<string[]>([]);
+    // ── lastProspectQuery: the original natural-language query for "Get More" re-runs ──
+    const [lastProspectQuery, setLastProspectQuery] = useState<string>('');
 
     // Premium (Sales Navigator) search toggle
     const [useSalesNav, setUseSalesNav] = useState(false);
@@ -749,17 +834,17 @@ export default function AdvancedSearchAIPage() {
         setPgBusy(false);
     }, []);
 
-    // Build ICP description from business profile for search injection
+    // Build seller context from business profile — only describes WHAT we sell,
+    // NOT who to target (targetCustomers / icpJobTitles / icpPainPoints are excluded
+    // because they reflect a previous ICP setup and would override the current search query).
     const getBusinessContext = () => {
         const p = businessProfile;
         const parts: string[] = [];
-        if (p.companyDescription) parts.push(`Company: ${p.companyDescription}`);
-        if (p.productsServices) parts.push(`Products/Services: ${p.productsServices}`);
-        if (p.targetCustomers) parts.push(`Target Customers: ${p.targetCustomers}`);
-        if (p.icpJobTitles) parts.push(`Target Job Titles: ${p.icpJobTitles}`);
-        if (p.icpPainPoints) parts.push(`Customer Pain Points: ${p.icpPainPoints}`);
+        if (p.companyDescription) parts.push(`Seller Company: ${p.companyDescription}`);
+        if (p.productsServices) parts.push(`Product/Service Being Sold: ${p.productsServices}`);
         if (p.valueProposition) parts.push(`Value Proposition: ${p.valueProposition}`);
-        if (p.geographicFocus) parts.push(`Geographic Focus: ${p.geographicFocus}`);
+        // Deliberately NOT including targetCustomers, icpJobTitles, icpPainPoints, geographicFocus
+        // — those are set via the current search query and targeting filters, not the business profile.
         return parts.join('\n');
     };
 
@@ -950,6 +1035,50 @@ export default function AdvancedSearchAIPage() {
     const [deleteConfirmation, setDeleteConfirmation] = useState<{ index: number; name: string } | null>(null);
     const [deletingLead, setDeletingLead] = useState(false);
 
+    // ── Restore persisted targeting_filters from localStorage (saved up to 7 days) ─
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lad_targeting_filters');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Only restore if saved within the last 7 days
+                const savedAt = parsed.saved_at ? new Date(parsed.saved_at).getTime() : 0;
+                const ageMs = Date.now() - savedAt;
+                const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+                if (ageMs < sevenDaysMs) {
+                    if (parsed.nationality?.length) setTgNationality(parsed.nationality);
+                    if (parsed.experience_level?.length) setTgExperienceLevel(parsed.experience_level);
+                    if (parsed.company_size?.length) setTgCompanySize(parsed.company_size);
+                    if (parsed.company_age?.length) setTgCompanyAge(parsed.company_age);
+                    if (parsed.education?.length) setTgEducation(parsed.education);
+                    if (parsed.skills?.length) setTgSkills(parsed.skills);
+                    // posted_recently is intentionally NOT restored — it must be explicitly set each session
+                    // Restore into targeting state so searches automatically include filters
+                    if (parsed.nationality?.length || parsed.experience_level?.length || parsed.company_size?.length) {
+                        setTargeting(prev => ({
+                            job_titles: prev?.job_titles || [],
+                            industries: prev?.industries || [],
+                            locations: prev?.locations || [],
+                            keywords: prev?.keywords || [],
+                            ...(prev || {}),
+                            decision_maker_nationality: parsed.nationality?.length ? parsed.nationality : prev?.decision_maker_nationality,
+                            decision_maker_experience_level: parsed.experience_level?.length ? parsed.experience_level : prev?.decision_maker_experience_level,
+                            company_size: parsed.company_size?.length ? parsed.company_size : prev?.company_size,
+                            company_age: parsed.company_age?.length ? parsed.company_age : prev?.company_age,
+                            decision_maker_education: parsed.education?.length ? parsed.education : prev?.decision_maker_education,
+                            decision_maker_skills: parsed.skills?.length ? parsed.skills : prev?.decision_maker_skills,
+                            // posted_recently not restored from localStorage — must be set explicitly
+                        }));
+                    }
+                } else {
+                    // Expired — clean up
+                    localStorage.removeItem('lad_targeting_filters');
+                }
+            }
+        } catch { }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount
+
     // ── Clear / Restart campaign setup ──────────────────────────────────────
     const clearChat = useCallback(() => {
         // Core chat
@@ -968,7 +1097,7 @@ export default function AdvancedSearchAIPage() {
         setCpWaBody(''); setCpWaFromNumber(''); setCpWaGenLoading(false);
         // Targeting form
         setTgStep(-1); setTgNationality([]); setTgExperienceLevel([]); setTgCompanySize([]);
-        setTgCompanyAge([]); setTgEducation([]); setTgSkills([]);
+        setTgCompanyAge([]); setTgEducation([]); setTgSkills([]); setTgPostedRecently(false);
         // Conversation meta
         setConvId(crypto.randomUUID()); setMsgCount(0); setPendingIntent(null);
         setPendingSearchConfirmation(null); setPendingContact(null);
@@ -1815,6 +1944,86 @@ export default function AdvancedSearchAIPage() {
                         if (chatD.summaryUpdate) {
                             setConversationSummary(prev => prev ? `${prev}\n${chatD.summaryUpdate}` : chatD.summaryUpdate);
                         }
+                        // ── Generic prospect search: route to enriched discovery pipeline ──
+                        if (chatD.newSearch && chatD.searchType === 'generic_prospect') {
+                            // Show the AI's loading message immediately
+                            setMessages(p => p.filter(m => m.id !== lid).concat({
+                                id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(),
+                            }));
+                            setIsSearching(true);
+                            setActivities([]);
+
+                            const prospectQuery = chatD.originalQuery || text;
+                            setLastProspectQuery(prospectQuery);
+                            setLastSearchType('generic_prospect');
+                            setSeenProspectIds([]);
+                            setLeads([]);
+
+                            try {
+                                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        query:      prospectQuery,
+                                        icpProfile: businessProfile,
+                                        sessionId:  `gps-${Date.now()}`,
+                                        seenIds:    [],
+                                        batchSize:  leadCount,
+                                    }),
+                                });
+                                const d = await resp.json();
+                                setIsSearching(false);
+                                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                                    const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                        id:               item.id || `gps-${idx}`,
+                                        name:             item.name || 'Unknown',
+                                        first_name:       item.first_name || '',
+                                        last_name:        item.last_name  || '',
+                                        headline:         item.headline   || item.decision_maker_title || '',
+                                        location:         item.location   || '',
+                                        current_company:  item.current_company || '',
+                                        profile_url:      item.profile_url || '',
+                                        profile_picture:  item.profile_picture || '',
+                                        industry:         item.industry || item.company_type || '',
+                                        network_distance: '',
+                                        locked:           idx >= 5,
+                                        phone:            item.phone || item.company_phone || '',
+                                        email:            item.email || '',
+                                        icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                        match_level:      item.match_level  || undefined,
+                                        icp_reasoning:    item.icp_reasoning || undefined,
+                                        enriched_profile: item.enriched_profile || undefined,
+                                    }));
+                                    setLeads(prospectLeads);
+                                    setShowPanel('leads');
+                                    // Track seen IDs for "get more" dedup
+                                    setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                                    setNoMoreLeads(!d.hasMore);
+                                    setTotalResults(d.total || prospectLeads.length);
+                                    setMessages(p => p.concat({
+                                        id: `a-sr-${Date.now()}`, role: 'ai',
+                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        ts: new Date(),
+                                    }));
+                                } else {
+                                    setMessages(p => p.concat({
+                                        id: `a-err-${Date.now()}`, role: 'ai',
+                                        text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — for example: *"General Managers at 5-star hotels in Dubai"* or *"CEOs of construction companies in Saudi Arabia"*.`,
+                                        ts: new Date(),
+                                    }));
+                                }
+                            } catch (prospectErr) {
+                                setIsSearching(false);
+                                console.error('[ProspectSearch] error', prospectErr);
+                                setMessages(p => p.concat({
+                                    id: `a-err-${Date.now()}`, role: 'ai',
+                                    text: `⚠️ Prospect search failed. Please try again or rephrase your query.`,
+                                    ts: new Date(),
+                                }));
+                            }
+                            setBusy(false);
+                            return;
+                        }
                     }
                 } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
 
@@ -1845,6 +2054,91 @@ export default function AdvancedSearchAIPage() {
                         // Clear the AI response so we show search results, not the chat response
                         aiResponseText = '';
                     }
+                }
+
+                // ── FRONTEND GENERIC PROSPECT SEARCH SAFETY NET ──────────────────
+                // If the backend didn't return searchType:'generic_prospect' but the query
+                // clearly describes a company TYPE + attribute/location, intercept here and
+                // route directly to the enriched prospect discovery pipeline.
+                // This catches cases where the backend classified the intent as CONTEXT_SEARCH
+                // or extracted LinkedIn keywords instead of detecting the generic pattern.
+                if (shouldRunSearch && isGenericCompanySearchQuery(text)) {
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai',
+                        text: `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts. This may take a moment as I research each prospect.\n\n⚡ *Searching across the web, LinkedIn, and company databases...*`,
+                        ts: new Date(),
+                    }));
+                    setIsSearching(true);
+                    setActivities([]);
+                    setLastProspectQuery(text);
+                    setLastSearchType('generic_prospect');
+                    setSeenProspectIds([]);
+                    setLeads([]);
+
+                    try {
+                        const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query:      text,
+                                icpProfile: businessProfile,
+                                sessionId:  `gps-${Date.now()}`,
+                                seenIds:    [],
+                                batchSize:  leadCount,
+                            }),
+                        });
+                        const d = await resp.json();
+                        setIsSearching(false);
+                        if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                            const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                id:               item.id || `gps-${idx}`,
+                                name:             item.name || 'Unknown',
+                                first_name:       item.first_name || '',
+                                last_name:        item.last_name  || '',
+                                headline:         item.headline   || '',
+                                location:         item.location   || '',
+                                current_company:  item.current_company || '',
+                                profile_url:      item.profile_url || '',
+                                profile_picture:  item.profile_picture || '',
+                                industry:         item.industry || item.company_type || '',
+                                network_distance: '',
+                                locked:           idx >= 5,
+                                phone:            item.phone || item.company_phone || '',
+                                email:            item.email || '',
+                                icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                match_level:      item.match_level  || undefined,
+                                icp_reasoning:    item.icp_reasoning || undefined,
+                                enriched_profile: item.enriched_profile || undefined,
+                            }));
+                            setLeads(prospectLeads);
+                            setShowPanel('leads');
+                            setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                            setNoMoreLeads(!d.hasMore);
+                            setTotalResults(d.total || prospectLeads.length);
+                            const strongMatches = prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length;
+                            setMessages(p => p.concat({
+                                id: `a-sr-${Date.now()}`, role: 'ai',
+                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                ts: new Date(),
+                            }));
+                        } else {
+                            setMessages(p => p.concat({
+                                id: `a-err-${Date.now()}`, role: 'ai',
+                                text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — e.g. *"GMs at 5-star hotels in Dubai"* or *"owners of gyms in Abu Dhabi"*.`,
+                                ts: new Date(),
+                            }));
+                        }
+                    } catch (prospectErr) {
+                        setIsSearching(false);
+                        console.error('[ProspectSearch] error', prospectErr);
+                        setMessages(p => p.concat({
+                            id: `a-err-${Date.now()}`, role: 'ai',
+                            text: `⚠️ Prospect search failed. Please try again.`,
+                            ts: new Date(),
+                        }));
+                    }
+                    setBusy(false);
+                    return;
                 }
 
                 if (!shouldRunSearch && aiResponseText) {
@@ -1954,7 +2248,11 @@ export default function AdvancedSearchAIPage() {
                 // Use the effective searchQuery (never "yes") as the ICP base description
                 const icpBase = confirmedForSearch ? searchQuery : text;
                 const bizCtx = getBusinessContext();
-                let icpDesc = bizCtx ? `${icpBase}\n\n--- Business Context ---\n${bizCtx}` : icpBase;
+                // Business context only describes what the seller offers — it does NOT redefine
+                // who to target. The search query is the sole source of ICP target criteria.
+                let icpDesc = bizCtx
+                    ? `## Search Target (WHO to find):\n${icpBase}\n\n## Seller Context (WHAT they sell — use only to assess relevance, not to redefine the target):\n${bizCtx}`
+                    : icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
@@ -1971,22 +2269,29 @@ export default function AdvancedSearchAIPage() {
                 setIsSearching(true);
                 setActivities([]);
 
+                // Use targetingOverride (from Targeting card confirm) when available,
+                // because setTargeting() is async and the React state may not yet reflect
+                // the new nationality / filters when the search fires immediately after confirm.
+                const effectiveTargeting = opts?.targetingOverride || targeting;
                 const d = await linkedInSearch.search({
                     query: searchQuery,
                     count: leadCount,
                     targeting: ext || undefined,
-                    targeting_filters: targeting && (
-                        targeting.decision_maker_nationality?.length ||
-                        targeting.decision_maker_experience_level?.length ||
-                        targeting.decision_maker_skills?.length ||
-                        targeting.decision_maker_education?.length ||
-                        targeting.company_size?.length
+                    targeting_filters: effectiveTargeting && (
+                        effectiveTargeting.decision_maker_nationality?.length ||
+                        effectiveTargeting.decision_maker_experience_level?.length ||
+                        effectiveTargeting.decision_maker_skills?.length ||
+                        effectiveTargeting.decision_maker_education?.length ||
+                        effectiveTargeting.company_size?.length ||
+                        effectiveTargeting.posted_recently
                     ) ? {
-                        nationality: targeting.decision_maker_nationality,
-                        experience_level: targeting.decision_maker_experience_level,
-                        skills: targeting.decision_maker_skills,
-                        education: targeting.decision_maker_education,
-                        company_size: targeting.company_size,
+                        nationality: effectiveTargeting.decision_maker_nationality,
+                        experience_level: effectiveTargeting.decision_maker_experience_level,
+                        skills: effectiveTargeting.decision_maker_skills,
+                        education: effectiveTargeting.decision_maker_education,
+                        company_size: effectiveTargeting.company_size,
+                        // Only send posted_recently when explicitly set by user
+                        posted_recently: effectiveTargeting.posted_recently === true ? true : undefined,
                     } : undefined,
                     icp_description: icpDesc,
                     search_enrichment: buildSearchEnrichment(),
@@ -2007,6 +2312,8 @@ export default function AdvancedSearchAIPage() {
                             locations: toArr(d.intent.locations), keywords: toArr(d.intent.keywords),
                             profile_language: toArr(d.intent.profile_language),
                             company_names: toArr(d.intent.company_names),
+                            // Carry nationality_filter so subsequent paginated searches pass it through
+                            nationality_filter: toArr(d.intent.nationality_filter),
                         };
                         const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0 || (newExt.keywords && newExt.keywords.length > 0) || (newExt.company_names && newExt.company_names.length > 0);
                         if (hasData) {
@@ -2019,6 +2326,7 @@ export default function AdvancedSearchAIPage() {
                     setLastSearchQuery(searchQuery);
                     setLastIcpDescription(icpBase);
                     setLastTargeting(ext);
+                    setLastSearchType('linkedin'); // mark as LinkedIn search for loadMore routing
                     addSearchSession(searchQuery, ext, icpBase);
                     setSearchPage(1);
                     setTotalResults(d.total || 0);
@@ -2028,15 +2336,17 @@ export default function AdvancedSearchAIPage() {
                     icpWasApplied = !!d.icp_applied;
                     if (Array.isArray(d.results) && d.results.length > 0) {
                         rawSearchResults = d.results;
-                        realLeads = d.results.map((item: any, idx: number) => ({
+                        realLeads = d.results.map((item: any, idx: number) => {
+                            const profileUrl = resolveProfileUrl(item);
+                            return {
                             id: item.id || item.provider_id || `lead-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (item.profile_url ? 'LinkedIn User' : 'Contact'),
+                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (profileUrl ? 'LinkedIn User' : 'Contact'),
                             first_name: item.first_name || '',
                             last_name: item.last_name || '',
                             headline: item.headline || '',
                             location: item.location || '',
                             current_company: item.current_company || '',
-                            profile_url: item.profile_url || '',
+                            profile_url: profileUrl,
                             profile_picture: item.profile_picture || '',
                             industry: item.industry || '',
                             network_distance: item.network_distance || '',
@@ -2046,21 +2356,75 @@ export default function AdvancedSearchAIPage() {
                             icp_reasoning: item.icp_reasoning || undefined,
                             enriched_profile: item.enriched_profile || undefined,
                             inferred: item.inferred || undefined,
-                        }));
+                        };});
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
+
+                        // ── Nationality annotation + secondary filter ─────────────────────
+                        // The backend already filters by nationality via LLM name inference.
+                        // This frontend pass: (1) annotates leads with inferred_nationality for
+                        // the UI badge display, (2) acts as a secondary safety net to catch any
+                        // profiles the backend may have missed.
+                        const nationalityFilters = effectiveTargeting?.decision_maker_nationality || (ext || targeting)?.decision_maker_nationality;
+                        if (nationalityFilters && nationalityFilters.length > 0 && realLeads.length > 0) {
+                            // Fire async — annotate after leads are shown (backend already filtered)
+                            (async () => {
+                                try {
+                                    const leadsForInference = realLeads.map(l => ({ id: l.id, name: l.name }));
+                                    const inferResult = await linkedInSearch.inferNationality(leadsForInference);
+                                    if (inferResult?.success && Array.isArray(inferResult.results)) {
+                                        const natMap: Record<string, { nationality: string; confidence: number }> = {};
+                                        for (const r of inferResult.results) {
+                                            if (r.id) natMap[r.id] = { nationality: r.nationality || '', confidence: r.confidence || 0 };
+                                        }
+                                        const annotated = realLeads.map(l => ({
+                                            ...l,
+                                            inferred_nationality: natMap[l.id]?.nationality || undefined,
+                                            nationality_confidence: natMap[l.id]?.confidence || undefined,
+                                        }));
+                                        const normalise = (s: string) => s.toLowerCase().trim();
+                                        const targetNats = nationalityFilters.map(normalise);
+                                        const matching = annotated.filter(l =>
+                                            // Keep if: (a) inferred nationality matches, OR
+                                            //           (b) nationality is unknown/ambiguous (trust backend filter)
+                                            !l.inferred_nationality ||
+                                            (l.inferred_nationality && targetNats.some(t =>
+                                                normalise(l.inferred_nationality!).includes(t) || t.includes(normalise(l.inferred_nationality!))
+                                            ))
+                                        );
+                                        const nonMatching = annotated.filter(l => !matching.find(m => m.id === l.id));
+                                        // Update leads with nationality annotations and remove confirmed non-matches
+                                        setLeads(matching);
+                                        if (nonMatching.length > 0) {
+                                            setFilteredLeads(prev => [...nonMatching, ...prev]);
+                                        }
+                                        console.log('[Nationality] Annotation complete', {
+                                            total: realLeads.length,
+                                            matching: matching.length,
+                                            nonMatching: nonMatching.length,
+                                            targets: nationalityFilters,
+                                        });
+                                    }
+                                } catch (inferErr) {
+                                    console.warn('[Nationality] Annotation failed', inferErr);
+                                }
+                            })();
+                        }
+                        // ── End nationality annotation ─────────────────────────────────────
                     }
                     // Capture below-threshold leads returned from ICP filtering
                     if (Array.isArray(d.filtered_leads) && d.filtered_leads.length > 0) {
-                        const fl = d.filtered_leads.map((item: any, idx: number) => ({
+                        const fl = d.filtered_leads.map((item: any, idx: number) => {
+                            const profileUrl = resolveProfileUrl(item);
+                            return {
                             id: item.id || item.provider_id || `fl-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (item.profile_url ? 'LinkedIn User' : 'Contact'),
+                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
                             first_name: item.first_name || '',
                             last_name: item.last_name || '',
                             headline: item.headline || '',
                             location: item.location || '',
                             current_company: item.current_company || '',
-                            profile_url: item.profile_url || '',
+                            profile_url: profileUrl,
                             profile_picture: item.profile_picture || '',
                             industry: item.industry || '',
                             network_distance: item.network_distance || '',
@@ -2069,7 +2433,7 @@ export default function AdvancedSearchAIPage() {
                             match_level: item.match_level || undefined,
                             icp_reasoning: item.icp_reasoning || undefined,
                             enriched_profile: item.enriched_profile || undefined,
-                        }));
+                        };});
                         setFilteredLeads(fl);
                         // Auto-expand when all results were filtered (no qualified leads found)
                         setShowFilteredLeads(realLeads.length === 0);
@@ -2318,23 +2682,50 @@ export default function AdvancedSearchAIPage() {
             company_age: tgCompanyAge.length > 0 ? tgCompanyAge : undefined,
             decision_maker_education: tgEducation.length > 0 ? tgEducation : undefined,
             decision_maker_skills: tgSkills.length > 0 ? tgSkills : undefined,
+            // Only set posted_recently when user explicitly toggled it ON
+            posted_recently: tgPostedRecently ? true : undefined,
         } as LeadTargeting;
 
         // Update targeting state
         setTargeting(updatedTargeting);
 
-        // Build a message for the AI to interpret these filters
+        // Persist targeting_filters to localStorage (reuse for next few days)
+        try {
+            const filtersToSave = {
+                nationality: tgNationality,
+                experience_level: tgExperienceLevel,
+                company_size: tgCompanySize,
+                company_age: tgCompanyAge,
+                education: tgEducation,
+                skills: tgSkills,
+                // posted_recently intentionally excluded — must be set explicitly each session
+                saved_at: new Date().toISOString(),
+            };
+            localStorage.setItem('lad_targeting_filters', JSON.stringify(filtersToSave));
+        } catch { }
+
+        // Build a message for the AI — nationality is intentionally kept out of the text
+        // so the AI/Gemini doesn't misinterpret a nationality like "India" as a search location.
+        // Nationality is applied purely as a post-search LLM filter (infer from names).
         const filterParts: string[] = [];
-        if (tgNationality.length > 0) filterParts.push(`Nationality: ${tgNationality.join(', ')}`);
+        // Nationality deliberately excluded from text — handled as backend post-filter only
         if (tgExperienceLevel.length > 0) filterParts.push(`Experience Level: ${tgExperienceLevel.join(', ')}`);
         if (tgCompanySize.length > 0) filterParts.push(`Company Size: ${tgCompanySize.join(', ')}`);
         if (tgCompanyAge.length > 0) filterParts.push(`Company Age: ${tgCompanyAge.join(', ')}`);
         if (tgEducation.length > 0) filterParts.push(`Education: ${tgEducation.join(', ')}`);
         if (tgSkills.length > 0) filterParts.push(`Skills: ${tgSkills.join(', ')}`);
+        if (tgPostedRecently) filterParts.push(`Activity: Posted on LinkedIn in the last 3 months`);
+
+        // Show nationality in the display label but keep it separate from the search query
+        const nationalityLabel = tgNationality.length > 0
+            ? `Nationality filter applied: ${tgNationality.join(', ')} (results will be filtered by inferred nationality)`
+            : '';
 
         const refinementMessage = filterParts.length > 0
-            ? `Refine my targeting with these additional criteria:\n${filterParts.join('\n')}`
-            : 'Confirm my current targeting criteria';
+            ? `Re-search with my updated targeting filters${nationalityLabel ? ` [${nationalityLabel}]` : ''}:\n${filterParts.join('\n')}`
+            : nationalityLabel
+                ? `Re-search — ${nationalityLabel}`
+                : 'Confirm my current targeting criteria';
 
         // Clear previous results so the UI shows fresh leads after the new search
         if (filterParts.length > 0) {
@@ -2352,7 +2743,7 @@ export default function AdvancedSearchAIPage() {
 
         // Send to AI for refinement with explicit targeting override so stale state isn't used
         doSend(refinementMessage, { targetingOverride: updatedTargeting });
-    }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
+    }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, tgPostedRecently, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); messages.length === 0 ? onLandingSubmit() : onChatSend(); }
@@ -2377,6 +2768,9 @@ export default function AdvancedSearchAIPage() {
         setLastSearchQuery('');
         setLastIcpDescription('');
         setLastTargeting(null);
+        setLastSearchType('linkedin');
+        setSeenProspectIds([]);
+        setLastProspectQuery('');
         setCpStep(-1);
         setTgStep(-1);
         setTgNationality([]);
@@ -2385,11 +2779,65 @@ export default function AdvancedSearchAIPage() {
         setTgCompanyAge([]);
         setTgEducation([]);
         setTgSkills([]);
+        setTgPostedRecently(false);
         setTargetingFiltersActive(false);
     };
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
+        // ── Generic prospect search: "Get More" calls prospect-search with seenIds ──
+        if (lastSearchType === 'generic_prospect') {
+            if (loadingMore || !lastProspectQuery) return;
+            setLoadingMore(true);
+            try {
+                setIsSearching(true);
+                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query:      lastProspectQuery,
+                        icpProfile: businessProfile,
+                        sessionId:  `gps-more-${Date.now()}`,
+                        seenIds:    seenProspectIds,
+                        batchSize:  leadCount,
+                    }),
+                });
+                const d = await resp.json();
+                setIsSearching(false);
+                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                    const existingCount = leads.length;
+                    const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                        id:               item.id || `gps-more-${existingCount + idx}`,
+                        name:             item.name || 'Unknown',
+                        first_name:       item.first_name || '',
+                        last_name:        item.last_name  || '',
+                        headline:         item.headline || '',
+                        location:         item.location || '',
+                        current_company:  item.current_company || '',
+                        profile_url:      item.profile_url || '',
+                        profile_picture:  item.profile_picture || '',
+                        industry:         item.industry || '',
+                        network_distance: '',
+                        locked:           (existingCount + idx) >= 5,
+                        phone:            item.phone || '',
+                        email:            item.email || '',
+                        icp_score:        item.icp_score != null ? item.icp_score : undefined,
+                        match_level:      item.match_level || undefined,
+                        icp_reasoning:    item.icp_reasoning || undefined,
+                        enriched_profile: item.enriched_profile || undefined,
+                    }));
+                    setLeads(prev => [...prev, ...moreLeads]);
+                    setSeenProspectIds(prev => [...prev, ...moreLeads.map(l => l.profile_url || l.id)]);
+                    if (!d.hasMore) setNoMoreLeads(true);
+                } else {
+                    setNoMoreLeads(true);
+                }
+            } catch (e) { console.error('[LoadMore:GenericProspect] error', e); setIsSearching(false); }
+            setLoadingMore(false);
+            return;
+        }
+
+        // ── Standard LinkedIn search "Get More" ───────────────────────────────────
         if (loadingMore || !lastSearchQuery) return;
 
         setLoadingMore(true);
@@ -2414,13 +2862,15 @@ export default function AdvancedSearchAIPage() {
                     targeting.decision_maker_experience_level?.length ||
                     targeting.decision_maker_skills?.length ||
                     targeting.decision_maker_education?.length ||
-                    targeting.company_size?.length
+                    targeting.company_size?.length ||
+                    targeting.posted_recently
                 ) ? {
                     nationality: targeting.decision_maker_nationality,
                     experience_level: targeting.decision_maker_experience_level,
                     skills: targeting.decision_maker_skills,
                     education: targeting.decision_maker_education,
                     company_size: targeting.company_size,
+                    posted_recently: targeting.posted_recently === true ? true : undefined,
                 } : undefined,
                 icp_description: icpDesc,
                 search_enrichment: buildSearchEnrichment(),
@@ -2444,24 +2894,26 @@ export default function AdvancedSearchAIPage() {
 
             if (d && Array.isArray(d.results) && d.results.length > 0) {
                 const existingCount = leads.length;
-                const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => {
+                    const profileUrl = resolveProfileUrl(item);
+                    return {
                     id: item.id || item.provider_id || `lead-${existingCount + idx}`,
-                    name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'LinkedIn User',
+                    name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
                     first_name: item.first_name || '',
                     last_name: item.last_name || '',
                     headline: item.headline || '',
                     location: item.location || '',
                     current_company: item.current_company || '',
-                    profile_url: item.profile_url || '',
+                    profile_url: profileUrl,
                     profile_picture: item.profile_picture || '',
                     industry: item.industry || '',
                     network_distance: item.network_distance || '',
                     locked: (existingCount + idx) >= 5,
-                    icp_score: item.icp_score || undefined,
+                    icp_score: item.icp_score != null ? item.icp_score : undefined,
                     match_level: item.match_level || undefined,
                     icp_reasoning: item.icp_reasoning || undefined,
                     enriched_profile: item.enriched_profile || undefined,
-                }));
+                };});
                 setLeads(prev => [...prev, ...moreLeads]);
                 setSearchCursor(d.cursor || null);
                 if (d.total) setTotalResults(d.total);
@@ -2901,6 +3353,8 @@ export default function AdvancedSearchAIPage() {
                                 setEducation={setTgEducation}
                                 skills={tgSkills}
                                 setSkills={setTgSkills}
+                                postedRecently={tgPostedRecently}
+                                setPostedRecently={setTgPostedRecently}
                                 currentTargeting={targeting}
                                 onConfirm={handleTargetingConfirm}
                                 loading={busy}
@@ -3245,10 +3699,10 @@ export default function AdvancedSearchAIPage() {
                                                     <span style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                         padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                        background: lead.match_level === 'strong' ? '#dcfce7' : lead.match_level === 'moderate' ? '#fef9c3' : '#fee2e2',
-                                                        color: lead.match_level === 'strong' ? '#166534' : lead.match_level === 'moderate' ? '#854d0e' : '#991b1b',
+                                                        background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                        color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                     }}>
-                                                        {lead.match_level === 'strong' ? '🟢' : lead.match_level === 'moderate' ? '🟡' : '🔴'} {lead.icp_score}%
+                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
                                                     </span>
                                                 )}
                                             </div>
@@ -3256,6 +3710,20 @@ export default function AdvancedSearchAIPage() {
                                                 {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
                                             </div>
                                             {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
+                                            {lead.inferred_nationality && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                        padding: '1px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+                                                        background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                                                    }}>
+                                                        🌍 {lead.inferred_nationality}
+                                                        {lead.nationality_confidence && lead.nationality_confidence >= 70 && (
+                                                            <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '2px' }}>·{lead.nationality_confidence}%</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
                                             {!targetingFiltersActive && lead.icp_reasoning && (
                                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
                                                     {lead.icp_reasoning}
@@ -3375,17 +3843,22 @@ export default function AdvancedSearchAIPage() {
                                                     {/* Info */}
                                                     <div className="adv-lead-info">
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer"
-                                                               className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }}>
-                                                                {lead.name}
-                                                            </a>
+                                                            {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                                <a href={lead.profile_url} target="_blank" rel="noopener noreferrer"
+                                                                   className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }} onClick={e => e.stopPropagation()}>
+                                                                    {lead.name}
+                                                                </a>
+                                                            ) : (
+                                                                <span className="adv-lead-name" style={{ color: '#374151' }}>{lead.name}</span>
+                                                            )}
                                                             {lead.icp_score !== undefined && (
                                                                 <span style={{
                                                                     display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                                     padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                                    background: '#fee2e2', color: '#991b1b',
+                                                                    background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                                    color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                                 }}>
-                                                                    🔴 {lead.icp_score}%
+                                                                    {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
                                                                 </span>
                                                             )}
                                                         </div>
@@ -5728,6 +6201,19 @@ function CheckpointFormInline({
                 localStorage.setItem('lad_campaign_checkpoints', JSON.stringify(checkpointSelections));
                 localStorage.setItem('lad_campaign_icp_input', initialIcpInput);
                 localStorage.setItem('lad_campaign_user_messages', JSON.stringify(userMessages));
+                // Persist targeting_filters (including nationality) for reuse over next few days
+                if (targeting) {
+                    const filtersToSave = {
+                        nationality: targeting.decision_maker_nationality || [],
+                        experience_level: targeting.decision_maker_experience_level || [],
+                        skills: targeting.decision_maker_skills || [],
+                        education: targeting.decision_maker_education || [],
+                        company_size: targeting.company_size || [],
+                        company_age: targeting.company_age || [],
+                        saved_at: new Date().toISOString(),
+                    };
+                    localStorage.setItem('lad_targeting_filters', JSON.stringify(filtersToSave));
+                }
             } catch { }
 
             // Helper to map a LeadProfile to the API shape
@@ -5812,6 +6298,16 @@ function CheckpointFormInline({
                     icp_input: initialIcpInput,
                     checkpoint_selections: checkpointSelections,
                     search_filters: { keywords: t.keywords?.join(' ') || '', industries: t.industries || [], locations: t.locations || [], job_titles: t.job_titles || [], profile_language: t.profile_language || [] },
+                    targeting_filters: targeting ? {
+                        nationality: targeting.decision_maker_nationality || [],
+                        experience_level: targeting.decision_maker_experience_level || [],
+                        skills: targeting.decision_maker_skills || [],
+                        education: targeting.decision_maker_education || [],
+                        company_size: targeting.company_size || [],
+                        company_age: targeting.company_age || [],
+                        // Only persisted when explicitly set by user
+                        posted_recently: targeting.posted_recently === true ? true : undefined,
+                    } : undefined,
                     lead_feedback: feedbackSummary,
                     search_sessions: searchSessions.slice(0, 10),
                     user_messages: userMessages,
@@ -7038,13 +7534,14 @@ const TG_QUESTIONS = [
     { id: 'company_age', question: 'What company age ranges interest you?', type: 'multi-select' },
     { id: 'education', question: 'What educational backgrounds are ideal?', type: 'multi-select' },
     { id: 'skills', question: 'Any specific skills you\'re looking for? (e.g., "AI/ML, Cloud Architecture")', type: 'text' },
+    { id: 'posted_recently', question: 'Filter by LinkedIn activity?', type: 'toggle' },
     { id: 'review', question: 'Review your targeting criteria', type: 'review' },
 ];
 
 function TargetingFormInline({
     step, setStep, nationality, setNationality, experienceLevel, setExperienceLevel,
     companySize, setCompanySize, companyAge, setCompanyAge, education, setEducation,
-    skills, setSkills, currentTargeting, onConfirm, loading, setLoading
+    skills, setSkills, postedRecently, setPostedRecently, currentTargeting, onConfirm, loading, setLoading
 }: {
     step: number; setStep: (s: number) => void;
     nationality: string[]; setNationality: React.Dispatch<React.SetStateAction<string[]>>;
@@ -7053,6 +7550,7 @@ function TargetingFormInline({
     companyAge: string[]; setCompanyAge: React.Dispatch<React.SetStateAction<string[]>>;
     education: string[]; setEducation: React.Dispatch<React.SetStateAction<string[]>>;
     skills: string[]; setSkills: React.Dispatch<React.SetStateAction<string[]>>;
+    postedRecently: boolean; setPostedRecently: React.Dispatch<React.SetStateAction<boolean>>;
     currentTargeting: LeadTargeting | null;
     onConfirm: () => void;
     loading?: boolean;
@@ -7236,8 +7734,51 @@ function TargetingFormInline({
                         </div>
                     )}
 
-                    {/* Step 6: Review */}
+                    {/* Step 6: Posted Recently */}
                     {step === 6 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Toggle card */}
+                            <div
+                                onClick={() => setPostedRecently(!postedRecently)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '16px 18px', borderRadius: '12px', cursor: 'pointer',
+                                    border: `2px solid ${postedRecently ? '#172560' : '#e5e7eb'}`,
+                                    background: postedRecently ? '#eef2ff' : '#fff',
+                                    transition: 'all 0.15s',
+                                }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: postedRecently ? '#172560' : '#111827' }}>
+                                        📢 Posted on LinkedIn in last 3 months
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+                                        Only show leads who have been active — posted, shared, or commented recently.
+                                        <br />
+                                        <span style={{ color: '#f59e0b', fontWeight: 500 }}>⚠ Sales Navigator only</span> — ignored for Classic API accounts.
+                                    </div>
+                                </div>
+                                {/* Toggle switch */}
+                                <div style={{
+                                    width: '44px', height: '24px', borderRadius: '12px', flexShrink: 0, marginLeft: '16px',
+                                    background: postedRecently ? '#172560' : '#d1d5db', transition: 'background 0.2s', position: 'relative',
+                                }}>
+                                    <div style={{
+                                        width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                                        position: 'absolute', top: '3px', transition: 'left 0.2s',
+                                        left: postedRecently ? '23px' : '3px',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                    }} />
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.5 }}>
+                                This filter is <strong>not saved</strong> between sessions — you must re-enable it each time you want it applied. It will not be auto-applied to campaigns or prospecting.
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 7: Review */}
+                    {step === 7 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {nationality.length > 0 && <div><strong>Nationalities:</strong> {nationality.join(', ')}</div>}
                             {experienceLevel.length > 0 && <div><strong>Experience Level:</strong> {experienceLevel.join(', ')}</div>}
@@ -7245,7 +7786,8 @@ function TargetingFormInline({
                             {companyAge.length > 0 && <div><strong>Company Age:</strong> {companyAge.join(', ')}</div>}
                             {education.length > 0 && <div><strong>Education:</strong> {education.join(', ')}</div>}
                             {skills.length > 0 && <div><strong>Skills:</strong> {skills.join(', ')}</div>}
-                            {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && (
+                            {postedRecently && <div><strong>Activity:</strong> Posted on LinkedIn in last 3 months ✅</div>}
+                            {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && !postedRecently && (
                                 <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>No additional filters selected</div>
                             )}
                         </div>
@@ -7429,6 +7971,7 @@ function buildSummary(t: LeadTargeting): string {
     if (t.job_titles.length) p.push(`🎯 **Job Titles:** ${t.job_titles.join(', ')}`);
     if (t.industries.length) p.push(`🏢 **Industries:** ${t.industries.join(', ')}`);
     if (t.locations.length) p.push(`📍 **Locations:** ${t.locations.join(', ')}`);
+    if (t.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${t.nationality_filter.join(', ')} (results filtered by inferred nationality)`);
     if (t.keywords.length) p.push(`🔑 **Keywords:** ${t.keywords.join(', ')}`);
     if (t.functions?.length) p.push(`⚙️ **Functions:** ${t.functions.join(', ')}`);
     if (t.seniority?.length) p.push(`⭐ **Seniority:** ${t.seniority.join(', ')}`);
@@ -7449,6 +7992,7 @@ function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string)
     if (intent.company_names?.length) p.push(`🏢 **Company:** ${intent.company_names.join(', ')}`);
     if (intent.locations?.length) p.push(`📍 **Location:** ${intent.locations.join(', ')}`);
     if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
+    if (intent.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${intent.nationality_filter.join(', ')}`);
     if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
     if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
 

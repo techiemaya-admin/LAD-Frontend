@@ -1,13 +1,16 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Calendar, Filter, ExternalLink } from 'lucide-react';
-import { useTransactions } from '@/sdk/features/billing';
+import { ArrowUpRight, ArrowDownLeft, Calendar, Filter, ExternalLink, Eye } from 'lucide-react';
+import { useTransactions } from '@lad/frontend-features/billing';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { TransactionDetailModal } from './TransactionDetailModal';
 type TransactionType = 'credit' | 'debit' | 'all';
 type TimeRange = '7d' | '30d' | '90d' | 'all';
 export const TransactionHistory: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [transactionType, setTransactionType] = useState<TransactionType>('all');
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   // Calculate date range
   const { startDate, endDate } = useMemo(() => {
@@ -30,17 +33,24 @@ export const TransactionHistory: React.FC = () => {
     endDate,
     limit: 100,
   });
+  // Normalize transaction data to match component expectations
+  const normalizeTransaction = (tx: any) => ({
+    ...tx,
+    type: tx.type || (tx.transaction_type === 'topup' || tx.transaction_type === 'credit' ? 'credit' : 'debit'),
+  });
+
   // Filter by search term
   const filteredTransactions = useMemo(() => {
     if (!transactions?.transactions) return [];
-    if (!searchTerm) return transactions.transactions;
+    const normalized = transactions.transactions.map(normalizeTransaction);
+    if (!searchTerm) return normalized;
     const search = searchTerm.toLowerCase();
-    return transactions.transactions.filter((tx) => {
+    return normalized.filter((tx) => {
       return (
         tx.description?.toLowerCase().includes(search) ||
         tx.reference_type?.toLowerCase().includes(search) ||
         tx.reference_id?.toLowerCase().includes(search) ||
-        tx.type.toLowerCase().includes(search)
+        (tx.type || tx.transaction_type)?.toLowerCase().includes(search)
       );
     });
   }, [transactions, searchTerm]);
@@ -214,12 +224,15 @@ export const TransactionHistory: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Balance After
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <Calendar className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                     <p className="text-gray-600">No transactions found</p>
                   </td>
@@ -277,6 +290,19 @@ export const TransactionHistory: React.FC = () => {
                         ? formatCurrency(parseFloat(transaction.balance_after))
                         : '-'}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setSelectedTransaction(transaction);
+                          setIsDetailModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
+                        title="View transaction details"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="text-xs font-medium hidden sm:inline">View</span>
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -284,6 +310,13 @@ export const TransactionHistory: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        transaction={selectedTransaction}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+      />
     </div>
   );
-};
+};
