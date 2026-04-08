@@ -32,7 +32,7 @@ import {
   type PaginationState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
-import { getStatusColor, renderChannelIcons, renderActionChips, renderActivityBreakdown } from './campaignUtils';
+import { getStatusColor, renderChannelIcons, renderActionChips } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];
   loading: boolean;
@@ -126,11 +126,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       header: 'Leads',
       cell: ({ getValue }) => getValue() || 0,
     }),
-    columnHelper.display({
-      id: 'activity',
-      header: 'Activity',
-      cell: ({ row }) => renderActivityBreakdown(row.original),
-    }),
     columnHelper.accessor(
       (row) => row.created_at as string,
       {
@@ -213,7 +208,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Channels</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Actions</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Leads</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Activity</TableHead>
                   <TableHead className="font-semibold text-[#1E293B]">Created</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] text-right"></TableHead>
                 </TableRow>
@@ -241,12 +235,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1.5">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
