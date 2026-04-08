@@ -32,7 +32,7 @@ import {
   type PaginationState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
-import { getStatusColor, renderChannelIcons, renderActionChips } from './campaignUtils';
+import { getStatusColor, renderActionChips } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];
   loading: boolean;
@@ -110,11 +110,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           </span>
         );
       },
-    }),
-    columnHelper.display({
-      id: 'channels',
-      header: 'Channels',
-      cell: ({ row }) => renderChannelIcons(row.original),
     }),
     columnHelper.display({
       id: 'actions',
@@ -205,7 +200,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 <TableRow className="bg-[#F8FAFC]">
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Campaign Name</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Status</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Channels</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Actions</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Leads</TableHead>
                   <TableHead className="font-semibold text-[#1E293B]">Created</TableHead>
@@ -220,12 +214,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     </TableCell>
                     <TableCell>
                       <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
