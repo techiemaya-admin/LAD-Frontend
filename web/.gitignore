@@ -60,3 +60,5 @@ VISUAL_GUIDE.md
 components.json
 new batch calls.json
 batch calls response.json.claude/
+# Local Testing
+src/app/test-playground/

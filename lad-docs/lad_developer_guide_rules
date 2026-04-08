@@ -1,0 +1,165 @@
+# LAD Developer Guide
+
+**Canonical Architecture Rules, Conventions, and Future Recommendations**
+
+This document is the single source of truth for how LAD is built, extended, and evolved. Any change that violates these rules must be refactored, not patched.
+
+## 1\. Core Architectural Principles (Non‑Negotiable)
+
+### 1.1 Multi‑Tenant First
+
+- LAD is a **single‑platform, multi‑tenant SaaS**.
+- There are **no per‑client forks**, schemas, or databases.
+- Every tenant is logically isolated using tenant_id.
+
+**Rules** - All tenant‑scoped tables MUST include tenant_id. - No table may implicitly assume a single tenant. - Authorization must always resolve in a tenant context.
+
+### 1.2 Features Are Isolated
+
+A **feature** is the primary unit of product evolution.
+
+**Definition** A feature owns: - Routes - Business logic - Guards (feature + credit) - Domain rules - External integrations
+
+**Rules** - Features never depend on other features implicitly. - Cross‑feature interaction must occur via **events** or explicit contracts. - Feature logic never lives in core/.
+
+### 1.3 Verticals Extend - They Never Fork
+
+Verticals (Education, Sales, etc.) are **extensions**, not variants.
+
+**Rules** - Core entities (users, leads, pipelines) are immutable. - Vertical data lives in **1‑to‑1 or 1‑to‑many extension tables**. - Vertical logic may add UI slots but never replace core behavior.
+
+### 1.4 Pipelines Compose, Not Branch
+
+The pipeline is a universal system.
+
+**Rules** - One pipeline engine for all tenants. - Vertical‑specific UI is injected via **slots**. - No conditional logic like if (education) in core pipeline code.
+
+### 1.5 Backend Is the Source of Truth
+
+**Rules** - All business logic lives in backend services. - Frontend API routes are proxies only. - Frontend never enforces billing, permissions, or feature access.
+
+## 2\. Backend Architecture Rules
+
+### 2.1 Folder Ownership
+
+backend/  
+├── core/ # Auth, billing, users, tenancy  
+├── features/ # Product features (campaigns, voice, AI, etc.)  
+├── shared/ # DB, guards, utilities
+
+**Rules** - core/ must remain small and stable. - New product logic always goes into features/. - Shared utilities must not depend on features.
+
+### 2.2 Feature Structure
+
+Each feature must contain: - manifest.js - routes.js - Isolated services/controllers
+
+**manifest.js must declare** - Feature key - Dependencies - Credit usage - Exposed routes
+
+### 2.3 File Size Discipline
+
+**Rule** - No file may exceed **400 lines**.
+
+If it does: - Extract services - Introduce domain modules - Split responsibilities
+
+### 2.4 Domain Events (Required Going Forward)
+
+All cross‑feature communication must move to **events**.
+
+Examples: - LeadCreated - CampaignStarted - CreditConsumed
+
+**Rules** - Events are append‑only. - Handlers must be idempotent. - No direct feature‑to‑feature calls.
+
+## 3\. Frontend Architecture Rules
+
+### 3.1 Frontend Is Split by Design
+
+frontend/ # Feature SDK (framework‑agnostic)  
+lad_ui/ # Next.js application (delivery shell)
+
+This split is **intentional and mandatory**.
+
+### 3.2 Frontend SDK (frontend/)
+
+**Purpose** - Reusable product logic - API clients - Types and hooks
+
+**Rules** - No JSX - No Next.js imports - No routing or UI logic
+
+If it cannot be reused in a mobile app, it does not belong here.
+
+### 3.3 Next.js App (lad_ui/)
+
+**Purpose** - UI components - Pages and layouts - API proxy routes
+
+**Rules** - No business logic - No billing decisions - No permission enforcement
+
+### 3.4 API Routing Rules
+
+Backend owns the API surface:
+
+/api/{feature}/\*
+
+**Rules** - Frontend API routes must mirror backend features. - Never invent routes like /api/linkedin or /api/leads. - Feature renames must propagate end‑to‑end.
+
+## 4\. Data Model Rules
+
+### 4.1 User & Tenant Model
+
+- users are global identities.
+- memberships define tenant access.
+- Roles are coarse‑grained; capabilities are fine‑grained.
+
+### 4.2 Billing & Credits
+
+**Rules** - Credits are tenant‑scoped. - All credit usage must be auditable. - No destructive updates to credit transactions.
+
+### 4.3 Feature Enablement
+
+Features are enabled per tenant.
+
+**Rules** - Feature access is backend‑controlled. - Frontend only reflects backend decisions.
+
+## 5\. AI Architecture Rules
+
+### 5.1 AI Is a Feature
+
+AI capabilities (ICP assistant, agents, voice) are **not core**.
+
+**Rules** - Conversation state lives in backend. - Model choice is backend‑owned. - Frontend renders only messages and flows.
+
+## 6\. Future‑Facing Recommendations
+
+### 6.1 Mandatory (Next Phase)
+
+- Complete campaign service refactor
+- Introduce domain event bus
+- Add feature dependency validation
+- Enforce feature contracts
+
+### 6.2 Strongly Recommended
+
+- OpenAPI contracts (Node ↔ Python)
+- Event outbox table
+- Feature lint rules
+- Automated architectural tests
+
+### 6.3 Optional / Strategic
+
+- Mobile app using frontend SDK
+- Enterprise RBAC UI
+- Audit log UI
+- SLA & usage dashboards
+
+## 7\. Red‑Flag Checklist (PR Review)
+
+Reject any change that: - Adds client‑specific logic - Forks pipelines or features - Introduces UI‑only APIs - Couples features together - Bypasses guards - Exceeds file size limits
+
+## 8\. Final Rule
+
+**Features are isolated.**  
+**Verticals extend.**  
+**Pipelines compose.**  
+**Clients never fork.**
+
+If a change violates this:
+
+**Refactor instead of patching.**

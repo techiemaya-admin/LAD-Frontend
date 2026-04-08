@@ -10,7 +10,9 @@ import { CallConfigurationSkeleton } from "@/components/skeletons/CallConfigurat
 import { CallOptionsSkeleton } from "@/components/skeletons/CallOptionsSkeleton";
 import { UserStorage } from "@/utils/userStorage";
 import MakeCallStatsCards from "./MakeCallStatsCards";
-import { BotMessageSquare,  Speech } from "lucide-react";
+import { BotMessageSquare, Speech, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AgentPlaygroundModal } from "@/components/voice-agent/AgentPlaygroundModal";
 import {
   useUserAvailableNumbers,
   useAvailableAgents,
@@ -110,8 +112,10 @@ export default function MakeCallContent() {
   const [initiatedBy, setInitiatedBy] = useState<string | undefined>(
     undefined
   );
+  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState<boolean>(false);
   // User ID (UUID) - backend uses JWT req.user.id, so this is mainly for local state
   const [voiceAgentUserId, setVoiceAgentUserId] = useState<string | null>(null);
+  const [voiceAgentTenantId, setVoiceAgentTenantId] = useState<string | null>(null);
   // Refs to track last processed data and prevent infinite loops
   const lastProcessedNumbersRef = useRef<string>("");
   const lastProcessedAgentsRef = useRef<string>("");
@@ -135,10 +139,13 @@ export default function MakeCallContent() {
         logger.debug("[make-call] User authenticated", { hasUser: !!meAny });
         // Use user.id from response (UUID format, not number)
         const userId = meAny?.user?.id || meAny?.id;
+        // Tenant ID mapping based on backend staging schema
+        const tenantId = meAny?.user?.activeTenantId || meAny?.user?.tenantId || meAny?.user?.organizationId || meAny?.organizationId;
         if (userId) {
           logger.debug("[make-call] Setting initiatedBy userId");
           setInitiatedBy(userId);
           setVoiceAgentUserId(userId);
+          if (tenantId) setVoiceAgentTenantId(tenantId);
           // Initialize user-scoped storage
           userStorageRef.current = new UserStorage(userId);
         }
@@ -582,16 +589,25 @@ export default function MakeCallContent() {
     <div className="min-h-screen bg-gray-50 p-3 md:p-3">
       <div className="space-y-6">
         {/* Header */}
-        <div className="mb-5 mt-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Speech className="w-8 h-8 text-[#1E293B]" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
-              AI Caller
-            </h1>
+        <div className="mb-5 mt-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Speech className="w-8 h-8 text-[#1E293B]" />
+              <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+                AI Caller
+              </h1>
+            </div>
+            <p className="text-sm text-[#64748B] ml-2">
+              Make single or bulk calls with voice agents
+            </p>
           </div>
-          <p className="text-sm text-[#64748B] ml-2">
-            Make single or bulk calls with voice agents
-          </p>
+          <Button 
+            onClick={() => setIsPlaygroundOpen(true)}
+            className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 self-start sm:mt-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            VOAG- Playground
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -656,6 +672,13 @@ export default function MakeCallContent() {
           </div>
         )}
       </div>
+      <AgentPlaygroundModal 
+        isOpen={isPlaygroundOpen} 
+        onClose={() => setIsPlaygroundOpen(false)} 
+        initialAgentId={agentId}
+        userId={voiceAgentUserId || undefined}
+        tenantId={voiceAgentTenantId || undefined}
+      />
     </div>
   );
 }
