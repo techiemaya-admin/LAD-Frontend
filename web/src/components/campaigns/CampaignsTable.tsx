@@ -173,8 +173,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   });
 
   return (
-    <div className="px-6 py-4">
-      <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Filters Section */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
@@ -280,7 +279,8 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <div className="px-6">
+              <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-[#F8FAFC]">
@@ -343,10 +343,11 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 )}
               </TableBody>
             </Table>
-            
+            </div>
+
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0]">
                 <div className="flex items-center gap-2 text-sm text-[#64748B]">
                   <span>Show</span>
                   <select
@@ -416,7 +417,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             )}
           </div>
         )}
-      </div>
     </div>
   );
 }
