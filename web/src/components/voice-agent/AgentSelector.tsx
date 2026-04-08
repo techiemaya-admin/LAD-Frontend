@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Bot, ChevronRight, Mic, User, Search, X } from 'lucide-react';
+import { Plus, Bot, ChevronRight, Mic, User, Search, X, Sparkles } from 'lucide-react';
 import { Agent, AgentStatus } from '@/types/agent';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ interface AgentSelectorProps {
   agents: Agent[];
   selectedAgentId: string | null;
   onSelectAgent: (agentId: string | null) => void;
+  onOpenPlayground: () => void;
   isLoading?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function AgentSelector({
   agents,
   selectedAgentId,
   onSelectAgent,
+  onOpenPlayground,
   isLoading = false,
 }: AgentSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,7 +59,7 @@ export function AgentSelector({
       </div>
 
       {/* Create New Button */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 md:py-3 lg:py-3 border-b border-border/30">
+      <div className="px-3 sm:px-4 py-3 border-b border-border/30 space-y-2">
         <Button
           onClick={() => onSelectAgent(null)}
           className={cn(
@@ -68,6 +70,14 @@ export function AgentSelector({
         >
           <Plus className="h-5 w-5" />
           <span>Create New Agent</span>
+        </Button>
+        <Button
+          onClick={onOpenPlayground}
+          variant="outline"
+          className="w-full justify-start gap-3 h-11 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 transition-all font-medium"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>VOAG - Playground</span>
         </Button>
       </div>
 

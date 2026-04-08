@@ -112,8 +112,10 @@ export default function Playground({
         step={pg.step}
         onClose={onClose}
         onBack={() => pg.setStep("welcome")}
-        onStartComingSoon={() => pg.setStep("coming-soon")}
+        onOpenCreateSelection={pg.openCreateSelection}
         onStartTesting={pg.startTesting}
+        onStartDirectConfig={pg.startDirectConfig}
+        onStartGuidedJourney={pg.startGuidedJourney}
         isHolding={pg.isHolding}
         reloading={pg.reloading}
         timerDisplay={pg.timerDisplay}

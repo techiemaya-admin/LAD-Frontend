@@ -1,17 +1,21 @@
 "use client";
+import React from "react";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { X, Sparkles, PlusCircle, ArrowLeft } from "lucide-react";
+import { X, Sparkles, PlusCircle, ArrowLeft, Wand2, Settings2, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { AgentOption } from "@/hooks/voice-agent/usePlayground";
 
 interface PlaygroundConfigViewProps {
   onClose?: () => void;
   onBack: () => void;
-  onStartComingSoon: () => void;
+  onOpenCreateSelection: () => void;
   onStartTesting: () => void;
+  onStartDirectConfig: () => void;
+  onStartGuidedJourney: () => void;
   isHolding: boolean;
   reloading: boolean;
   timerDisplay: string;
@@ -29,7 +33,7 @@ interface PlaygroundConfigViewProps {
   setEnableCallLog: (val: boolean) => void;
   connecting: boolean;
   startCall: () => Promise<void>;
-  step: "welcome" | "config" | "coming-soon";
+  step: "welcome" | "config" | "create-selection" | "guided-journey";
 }
 
 /* Shared UI fragments */
@@ -99,8 +103,10 @@ function BackButton({ onClick }: { onClick: () => void }) {
 export default function PlaygroundConfigView({
   onClose,
   onBack,
-  onStartComingSoon,
+  onOpenCreateSelection,
   onStartTesting,
+  onStartDirectConfig,
+  onStartGuidedJourney,
   isHolding,
   reloading,
   timerDisplay,
@@ -120,33 +126,141 @@ export default function PlaygroundConfigView({
   startCall,
   step,
 }: PlaygroundConfigViewProps) {
-  /* ── COMING SOON ── */
-  if (step === "coming-soon") {
+  /* ── GUIDED JOURNEY TEXT CYCLING component ── */
+  const ThinkingIndicator = () => {
+    const [index, setIndex] = React.useState(0);
+    const steps = [
+      "Analyzing requirements...",
+      "Drafting agent persona...",
+      "Optimizing system prompts...",
+      "Structuring knowledge base...",
+      "Finalizing configuration..."
+    ];
+
+    React.useEffect(() => {
+      const timer = setInterval(() => {
+        setIndex((prev) => (prev + 1) % steps.length);
+      }, 2500);
+      return () => clearInterval(timer);
+    }, []);
+
+    return (
+      <div className="flex flex-col items-center space-y-4">
+        <div className="relative size-24 flex items-center justify-center">
+          <motion.div
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute inset-0 bg-[#0b1957]/10 rounded-full"
+          />
+          <motion.div
+            animate={{
+              rotate: 360,
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="size-16 border-2 border-dashed border-[#0b1957]/20 rounded-full flex items-center justify-center"
+          >
+            <Sparkles className="size-8 text-[#0b1957] animate-pulse" />
+          </motion.div>
+        </div>
+        <div className="h-6 flex items-center justify-center overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={index}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-sm font-medium text-[#0b1957]/70"
+            >
+              {steps[index]}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  };
+
+  /* ── GUIDED JOURNEY SCREEN ── */
+  if (step === "guided-journey") {
+    return (
+      <div className="relative flex flex-col items-center w-full max-w-md p-10 bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+        <CloseButton onClose={onClose} />
+        <div className="flex flex-col items-center text-center space-y-8 pt-6 pb-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-[#0b1957]">AI Guided Journey</h2>
+            <p className="text-sm text-slate-500">Creating your agent in real-time</p>
+          </div>
+          <ThinkingIndicator />
+          <p className="text-[10px] text-slate-400 max-w-[200px] leading-relaxed">
+            This minimal configuration ensures your agent follows best practices for interaction and goal achievement.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── CREATE SELECTION SCREEN ── */
+  if (step === "create-selection") {
     return (
       <div className="relative flex flex-col items-center w-full max-w-md p-8 bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         <BackButton onClick={onBack} />
         <CloseButton onClose={onClose} />
 
-        <div className="flex flex-col items-center text-center space-y-4 pt-4">
-          <div className="size-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-2">
-            <PlusCircle className="size-8 stroke-[1.5]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#0b1957]">Coming Soon</h2>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-[240px]">
-            The ability to design and train new voice agents is under active
-            development. Stay tuned!
-          </p>
-          <Button
-            variant="outline"
-            onClick={onBack}
-            className="mt-4 border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            Back to Home
-          </Button>
+        <div className="text-center space-y-2 mb-8 mt-4">
+          <h2 className="text-2xl font-bold text-[#0b1957]">Create New Agent</h2>
+          <p className="text-sm text-slate-500">Choose how you want to build your AI.</p>
         </div>
+
+        <div className="w-full space-y-4">
+          <button
+            onClick={onStartGuidedJourney}
+            className="w-full group relative flex items-center gap-4 p-5 bg-gradient-to-br from-[#0b1957] to-[#1e293b] hover:to-[#0b1957] text-white rounded-2xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+          >
+            <div className="size-12 bg-white/10 rounded-xl flex items-center justify-center text-blue-200">
+              <Wand2 className="size-6" />
+            </div>
+            <div className="text-left">
+              <div className="text-base font-bold">AI Guided Journey</div>
+              <div className="text-[11px] text-blue-100/80">
+                Answer a few questions and let AI build it.
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onStartDirectConfig}
+            className="w-full group relative flex items-center gap-4 p-5 bg-white border-2 border-slate-100 hover:border-[#0b1957]/20 hover:bg-slate-50 rounded-2xl transition-all active:scale-[0.98]"
+          >
+            <div className="size-12 bg-slate-100 rounded-xl flex items-center justify-center text-[#0b1957]/60 group-hover:text-[#0b1957]">
+              <Settings2 className="size-6" />
+            </div>
+            <div className="text-left">
+              <div className="text-base font-bold text-[#0b1957]">Direct Configuration</div>
+              <div className="text-[11px] text-slate-400">
+                Full manual control over all parameters.
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <p className="mt-8 text-[10px] text-slate-400 text-center">
+            You can always modify agents manually after creation.
+        </p>
       </div>
     );
   }
+
 
   /* ── WELCOME ── */
   if (step === "welcome") {
@@ -156,7 +270,7 @@ export default function PlaygroundConfigView({
 
         <div className="mb-8 mt-2 relative w-48 h-12">
           <Image
-            src="/logo.png"
+            src="/voag-logo.png"
             alt="LADS Logo"
             fill
             className="object-contain"
@@ -192,7 +306,7 @@ export default function PlaygroundConfigView({
             </div>
           </button>
           <button
-            onClick={onStartComingSoon}
+            onClick={onOpenCreateSelection}
             className="w-full group relative flex items-center gap-4 p-4 bg-slate-50 hover:bg-white border hover:border-slate-300 rounded-2xl transition-all hover:shadow-md active:scale-[0.98]"
           >
             <div className="size-10 bg-slate-200 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-slate-700 group-hover:text-white transition-colors">
@@ -226,7 +340,7 @@ export default function PlaygroundConfigView({
 
       <div className="mb-6 mt-2 relative w-48 h-12">
         <Image
-          src="/logo.png"
+          src="/voag-logo.png"
           alt="LADS Logo"
           fill
           className="object-contain"

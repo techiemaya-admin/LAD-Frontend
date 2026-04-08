@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 /* ──────────────────────────────────────────────────────────────────
    CONSTANTS
@@ -24,7 +25,7 @@ export interface AgentOption {
   description: string;
 }
 
-export type PlaygroundStep = "welcome" | "config" | "coming-soon";
+export type PlaygroundStep = "welcome" | "config" | "create-selection" | "guided-journey";
 
 export interface UsePlaygroundOptions {
   onClose?: () => void;
@@ -59,6 +60,9 @@ export interface UsePlaygroundReturn {
   timerDisplay: string;
   startCall: () => Promise<void>;
   handleDisconnect: () => void;
+  openCreateSelection: () => void;
+  startDirectConfig: () => void;
+  startGuidedJourney: () => void;
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -71,6 +75,7 @@ export function usePlayground({
   userId,
   tenantId,
 }: UsePlaygroundOptions): UsePlaygroundReturn {
+  const router = useRouter();
   /* Step tracking */
   const [step, setStep] = useState<PlaygroundStep>("welcome");
 
@@ -390,5 +395,24 @@ export function usePlayground({
     timerDisplay,
     startCall,
     handleDisconnect,
+    openCreateSelection: () => {
+      if (callIdRef.current) releaseHold(callIdRef.current);
+      setCallId("");
+      setIsHolding(false);
+      clearAllTimers();
+      setStep("create-selection");
+    },
+    startDirectConfig: () => {
+      if (callIdRef.current) releaseHold(callIdRef.current);
+      if (onClose) onClose();
+      router.push("/settings?tab=api");
+    },
+    startGuidedJourney: () => {
+      if (callIdRef.current) releaseHold(callIdRef.current);
+      setCallId("");
+      setIsHolding(false);
+      clearAllTimers();
+      setStep("guided-journey");
+    },
   };
 }
