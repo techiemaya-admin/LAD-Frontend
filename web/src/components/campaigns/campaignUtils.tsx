@@ -224,9 +224,40 @@ export const renderActionChips = (campaign: Campaign) => {
     platformActions[action.platform].push(action.name);
   });
   const chips: React.ReactElement[] = [];
+  const pd = (campaign as any).platform_metrics || {};
+
   Object.entries(platformActions).forEach(([platform, actionNames]) => {
     const config = PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] || { name: platform, color: '#64748B', bgColor: '#F1F5F9' };
     const actionText = actionNames.join(', ');
+
+    // For LinkedIn, add metrics to the tooltip
+    let tooltipContent = `${config.name}: ${actionText}`;
+    if (platform === 'linkedin') {
+      const li = pd.linkedin || {};
+      const visits = li.profile_views ?? 0;
+      const sent = li.sent ?? 0;
+      const accepted = li.connected ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-gray-400" />
+              <span>Profile Visits: <strong>{visits}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <UserPlus className="w-3 h-3 text-[#0077B5]" />
+              <span>Connections Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Connections: <strong>{accepted}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     chips.push(
       <TooltipProvider key={platform}>
         <Tooltip>
@@ -243,7 +274,7 @@ export const renderActionChips = (campaign: Campaign) => {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            {`${config.name}: ${actionText}`}
+            {tooltipContent}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -483,8 +514,6 @@ export const renderActivityBreakdown = (campaign: Campaign): React.ReactElement 
   // ── LinkedIn ────────────────────────────────────────────────────────────────
   if (channels.linkedin) {
     const li       = pd.linkedin || {};
-    const visits   = li.profile_views ?? 0;
-    const sent     = li.sent ?? 0;
     const accepted = li.connected ?? 0;
     rows.push(
       <div key="linkedin" className="flex items-center gap-2 min-w-0">
@@ -492,26 +521,6 @@ export const renderActivityBreakdown = (campaign: Campaign): React.ReactElement 
           <Linkedin className="w-2.5 h-2.5 text-[#0077B5]" />
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 cursor-default">
-                  <Eye className="w-3 h-3 text-gray-400" />{visits}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>Profile Visits</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 cursor-default">
-                  <UserPlus className="w-3 h-3 text-[#0077B5]" />{sent}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>Connections Sent</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
