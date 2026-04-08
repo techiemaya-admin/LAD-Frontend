@@ -8,6 +8,7 @@ import PricingHero from "@/components/landing/PricingHero";
 import StandardPlans from "@/components/landing/StandardPlans";
 import EnterprisePlans from "@/components/landing/EnterprisePlans";
 import PricingBreakdown from "@/components/landing/PricingBreakdown";
+import InteractivePricingCalculator from "@/components/landing/InteractivePricingCalculator";
 import PricingCTA from "@/components/landing/PricingCTA";
 import CTASection from "@/components/landing/CTASection";
 
@@ -34,9 +35,14 @@ export default function LAD3DShowcase() {
       <section>
         {/* Pricing Hero */}
         <PricingHero />
-        
+
         {/* Standard Plans */}
         <StandardPlans />
+
+        {/* Interactive Pricing Calculator */}
+        <div className="container mx-auto px-4">
+          <InteractivePricingCalculator />
+        </div>
 
         {/* Pricing Breakdown */}
         <PricingBreakdown />
