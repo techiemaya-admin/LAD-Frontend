@@ -402,7 +402,11 @@ export function ConversationsPage() {
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
             >
-              <ChannelIcon channel={sublabel as any} size={12} />
+              <ChannelIcon
+                channel={sublabel as any}
+                size={16}
+                overrideColor={activeTab === id ? '#ffffff' : undefined}
+              />
               {label}
             </button>
           ))}
