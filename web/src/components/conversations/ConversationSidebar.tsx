@@ -150,6 +150,19 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {});
   }, []);
 
+  // Handle ESC key to close select mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSelectMode) {
+        setIsSelectMode(false);
+        setSelectedIds(new Set());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectMode]);
+
   const displayPhone = useCallback((phone: string | undefined | null): string => {
     if (!maskPhoneNumbers || !phone) return phone || '';
     const digits = phone.replace(/\D/g, '');
@@ -544,6 +557,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           isSelectMode={isSelectMode}
           isChecked={selectedIds.has(conversation.id)}
           onContextStatusClick={handleContextStatusClick}
+          onDoubleClick={() => {
+            setIsSelectMode(true);
+            setSelectedIds(new Set([conversation.id]));
+          }}
         />
       );
     },
@@ -681,6 +698,34 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             <X className="h-3 w-3 mr-1" />
             Clear
           </Button>
+        </div>
+      )}
+
+      {/* Multi-select filter row - shows at top when in select mode */}
+      {isSelectMode && (
+        <div className="px-3 py-2.5 border-b border-border bg-blue-50/60 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <CheckSquare className="h-4 w-4 text-blue-600" />
+            <span className="text-blue-700">{selectedIds.size} contact{selectedIds.size !== 1 ? 's' : ''} selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={selectAll}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={deselectAll}
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       )}
 
