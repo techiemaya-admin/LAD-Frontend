@@ -37,21 +37,6 @@ export interface UseUpdateRelationshipScoresReturn {
 export function useRelationshipHeatmap(enabled: boolean = true): UseRelationshipHeatmapReturn {
   const query = useQuery(getRelationshipHeatmapOptions(enabled));
 
-  if (typeof window !== 'undefined') {
-    console.log(
-      '%c[useRelationshipHeatmap] Query state:',
-      'color: #10B981; font-weight: bold;',
-      {
-        enabled,
-        isLoading: query.isLoading,
-        isError: query.isError,
-        hasData: !!query.data,
-        dataLength: query.data?.data?.length || 0,
-        error: query.error?.message || 'NO_ERROR',
-      }
-    );
-  }
-
   return {
     data: query.data,
     heatmapData: query.data?.data,
@@ -73,14 +58,6 @@ export function useUpdateRelationshipScores(): UseUpdateRelationshipScoresReturn
   const mutation = useMutation({
     mutationFn: () => relationshipScoresApi.updateRelationshipScores(),
   });
-
-  if (typeof window !== 'undefined' && mutation.isError) {
-    console.error(
-      '%c[useUpdateRelationshipScores] Mutation error:',
-      'color: #EF4444; font-weight: bold;',
-      mutation.error
-    );
-  }
 
   return {
     mutate: mutation.mutate as () => void,
