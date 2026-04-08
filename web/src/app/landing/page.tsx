@@ -1,6 +1,9 @@
 "use client";
 import HeroSection from "@/components/landing/HeroSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
+import HowItWorksSection from "@/components/landing/HowItWorksSection";
+import ValuePropositionSection from "@/components/landing/ValuePropositionSection";
+import SocialProofSection from "@/components/landing/SocialProofSection";
 import PricingHero from "@/components/landing/PricingHero";
 import StandardPlans from "@/components/landing/StandardPlans";
 import EnterprisePlans from "@/components/landing/EnterprisePlans";
@@ -17,6 +20,15 @@ export default function LAD3DShowcase() {
 
       {/* Features Section */}
       <FeaturesSection />
+
+      {/* How It Works Section */}
+      <HowItWorksSection />
+
+      {/* Value Proposition Section */}
+      <ValuePropositionSection />
+
+      {/* Social Proof Section */}
+      <SocialProofSection />
 
       {/* Pricing Section */}
       <section>
