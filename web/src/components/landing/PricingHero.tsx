@@ -37,14 +37,14 @@ export default function PricingHero() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.h1 
           variants={itemVariants}
-          className="text-4xl md:text-6xl font-bold text-gray-900 mb-6"
+          className="text-4xl md:text-6xl font-bold text-[#222B45] mb-6"
         >
           Simple, credit-based
           <span className="text-blue-600 ml-3">pricing</span>
         </motion.h1>
         <motion.p 
           variants={itemVariants}
-          className="text-xl text-gray-600 max-w-3xl mx-auto mb-8"
+          className="text-xl text-[#8F9BB3] max-w-3xl mx-auto mb-8"
         >
           Buy credits once, use them for any feature. No subscriptions, no
           monthly fees, no expiration.

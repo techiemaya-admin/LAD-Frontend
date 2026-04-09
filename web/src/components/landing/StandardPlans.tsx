@@ -102,10 +102,10 @@ export default function StandardPlans() {
           variants={cardVariants}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-[#222B45] mb-4">
             Flexible Pricing Plans
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-[#8F9BB3]">
             Choose the plan that fits your business needs. Credits included
             with every plan.
           </p>
@@ -116,10 +116,10 @@ export default function StandardPlans() {
             variants={cardVariants}
             className="text-center mb-8"
           >
-            <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-2xl font-semibold text-[#222B45] mb-2">
               Standard Plans
             </h3>
-            <p className="text-gray-600">
+            <p className="text-[#8F9BB3]">
               Perfect for individuals and new beginners
             </p>
           </motion.div>
@@ -171,8 +171,8 @@ export default function StandardPlans() {
                 )}
 
                 <div className="mb-4">
-                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-white' : 'text-gray-900' }`}>{plan.name}</h3>
-                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-gray-600' }`}>{plan.description}</p>
+                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-white' : 'text-[#222B45]' }`}>{plan.name}</h3>
+                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-[#8F9BB3]' }`}>{plan.description}</p>
                 </div>
 
                 <div className="mb-6">
@@ -184,7 +184,7 @@ export default function StandardPlans() {
                   ) : (
                     <>
                       <div className="flex items-baseline">
-                        <span className="text-4xl font-bold text-gray-900">
+                        <span className="text-4xl font-bold text-[#222B45]">
                           {plan.price}
                         </span>
                       </div>

@@ -143,11 +143,11 @@ export default function FeaturesSection() {
           variants={itemVariants}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
             Powerful Features for{" "}
-            <span className="text-[#0b1957]">Automated Success</span>
+            <span className="text-indigo-600">Automated Success</span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
             Experience the future of sales automation with our comprehensive
             suite of AI-powered tools
           </p>
@@ -181,7 +181,7 @@ export default function FeaturesSection() {
                     {/* Before */}
                     <div className="flex gap-2 items-start">
                       <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase mt-0.5">Before</span>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-through">
+                      <p className="text-sm text-[#8F9BB3] dark:text-gray-400 line-through">
                         {feature.beforeText}
                       </p>
                     </div>
@@ -209,7 +209,7 @@ export default function FeaturesSection() {
                       whileHover={{ opacity: 1 }}
                       className="pt-2 border-t border-gray-300 dark:border-gray-700"
                     >
-                      <p className="text-xs font-bold text-[#0b1957] dark:text-blue-400">
+                      <p className="text-xs font-bold text-indigo-600 dark:text-blue-400">
                         ✨ {feature.improvement}
                       </p>
                     </motion.div>

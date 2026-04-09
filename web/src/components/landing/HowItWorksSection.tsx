@@ -86,7 +86,7 @@ export default function HowItWorksSection() {
 
   return (
     <motion.section
-      className="py-20 relative bg-gradient-to-b from-white via-gray-50 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+      className="py-20 relative bg-gradient-to-b from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
       id="how-it-works"
       initial="hidden"
       whileInView="visible"
@@ -99,10 +99,10 @@ export default function HowItWorksSection() {
           variants={stepVariants}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            How It <span className="text-[#0b1957]">Works</span>
+          <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
+            How It <span className="text-indigo-600">Works</span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
             Get started with LAD in 5 simple steps and watch your sales multiply automatically
           </p>
         </motion.div>
@@ -159,14 +159,14 @@ export default function HowItWorksSection() {
                   transition={{ type: 'spring', stiffness: 300 }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-2xl font-bold text-[#222B45] dark:text-white">
                       {item.title}
                     </h3>
-                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm font-semibold rounded-full">
+                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#8F9BB3] dark:text-gray-400 text-sm font-semibold rounded-full">
                       {item.duration}
                     </span>
                   </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  <p className="text-[#8F9BB3] dark:text-gray-400 text-lg">
                     {item.description}
                   </p>
                 </motion.div>
@@ -198,14 +198,14 @@ export default function HowItWorksSection() {
                 {/* Content */}
                 <div className="flex-1 pt-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-[#222B45] dark:text-white">
                       {item.title}
                     </h3>
-                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-full">
+                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-[#8F9BB3] dark:text-gray-400 text-xs font-semibold rounded-full">
                       {item.duration}
                     </span>
                   </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  <p className="text-[#8F9BB3] dark:text-gray-400 text-sm">
                     {item.description}
                   </p>
                 </div>
@@ -230,13 +230,13 @@ export default function HowItWorksSection() {
           variants={stepVariants}
           className="mt-16 text-center"
         >
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+          <p className="text-[#8F9BB3] dark:text-gray-400 mb-6 text-lg">
             Ready to automate your sales process?
           </p>
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
             whileTap={{ scale: 0.95 }}
-            className="px-10 py-4 bg-[#0b1957] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+            className="px-10 py-4 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
           >
             Start Free Trial
           </motion.button>

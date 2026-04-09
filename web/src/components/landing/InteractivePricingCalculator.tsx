@@ -60,10 +60,10 @@ export default function InteractivePricingCalculator() {
       viewport={{ once: true, amount: 0.3 }}
     >
       <div className="max-w-4xl mx-auto">
-        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-3xl font-bold text-[#222B45] dark:text-white mb-2">
           Pricing Calculator
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-8">
+        <p className="text-[#8F9BB3] dark:text-gray-400 mb-8">
           Adjust these values to see how many credits you'll need
         </p>
 
@@ -75,7 +75,7 @@ export default function InteractivePricingCalculator() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <label className="block text-sm font-semibold text-[#222B45] dark:text-white mb-3">
               Monthly AI Calls
             </label>
             <div className="flex items-center gap-4">
@@ -87,7 +87,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setCallsPerMonth(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <div className="text-2xl font-bold text-[#0b1957] dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
                 {callsPerMonth}
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function InteractivePricingCalculator() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <label className="block text-sm font-semibold text-[#222B45] dark:text-white mb-3">
               Average Call Duration (min)
             </label>
             <div className="flex items-center gap-4">
@@ -114,7 +114,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setAvgCallDuration(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
               />
-              <div className="text-2xl font-bold text-[#0b1957] dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
                 {avgCallDuration}m
               </div>
             </div>
@@ -126,7 +126,7 @@ export default function InteractivePricingCalculator() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <label className="block text-sm font-semibold text-[#222B45] dark:text-white mb-3">
               Leads to Enrich Monthly
             </label>
             <div className="flex items-center gap-4">
@@ -138,7 +138,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setLeadsToEnrich(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
               />
-              <div className="text-2xl font-bold text-[#0b1957] dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
                 {leadsToEnrich}
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function InteractivePricingCalculator() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.25 }}
           >
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <label className="block text-sm font-semibold text-[#222B45] dark:text-white mb-3">
               Active Integrations
             </label>
             <div className="flex items-center gap-4">
@@ -165,7 +165,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setIntegrations(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
               />
-              <div className="text-2xl font-bold text-[#0b1957] dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
                 {integrations}
               </div>
             </div>
@@ -185,13 +185,13 @@ export default function InteractivePricingCalculator() {
             transition={{ type: 'spring', stiffness: 200 }}
             className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-gray-700"
           >
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
+            <p className="text-xs font-semibold text-[#8F9BB3] dark:text-gray-400 uppercase mb-2">
               Credits Needed
             </p>
-            <div className="text-4xl font-bold text-[#0b1957] dark:text-blue-400 mb-2">
+            <div className="text-4xl font-bold text-indigo-600 dark:text-blue-400 mb-2">
               {totalCredits.toLocaleString()}
             </div>
-            <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+            <div className="space-y-1 text-xs text-[#8F9BB3] dark:text-gray-400">
               <p>Voice: {voiceCredits.toLocaleString()}</p>
               <p>Enrichment: {enrichmentCredits.toLocaleString()}</p>
               <p>Integrations: {integrationCredits.toLocaleString()}</p>
@@ -228,13 +228,13 @@ export default function InteractivePricingCalculator() {
             transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
             className="p-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900 border border-green-200 dark:border-gray-700"
           >
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
+            <p className="text-xs font-semibold text-[#8F9BB3] dark:text-gray-400 uppercase mb-2">
               Estimated Monthly Cost
             </p>
             <div className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
               ${(totalCredits / 1000 * 99).toFixed(0)}
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-[#8F9BB3] dark:text-gray-400">
               Based on $99 per 1,000 credits
             </p>
           </motion.div>
@@ -250,7 +250,7 @@ export default function InteractivePricingCalculator() {
           <div className="flex gap-3">
             <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
+              <p className="font-semibold text-[#222B45] dark:text-white text-sm mb-1">
                 💡 Pro Tip
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300">

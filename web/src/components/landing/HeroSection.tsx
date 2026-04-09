@@ -71,9 +71,9 @@ export default function HeroSection() {
       animate="visible"
       variants={containerVariants}
     >
-      {/* Solid background */}
+      {/* Background gradient matching app theme */}
       <div
-        className="absolute inset-0 bg-[#dadada]"
+        className="absolute inset-0 bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
       />
 
 
@@ -86,26 +86,26 @@ export default function HeroSection() {
           >
             {/* Logo */}
             <motion.div variants={itemVariants}>
-              <h1 className="text-6xl lg:text-7xl font-bold text-[#0b1957] dark:text-white leading-tight">
+              <h1 className="text-6xl lg:text-7xl font-bold text-[#222B45] dark:text-white leading-tight">
                 LAD
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-400 font-semibold mt-2">
+              <p className="text-xl text-[#8F9BB3] dark:text-gray-400 font-semibold mt-2">
                 Powered by Techiemaya
               </p>
             </motion.div>
 
-            <motion.h2 
+            <motion.h2
               variants={itemVariants}
-              className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight"
+              className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white leading-tight"
             >
               AI Agents That{" "}
-              <span className="text-[#0b1957]">Close Deals</span>{" "}
+              <span className="text-indigo-600">Close Deals</span>{" "}
               Automatically
             </motion.h2>
 
-            <motion.p 
+            <motion.p
               variants={itemVariants}
-              className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed"
+              className="text-xl text-[#8F9BB3] dark:text-gray-400 leading-relaxed"
             >
               Revolutionize your sales process with AI-powered agents that
               communicate across all channels—voice, email, chat, and social
@@ -119,13 +119,13 @@ export default function HeroSection() {
             >
               <Link href="/onboarding">
                 <motion.button
-                  whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
+                  whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(79, 70, 229, 0.3)' }}
                   whileTap={{ scale: 0.95 }}
                   animate={{
                     boxShadow: [
-                      '0 10px 20px rgba(11, 25, 87, 0.1)',
-                      '0 15px 30px rgba(11, 25, 87, 0.2)',
-                      '0 10px 20px rgba(11, 25, 87, 0.1)'
+                      '0 10px 20px rgba(79, 70, 229, 0.1)',
+                      '0 15px 30px rgba(79, 70, 229, 0.2)',
+                      '0 10px 20px rgba(79, 70, 229, 0.1)'
                     ]
                   }}
                   transition={{
@@ -133,7 +133,7 @@ export default function HeroSection() {
                     repeat: Infinity,
                     ease: 'easeInOut'
                   }}
-                  className="px-8 py-4 bg-[#0b1957] text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
+                  className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
                 >
                   Get Started
                 </motion.button>
@@ -141,7 +141,7 @@ export default function HeroSection() {
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)' }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
+                className="px-8 py-4 bg-white dark:bg-gray-800 text-[#222B45] dark:text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
               >
                 Watch Demo
               </motion.button>
@@ -164,7 +164,7 @@ export default function HeroSection() {
                   className="text-center p-4 rounded-xl backdrop-blur-sm bg-white/30 dark:bg-gray-800/30 border border-white/20 dark:border-gray-700/20 transition-colors"
                 >
                   <motion.div
-                    className="text-3xl font-bold text-[#0b1957] dark:text-white"
+                    className="text-3xl font-bold text-[#222B45] dark:text-white"
                     animate={{
                       scale: [1, 1.05, 1],
                     }}
@@ -175,7 +175,7 @@ export default function HeroSection() {
                   >
                     {stat.value}{stat.suffix}
                   </motion.div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 font-medium">
+                  <div className="text-sm text-[#8F9BB3] dark:text-gray-400 mt-2 font-medium">
                     {stat.label}
                   </div>
                 </motion.div>
@@ -184,19 +184,14 @@ export default function HeroSection() {
           </motion.div>
 
           {/* Right: Image */}
-          <motion.div
-            variants={itemVariants}
-            className="mt-8"
-          >
-            <Image
+           <Image
               src="/lad.png"
               alt="LAD Platform"
               width={600}
               height={400}
               priority
-              className="w-full rounded-2xl shadow-2xl"
+              className="w-full"
             />
-          </motion.div>
         </div>
       </div>
     </motion.section>
