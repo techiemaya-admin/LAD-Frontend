@@ -13,10 +13,18 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
+
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+
     "jsx": "react-jsx",
+
     "incremental": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+
     "baseUrl": ".",
     "plugins": [
       {
