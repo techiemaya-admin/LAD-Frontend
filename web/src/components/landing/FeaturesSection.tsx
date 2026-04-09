@@ -145,7 +145,7 @@ export default function FeaturesSection() {
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
             Powerful Features for{" "}
-            <span className="text-indigo-600">Automated Success</span>
+            <span className="text-[#1A3F7F]">Automated Success</span>
           </h2>
           <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
             Experience the future of sales automation with our comprehensive
@@ -209,7 +209,7 @@ export default function FeaturesSection() {
                       whileHover={{ opacity: 1 }}
                       className="pt-2 border-t border-gray-300 dark:border-gray-700"
                     >
-                      <p className="text-xs font-bold text-indigo-600 dark:text-blue-400">
+                      <p className="text-xs font-bold text-[#1A3F7F] dark:text-blue-400">
                         ✨ {feature.improvement}
                       </p>
                     </motion.div>

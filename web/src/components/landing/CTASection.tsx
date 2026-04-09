@@ -76,7 +76,7 @@ export default function CTASection() {
       variants={containerVariants}
     >
       {/* Background with gradient and animation */}
-      <div className="absolute inset-0 bg-indigo-600" />
+      <div className="absolute inset-0 bg-[#1A3F7F]" />
       <motion.div
         className="absolute inset-0 opacity-30"
         animate={{
@@ -131,7 +131,7 @@ export default function CTASection() {
                 <motion.button
                   className={`w-full p-6 rounded-2xl font-semibold transition-all relative group ${
                     cta.highlight
-                      ? 'bg-white text-indigo-600 shadow-2xl'
+                      ? 'bg-white text-[#1A3F7F] shadow-2xl'
                       : 'bg-white/10 backdrop-blur-md text-white border border-white/20 hover:border-white/40'
                   }`}
                   whileHover={{

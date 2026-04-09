@@ -28,7 +28,7 @@ export default function PricingHero() {
 
   return (
     <motion.div 
-      className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0b1957] dark:to-[#0b1957] py-16"
+      className="bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-900 py-16"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}

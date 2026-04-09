@@ -70,7 +70,7 @@ export default function SocialProofSection() {
 
   return (
     <motion.section
-      className="py-20 relative bg-gradient-to-b from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
+      className="py-20 relative bg-gradient-to-b from-white via-blue-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
       id="social-proof"
       initial="hidden"
       whileInView="visible"
@@ -84,7 +84,7 @@ export default function SocialProofSection() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
-            Trusted by <span className="text-indigo-600">Hundreds of Businesses</span>
+            Trusted by <span className="text-[#1A3F7F]">Hundreds of Businesses</span>
           </h2>
           <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
             Join successful companies that have already transformed their sales process
@@ -131,7 +131,7 @@ export default function SocialProofSection() {
                   whileInView={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 0.6 }}
                 >
-                  <p className="text-sm font-bold text-indigo-600 dark:text-blue-400">
+                  <p className="text-sm font-bold text-[#1A3F7F] dark:text-blue-400">
                     📊 {testimonial.metric}
                   </p>
                 </motion.div>
@@ -165,7 +165,7 @@ export default function SocialProofSection() {
               transition={{ delay: index * 0.1 }}
               className="text-center p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900"
             >
-              <h4 className="text-4xl lg:text-5xl font-bold text-indigo-600 dark:text-blue-400 mb-2">
+              <h4 className="text-4xl lg:text-5xl font-bold text-[#1A3F7F] dark:text-blue-400 mb-2">
                 {stat.number}
               </h4>
               <p className="text-[#8F9BB3] dark:text-gray-400 font-medium">{stat.label}</p>

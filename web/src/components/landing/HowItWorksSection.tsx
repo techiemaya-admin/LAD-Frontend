@@ -86,7 +86,7 @@ export default function HowItWorksSection() {
 
   return (
     <motion.section
-      className="py-20 relative bg-gradient-to-b from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
+      className="py-20 relative bg-gradient-to-b from-white via-blue-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
       id="how-it-works"
       initial="hidden"
       whileInView="visible"
@@ -100,7 +100,7 @@ export default function HowItWorksSection() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
-            How It <span className="text-indigo-600">Works</span>
+            How It <span className="text-[#1A3F7F]">Works</span>
           </h2>
           <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
             Get started with LAD in 5 simple steps and watch your sales multiply automatically
@@ -236,7 +236,7 @@ export default function HowItWorksSection() {
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
             whileTap={{ scale: 0.95 }}
-            className="px-10 py-4 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+            className="px-10 py-4 bg-[#1A3F7F] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
           >
             Start Free Trial
           </motion.button>

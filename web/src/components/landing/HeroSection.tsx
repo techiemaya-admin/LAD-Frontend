@@ -73,7 +73,7 @@ export default function HeroSection() {
     >
       {/* Background gradient matching app theme */}
       <div
-        className="absolute inset-0 bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
+        className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
       />
 
 
@@ -99,7 +99,7 @@ export default function HeroSection() {
               className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white leading-tight"
             >
               AI Agents That{" "}
-              <span className="text-indigo-600">Close Deals</span>{" "}
+              <span className="text-[#1A3F7F]">Close Deals</span>{" "}
               Automatically
             </motion.h2>
 
@@ -133,7 +133,7 @@ export default function HeroSection() {
                     repeat: Infinity,
                     ease: 'easeInOut'
                   }}
-                  className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
+                  className="px-8 py-4 bg-[#1A3F7F] text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
                 >
                   Get Started
                 </motion.button>

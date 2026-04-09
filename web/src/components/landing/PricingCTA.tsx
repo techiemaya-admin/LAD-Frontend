@@ -42,7 +42,7 @@ export default function PricingCTA() {
             boxShadow: "0 20px 40px -12px rgba(11, 25, 87, 0.3)"
           }}
           whileTap={{ scale: 0.95 }}
-          className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+          className="px-8 py-4 bg-[#1A3F7F] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
         >
           View Pricing Calculator
         </motion.button>

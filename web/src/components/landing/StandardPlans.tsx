@@ -141,7 +141,7 @@ export default function StandardPlans() {
                   plan.popular
                     ? "border-blue-500 hover:shadow-xl transform scale-105"
                     : (plan as any).enterprise
-                    ? "border-indigo-500 hover:border-indigo-600 hover:shadow-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white"
+                    ? "border-indigo-500 hover:border-#1A3F7F hover:shadow-xl bg-gradient-to-br from-#1A3F7F to-violet-600 text-white"
                     : "border-gray-200 hover:border-blue-500 hover:shadow-xl"
                 }`}
               >

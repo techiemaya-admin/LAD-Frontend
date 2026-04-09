@@ -87,7 +87,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setCallsPerMonth(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-[#1A3F7F] dark:text-blue-400 min-w-16 text-right">
                 {callsPerMonth}
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setAvgCallDuration(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
               />
-              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-[#1A3F7F] dark:text-blue-400 min-w-16 text-right">
                 {avgCallDuration}m
               </div>
             </div>
@@ -138,7 +138,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setLeadsToEnrich(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
               />
-              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-[#1A3F7F] dark:text-blue-400 min-w-16 text-right">
                 {leadsToEnrich}
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function InteractivePricingCalculator() {
                 onChange={(e) => setIntegrations(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
               />
-              <div className="text-2xl font-bold text-indigo-600 dark:text-blue-400 min-w-16 text-right">
+              <div className="text-2xl font-bold text-[#1A3F7F] dark:text-blue-400 min-w-16 text-right">
                 {integrations}
               </div>
             </div>
@@ -188,7 +188,7 @@ export default function InteractivePricingCalculator() {
             <p className="text-xs font-semibold text-[#8F9BB3] dark:text-gray-400 uppercase mb-2">
               Credits Needed
             </p>
-            <div className="text-4xl font-bold text-indigo-600 dark:text-blue-400 mb-2">
+            <div className="text-4xl font-bold text-[#1A3F7F] dark:text-blue-400 mb-2">
               {totalCredits.toLocaleString()}
             </div>
             <div className="space-y-1 text-xs text-[#8F9BB3] dark:text-gray-400">
