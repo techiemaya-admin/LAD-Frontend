@@ -806,22 +806,7 @@ const SettingsPage: React.FC = () => {
                       <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Field Key</label>
                       <input name="field_key" defaultValue={editingConfig?.field_key} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Type</label>
-                      <select name="field_type" defaultValue={editingConfig?.field_type || 'text'} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm">
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                        <option value="dropdown">Dropdown</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Options (comma separated for dropdown)</label>
-                      <input name="options" defaultValue={editingConfig?.options?.join(', ')} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
-                    </div>
                     <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm text-[#4B5563]">
-                        <input type="checkbox" name="is_required" defaultChecked={editingConfig?.is_required} /> Required
-                      </label>
                       <label className="flex items-center gap-2 text-sm text-[#4B5563]">
                         <input type="checkbox" name="is_active" defaultChecked={editingConfig?.is_active ?? true} /> Active
                       </label>
