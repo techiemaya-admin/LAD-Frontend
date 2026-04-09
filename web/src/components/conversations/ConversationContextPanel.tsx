@@ -44,6 +44,8 @@ interface ConversationContextPanelProps {
   conversation: Conversation;
   onClose: () => void;
   backendChannel?: 'personal' | 'waba';
+  /** Force the panel to open on a specific tab */
+  defaultTab?: 'assignment' | 'notes' | 'comments';
 }
 
 const tagColors: Record<ContactTag, string> = {
@@ -83,6 +85,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   conversation,
   onClose,
   backendChannel = 'waba',
+  defaultTab = 'assignment',
 }: ConversationContextPanelProps) {
   const { contact, channel, createdAt } = conversation;
   const [newComment, setNewComment] = useState('');
@@ -754,7 +757,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           </div>
 
           {/* Tabs: Assignment, Notes & Internal Comments */}
-          <Tabs defaultValue="assignment" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="w-full grid grid-cols-3 h-9">
               <TabsTrigger value="assignment" className="text-xs">
                 <UserCheck className="h-3 w-3 mr-1.5" />

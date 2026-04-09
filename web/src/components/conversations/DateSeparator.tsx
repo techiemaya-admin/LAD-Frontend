@@ -17,8 +17,19 @@ export const DateSeparator = memo(function DateSeparator({ date }: DateSeparator
   }
 
   return (
-    <div className="flex items-center justify-center my-4">
-      <div className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+    <div className="flex items-center justify-center my-3">
+      <div
+        className="px-3 py-1 rounded-full shadow-sm"
+        style={{
+          backgroundColor: '#d9d0c7',
+          color: '#4a4035',
+          fontSize: '12px',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+          fontWeight: 500,
+          letterSpacing: '0.01em',
+          lineHeight: '1.4',
+        }}
+      >
         {label}
       </div>
     </div>

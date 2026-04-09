@@ -138,6 +138,7 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
+<<<<<<< HEAD
   /* Message bubbles - WhatsApp Theme */
   .message-bubble-incoming {
     @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md border border-gray-200 shadow-sm;
@@ -150,10 +151,49 @@
   /* Chat background - WhatsApp Theme */
   .whatsapp-chat-bg {
     @apply bg-[#ECE5DD];
+=======
+  /* Message bubbles — defined below in the chat-bg block with WhatsApp styling */
+
+  /* ── Chat window background ────────────────────────────────────────────── */
+  .whatsapp-chat-bg {
+    background-color: #ffffff;
+>>>>>>> develop
   }
 
   .dark .whatsapp-chat-bg {
-    @apply bg-gray-950;
+    background-color: #0d1418;
+  }
+
+  /* ── Chat message typography (WhatsApp-style) ──────────────────────────── */
+  .wa-msg-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14.2px;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    white-space: pre-wrap;
+    word-break: break-words;
+  }
+
+  .wa-msg-time {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Update message bubble base to match WhatsApp ──────────────────────── */
+  .message-bubble-incoming {
+    background: #ffffff;
+    color: #111b21;
+    border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
+  }
+
+  .message-bubble-outgoing {
+    background: #0b1957;
+    color: #ffffff;
+    border-radius: 8px 0 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
 
   /* Event type colors for calendar */
