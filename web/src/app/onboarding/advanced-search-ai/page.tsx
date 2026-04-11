@@ -1902,6 +1902,109 @@ export default function AdvancedSearchAIPage() {
             }
         }
 
+        // ── ABM INTENT DETECTION ──
+        // Intercept company research / insight queries and route to ABM pipeline.
+        // Must run BEFORE web-search and lead-chat so it gets first priority.
+        const ABM_INTENT_PATTERNS = [
+            /(?:get\s+me\s+|give\s+me\s+|provide\s+|show\s+me\s+)?(?:detailed\s+)?insights?\s+(?:about|on|for|of)\s+(.+)/i,
+            /(?:detailed\s+)?(?:company\s+)?(?:insights?|intelligence|analysis|profile|overview|details?|information|info)\s+(?:about|on|for|of|regarding)\s+(.+)/i,
+            /research\s+(?:the\s+company\s+)?(?:called\s+)?(.+?)(?:\s*,|\s*$)/i,
+            /(?:account[\s-]based|abm)\s+(?:research|insights?|intelligence|analysis)\s+(?:on|for|about)\s+(.+)/i,
+            /(?:prospect|target)\s+company\s+(?:research|analysis|profile)\s+(?:for|on|about)?\s*(.+)/i,
+        ];
+        const isABMQuery = ABM_INTENT_PATTERNS.some(p => p.test(text));
+
+        if (isABMQuery) {
+            try {
+                const abmRes = await fetch('/api/abm/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ query: text }),
+                });
+                const abmData = await abmRes.json();
+
+                if (abmData.success && abmData.data) {
+                    const c = abmData.data;
+                    const actions: any[] = abmData.next_best_actions || [];
+
+                    // Build structured chat response
+                    const parts: string[] = [`# Detailed Insights: ${c.company_name}\n`];
+
+                    if (c.company_overview) parts.push(`**Who They Are:**\n${c.company_overview}\n`);
+
+                    const firmoParts: string[] = [];
+                    if (c.industry)           firmoParts.push(`**Industry:** ${c.industry}`);
+                    if (c.headquarters)       firmoParts.push(`**HQ:** ${c.headquarters}`);
+                    if (c.founded_year)       firmoParts.push(`**Founded:** ${c.founded_year}`);
+                    if (c.company_size_range) firmoParts.push(`**Size:** ${c.company_size_range} employees`);
+                    if (c.funding_stage)      firmoParts.push(`**Funding:** ${c.funding_stage}`);
+                    if (firmoParts.length)    parts.push(`**Company Profile:**\n${firmoParts.join(' · ')}\n`);
+
+                    const social = c.social || {};
+                    const socialParts: string[] = [];
+                    if (social.linkedin_url) socialParts.push(`[LinkedIn](${social.linkedin_url})${social.linkedin_followers ? ` (${(social.linkedin_followers/1000).toFixed(1)}K followers)` : ''}`);
+                    if (social.twitter_url)  socialParts.push(`[Twitter/X](${social.twitter_url})${social.twitter_followers ? ` (${(social.twitter_followers/1000).toFixed(1)}K followers)` : ''}`);
+                    if (socialParts.length)  parts.push(`**Social Presence:**\n${socialParts.join(' · ')}\n`);
+
+                    const posts: any[] = c.linkedin_posts || [];
+                    if (posts.length > 0) {
+                        parts.push(`**Recent LinkedIn Activity (${posts.length} posts):**`);
+                        posts.slice(0, 3).forEach((p: any) => {
+                            const preview = (p.text || '').substring(0, 160).replace(/\n/g, ' ');
+                            const eng = [p.likes ? `👍 ${p.likes}` : null, p.comments ? `💬 ${p.comments}` : null].filter(Boolean).join('  ');
+                            parts.push(`• "${preview}${(p.text||'').length > 160 ? '...' : ''}"\n  ${eng}`);
+                        });
+                        parts.push('');
+                    }
+
+                    const activities: any[] = c.recent_activities || [];
+                    if (activities.length > 0) {
+                        parts.push(`**Recent News & Activities:**`);
+                        activities.slice(0, 4).forEach((a: any) => parts.push(`• **${a.title}**${a.date ? ` _(${a.date})_` : ''}${a.source ? ` — ${a.source}` : ''}`));
+                        parts.push('');
+                    }
+
+                    const dms: any[] = (c.key_decision_makers || []).sort((a: any, b: any) => (b.icp_score||0) - (a.icp_score||0));
+                    if (dms.length > 0) {
+                        parts.push(`**Key Decision Makers & ICP Scores:**`);
+                        dms.slice(0, 6).forEach((dm: any) => {
+                            const score = dm.icp_score >= 80 ? `🟢 ${dm.icp_score}/100` : dm.icp_score >= 60 ? `🟡 ${dm.icp_score}/100` : `🟠 ${dm.icp_score}/100`;
+                            parts.push(`• **${dm.name || 'Unknown'}** — ${dm.title || 'N/A'}${dm.department ? ` · ${dm.department}` : ''} ${score}${dm.linkedin_url ? ` · [LinkedIn](${dm.linkedin_url})` : ''}`);
+                            if (dm.icp_rationale) parts.push(`  _${dm.icp_rationale}_`);
+                        });
+                        parts.push('');
+                    }
+
+                    if (actions.length > 0) {
+                        parts.push(`**🎯 Next Best Actions for Account-Based Sales Development:**`);
+                        actions.forEach((a: any) => {
+                            parts.push(`\n**${a.priority}. ${a.action}** [${a.channel || ''}]${a.target_person ? ` → _${a.target_person}_` : ''}`);
+                            if (a.rationale)              parts.push(`   ${a.rationale}`);
+                            if (a.suggested_message_hook) parts.push(`   💬 _"${a.suggested_message_hook}"_`);
+                        });
+                        parts.push('');
+                    }
+
+                    parts.push(`---\n_Company profile saved to your ABM prospect list._`);
+                    const responseText = parts.join('\n');
+
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai',
+                        text: responseText,
+                        ts: new Date(),
+                        abmData: abmData.data,
+                        nextBestActions: actions,
+                    }));
+                    setBusy(false);
+                    return;
+                }
+            } catch (abmErr) {
+                // ABM call failed — fall through to web-search / lead-chat
+                console.warn('[ABM] Research failed, falling through:', abmErr);
+            }
+        }
+
         // ── WEB SEARCH INTENT DETECTION ──
         // Intercept queries asking about specific companies or people before routing to ICP lead-chat
         const isWebResearchQuery = webSearchEnabled ||

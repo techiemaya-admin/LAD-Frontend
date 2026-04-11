@@ -28,6 +28,7 @@ import {
   XCircle,
   History,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
@@ -295,8 +296,10 @@ export const AssignmentPanel = memo(function AssignmentPanel({
                 </p>
               </div>
             </div>
-            <Badge variant="default" className="ml-2">
-              Assigned
+            <Badge
+              className="ml-2 bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1"
+            >
+              <Check className="h-3.5 w-3.5" />
             </Badge>
           </div>
 
@@ -357,9 +360,8 @@ export const AssignmentPanel = memo(function AssignmentPanel({
           {/* Action buttons */}
           <div className="flex gap-2 pt-2">
             <Button
-              variant="outline"
               size="sm"
-              className="flex-1 text-xs"
+              className="flex-1 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => setShowUnassignDialog(true)}
               disabled={submitting}
             >
