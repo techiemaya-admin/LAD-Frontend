@@ -13,6 +13,7 @@ interface ChannelIconProps {
   size?: number;
   className?: string;
   showBackground?: boolean;
+  overrideColor?: string;
 }
 
 const channelConfig: Record<AnyChannel, { colorClass: string; bgClass: string; color: string }> = {
@@ -58,8 +59,10 @@ export const ChannelIcon = memo(function ChannelIcon({
   size = 16,
   className,
   showBackground = false,
+  overrideColor,
 }: ChannelIconProps) {
   const config = channelConfig[channel] ?? channelConfig.whatsapp;
+  const iconColor = overrideColor || config.color;
 
   const renderIcon = () => {
     if (channel === 'whatsapp' || channel === 'personal_whatsapp') {
@@ -67,7 +70,7 @@ export const ChannelIcon = memo(function ChannelIcon({
         <FontAwesomeIcon
           icon={faWhatsapp}
           size={`${size}px` as any}
-          style={{ color: config.color }}
+          style={{ color: iconColor }}
         />
       );
     } else if (channel === 'business_whatsapp') {
@@ -77,7 +80,7 @@ export const ChannelIcon = memo(function ChannelIcon({
           <FontAwesomeIcon
             icon={faWhatsapp}
             size={`${size}px` as any}
-            style={{ color: config.color }}
+            style={{ color: iconColor }}
           />
           <Building2
             size={Math.max(8, Math.round(size * 0.55))}
@@ -86,19 +89,19 @@ export const ChannelIcon = memo(function ChannelIcon({
         </div>
       );
     } else if (channel === 'linkedin') {
-      return <Linkedin size={size} style={{ color: config.color }} />;
+      return <Linkedin size={size} style={{ color: iconColor }} />;
     } else if (channel === 'gmail') {
-      return <Mail size={size} style={{ color: config.color }} />;
+      return <Mail size={size} style={{ color: iconColor }} />;
     } else if (channel === 'outlook') {
       return (
         <FontAwesomeIcon
           icon={faMicrosoft}
           size={`${size}px` as any}
-          style={{ color: config.color }}
+          style={{ color: iconColor }}
         />
       );
     } else if (channel === 'instagram') {
-      return <Instagram size={size} style={{ color: config.color }} />;
+      return <Instagram size={size} style={{ color: iconColor }} />;
     }
   };
 

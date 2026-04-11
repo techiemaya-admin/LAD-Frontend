@@ -235,8 +235,8 @@ export const ConversationListItem = memo(function ConversationListItem({
             )}
 
             {hasUnread && (
-              <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
+              <span className="h-5 min-w-5 px-1.5 rounded-full bg-[#25D366] text-white text-xs font-bold flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </div>

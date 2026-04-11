@@ -117,10 +117,14 @@ export function useLinkedInSearch() {
   );
 
   /**
-   * Perform advanced LinkedIn search.
-   * Accepts the full request body as an object:
-   *   { query, count, targeting, icp_description, filters: { cursor } }
-   * Returns the raw API response: { results, total, cursor, intent, activities, icp_applied, ... }
+   * [BACKUP] Perform advanced LinkedIn search via the original /search/advanced endpoint.
+   *
+   * Preserved as a fallback in case the unified endpoint needs to be reverted (Option B).
+   * Used directly for cursor-based pagination ("Get More") since /search/unified does not
+   * support cursor pagination.
+   *
+   * Body: { query, count, targeting, targeting_filters, icp_description, filters: { cursor }, ... }
+   * Returns: { results[], total, cursor, intent, activities, icp_applied, ... }
    */
   const search = useCallback(
     async (body: Record<string, any>): Promise<any | null> => {
@@ -144,6 +148,102 @@ export function useLinkedInSearch() {
         return data;
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Failed to search leads';
+        setState(prev => ({ ...prev, isLoading: false, error }));
+        return null;
+      }
+    },
+    []
+  );
+
+  /**
+   * Perform a fresh lead search via the 6-module unified search endpoint.
+   *
+   * Routes the query to the correct module automatically:
+   *   abm               → person/company name detected  → "Target Specific Account"
+   *   signal_detection  → hiring/funding/post signals   → "Intent Signal Search"
+   *   competitor_intent → "people who use X"           → "Competitor Prospect Search"
+   *   advanced_search   → role / industry / location    → "Multi-Filter Lead Search"
+   *
+   * The response is normalised to the same shape as `search()` so callers
+   * (page.tsx) need zero changes to their result-handling code:
+   *   results  ← leads[]          (unified uses "leads", advanced uses "results")
+   *   total    ← leads.length     (unified has no cursor pagination)
+   *   cursor   ← null             (pagination falls back to /search/advanced)
+   *   icp_applied ← false         (scoring handled server-side in unified)
+   *
+   * Extra fields passed through:
+   *   module_used, module_label, subtype, confidence_score, needs_refinement, stats
+   *
+   * Body accepted: same shape as `search()` — query, count, targeting, filters, etc.
+   * Returns: normalised response (same shape as `search()`) or null on failure.
+   */
+  const searchUnified = useCallback(
+    async (body: Record<string, any>): Promise<any | null> => {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      try {
+        // Map advanced-search body fields to unified endpoint fields.
+        // All fields that affect result quality are forwarded so the backend
+        // advanced_search case can run the same full pipeline as /search/advanced.
+        const unifiedBody: Record<string, any> = {
+          query:            body.query,
+          filters:          body.filters          || {},
+          // Pre-extracted targeting → enables fast path (skip Gemini re-parse)
+          ...(body.targeting          ? { targeting:          body.targeting          } : {}),
+          // Additional targeting filters (nationality, skills, company size, etc.)
+          ...(body.targeting_filters  ? { targeting_filters:  body.targeting_filters  } : {}),
+          // ICP description for lead qualification scoring
+          ...(body.icp_description    ? { icp_description:    body.icp_description    } : {}),
+          // Sales Navigator flag
+          ...(body.useSalesNav        ? { useSalesNav:        body.useSalesNav        } : {}),
+        };
+
+        const response = await fetch(
+          `${API_BASE}/api/campaigns/linkedin/search/unified`,
+          {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(unifiedBody),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Unified search failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setState(prev => ({ ...prev, isLoading: false }));
+
+        // ── Normalise unified response → same shape as /search/advanced ─────────
+        // Unified returns `leads[]`; page.tsx reads `results[]`.
+        // For advanced_search the backend now returns real total + cursor.
+        // For other modules (ABM, signal, competitor) cursor stays null.
+        const normalisedData = {
+          // Core result fields (mapped for page.tsx compatibility)
+          results:    data.leads    || [],
+          total:      data.total    ?? (data.leads || []).length,
+          cursor:     data.cursor   ?? null,
+          icp_applied: data.icp_applied ?? false,
+
+          // Intent fields (same structure in both endpoints)
+          intent: data.intent || null,
+
+          // Unified-only metadata — available to page.tsx if it wants to display them
+          module_used:      data.module_used      || 'advanced_search',
+          module_label:     data.module_label     || 'Multi-Filter Lead Search',
+          subtype:          data.subtype          || null,
+          confidence:       data.confidence       || null,
+          confidence_score: data.confidence_score || null,
+          needs_refinement: data.needs_refinement || false,
+          stats:            data.stats            || {},
+          suggestions:      data.suggestions      || [],
+
+          // Preserve success flag
+          success: data.success,
+        };
+
+        return normalisedData;
+      } catch (err) {
+        const error = err instanceof Error ? err.message : 'Failed to search leads (unified)';
         setState(prev => ({ ...prev, isLoading: false, error }));
         return null;
       }
@@ -193,7 +293,8 @@ export function useLinkedInSearch() {
     ...state,
     // Actions
     extractIntent,
-    search,
+    search,           // ← BACKUP: /search/advanced — use for pagination ("Get More")
+    searchUnified,    // ← PRIMARY: /search/unified — 6-module router for fresh searches
     inferNationality,
     reset,
   };
