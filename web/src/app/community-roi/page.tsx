@@ -5,19 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { 
-  Users, 
-  MessageSquare, 
-  Network, 
-  Activity, 
-  Search, 
-  ChevronRight, 
+import {
+  Users,
+  MessageSquare,
+  Network,
+  Activity,
+  Search,
+  ChevronRight,
   Building2,
   Phone,
   Linkedin,
   Trophy,
   ArrowUpRight,
-  Handshake
+  Handshake,
+  CalendarDays,
+  LayoutDashboard,
 } from 'lucide-react'
 
 import { useListMembers } from '@lad/frontend-features/community-roi'
@@ -27,12 +29,17 @@ import MemberProfileView from './components/MemberProfileView'
 import LeaderboardPanel from './components/LeaderboardPanel'
 import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
 import DataImportButton from '@/features/community-roi/components/DataImportButton'
+import CommunityCalendar from './components/CommunityCalendar'
+import MemberIntelFeed from './components/MemberIntelFeed'
+
+type ActiveView = 'dashboard' | 'calendar'
 
 export default function CommunityROIDashboard() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [showNetworkGraph, setShowNetworkGraph] = useState(false)
   const [selectedCommunity, setSelectedCommunity] = useState('BNI')
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard')
 
   // Get tenant ID from environment or props (without Redux dependency)
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || '';
@@ -138,6 +145,8 @@ export default function CommunityROIDashboard() {
         <div className="max-w-5xl mx-auto p-8">
           {selectedMemberId ? (
             <MemberProfileView memberId={selectedMemberId} onBack={() => setSelectedMemberId(null)} />
+          ) : activeView === 'calendar' ? (
+            <CommunityCalendar tenantId={tenantId} />
           ) : (
             <div className="space-y-8">
               {/* Community Header */}
@@ -162,7 +171,30 @@ export default function CommunityROIDashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  {/* View Toggle */}
+                  <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
+                    <button
+                      onClick={() => { setActiveView('dashboard'); setSelectedMemberId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        activeView === 'dashboard'
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+                    </button>
+                    <button
+                      onClick={() => { setActiveView('calendar'); setSelectedMemberId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        activeView === 'calendar'
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <CalendarDays className="w-3.5 h-3.5" /> Calendar
+                    </button>
+                  </div>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Activity className="w-4 h-4" /> Activity Logs
                   </Button>
@@ -183,6 +215,14 @@ export default function CommunityROIDashboard() {
                 </div>
                 <SimpleAnalyticsCards />
               </div>
+
+              {/* Member Intelligence Feed */}
+              {filteredMembers.length > 0 && (
+                <MemberIntelFeed
+                  members={filteredMembers}
+                  onViewProfile={(id) => setSelectedMemberId(id)}
+                />
+              )}
 
               {/* Relationship Heatmap */}
               <div>

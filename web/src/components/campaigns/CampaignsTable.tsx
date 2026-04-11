@@ -30,6 +30,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
   type PaginationState,
+  type ColumnSizingState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
 import { getStatusColor, renderActionChips } from './campaignUtils';
@@ -49,7 +50,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     pageIndex: 0,
     pageSize: 10,
   });
-  const [columnSizing, setColumnSizing] = React.useState({
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({
     name: 300,
   });
   
