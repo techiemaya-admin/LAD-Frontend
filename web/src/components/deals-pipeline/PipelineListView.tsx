@@ -37,6 +37,8 @@ import {
   ChevronsRight,
   Linkedin,
   Phone,
+  Mail,
+  MessageCircle,
   LayoutGrid,
   List,
   Calendar,
@@ -804,62 +806,37 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       }
-      case 'source':
+      case 'source': {
         const sourceValue = (lead.source || 'unknown').toLowerCase();
-        const getSourceStyles = (source: string) => {
-          switch (source) {
-            case 'voice_agent':
-              return 'bg-primary/20 text-primary border border-primary/30';
-            case 'apollo':
-            case 'apollo_io':
-              return 'bg-green-100 text-green-600 border border-green-300';
-            case 'website':
-              return 'bg-purple-100 text-purple-600 border border-purple-300';
-            case 'linkedin':
-              return 'bg-blue-100 text-blue-600 border border-blue-300';
-            default:
-              return 'bg-gray-100 text-gray-600 border border-gray-300';
-          }
+        const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
+          linkedin:    { label: 'LinkedIn',    icon: <Linkedin       className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          email:       { label: 'Email',       icon: <Mail           className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
+          whatsapp:    { label: 'WhatsApp',    icon: <MessageCircle  className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
+          voice_agent: { label: 'Voice',       icon: <Phone          className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
+          apollo:      { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          apollo_io:   { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          website:     { label: 'Website',     icon: <Globe          className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
         };
-        const formatSourceName = (source: string) => {
-          switch (source.toLowerCase()) {
-            case 'apollo_io':
-              return 'Apollo.io';
-            case 'voice_agent':
-              return 'Voice-Agent';
-            case 'linkedin':
-              return 'LinkedIn';
-            default:
-              return source || 'Unknown';
-          }
+        const cfg = sourceConfig[sourceValue] ?? {
+          label: lead.source ? lead.source.charAt(0).toUpperCase() + lead.source.slice(1) : 'Unknown',
+          icon: <span className="w-2 h-2 rounded-full bg-slate-400" />,
+          classes: 'bg-slate-100 text-slate-500 border border-slate-200',
         };
-        const getSourceIcon = (source: string) => {
-          switch (source.toLowerCase()) {
-            case 'linkedin':
-              return <Linkedin className="w-4 h-4" />;
-            case 'voice_agent':
-              return <Phone className="w-4 h-4" />;
-            case 'website':
-              return <Globe className="w-4 h-4" />;
-            default:
-              return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
-          }
-        };
-        const sourceName = formatSourceName(lead.source || '');
         return (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
-                  {getSourceIcon(sourceValue)}
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${cfg.classes}`}>
+                  {cfg.icon}
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{sourceName}</p>
+                <p>{cfg.label}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         );
+      }
       case 'createdAt':
         return (
           <p className="text-sm">
