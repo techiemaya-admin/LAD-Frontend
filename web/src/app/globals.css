@@ -138,7 +138,6 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-<<<<<<< HEAD
   /* Message bubbles - WhatsApp Theme */
   .message-bubble-incoming {
     @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md border border-gray-200 shadow-sm;
@@ -151,13 +150,6 @@
   /* Chat background - WhatsApp Theme */
   .whatsapp-chat-bg {
     @apply bg-[#ECE5DD];
-=======
-  /* Message bubbles — defined below in the chat-bg block with WhatsApp styling */
-
-  /* ── Chat window background ────────────────────────────────────────────── */
-  .whatsapp-chat-bg {
-    background-color: #ffffff;
->>>>>>> develop
   }
 
   .dark .whatsapp-chat-bg {
