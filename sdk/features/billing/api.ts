@@ -170,15 +170,69 @@ export async function getUsageAggregation(params?: {
 }
 /**
  * List ledger transactions
+ * Normalizes API response to match frontend expectations
  */
 export async function listTransactions(params?: {
+  type?: string;
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
-}): Promise<LedgerTransaction[]> {
+}): Promise<any> {
   const response = await apiClient.get('/api/billing/transactions', { params });
-  return response.data.transactions;
+  
+  const creditsPerDollar: number = response.data.creditsPerDollar ?? (1000 / 99);
+  const planTier: string = response.data.planTier ?? 'starter';
+
+  // Normalize transactions: map transaction_type to type, handle string amounts
+  const normalizedTransactions = response.data.transactions?.map((tx: any) => {
+    const amountUsd = parseFloat(tx.amount || '0');
+    const balanceAfterUsd = tx.balance_after != null ? parseFloat(tx.balance_after) : null;
+    const balanceBeforeUsd = tx.balance_before != null ? parseFloat(tx.balance_before) : null;
+    return {
+      id: tx.id,
+      type: mapTransactionType(tx.transaction_type),
+      transaction_type: tx.transaction_type,
+      source: tx.source || 'ledger',
+      // Raw USD amounts (kept for reference)
+      amount: amountUsd.toString(),
+      balance_before: tx.balance_before?.toString(),
+      balance_after: tx.balance_after?.toString(),
+      balanceBefore: balanceBeforeUsd,
+      balanceAfter: balanceAfterUsd,
+      // Credits equivalents (converted using plan rate)
+      credits_amount: Math.round(Math.abs(amountUsd) * creditsPerDollar * 100) / 100,
+      credits_balance_after: balanceAfterUsd != null ? Math.round(balanceAfterUsd * creditsPerDollar * 100) / 100 : null,
+      credits_balance_before: balanceBeforeUsd != null ? Math.round(balanceBeforeUsd * creditsPerDollar * 100) / 100 : null,
+      description: tx.description || '',
+      reference_type: tx.reference_type,
+      reference_id: tx.reference_id,
+      created_at: tx.created_at,
+      createdAt: tx.created_at,
+      status: 'completed',
+      metadata: tx.metadata,
+      tenant_id: tx.tenant_id,
+      wallet_id: tx.wallet_id,
+    };
+  }) || [];
+
+  return {
+    transactions: normalizedTransactions,
+    count: response.data.count,
+    pagination: response.data.pagination,
+    creditsPerDollar,
+    planTier,
+  };
+}
+
+/**
+ * Map backend transaction_type to frontend type
+ */
+function mapTransactionType(transactionType: string): 'credit' | 'debit' {
+  if (transactionType === 'topup' || transactionType === 'credit') {
+    return 'credit';
+  }
+  return 'debit';
 }
 /**
  * LEGACY COMPATIBILITY
@@ -202,6 +256,32 @@ export async function getCreditsBalanceLegacy(): Promise<{
 }
 // Backward compatibility alias
 export const getWalletBalanceLegacy = getCreditsBalanceLegacy;
+/**
+ * Get wallet balance with transaction history
+ * Calls /wallet/balance which returns balance + transactions
+ */
+export async function getWalletBalanceWithTransactions(): Promise<{
+  credits: number;
+  balance: number;
+  currency: string;
+  lastRecharge: { amount: number; credits: number; date: string } | null;
+  monthlyUsage: number;
+  totalSpent: number;
+  transactions: Array<{
+    id: string;
+    amount: string;
+    type: 'credit' | 'debit';
+    description: string;
+    reference_type?: string;
+    reference_id?: string;
+    balance_after?: string;
+    created_at: string;
+    status: 'completed' | 'pending' | 'failed';
+  }>;
+}> {
+  const response = await apiClient.get('/api/wallet/balance');
+  return response.data;
+}
 /**
  * LEGACY COMPATIBILITY
  * Get credit packages

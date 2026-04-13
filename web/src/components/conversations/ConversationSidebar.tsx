@@ -150,6 +150,19 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {});
   }, []);
 
+  // Handle ESC key to close select mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSelectMode) {
+        setIsSelectMode(false);
+        setSelectedIds(new Set());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectMode]);
+
   const displayPhone = useCallback((phone: string | undefined | null): string => {
     if (!maskPhoneNumbers || !phone) return phone || '';
     const digits = phone.replace(/\D/g, '');
@@ -544,6 +557,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           isSelectMode={isSelectMode}
           isChecked={selectedIds.has(conversation.id)}
           onContextStatusClick={handleContextStatusClick}
+          onDoubleClick={() => {
+            setIsSelectMode(true);
+            setSelectedIds(new Set([conversation.id]));
+          }}
         />
       );
     },
@@ -605,75 +622,6 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             {isSelectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
           </Button>
         </div>
-      </div>
-
-      {/* Channel Filters */}
-      <div className="p-2 flex gap-1 border-b border-border overflow-x-auto">
-        <TooltipProvider>
-          {channelButtons.map(({ id, label, channel }) => {
-            const isActive = channelFilter === id;
-            const count = unreadCounts[id] ?? 0;
-
-            return (
-              <Tooltip key={id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => onChannelFilterChange(id as Channel | 'all')}
-                    className={cn(
-                      'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center gap-1.5 text-xs font-medium transition-all relative',
-                      isActive
-                        ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
-                        : channelColorMap[id]
-                    )}
-                  >
-                    {channel ? (
-                      <ChannelIcon channel={channel} size={14} />
-                    ) : (
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    )}
-                    {count > 0 && (
-                      <span
-                        className={cn(
-                          'absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-card shadow-sm',
-                          isActive ? 'bg-white text-slate-900' : 'bg-primary text-primary-foreground'
-                        )}
-                      >
-                        {count > 99 ? '99+' : count}
-                      </span>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
-                  {label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-
-          {/* Named-only toggle: hide Unknown / unsaved contacts */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={namedOnly ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setNamedOnly((v) => !v)}
-                className={cn(
-                  'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center text-xs font-medium transition-all',
-                  namedOnly
-                    ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                )}
-              >
-                <UserMinus className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
-              {namedOnly ? 'Showing named only' : 'Hide unknown contacts'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
 
       {/* Context Status Filters (tenant-specific) */}
@@ -750,6 +698,34 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             <X className="h-3 w-3 mr-1" />
             Clear
           </Button>
+        </div>
+      )}
+
+      {/* Multi-select filter row - shows at top when in select mode */}
+      {isSelectMode && (
+        <div className="px-3 py-2.5 border-b border-border bg-blue-50/60 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <CheckSquare className="h-4 w-4 text-blue-600" />
+            <span className="text-blue-700">{selectedIds.size} contact{selectedIds.size !== 1 ? 's' : ''} selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={selectAll}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={deselectAll}
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       )}
 

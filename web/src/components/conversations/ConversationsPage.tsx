@@ -43,6 +43,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
@@ -289,6 +290,10 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           onExport={handleExport}
           onBlock={handleBlock}
           onDelete={handleDelete}
+          onOpenAssignmentPanel={() => {
+            setContextPanelTab('assignment');
+            if (!isContextPanelOpen) setIsContextPanelOpen(true);
+          }}
         />
       )}
 
@@ -306,6 +311,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               conversation={typedSelectedConversation}
               onClose={toggleContextPanel}
               backendChannel={channel}
+              defaultTab={contextPanelTab}
             />
           </motion.div>
         )}
@@ -319,16 +325,11 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
 // ─────────────────────────────────────────────────────────────────────────────
 type WaTab = 'personal' | 'waba' | 'linkedin';
 
-const WA_TABS: { id: WaTab; label: string; sublabel: string }[] = [
-  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
-  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility: Check which WhatsApp channels are connected
 // ─────────────────────────────────────────────────────────────────────────────
-async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean }> {
+async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean; linkedInConnected: boolean }> {
   try {
     // Check Personal WhatsApp connections
     const personalRes = await fetchWithTenant('/api/whatsapp-conversations/accounts');
@@ -340,10 +341,24 @@ async function getConnectedChannels(): Promise<{ personalConnected: boolean; wab
     const wabaRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=waba');
     const wabaConnected = wabaRes.ok;
 
-    return { personalConnected, wabaConnected };
+    // Check LinkedIn connection — the backend returns { success: true, data: [], message: 'No LinkedIn account connected...' }
+    // when no Unipile LinkedIn account is registered for this tenant.
+    let linkedInConnected = false;
+    try {
+      const liRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=linkedin');
+      if (liRes.ok) {
+        const liData = await liRes.json();
+        // Connected = endpoint didn't return the "no account" message
+        linkedInConnected = !liData?.message?.toLowerCase().includes('no linkedin account');
+      }
+    } catch {
+      linkedInConnected = false;
+    }
+
+    return { personalConnected, wabaConnected, linkedInConnected };
   } catch (err) {
     console.error('Error checking connected channels:', err);
-    return { personalConnected: false, wabaConnected: false };
+    return { personalConnected: false, wabaConnected: false, linkedInConnected: false };
   }
 }
 
@@ -368,6 +383,27 @@ function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTa
   return 'personal';
 }
 
+// All possible tabs — LinkedIn is only included when the tenant has an active LinkedIn account
+const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
+  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
+  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Get brand color for tab
+// ─────────────────────────────────────────────────────────────────────────────
+function getTabColor(tabId: WaTab): string {
+  switch (tabId) {
+    case 'personal':
+      return '#25D366'; // WhatsApp green
+    case 'waba':
+      return '#128C7E'; // WhatsApp Business teal
+    case 'linkedin':
+      return '#0077B5'; // LinkedIn blue
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page shell — handles only tab + AI playground state
 // ─────────────────────────────────────────────────────────────────────────────
@@ -375,15 +411,20 @@ export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [linkedInConnected, setLinkedInConnected] = useState(false);
 
   // Load connection status on mount and set default tab
   useEffect(() => {
     (async () => {
-      const { personalConnected, wabaConnected } = await getConnectedChannels();
+      const { personalConnected, wabaConnected, linkedInConnected: liConnected } = await getConnectedChannels();
       const defaultTab = getDefaultTab(personalConnected, wabaConnected);
       setActiveTab(defaultTab);
+      setLinkedInConnected(liConnected);
     })();
   }, []);
+
+  // Only show LinkedIn tab when the tenant has an active LinkedIn account
+  const visibleTabs = ALL_TABS.filter(t => t.id !== 'linkedin' || linkedInConnected);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -391,18 +432,23 @@ export function ConversationsPage() {
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
         {/* Channel tabs */}
         <div className="flex items-center gap-1">
-          {WA_TABS.map(({ id, label, sublabel }) => (
+          {visibleTabs.map(({ id, label, sublabel }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
                 'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
                 activeTab === id
-                  ? 'bg-slate-900 text-white shadow-sm'
+                  ? 'text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
+              style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
             >
-              <ChannelIcon channel={sublabel as any} size={12} />
+              <ChannelIcon
+                channel={sublabel as any}
+                size={16}
+                overrideColor={activeTab === id ? '#ffffff' : undefined}
+              />
               {label}
             </button>
           ))}

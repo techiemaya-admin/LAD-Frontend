@@ -2669,6 +2669,8 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 status={message.status}
                 missing={message.missing}
                 searchResults={message.searchResults}
+                moduleUsed={(message as any).moduleUsed}
+                moduleLabel={(message as any).moduleLabel}
                 workflow={message.workflow}
                 isLastMessage={index === aiMessages.length - 1}
                 onOptionSubmit={
@@ -3243,67 +3245,112 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                   content: msg,
                   timestamp: new Date(),
                 });
-                // Call extracting intent backend endpoint
+                // ── Unified Search: classify intent → route to correct module → return scored leads ──
                 try {
-                  const extractRes = await apiPost<{ success: boolean; intent: any; summary: string }>('/api/campaigns/linkedin/search/extract-intent', { query: msg });
-                  if (extractRes.success) {
-                    const intent = extractRes.intent;
+                  addAIMessage({
+                    role: 'ai',
+                    content: `🔍 Analyzing your search and routing to the best module...`,
+                    timestamp: new Date(),
+                  });
 
-                    // Build a detailed summary for the user
-                    const parts: string[] = [];
-                    parts.push(`🔍 **I've analyzed your search request:**\n`);
-                    parts.push(extractRes.summary);
-                    parts.push('');
+                  const unifiedRes = await apiPost<{
+                    success: boolean;
+                    module_used: string;
+                    module_label: string;
+                    subtype?: string;
+                    confidence: string;
+                    confidence_score: number;
+                    needs_refinement: boolean;
+                    intent: any;
+                    leads: any[];
+                    stats: any;
+                    suggestions?: string[];
+                    message?: string;
+                    module_error?: string;
+                  }>('/api/campaigns/linkedin/search/unified', { query: msg });
 
-                    if (intent.keywords) parts.push(`• **Keywords:** ${intent.keywords}`);
-                    if (intent.job_titles?.length > 0) parts.push(`• **Job Titles:** ${intent.job_titles.join(', ')}`);
-                    if (intent.industries?.length > 0) parts.push(`• **Industries:** ${intent.industries.join(', ')}`);
-                    if (intent.locations?.length > 0) parts.push(`• **Locations:** ${intent.locations.join(', ')}`);
-                    if (intent.profile_language?.length > 0) parts.push(`• **Languages:** ${intent.profile_language.join(', ')}`);
+                  if (!unifiedRes.success) {
+                    throw new Error('Unified search returned failure');
+                  }
 
-                    parts.push('\n✅ These details will be used to find your leads on LinkedIn after campaign setup.');
-
-                    addAIMessage({
-                      role: 'ai',
-                      content: parts.join('\n'),
-                      timestamp: new Date(),
-                    });
-
-                    // Store the extracted intent in the onboarding store
-                    useOnboardingStore.setState({
-                      advancedSearchIntent: intent
-                    });
-
-                    // Start Advanced Search custom flow (NOT the ICP flow)
-                    // Step 2: Ask about specific location with skip option
-                    const locationSuggestion = intent.locations?.length > 0
-                      ? `\n\n💡 From your search: **${intent.locations.join(', ')}**`
+                  // ── Case 1: Low confidence → ask for refinement ─────────────────────────
+                  if (unifiedRes.needs_refinement) {
+                    const suggestions = unifiedRes.suggestions || [];
+                    const suggestionText = suggestions.length
+                      ? '\n\n💡 **Try one of these:**\n' + suggestions.map(s => `• "${s}"`).join('\n')
                       : '';
 
-                    setFlowState('adv_search_location');
                     addAIMessage({
                       role: 'ai',
-                      content: `📍 **Do you want to narrow down to a specific employee location?**${locationSuggestion}\n\nType a location (city/country) or type **skip** to use the one from your search.`,
+                      content: `${unifiedRes.message || 'Could you be more specific about your search?'}${suggestionText}`,
                       timestamp: new Date(),
                     });
-                  } else {
-                    // Extraction failed but no error - still start the flow
-                    useOnboardingStore.setState({ advancedSearchIntent: {} });
+                    // Reset to let the user type a new query
+                    setFlowState('');
+                    setIsProcessingAI(false);
+                    return;
+                  }
+
+                  const intent   = unifiedRes.intent   || {};
+                  const leads    = unifiedRes.leads    || [];
+                  const stats    = unifiedRes.stats    || {};
+                  const modLabel = unifiedRes.module_label || 'Lead Search';
+                  const modUsed  = unifiedRes.module_used  || 'advanced_search';
+
+                  // ── Case 2: Results found ────────────────────────────────────────────────
+                  if (leads.length > 0) {
+                    const highIntent = leads.filter((l: any) => l.intent_level === 'high').length;
+                    const avgScore   = stats.avg || 0;
+
+                    const summaryParts: string[] = [
+                      `✅ **${modLabel}** · ${unifiedRes.confidence} confidence`,
+                      ``,
+                      `Found **${leads.length} leads** with avg buy-intent score **${avgScore}/100**`,
+                    ];
+                    if (highIntent > 0) summaryParts.push(`🔥 **${highIntent} high-intent** leads ready to engage`);
+                    if (intent.job_titles?.length)  summaryParts.push(`• Titles: ${intent.job_titles.slice(0, 3).join(', ')}`);
+                    if (intent.industries?.length)  summaryParts.push(`• Industry: ${intent.industries.slice(0, 2).join(', ')}`);
+                    if (intent.locations?.length)   summaryParts.push(`• Location: ${intent.locations.slice(0, 2).join(', ')}`);
+                    if (unifiedRes.module_error) summaryParts.push(`\n⚠️ Some results may be incomplete: ${unifiedRes.module_error}`);
+
+                    addAIMessage({
+                      role: 'ai',
+                      content: summaryParts.join('\n'),
+                      timestamp: new Date(),
+                      searchResults: leads,
+                      moduleUsed: modUsed,
+                      moduleLabel: modLabel,
+                    } as any);
+
+                    // Store extracted intent for campaign setup
+                    useOnboardingStore.setState({ advancedSearchIntent: intent });
+
+                    // Proceed to campaign setup — skip location question since we have leads
                     setFlowState('adv_search_location');
                     addAIMessage({
                       role: 'ai',
-                      content: `📍 **Where should the leads be located?**\n\nType a location (city/country) or type **skip** to search globally.`,
+                      content: `📋 **Ready to create a campaign with these leads?**\n\nType a location to refine further, or type **skip** to use all ${leads.length} leads found.`,
+                      timestamp: new Date(),
+                    });
+
+                  } else {
+                    // ── Case 3: No results ───────────────────────────────────────────────
+                    useOnboardingStore.setState({ advancedSearchIntent: intent });
+                    setFlowState('adv_search_location');
+                    addAIMessage({
+                      role: 'ai',
+                      content: `🔍 **No leads found yet via ${modLabel}.**\n\nLet's refine the search. 📍 **Where should the leads be located?**\n\nType a location or **skip** to search globally.`,
                       timestamp: new Date(),
                     });
                   }
                 } catch (e) {
-                  logger.error('Error extracting search intent', e);
-                  // Still allow the user to continue manually
+                  logger.error('Error in unified search', e);
+                  // Fallback: use extract-intent so the campaign flow can still proceed
                   useOnboardingStore.setState({ advancedSearchIntent: { keywords: msg } });
                   setFlowState('adv_search_location');
                   addAIMessage({
                     role: 'ai',
-                    content: `⚠️ I had trouble analyzing your search, but let's continue.\n\n📍 **Where should the leads be located?**\n\nType a location (city/country) or type **skip** to search globally.`,
+                    content: `⚠️ I had trouble with the search, but let's continue manually.\n\n📍 **Where should the leads be located?**\n\nType a location (city/country) or **skip** to search globally.`,
                     timestamp: new Date(),
                   });
                 }

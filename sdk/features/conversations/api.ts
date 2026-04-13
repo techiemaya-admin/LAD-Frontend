@@ -52,9 +52,27 @@ function mapChannelFromApi(channel?: string): Channel {
 }
 
 function mapMessageFromApi(raw: any): Message {
-  const role = raw.role || 'user';
-  // Backend returns "AI" for agent messages, "user" for lead, "human_agent" for human takeover
+  const rawRole = raw.role || 'user';
+
+  // WABA stores human-agent messages as role='assistant' with metadata.sender_type='human_agent'
+  // Normalise so callers always see role='human_agent' for human takeover messages.
+  const metadata: Record<string, any> =
+    typeof raw.metadata === 'string'
+      ? (() => { try { return JSON.parse(raw.metadata); } catch { return {}; } })()
+      : (raw.metadata || {});
+
+  const role =
+    metadata.sender_type === 'human_agent' && rawRole === 'assistant'
+      ? 'human_agent'
+      : rawRole;
+
   const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
+
+  // Human-agent display name: prefer metadata, fall back to 'Agent'
+  const senderName: string | undefined =
+    role === 'human_agent'
+      ? (metadata.sender_name || metadata.agent_name || raw.sender_name || undefined)
+      : undefined;
 
   return {
     id: raw.id,
@@ -64,11 +82,15 @@ function mapMessageFromApi(raw: any): Message {
     isOutgoing,
     status: (raw.message_status || 'sent') as MessageStatus,
     sender: {
-      id: isOutgoing ? 'agent' : raw.lead_id || 'user',
-      name: isOutgoing ? (role === 'human_agent' ? 'Agent' : 'AI Agent') : 'Contact',
+      id: isOutgoing ? (metadata.human_agent_id || 'agent') : raw.lead_id || 'user',
+      name: isOutgoing
+        ? (role === 'human_agent' ? (senderName || 'Agent') : 'AI Agent')
+        : 'Contact',
     },
     role,
     intent: raw.intent,
+    senderName,
+    humanAgentId: metadata.human_agent_id || undefined,
   };
 }
 
