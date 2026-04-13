@@ -9,7 +9,6 @@ import {
   Users,
   MessageSquare,
   Network,
-  Activity,
   Search,
   ChevronRight,
   Building2,
@@ -17,7 +16,7 @@ import {
   Linkedin,
   Trophy,
   ArrowUpRight,
-  Handshake,
+  UserPlus,
   CalendarDays,
   LayoutDashboard,
 } from 'lucide-react'
@@ -195,11 +194,8 @@ export default function CommunityROIDashboard() {
                       <CalendarDays className="w-3.5 h-3.5" /> Calendar
                     </button>
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Activity className="w-4 h-4" /> Activity Logs
-                  </Button>
                   <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
-                    <Handshake className="w-4 h-4" /> Log Interaction
+                    <UserPlus className="w-4 h-4" /> Onboard New Member
                   </Button>
                   <DataImportButton />
                 </div>
