@@ -45,7 +45,7 @@ export default function CommunityROIDashboard() {
   const { data: members, isLoading: membersLoading } = useListMembers({ tenantId })
 
   const communities = [
-    { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, color: 'text-red-600', bg: 'bg-red-50' },
+    { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, logo: '/assets/community-logos/bni-logo.svg', color: 'text-red-600', bg: 'bg-red-50' },
     { id: 'WhatsApp', name: 'WhatsApp Group', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
     { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
@@ -151,13 +151,25 @@ export default function CommunityROIDashboard() {
               {/* Community Header */}
               <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`p-4 rounded-2xl ${communities.find(c => c.id === selectedCommunity)?.bg}`}>
-                    {(() => {
-                      const Icon = communities.find(c => c.id === selectedCommunity)?.icon || Building2
-                      const color = communities.find(c => c.id === selectedCommunity)?.color || 'text-slate-600'
-                      return <Icon className={`w-8 h-8 \${color}`} />
-                    })()}
-                  </div>
+                  {(() => {
+                    const community = communities.find(c => c.id === selectedCommunity)
+                    if (community?.logo) {
+                      return (
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
+                          <img src={community.logo} alt={community.name} className="w-full h-full object-cover" />
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className={`p-4 rounded-2xl ${community?.bg}`}>
+                        {(() => {
+                          const Icon = community?.icon || Building2
+                          const color = community?.color || 'text-slate-600'
+                          return <Icon className={`w-8 h-8 ${color}`} />
+                        })()}
+                      </div>
+                    )
+                  })()}
                   <div>
                     <h1 className="text-2xl font-bold text-slate-900">
                       {communities.find(c => c.id === selectedCommunity)?.name}
