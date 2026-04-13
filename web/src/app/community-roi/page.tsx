@@ -33,6 +33,7 @@ import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
 import DataImportButton from '@/features/community-roi/components/DataImportButton'
 import CommunityCalendar from './components/CommunityCalendar'
 import MemberIntelFeed from './components/MemberIntelFeed'
+import OnboardNewMembersModal from './components/OnboardNewMembersModal'
 
 type ActiveView = 'dashboard' | 'calendar'
 
@@ -42,6 +43,7 @@ export default function CommunityROIDashboard() {
   const [selectedCommunity, setSelectedCommunity] = useState('BNI')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+  const [showOnboardModal, setShowOnboardModal] = useState(false)
 
   // Sidebar state
   const [sidebarVisible, setSidebarVisible] = useState(true)
@@ -114,7 +116,7 @@ export default function CommunityROIDashboard() {
       {/* Member Sidebar */}
       <div
         data-sidebar="true"
-        className={`${sidebarVisible ? 'w-80' : 'w-0'} border-r bg-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-lg ${!sidebarVisible && !sidebarPinned ? 'absolute left-0 top-0 bottom-0 z-50' : ''}`}
+        className={`${sidebarVisible ? 'w-80' : 'w-0'} border-r bg-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-lg ${!sidebarVisible && !sidebarPinned ? 'fixed left-0 top-0 bottom-0 z-50 w-80' : ''}`}
       >
         {/* Channel Selection */}
         <div className="p-4 flex gap-3 border-b overflow-x-auto no-scrollbar bg-slate-50/50">
@@ -234,8 +236,8 @@ export default function CommunityROIDashboard() {
                     const community = communities.find(c => c.id === selectedCommunity)
                     if (community?.logo) {
                       return (
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg bg-white flex items-center justify-center">
-                          <img src={community.logo} alt={community.name} className="w-full h-full object-contain p-2" />
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center">
+                          <img src={community.logo} alt={community.name} className="w-full h-full object-contain" />
                         </div>
                       )
                     }
@@ -285,7 +287,11 @@ export default function CommunityROIDashboard() {
                       <CalendarDays className="w-3.5 h-3.5" /> Calendar
                     </button>
                   </div>
-                  <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowOnboardModal(true)}
+                  >
                     <UserPlus className="w-4 h-4" /> Onboard New Member
                   </Button>
                   <DataImportButton />
@@ -302,14 +308,6 @@ export default function CommunityROIDashboard() {
                 </div>
                 <SimpleAnalyticsCards />
               </div>
-
-              {/* Member Intelligence Feed */}
-              {filteredMembers.length > 0 && (
-                <MemberIntelFeed
-                  members={filteredMembers}
-                  onViewProfile={(id) => setSelectedMemberId(id)}
-                />
-              )}
 
               {/* Relationship Heatmap */}
               <div>
@@ -341,6 +339,14 @@ export default function CommunityROIDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Member Intelligence Feed */}
+              {filteredMembers.length > 0 && (
+                <MemberIntelFeed
+                  members={filteredMembers}
+                  onViewProfile={(id) => setSelectedMemberId(id)}
+                />
+              )}
             </div>
           )}
         </div>
@@ -362,6 +368,12 @@ export default function CommunityROIDashboard() {
     {showNetworkGraph && (
       <NetworkGrowthGraph onClose={() => setShowNetworkGraph(false)} />
     )}
+
+    <OnboardNewMembersModal
+      isOpen={showOnboardModal}
+      onClose={() => setShowOnboardModal(false)}
+      tenantId={tenantId}
+    />
     </>
   )
 }

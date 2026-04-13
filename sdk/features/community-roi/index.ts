@@ -79,6 +79,9 @@ export {
   useDashboardLeaderboards,
   useRelationshipHeatmap,
   useUpdateRelationshipScores,
+  useNewMembers,
+  useOnboardNewMembers,
+  useSendOnboardingTemplate,
 } from './hooks';
 
 // ============================================================================
@@ -105,4 +108,5 @@ export type {
   UpdateRelationshipScoresResponse,
   UUID,
 } from './types';
+export type { NewMembersResponse, UseNewMembersReturn } from './hooks';
 

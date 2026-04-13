@@ -24,6 +24,8 @@ import {
   CalendarDays,
   Handshake,
   ArrowLeft,
+  Sparkles,
+  X,
 } from 'lucide-react'
 import {
   format,
@@ -105,6 +107,21 @@ function avatarColor(name: string) {
   return colors[Math.abs(hash) % colors.length]
 }
 
+interface Recommendation {
+  id: string
+  member_id: string
+  recommended_member_id: string
+  member_name: string
+  member_company?: string
+  rec_member_name: string
+  rec_member_company?: string
+  rec_member_designation?: string
+  reason: string
+  talking_points: string[]
+  score: number
+  status: 'pending' | 'scheduled' | 'dismissed'
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface CommunityCalendarProps {
@@ -122,6 +139,9 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
   const [togglingEnabled, setTogglingEnabled] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [updatingMeetingId, setUpdatingMeetingId] = useState<string | null>(null)
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [loadingRecs, setLoadingRecs]         = useState(false)
+  const [scheduleFromRec, setScheduleFromRec] = useState<Recommendation | null>(null)
 
   // ── Fetch calendar settings ──────────────────────────────────────────────
   const fetchSettings = useCallback(async () => {
@@ -148,8 +168,52 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
     finally { setLoadingMeetings(false) }
   }, [currentMonth])
 
-  useEffect(() => { fetchSettings() }, [fetchSettings])
-  useEffect(() => { fetchMeetings() }, [fetchMeetings])
+  // ── Fetch 1-2-1 recommendations ─────────────────────────────────────────────
+  const fetchRecommendations = useCallback(async () => {
+    setLoadingRecs(true)
+    try {
+      const res = await fetch('/api/community-roi/recommendations?limit=50')
+      if (res.ok) {
+        const json = await res.json()
+        const rows = Array.isArray(json) ? json : (json.data ?? [])
+        setRecommendations(rows.map((r: any) => ({
+          ...r,
+          talking_points: Array.isArray(r.talking_points)
+            ? r.talking_points
+            : (typeof r.talking_points === 'string'
+                ? JSON.parse(r.talking_points || '[]')
+                : []),
+        })))
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingRecs(false) }
+  }, [])
+
+  const dismissRecommendation = async (id: string) => {
+    setRecommendations(prev => prev.filter(r => r.id !== id))
+    try {
+      await fetch(`/api/community-roi/recommendations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dismissed' }),
+      })
+    } catch { /* ignore */ }
+  }
+
+  const markRecommendationScheduled = async (id: string) => {
+    setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: 'scheduled' } : r))
+    try {
+      await fetch(`/api/community-roi/recommendations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'scheduled' }),
+      })
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { fetchSettings() },       [fetchSettings])
+  useEffect(() => { fetchMeetings() },       [fetchMeetings])
+  useEffect(() => { fetchRecommendations() }, [fetchRecommendations])
 
   // ── Toggle calendar enabled/disabled ────────────────────────────────────
   const toggleEnabled = async () => {
@@ -637,6 +701,120 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
             </CardContent>
           </Card>
 
+          {/* ── Suggested 1-2-1s (AI Recommendations) ── */}
+          <Card className="rounded-2xl border-violet-100 shadow-sm overflow-hidden">
+            <CardHeader className="pb-3 border-b border-violet-50 bg-gradient-to-r from-violet-50 to-white">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  Suggested 1-2-1s
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {recommendations.filter(r => r.status === 'pending').length > 0 && (
+                    <Badge className="text-[10px] font-bold bg-violet-100 text-violet-700 border-violet-200">
+                      {recommendations.filter(r => r.status === 'pending').length}
+                    </Badge>
+                  )}
+                  {loadingRecs && <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3">
+              {loadingRecs && recommendations.length === 0 ? (
+                <div className="space-y-2 animate-pulse py-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="h-16 bg-violet-50 rounded-xl" />
+                  ))}
+                </div>
+              ) : recommendations.filter(r => r.status === 'pending').length === 0 ? (
+                <div className="text-center py-6 space-y-1">
+                  <p className="text-sm text-slate-400">No suggestions yet</p>
+                  <p className="text-xs text-slate-300">Run member intel research to generate recommendations</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {recommendations
+                    .filter(r => r.status === 'pending')
+                    .map(rec => (
+                      <div key={rec.id} className="rounded-xl border border-slate-100 bg-white p-3 space-y-2 hover:border-violet-200 hover:shadow-sm transition-all">
+                        {/* Member pair */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex -space-x-2 shrink-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white ${avatarColor(rec.member_name || '')}`}>
+                                {initials(rec.member_name || '?')}
+                              </div>
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white ${avatarColor(rec.rec_member_name || '')}`}>
+                                {initials(rec.rec_member_name || '?')}
+                              </div>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-800 truncate">
+                                {rec.member_name} × {rec.rec_member_name}
+                              </p>
+                              {rec.rec_member_company && (
+                                <p className="text-[10px] text-slate-400 truncate">{rec.rec_member_company}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {rec.score > 0 && (
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                                rec.score >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                rec.score >= 60 ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                 'bg-slate-50 text-slate-500 border-slate-100'
+                              }`}>
+                                {Math.round(rec.score)}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => dismissRecommendation(rec.id)}
+                              className="text-slate-300 hover:text-red-400 transition-colors"
+                              title="Dismiss"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Reason */}
+                        {rec.reason && (
+                          <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+                            {rec.reason}
+                          </p>
+                        )}
+
+                        {/* Talking points */}
+                        {rec.talking_points?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {rec.talking_points.slice(0, 2).map((tp, i) => (
+                              <span key={i} className="text-[10px] bg-violet-50 text-violet-600 border border-violet-100 px-2 py-0.5 rounded-full">
+                                {String(tp).slice(0, 40)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Schedule button */}
+                        <Button
+                          size="sm"
+                          className="w-full h-7 text-xs gap-1.5 bg-violet-600 hover:bg-violet-700"
+                          disabled={!settings?.is_enabled}
+                          onClick={() => {
+                            markRecommendationScheduled(rec.id)
+                            setScheduleFromRec(rec)
+                            setShowScheduleModal(true)
+                          }}
+                        >
+                          <Plus className="w-3 h-3" /> Schedule This 1-2-1
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Settings card */}
           {settings && (
             <Card className="rounded-2xl border-slate-100 bg-slate-50 shadow-none">
@@ -665,14 +843,21 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
       {/* ── Schedule Modal ── */}
       {showScheduleModal && (
         <ScheduleMeetingModal
-          onClose={() => setShowScheduleModal(false)}
+          onClose={() => { setShowScheduleModal(false); setScheduleFromRec(null) }}
           onSuccess={(newMeeting) => {
             setMeetings(prev => [...prev, newMeeting])
             setSelectedDay(parseISO(newMeeting.meeting_date))
             setShowScheduleModal(false)
+            setScheduleFromRec(null)
           }}
           defaultDate={selectedDay}
           calendarSettings={settings}
+          prefillMemberAId={scheduleFromRec?.member_id || ''}
+          prefillMemberBId={scheduleFromRec?.recommended_member_id || ''}
+          prefillAgendaNotes={scheduleFromRec?.reason
+            ? `Recommended 1-2-1: ${scheduleFromRec.reason}${scheduleFromRec.talking_points?.length ? '\n\nTalking points:\n' + scheduleFromRec.talking_points.map((t: string) => `• ${t}`).join('\n') : ''}`
+            : ''
+          }
         />
       )}
     </div>

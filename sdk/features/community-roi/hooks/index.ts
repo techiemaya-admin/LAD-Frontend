@@ -35,6 +35,10 @@ export { useDashboardLeaderboards } from './useDashboardLeaderboards';
 // Relationship Heatmap
 export { useRelationshipHeatmap, useUpdateRelationshipScores } from './useRelationshipHeatmap';
 
+// Member Sync / Onboarding
+export { useNewMembers, useOnboardNewMembers } from './useNewMembers';
+export { useSendOnboardingTemplate } from './useSendOnboardingTemplate';
+
 // Re-export types
 export type { UseListMembersReturn } from './useListMembers';
 export type { UseMemberReturn } from './useMember';
@@ -49,4 +53,5 @@ export type { MemberImpactScore, UseMemberImpactScoreReturn } from './useMemberI
 export type { UseTopContributorsReturn } from './useTopContributors';
 export type { NetworkStats, UseNetworkStatsReturn } from './useNetworkStats';
 export type { UseRelationshipHeatmapReturn, UseUpdateRelationshipScoresReturn } from './useRelationshipHeatmap';
+export type { NewMembersResponse, UseNewMembersReturn } from './useNewMembers';
 

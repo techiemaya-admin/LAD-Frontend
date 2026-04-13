@@ -1,10 +1,48 @@
 import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
-import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MrLadAvatar } from './MrLadAvatar';
+
+// ── Template message renderer ─────────────────────────────────────────────────
+// Parses "[Template: <name>] <param>" stored format into a styled card
+function TemplateMessageBubble({ content }: { content: string }) {
+  // Parse format: "[Template: onboard_new_member] John Doe"
+  const match = content.match(/^\[Template:\s*([^\]]+)\]\s*(.*)?$/s);
+  if (!match) return <p className="wa-msg-text">{content}</p>;
+
+  const templateName = match[1].trim();
+  const params = match[2]?.trim() || '';
+
+  // Map template names to human-friendly labels
+  const templateLabels: Record<string, { label: string; description: string }> = {
+    onboard_new_member: {
+      label: 'Welcome Message',
+      description: `Sent onboarding welcome message${params ? ` to ${params}` : ''}`,
+    },
+  };
+
+  const meta = templateLabels[templateName] || {
+    label: templateName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    description: params ? `Parameters: ${params}` : 'Template message sent',
+  };
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[180px]">
+      {/* Template badge */}
+      <div className="flex items-center gap-1.5 pb-1 border-b border-white/20">
+        <MessageSquare className="w-3 h-3 opacity-70 shrink-0" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+          {meta.label}
+        </span>
+      </div>
+      {/* Template description */}
+      <p className="wa-msg-text text-[13px] leading-snug">{meta.description}</p>
+    </div>
+  );
+}
 
 interface Contact {
   id: string;
@@ -213,8 +251,12 @@ export const MessageBubble = memo(function MessageBubble({
           </p>
         )}
 
-        {/* Message text — WhatsApp-style typography */}
-        <p className="wa-msg-text">{content}</p>
+        {/* Message text — template messages get a styled card, others plain text */}
+        {content?.startsWith('[Template:') ? (
+          <TemplateMessageBubble content={content} />
+        ) : (
+          <p className="wa-msg-text">{content}</p>
+        )}
 
         {/* Timestamp + status row */}
         <div
