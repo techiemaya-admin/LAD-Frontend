@@ -7,6 +7,7 @@ import { ProfileSummaryDialog } from '@/components/campaigns';
 import AgentVisualizer from '@/components/ui/AgentVisualizer';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
+import { useAuth } from '@/contexts/AuthContext';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
 import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
 import {
@@ -428,6 +429,25 @@ export default function AdvancedSearchAIPage() {
     // Checkpoint form state (inline in chat)
     const [pendingContact, setPendingContact] = useState<any>(null); // detected contact from phone/email outreach
     const [cpStep, setCpStep] = useState(-1); // -1 = not started, 0-6 = steps
+    const [isMobile, setIsMobile] = useState(false);
+    const [chatBlocked, setChatBlocked] = useState(false);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth <= 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg.role === 'ai' && lastMsg.targeting) {
+                setChatBlocked(true);
+            }
+        }
+    }, [messages]);
+
     const [cpIcpThreshold, setCpIcpThreshold] = useState('75');
     const [cpActions, setCpActions] = useState<string[]>([]);
     const [cpConnMsg, setCpConnMsg] = useState('');
@@ -2462,8 +2482,9 @@ export default function AdvancedSearchAIPage() {
             }]);
             return;
         }
+        if (v.toLowerCase().includes('refine')) setChatBlocked(false);
         doSend(v);
-    }, [doSend, targeting, pendingContact, setCpStep]);
+    }, [doSend, targeting, pendingContact, setCpStep, isMobile]);
 
     const handleTargetingConfirm = useCallback(async () => {
         // Build the updated targeting object with new filter values
@@ -2547,6 +2568,7 @@ export default function AdvancedSearchAIPage() {
         setMessages([]);
         setTargeting(null);
         setLeads([]);
+        setChatBlocked(false);
         setShowPanel(false);
         setConvId(crypto.randomUUID());
         setMsgCount(0);
@@ -2937,35 +2959,37 @@ export default function AdvancedSearchAIPage() {
                     </button>
 
                     {/* AI Playground button — top-right */}
-                    <button
-                        onClick={() => setShowPlayground(true)}
-                        title="Configure AI context: company, ICP, sales script, etc."
-                        className="adv-icp-discover-btn"
-                        style={{
-                            position: 'absolute', top: '16px', right: '20px', zIndex: 10,
-                            display: 'flex', alignItems: 'center', gap: '7px',
-                            padding: '8px 14px', borderRadius: '20px',
-                            border: '1.5px solid',
-                            borderColor: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb',
-                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#e8ecfa,#f0f3ff)' : '#fff',
-                            color: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280',
-                            fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#0b1957'; e.currentTarget.style.color = '#0b1957'; }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb';
-                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280';
-                        }}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        ICP Discovery
-                        {Object.values(businessProfile).some(v => v) && (
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
-                        )}
-                    </button>
+                    {(!isMobile || messages.length === 0) && (
+                        <button
+                            onClick={() => setShowPlayground(true)}
+                            title="Configure AI context: company, ICP, sales script, etc."
+                            className="adv-icp-discover-btn"
+                            style={{
+                                position: 'absolute', top: '16px', right: '20px', zIndex: 10,
+                                display: 'flex', alignItems: 'center', gap: '7px',
+                                padding: '8px 14px', borderRadius: '20px',
+                                border: '1.5px solid',
+                                borderColor: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb',
+                                background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#e8ecfa,#f0f3ff)' : '#fff',
+                                color: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280',
+                                fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#0b1957'; e.currentTarget.style.color = '#0b1957'; }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb';
+                                e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280';
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            ICP Discovery
+                            {Object.values(businessProfile).some(v => v) && (
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', marginLeft: 2 }} />
+                            )}
+                        </button>
+                    )}
 
                     <div className="adv-chat-msgs">
                         {/* Landing Content - Show when no messages */}
@@ -2992,7 +3016,7 @@ export default function AdvancedSearchAIPage() {
                                             : 'Qualifying...'
                                     }
                                     : m;
-                                return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
+                                return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => { setTgStep(0); setChatBlocked(false); }} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
                             })}
                         </div>
 
@@ -3105,79 +3129,81 @@ export default function AdvancedSearchAIPage() {
                         <div ref={endRef} />
                     </div>
 
-                    <div className="adv-chat-input-wrap">
-                        <div className="adv-chat-input-box">
-                            <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
-                                onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
-                                onKeyDown={onKey}
-                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
-                                className="adv-chat-ta" />
-                            <div className="adv-chat-input-foot">
-                                <div style={{ position: 'relative' }}>
-                                    <button className="adv-chat-attach-btn" title="Add files or tools" onClick={(e) => { e.stopPropagation(); setShowChatAttachMenu(!showChatAttachMenu); }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    {!(isMobile && chatBlocked) && (
+                        <div className={`adv-chat-input-wrap ${(!isMobile && chatBlocked) ? 'adv-chat-blur' : ''}`}>
+                            <div className="adv-chat-input-box">
+                                <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
+                                    onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                                    onKeyDown={onKey}
+                                    placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
+                                    className="adv-chat-ta" />
+                                <div className="adv-chat-input-foot">
+                                    <div style={{ position: 'relative' }}>
+                                        <button className="adv-chat-attach-btn" title="Add files or tools" onClick={(e) => { e.stopPropagation(); setShowChatAttachMenu(!showChatAttachMenu); }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                                        </button>
+                                        {showChatAttachMenu && (
+                                            <div className="adv-attach-menu" onClick={e => e.stopPropagation()}>
+                                                <div className="adv-attach-item" onClick={() => { fileInputRef.current?.click(); setShowChatAttachMenu(false); }}>
+                                                    <div className="adv-attach-icon" style={{ background: '#dcfce7' }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div className="adv-attach-label">Import leads</div>
+                                                        <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
+                                                    </div>
+                                                </div>
+                                                <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
+                                                    <div className="adv-attach-icon" style={{ background: '#dce3f5' }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div className="adv-attach-label">Select contacts</div>
+                                                        <div className="adv-attach-sub">Pick from your existing contacts</div>
+                                                    </div>
+                                                </div>
+                                                <div className="adv-attach-divider" />
+                                                <div className="adv-attach-item" onClick={() => { setShowChatAttachMenu(false); router.push('/settings'); }}>
+                                                    <div className="adv-attach-icon" style={{ background: '#fef3c7' }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div className="adv-attach-label">Connect tools</div>
+                                                        <div className="adv-attach-sub">LinkedIn, HubSpot, Salesforce</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Premium Search toggle — uses Serper X-Ray + Sales Navigator */}
+                                    <button
+                                        onClick={() => setUseSalesNav(v => !v)}
+                                        title={useSalesNav ? 'Premium Search ON — Google X-Ray + Sales Navigator (1 credit/search)' : 'Enable Premium Search: Google X-Ray + Sales Navigator (1 credit/search)'}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                            padding: '3px 8px', borderRadius: '12px', border: 'none',
+                                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                                            transition: 'all 0.15s',
+                                            background: useSalesNav ? '#0a66c2' : '#f1f5f9',
+                                            color: useSalesNav ? '#fff' : '#64748b',
+                                            boxShadow: useSalesNav ? '0 1px 4px rgba(10,102,194,.35)' : 'none',
+                                        }}
+                                    >
+                                        {/* Star icon for Premium */}
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                        {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
                                     </button>
-                                    {showChatAttachMenu && (
-                                        <div className="adv-attach-menu" onClick={e => e.stopPropagation()}>
-                                            <div className="adv-attach-item" onClick={() => { fileInputRef.current?.click(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{ background: '#dcfce7' }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-                                                </div>
-                                                <div>
-                                                    <div className="adv-attach-label">Import leads</div>
-                                                    <div className="adv-attach-sub">CSV, Excel, images, PDFs</div>
-                                                </div>
-                                            </div>
-                                            <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{ background: '#dce3f5' }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
-                                                </div>
-                                                <div>
-                                                    <div className="adv-attach-label">Select contacts</div>
-                                                    <div className="adv-attach-sub">Pick from your existing contacts</div>
-                                                </div>
-                                            </div>
-                                            <div className="adv-attach-divider" />
-                                            <div className="adv-attach-item" onClick={() => { setShowChatAttachMenu(false); router.push('/settings'); }}>
-                                                <div className="adv-attach-icon" style={{ background: '#fef3c7' }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
-                                                </div>
-                                                <div>
-                                                    <div className="adv-attach-label">Connect tools</div>
-                                                    <div className="adv-attach-sub">LinkedIn, HubSpot, Salesforce</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                    <button className="adv-send-circle adv-send-sm" disabled={!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)} onClick={onChatSend}
+                                        style={{ background: !input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) ? '#e5e7eb' : '#172560', boxShadow: !input.trim() || busy ? 'none' : '0 2px 8px rgba(23,37,96,.3)' }}>
+                                        {busy ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
+                                    </button>
                                 </div>
-                                {/* Premium Search toggle — uses Serper X-Ray + Sales Navigator */}
-                                <button
-                                    onClick={() => setUseSalesNav(v => !v)}
-                                    title={useSalesNav ? 'Premium Search ON — Google X-Ray + Sales Navigator (1 credit/search)' : 'Enable Premium Search: Google X-Ray + Sales Navigator (1 credit/search)'}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '4px',
-                                        padding: '3px 8px', borderRadius: '12px', border: 'none',
-                                        cursor: 'pointer', fontSize: '11px', fontWeight: 600,
-                                        transition: 'all 0.15s',
-                                        background: useSalesNav ? '#0a66c2' : '#f1f5f9',
-                                        color: useSalesNav ? '#fff' : '#64748b',
-                                        boxShadow: useSalesNav ? '0 1px 4px rgba(10,102,194,.35)' : 'none',
-                                    }}
-                                >
-                                    {/* Star icon for Premium */}
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                    {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
-                                </button>
-                                <button className="adv-send-circle adv-send-sm" disabled={!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)} onClick={onChatSend}
-                                    style={{ background: !input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) ? '#e5e7eb' : '#172560', boxShadow: !input.trim() || busy ? 'none' : '0 2px 8px rgba(23,37,96,.3)' }}>
-                                    {busy ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
-                                </button>
                             </div>
+                            <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
                         </div>
-                        <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
-                    </div>
+                    )}
                     {messages.length === 0 && (
                         <div className="adv-gemini-chips">
                             <button className="adv-gemini-chip" onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }}>
@@ -3204,49 +3230,51 @@ export default function AdvancedSearchAIPage() {
                 </div>
 
                 {/* MOBILE ICP BUTTON (Always visible on mobile) */}
-                <div className="adv-mobile-icp-box">
-                    <button 
-                        className="adv-mobile-icp-btn"
-                        onClick={() => setShowPlayground(true)}
-                        title="ICP Discovery"
-                    >
-                        <Sparkles size={22} color="#fff" />
-                    </button>
-                </div>
+                {messages.length === 0 && (
+                    <div className="adv-mobile-icp-box">
+                        <button
+                            className="adv-mobile-icp-btn"
+                            onClick={() => setShowPlayground(true)}
+                            title="ICP Discovery"
+                        >
+                            <Sparkles size={22} color="#fff" />
+                        </button>
+                    </div>
+                )}
 
                 {/* MOBILE NAVIGATION SIDEBAR (Leads/Flow) - only when active results exist */}
                 {(messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
                     <div className="adv-mobile-nav">
                         {showPanel && (
-                        <button
-                            className="adv-nav-btn"
-                            onClick={() => setShowPanel(false)}
-                            title="Chat"
-                        >
-                            <MessageSquare size={20} />
-                            <span className="adv-nav-label">Chat</span>
-                        </button>
-                    )}
-                    {showPanel !== 'leads' && (
-                        <button
-                            className="adv-nav-btn"
-                            onClick={() => setShowPanel('leads')}
-                            title="Leads"
-                        >
-                            <Users size={20} />
-                            <span className="adv-nav-label">Leads</span>
-                        </button>
-                    )}
-                    {showPanel !== 'workflow' && (
-                        <button
-                            className="adv-nav-btn"
-                            onClick={() => setShowPanel('workflow')}
-                            title="Workflow"
-                        >
-                            <Zap size={20} />
-                            <span className="adv-nav-label">Flow</span>
-                        </button>
-                    )}
+                            <button
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel(false)}
+                                title="Chat"
+                            >
+                                <MessageSquare size={20} />
+                                <span className="adv-nav-label">Chat</span>
+                            </button>
+                        )}
+                        {showPanel !== 'leads' && (
+                            <button
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('leads')}
+                                title="Leads"
+                            >
+                                <Users size={20} />
+                                <span className="adv-nav-label">Leads</span>
+                            </button>
+                        )}
+                        {showPanel !== 'workflow' && (
+                            <button
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('workflow')}
+                                title="Workflow"
+                            >
+                                <Zap size={20} />
+                                <span className="adv-nav-label">Flow</span>
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -3338,8 +3366,8 @@ export default function AdvancedSearchAIPage() {
                                                         <span className="adv-verified">✓</span>
                                                     </div>
                                                     <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
-                                                    {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
-                                                    {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
+                                                    {lead.email && <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', whiteSpace: 'nowrap' }}><span style={{ flexShrink: 0 }}>✉️</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{lead.email}</span></div>}
+                                                    {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', whiteSpace: 'nowrap' }}><span style={{ flexShrink: 0 }}>📞</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{lead.phone}</span></div>}
                                                     {lead.linkedinProfile && (
                                                         <div style={{ fontSize: '12px', color: '#0a66c2' }}>
                                                             <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
@@ -4742,7 +4770,12 @@ export default function AdvancedSearchAIPage() {
 /* ═══════════════════════════════════════════════
    CHAT BUBBLE
    ═══════════════════════════════════════════════ */
+import { useSelector } from 'react-redux';
+
 function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean }) {
+    const user = useSelector((state: any) => state.auth?.user);
+    const displayName = user?.name || "User";
+    const userInitial = displayName.charAt(0).toUpperCase();
     const THINKING_WORDS = ['Thinking', 'Searching', 'Scrapping', 'Crawling', 'Analyzing', 'Matching', 'Qualifying', 'Processing'];
     const [thinkIdx, setThinkIdx] = React.useState(0);
     const [thinkVisible, setThinkVisible] = React.useState(true);
@@ -4778,8 +4811,11 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
         </div>
     );
     if (msg.role === 'user') return (
-        <div className="adv-bubble adv-bubble-user fadeUp">
-            <div className="adv-user-msg">{msg.text}</div>
+        <div className="adv-bubble adv-bubble-user fadeUp" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <div className="adv-user-msg" style={{ margin: 0, order: 1 }}>{msg.text}</div>
+            <div style={{ order: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#172560', color: 'white', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>
+                {user?.avatar ? <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : userInitial}
+            </div>
         </div>
     );
     return (
@@ -4976,32 +5012,41 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     </div>
                 )}
 
-                {/* ── NAS.io-style action buttons ── */}
+                {/* ── Modern action buttons (Example 1 style) ── */}
                 {msg.targeting && (
-                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
-                        <button className="adv-act-btn" style={{
-                            padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
-                        }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
-                        <button className="adv-act-btn" style={{
-                            padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
-                        }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
+                    <div className="adv-action-btns" style={{ display: "flex", alignItems: "stretch", gap: "24px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "16px", marginTop: "4px" }}>
+                        {/* Refine Button */}
+                        <button
+                            className="adv-act-btn-refine"
+                            onClick={() => onOpt('Refine my targeting criteria')}
+                        >
+                            🔍 Refine Filters
+                        </button>
+
+                        {/* Create Journey Group */}
+                        <button
+                            className="adv-act-btn-journey"
+                            onClick={onStartCheckpoints}
+                        >
+                            🚀 Create Outreach Journey
+                        </button>
                     </div>
                 )}
 
                 {/* ── Inbound: Download Template + Upload buttons ── */}
                 {(msg.inboundAction === 'download' || msg.inboundAction === 'upload') && (
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', flexWrap: 'nowrap', width: '100%', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
                         <button onClick={downloadInboundTemplate} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', padding: '10px 8px',
                             background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff',
                             border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s',
-                        }}><Download size={16} /> Download Template</button>
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap'
+                        }}><Download size={16} /> Download</button>
                         <button onClick={() => onUploadClick?.()} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', padding: '10px 8px',
                             background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
-                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
-                        }}><Upload size={16} /> Upload CSV File</button>
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap'
+                        }}><Upload size={16} /> Upload CSV</button>
                     </div>
                 )}
 
@@ -5020,7 +5065,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             {msg.inboundSummary.website > 0 && <span style={{ fontSize: '11px', background: '#fff', color: '#6b21a8', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, border: '1px solid #e9d5ff' }}>🌐 Website ({msg.inboundSummary.website})</span>}
                         </div>
                         <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                            <button className="adv-act-btn" style={{
+                            <button style={{
                                 width: '100%', padding: "10px 14px", background: "#172560", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, color: "#fff", cursor: 'pointer', boxShadow: '0 4px 12px rgba(23,37,96,0.2)'
                             }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
                         </div>
@@ -5043,26 +5088,32 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         </div>
                         <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
                             {msg.outreach_journey.map((step, si) => {
-                                const icons: Record<string, React.ReactNode> = {
-                                    linkedin: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
-                                    ),
-                                    email: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
-                                    ),
-                                    whatsapp: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                                    ),
-                                    voice: (
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
-                                    ),
+                                const channelConfig = {
+                                    linkedin: {
+                                        color: '#0a66c2', icon: (
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}>
+                                                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                                            </svg>
+                                        )
+                                    },
+                                    email: {
+                                        color: '#4f46e5', icon: (
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+                                        )
+                                    },
+                                    whatsapp: {
+                                        color: '#25d366', icon: (
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill={step.recommended ? '#fff' : '#9ca3af'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+                                        )
+                                    },
+                                    voice: {
+                                        color: '#f97316', icon: (
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={step.recommended ? '#fff' : '#9ca3af'} strokeWidth="1.8" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.5 19.79 19.79 0 01.74 1.84 2 2 0 012.72 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.69a16 16 0 006.4 6.4l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
+                                        )
+                                    },
                                 };
-                                const bgColor = step.recommended
-                                    ? step.channel === 'linkedin' ? '#0a66c2'
-                                        : step.channel === 'email' ? '#4f46e5'
-                                            : step.channel === 'whatsapp' ? '#25d366'
-                                                : '#f97316'
-                                    : '#f3f4f6';
+                                const config = channelConfig[step.channel as keyof typeof channelConfig] || channelConfig.email;
+                                const bgColor = step.recommended ? config.color : '#f3f4f6';
                                 return (
                                     <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100px' }}>
@@ -5077,15 +5128,15 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                                     if (tip) tip.style.opacity = '0';
                                                 }}
                                             >
-                                                <div style={{
+                                                <div className="journey-icon-circle" style={{
                                                     width: '44px', height: '44px', borderRadius: '50%',
                                                     background: bgColor,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     boxShadow: step.recommended ? `0 4px 12px ${bgColor}55` : 'none',
                                                     border: step.recommended ? 'none' : '1.5px solid #e5e7eb',
-                                                    flexShrink: 0, cursor: 'default',
+                                                    flexShrink: 0, cursor: 'default', opacity: 1, visibility: 'visible'
                                                 }}>
-                                                    {icons[step.channel]}
+                                                    {config.icon}
                                                 </div>
                                                 {/* Custom tooltip */}
                                                 <div className="journey-tip" style={{
@@ -7785,6 +7836,30 @@ const css = `
             .adv-topbar {padding:16px 28px; position:relative; z-index:2; display:flex; align-items:center; }
             .adv-back {width:42px; height:42px; border-radius:50%; border:1px solid #e5e7eb; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.06); transition:all .15s; }
             .adv-back:hover {background:#f3f4f6; }
+
+            .adv-act-btn-refine {
+                display: flex; align-items: center; justify-content: center; flex: 1; gap: 8px;
+                padding: 12px 24px; border: none;
+                background: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%);
+                color: #fff; border-radius: 12px;
+                font-size: 14px; font-weight: 700; cursor: pointer;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+                transition: all 0.2s;
+            }
+            .adv-act-btn-refine:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
+            .adv-act-btn-refine:active { transform: translateY(0); }
+
+            .adv-act-btn-journey {
+                display: flex; align-items: center; justify-content: center; flex: 1; gap: 8px;
+                padding: 12px 24px; border: none;
+                background: #172560;
+                color: #fff; border-radius: 12px;
+                font-size: 14px; font-weight: 700; cursor: pointer;
+                box-shadow: 0 4px 12px rgba(23, 37, 96, 0.35);
+                transition: all 0.2s;
+            }
+            .adv-act-btn-journey:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(23, 37, 96, 0.45); }
+            .adv-act-btn-journey:active { transform: translateY(0); }
             .adv-center {flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 24px 60px; z-index:2; position:relative; }
             .adv-asterisk-wrap {width:90px; height:90px; border-radius:50%; background:#fff; border:1.5px solid #e0eaf5; display:flex; align-items:center; justify-content:center; margin-bottom:24px; box-shadow:0 4px 16px rgba(23,37,96,.10); animation:fadeUp .4s ease both; overflow:hidden; }
             .adv-lad-logo {width:80px; height:auto; display:block; }
@@ -7861,7 +7936,8 @@ const css = `
             .adv-tw-in{opacity:1;transform:translateY(0)}
             .adv-tw-out{opacity:0;transform:translateY(-6px)}
             /* ── CHAT INPUT ── */
-            .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; }
+            .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; transition: opacity 0.3s ease; }
+            .adv-chat-blur { pointer-events: none; opacity: 0.5; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
             .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid transparent; border-radius:24px; padding:16px 20px 12px; max-width:720px; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(23,37,96,0.06); position:relative; z-index:0; }
             .adv-chat-input-box::before {content:''; position:absolute; inset:-1.5px; border-radius:25.5px; padding:1.5px; background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#3b82f6); background-size:300% 100%; animation:adv-border-move 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; z-index:-1; pointer-events:none; }
@@ -8118,26 +8194,50 @@ const css = `
             }
             /* ── MOBILE RESPONSIVE ── */
             @media (max-width: 768px) {
-                .adv-gemini-title {font-size: 22px; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
+                .adv-gemini-hero { width: 94% !important; margin: 0 auto !important; padding: 0 !important; display: flex; flex-direction: column; align-items: center; }
+                .adv-gemini-title { font-size: 22px; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; width: 100%; text-align: center; }
                 .adv-gemini-sparkle {width: 22px; height: 22px; }
                 .adv-gemini-logo-wrap {width: 56px; height: 56px; margin-bottom: 20px; }
                 .adv-gemini-logo {width: 44px; }
-                .adv-gemini-hero {padding: 0 16px; }
-                .adv-gemini-chips {flex-wrap: wrap; justify-content: center; padding: 0 16px 16px; overflow-x: visible; gap: 8px; }
+                .adv-gemini-chips {flex-wrap: wrap; justify-content: center; padding: 0 !important; overflow-x: visible; gap: 8px; width: 100%; }
                 .adv-gemini-chip {padding: 8px 14px; font-size: 12px; flex: 0 0 auto; }
                 .adv-chat-input-box {border-radius: 20px; padding: 12px 14px 10px; }
                 .adv-chat-back {width: 36px; height: 36px; top: 12px; left: 12px; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
-                .adv-chat-left {min-width: 100%; }
-                .adv-mobile-nav { display: flex; }
-                .adv-mobile-icp-box { display: flex; }
-                /* Symmetric padding to keep content centered on mobile */
-                .adv-chat-msgs { padding-left: 20px !important; padding-right: 20px !important; }
-                .adv-panel-body { padding-left: 20px !important; padding-right: 20px !important; }
-                .adv-chat-input-wrap { padding-left: 20px !important; padding-right: 20px !important; }
-                .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; }
-                .adv-action-btns { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; }
-                .adv-rc { display: flex !important; }
+                .adv-chat-left { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; display: flex; flex-direction: column; align-items: stretch !important; }
+                .adv-mobile-nav { display: flex; right: 8px !important; left: auto !important; }
+                .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 80px !important; }
+                /* Decrease width for a more contained look on mobile */
+                .adv-chat-msgs { padding: 50px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; }
+                .adv-msgs-inner { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px !important; box-sizing: border-box !important; }
+                .adv-panel-body { padding-left: 12px !important; padding-right: 12px !important; }
+                .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px 12px !important; box-sizing: border-box !important; }
+                .adv-bubble-user { width: 100% !important; margin-left: auto !important; margin-right: 0 !important; justify-content: flex-end !important; padding-right: 0 !important; }
+                .adv-user-msg { max-width: 85% !important; word-wrap: break-word !important; }
+                .adv-ai-name { justify-content: flex-start !important; }
+                .adv-ai-avatar { width: 32px !important; height: 32px !important; flex-shrink: 0 !important; }
+                .adv-bubble-ai { gap: 8px !important; width: 100% !important; max-width: 100% !important; }
+                .adv-ai-text { text-align: left !important; width: 100% !important; font-size: 13.5px !important; }
+                .adv-rc { padding: 10px 12px !important; border-radius: 10px !important; gap: 8px !important; overflow-x: hidden !important; }
+                .adv-rc-icon { width: 26px !important; height: 26px !important; border-radius: 6px !important; font-size: 14px !important; }
+                .adv-rc-label { font-size: 12px !important; }
+                .adv-rc-sub { font-size: 10px !important; }
+                .adv-act-btn-refine { padding: 10px 8px !important; font-size: 11.5px !important; flex: 1 !important; width: auto !important; justify-content: center; white-space: nowrap; }
+                .adv-act-btn-journey { padding: 10px 8px !important; font-size: 11.5px !important; flex: 1 !important; width: auto !important; justify-content: center; }
+                .adv-action-btns { flex-direction: row !important; align-items: stretch !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important; flex-wrap: nowrap !important; }
+                .adv-main-product-card { padding: 12px !important; border-radius: 10px !important; gap: 10px !important; }
+                .adv-main-product-card > div:first-of-type { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+                .adv-main-product-card > div:nth-of-type(2) > div:first-of-type { font-size: 13px !important; }
+                .adv-journey-stepper > div > div { width: 75px !important; }
+                .journey-icon-circle { width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+                .adv-journey-stepper svg { width: 18px !important; height: 18px !important; display: block !important; }
+                .adv-journey-stepper span { font-size: 10px !important; }
+                .adv-ai-text p, .adv-ai-text div { text-align: left !important; justify-content: flex-start !important; }
+                .adv-ai-bullet { justify-content: flex-start !important; text-align: left !important; }
+                .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
+                .adv-action-btns { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
+                .adv-rc { display: flex !important; width: 100% !important; }
+                .adv-rc-leads { display: none !important; }
                 .adv-rc-leads { display: none !important; }
                 .adv-icp-discover-btn { display: none !important; }
                 .adv-mobile-nav { top: 160px !important; }
@@ -8160,10 +8260,15 @@ const css = `
                     background: #0f1842;
                     transform: scale(1.05);
                 }
-                .adv-ai-body { max-width: 100%; }
-                .adv-action-btns { margin-top: 16px; width: 100%; justify-content: center !important; }
-                .adv-act-btn { flex: 1; text-align: center; justify-content: center; }
-                .adv-journey-stepper { justify-content: center !important; }
+                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 60px !important; box-sizing: border-box !important; display: block; }
+                .adv-act-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: center; justify-content: center; font-size: 11px !important; padding: 10px 4px !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+                .adv-opt-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: left; font-size: 11px !important; padding: 8px 10px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+                .adv-journey-stepper { justify-content: flex-start !important; }
+                .adv-center { padding: 0 0 60px !important; align-items: center !important; }
+                .adv-input-outer { width: 90% !important; max-width: 90% !important; margin: 0 auto 28px !important; }
+                .adv-title { font-size: 24px !important; width: 88%; margin: 0 auto 24px !important; text-align: center; }
+                .adv-chips-row { width: 90% !important; justify-content: center !important; padding: 0 !important; margin: 0 auto !important; }
+                .adv-recent-wrap { width: 90% !important; margin: 16px auto 0 !important; }
             }
             @media (max-width: 480px) {
                 .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }
