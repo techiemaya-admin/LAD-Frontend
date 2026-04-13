@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -49,41 +49,40 @@ export default function CommunityROIDashboard() {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('sidebar-pinned') !== 'false'
   })
-  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Auto-hide sidebar logic
+  // Immediate auto-hide sidebar logic
   useEffect(() => {
-    const handleActivity = () => {
-      // Clear existing timer
-      if (autoHideTimerRef.current) {
-        clearTimeout(autoHideTimerRef.current)
-      }
+    const handleMainContentInteraction = (e: Event) => {
+      // Don't hide if sidebar is pinned
+      if (sidebarPinned) return
 
-      // Show sidebar on activity
-      setSidebarVisible(true)
+      // Check if the click/interaction is outside the sidebar
+      const target = e.target as HTMLElement
+      const sidebar = document.querySelector('[data-sidebar="true"]')
 
-      // Set auto-hide timer (5 seconds of inactivity)
-      if (!sidebarPinned) {
-        autoHideTimerRef.current = setTimeout(() => {
-          setSidebarVisible(false)
-        }, 5000)
+      if (sidebar && !sidebar.contains(target)) {
+        // Click/interaction is in main content area - hide sidebar immediately
+        setSidebarVisible(false)
       }
     }
 
-    // Add event listeners
-    window.addEventListener('mousemove', handleActivity)
-    window.addEventListener('click', handleActivity)
-    window.addEventListener('scroll', handleActivity)
-    window.addEventListener('keypress', handleActivity)
+    const handleShowSidebar = (e: Event) => {
+      // Show sidebar when clicking the floating button or in sidebar area
+      const target = e.target as HTMLElement
+      const floatingBtn = document.querySelector('[data-sidebar-toggle="true"]')
+      const sidebar = document.querySelector('[data-sidebar="true"]')
+
+      if (floatingBtn?.contains(target) || sidebar?.contains(target)) {
+        setSidebarVisible(true)
+      }
+    }
+
+    window.addEventListener('click', handleMainContentInteraction)
+    window.addEventListener('scroll', handleMainContentInteraction)
 
     return () => {
-      window.removeEventListener('mousemove', handleActivity)
-      window.removeEventListener('click', handleActivity)
-      window.removeEventListener('scroll', handleActivity)
-      window.removeEventListener('keypress', handleActivity)
-      if (autoHideTimerRef.current) {
-        clearTimeout(autoHideTimerRef.current)
-      }
+      window.removeEventListener('click', handleMainContentInteraction)
+      window.removeEventListener('scroll', handleMainContentInteraction)
     }
   }, [sidebarPinned])
 
@@ -114,6 +113,7 @@ export default function CommunityROIDashboard() {
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       {/* Member Sidebar */}
       <div
+        data-sidebar="true"
         className={`${sidebarVisible ? 'w-80' : 'w-0'} border-r bg-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-lg ${!sidebarVisible && !sidebarPinned ? 'absolute left-0 top-0 bottom-0 z-50' : ''}`}
       >
         {/* Channel Selection */}
@@ -350,6 +350,7 @@ export default function CommunityROIDashboard() {
     {/* Floating button to show sidebar when hidden */}
     {!sidebarVisible && !sidebarPinned && (
       <button
+        data-sidebar-toggle="true"
         onClick={() => setSidebarVisible(true)}
         className="fixed left-4 top-4 p-3 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-all z-40"
         title="Show members sidebar"
