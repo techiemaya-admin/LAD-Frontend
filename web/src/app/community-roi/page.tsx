@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,9 @@ import {
   UserPlus,
   CalendarDays,
   LayoutDashboard,
+  Pin,
+  PinOff,
+  X,
 } from 'lucide-react'
 
 import { useListMembers } from '@lad/frontend-features/community-roi'
@@ -40,6 +43,58 @@ export default function CommunityROIDashboard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
 
+  // Sidebar state
+  const [sidebarVisible, setSidebarVisible] = useState(true)
+  const [sidebarPinned, setSidebarPinned] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('sidebar-pinned') !== 'false'
+  })
+  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auto-hide sidebar logic
+  useEffect(() => {
+    const handleActivity = () => {
+      // Clear existing timer
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current)
+      }
+
+      // Show sidebar on activity
+      setSidebarVisible(true)
+
+      // Set auto-hide timer (5 seconds of inactivity)
+      if (!sidebarPinned) {
+        autoHideTimerRef.current = setTimeout(() => {
+          setSidebarVisible(false)
+        }, 5000)
+      }
+    }
+
+    // Add event listeners
+    window.addEventListener('mousemove', handleActivity)
+    window.addEventListener('click', handleActivity)
+    window.addEventListener('scroll', handleActivity)
+    window.addEventListener('keypress', handleActivity)
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity)
+      window.removeEventListener('click', handleActivity)
+      window.removeEventListener('scroll', handleActivity)
+      window.removeEventListener('keypress', handleActivity)
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current)
+      }
+    }
+  }, [sidebarPinned])
+
+  // Handle sidebar pin toggle
+  const handleTogglePin = () => {
+    const newPinned = !sidebarPinned
+    setSidebarPinned(newPinned)
+    localStorage.setItem('sidebar-pinned', newPinned ? 'true' : 'false')
+    setSidebarVisible(true) // Show sidebar when pinning
+  }
+
   // Get tenant ID from environment or props (without Redux dependency)
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || '';
   const { data: members, isLoading: membersLoading } = useListMembers({ tenantId })
@@ -56,9 +111,11 @@ export default function CommunityROIDashboard() {
 
   return (
     <>
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       {/* Member Sidebar */}
-      <div className="w-80 border-r bg-white flex flex-col shrink-0">
+      <div
+        className={`${sidebarVisible ? 'w-80' : 'w-0'} border-r bg-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-lg ${!sidebarVisible && !sidebarPinned ? 'absolute left-0 top-0 bottom-0 z-50' : ''}`}
+      >
         {/* Channel Selection */}
         <div className="p-4 flex gap-3 border-b overflow-x-auto no-scrollbar bg-slate-50/50">
           {communities.map((community) => (
@@ -81,11 +138,33 @@ export default function CommunityROIDashboard() {
         </div>
 
         <div className="p-4 border-b space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="font-bold text-lg text-slate-800">Members</h2>
-            <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
-              {filteredMembers.length} Total
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
+                {filteredMembers.length} Total
+              </Badge>
+              <button
+                onClick={handleTogglePin}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                title={sidebarPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              >
+                {sidebarPinned ? (
+                  <Pin className="w-4 h-4 fill-slate-600 text-slate-600" />
+                ) : (
+                  <PinOff className="w-4 h-4" />
+                )}
+              </button>
+              {!sidebarPinned && (
+                <button
+                  onClick={() => setSidebarVisible(false)}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                  title="Close sidebar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -267,6 +346,17 @@ export default function CommunityROIDashboard() {
         </div>
       </div>
     </div>
+
+    {/* Floating button to show sidebar when hidden */}
+    {!sidebarVisible && !sidebarPinned && (
+      <button
+        onClick={() => setSidebarVisible(true)}
+        className="fixed left-4 top-4 p-3 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-all z-40"
+        title="Show members sidebar"
+      >
+        <Users className="w-5 h-5" />
+      </button>
+    )}
 
     {showNetworkGraph && (
       <NetworkGrowthGraph onClose={() => setShowNetworkGraph(false)} />
