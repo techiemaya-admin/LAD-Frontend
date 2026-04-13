@@ -52,6 +52,9 @@ interface ScheduleMeetingModalProps {
   onSuccess: (meeting: any) => void
   defaultDate?: Date
   calendarSettings: CalendarSettings | null
+  prefillMemberAId?: string
+  prefillMemberBId?: string
+  prefillAgendaNotes?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -75,11 +78,14 @@ export default function ScheduleMeetingModal({
   onSuccess,
   defaultDate,
   calendarSettings,
+  prefillMemberAId  = '',
+  prefillMemberBId  = '',
+  prefillAgendaNotes = '',
 }: ScheduleMeetingModalProps) {
   const [members, setMembers]           = useState<Member[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
-  const [memberAId, setMemberAId]       = useState('')
-  const [memberBId, setMemberBId]       = useState('')
+  const [memberAId, setMemberAId]       = useState(prefillMemberAId)
+  const [memberBId, setMemberBId]       = useState(prefillMemberBId)
   const [memberASearch, setMemberASearch] = useState('')
   const [memberBSearch, setMemberBSearch] = useState('')
   const [showDropdownA, setShowDropdownA] = useState(false)
@@ -89,7 +95,7 @@ export default function ScheduleMeetingModal({
   const [duration, setDuration]         = useState(calendarSettings?.default_meeting_duration_mins ?? 30)
   const [meetingType, setMeetingType]   = useState<'virtual' | 'in_person' | 'phone'>('virtual')
   const [location, setLocation]         = useState('')
-  const [agendaNotes, setAgendaNotes]   = useState('')
+  const [agendaNotes, setAgendaNotes]   = useState(prefillAgendaNotes)
   const [submitting, setSubmitting]     = useState(false)
   const [conflicts, setConflicts]       = useState<ConflictError[]>([])
   const [checkingConflicts, setCheckingConflicts] = useState(false)

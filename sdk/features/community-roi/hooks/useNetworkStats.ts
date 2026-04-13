@@ -27,21 +27,6 @@ export interface UseNetworkStatsReturn {
 export function useNetworkStats(enabled: boolean = true): UseNetworkStatsReturn {
   const query = useQuery(getNetworkStatsOptions(enabled));
 
-  if (typeof window !== 'undefined') {
-    console.log(
-      '%c[useNetworkStats] Query state:',
-      'color: #3F51B5; font-weight: bold;',
-      {
-        enabled,
-        isLoading: query.isLoading,
-        isError: query.isError,
-        hasData: !!query.data,
-        dataKeys: query.data ? Object.keys(query.data) : 'NO_DATA',
-        error: query.error?.message || 'NO_ERROR',
-      }
-    );
-  }
-
   return {
     data: query.data,
     stats: query.data,

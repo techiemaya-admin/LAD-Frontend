@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,6 @@ import {
   Users,
   MessageSquare,
   Network,
-  Activity,
   Search,
   ChevronRight,
   Building2,
@@ -17,9 +16,12 @@ import {
   Linkedin,
   Trophy,
   ArrowUpRight,
-  Handshake,
+  UserPlus,
   CalendarDays,
   LayoutDashboard,
+  Pin,
+  PinOff,
+  X,
 } from 'lucide-react'
 
 import { useListMembers } from '@lad/frontend-features/community-roi'
@@ -31,6 +33,7 @@ import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
 import DataImportButton from '@/features/community-roi/components/DataImportButton'
 import CommunityCalendar from './components/CommunityCalendar'
 import MemberIntelFeed from './components/MemberIntelFeed'
+import OnboardNewMembersModal from './components/OnboardNewMembersModal'
 
 type ActiveView = 'dashboard' | 'calendar'
 
@@ -40,13 +43,65 @@ export default function CommunityROIDashboard() {
   const [selectedCommunity, setSelectedCommunity] = useState('BNI')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+  const [showOnboardModal, setShowOnboardModal] = useState(false)
+
+  // Sidebar state
+  const [sidebarVisible, setSidebarVisible] = useState(true)
+  const [sidebarPinned, setSidebarPinned] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('sidebar-pinned') !== 'false'
+  })
+
+  // Immediate auto-hide sidebar logic
+  useEffect(() => {
+    const handleMainContentInteraction = (e: Event) => {
+      // Don't hide if sidebar is pinned
+      if (sidebarPinned) return
+
+      // Check if the click/interaction is outside the sidebar
+      const target = e.target as HTMLElement
+      const sidebar = document.querySelector('[data-sidebar="true"]')
+
+      if (sidebar && !sidebar.contains(target)) {
+        // Click/interaction is in main content area - hide sidebar immediately
+        setSidebarVisible(false)
+      }
+    }
+
+    const handleShowSidebar = (e: Event) => {
+      // Show sidebar when clicking the floating button or in sidebar area
+      const target = e.target as HTMLElement
+      const floatingBtn = document.querySelector('[data-sidebar-toggle="true"]')
+      const sidebar = document.querySelector('[data-sidebar="true"]')
+
+      if (floatingBtn?.contains(target) || sidebar?.contains(target)) {
+        setSidebarVisible(true)
+      }
+    }
+
+    window.addEventListener('click', handleMainContentInteraction)
+    window.addEventListener('scroll', handleMainContentInteraction)
+
+    return () => {
+      window.removeEventListener('click', handleMainContentInteraction)
+      window.removeEventListener('scroll', handleMainContentInteraction)
+    }
+  }, [sidebarPinned])
+
+  // Handle sidebar pin toggle
+  const handleTogglePin = () => {
+    const newPinned = !sidebarPinned
+    setSidebarPinned(newPinned)
+    localStorage.setItem('sidebar-pinned', newPinned ? 'true' : 'false')
+    setSidebarVisible(true) // Show sidebar when pinning
+  }
 
   // Get tenant ID from environment or props (without Redux dependency)
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || '';
   const { data: members, isLoading: membersLoading } = useListMembers({ tenantId })
 
   const communities = [
-    { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, color: 'text-red-600', bg: 'bg-red-50' },
+    { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, logo: '/assets/community-logos/bni-logo.svg', color: 'text-red-600', bg: 'bg-red-50' },
     { id: 'WhatsApp', name: 'WhatsApp Group', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
     { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
@@ -57,9 +112,12 @@ export default function CommunityROIDashboard() {
 
   return (
     <>
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       {/* Member Sidebar */}
-      <div className="w-80 border-r bg-white flex flex-col shrink-0">
+      <div
+        data-sidebar="true"
+        className={`${sidebarVisible ? 'w-80' : 'w-0'} border-r bg-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-lg ${!sidebarVisible && !sidebarPinned ? 'fixed left-0 top-0 bottom-0 z-50 w-80' : ''}`}
+      >
         {/* Channel Selection */}
         <div className="p-4 flex gap-3 border-b overflow-x-auto no-scrollbar bg-slate-50/50">
           {communities.map((community) => (
@@ -82,11 +140,33 @@ export default function CommunityROIDashboard() {
         </div>
 
         <div className="p-4 border-b space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="font-bold text-lg text-slate-800">Members</h2>
-            <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
-              {filteredMembers.length} Total
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
+                {filteredMembers.length} Total
+              </Badge>
+              <button
+                onClick={handleTogglePin}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                title={sidebarPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              >
+                {sidebarPinned ? (
+                  <Pin className="w-4 h-4 fill-slate-600 text-slate-600" />
+                ) : (
+                  <PinOff className="w-4 h-4" />
+                )}
+              </button>
+              {!sidebarPinned && (
+                <button
+                  onClick={() => setSidebarVisible(false)}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                  title="Close sidebar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -146,19 +226,31 @@ export default function CommunityROIDashboard() {
           {selectedMemberId ? (
             <MemberProfileView memberId={selectedMemberId} onBack={() => setSelectedMemberId(null)} />
           ) : activeView === 'calendar' ? (
-            <CommunityCalendar tenantId={tenantId} />
+            <CommunityCalendar tenantId={tenantId} onBack={() => setActiveView('dashboard')} />
           ) : (
             <div className="space-y-8">
               {/* Community Header */}
               <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`p-4 rounded-2xl ${communities.find(c => c.id === selectedCommunity)?.bg}`}>
-                    {(() => {
-                      const Icon = communities.find(c => c.id === selectedCommunity)?.icon || Building2
-                      const color = communities.find(c => c.id === selectedCommunity)?.color || 'text-slate-600'
-                      return <Icon className={`w-8 h-8 \${color}`} />
-                    })()}
-                  </div>
+                  {(() => {
+                    const community = communities.find(c => c.id === selectedCommunity)
+                    if (community?.logo) {
+                      return (
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center">
+                          <img src={community.logo} alt={community.name} className="w-full h-full object-contain" />
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className={`p-4 rounded-2xl ${community?.bg}`}>
+                        {(() => {
+                          const Icon = community?.icon || Building2
+                          const color = community?.color || 'text-slate-600'
+                          return <Icon className={`w-8 h-8 ${color}`} />
+                        })()}
+                      </div>
+                    )
+                  })()}
                   <div>
                     <h1 className="text-2xl font-bold text-slate-900">
                       {communities.find(c => c.id === selectedCommunity)?.name}
@@ -195,11 +287,12 @@ export default function CommunityROIDashboard() {
                       <CalendarDays className="w-3.5 h-3.5" /> Calendar
                     </button>
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Activity className="w-4 h-4" /> Activity Logs
-                  </Button>
-                  <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
-                    <Handshake className="w-4 h-4" /> Log Interaction
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowOnboardModal(true)}
+                  >
+                    <UserPlus className="w-4 h-4" /> Onboard New Member
                   </Button>
                   <DataImportButton />
                 </div>
@@ -215,14 +308,6 @@ export default function CommunityROIDashboard() {
                 </div>
                 <SimpleAnalyticsCards />
               </div>
-
-              {/* Member Intelligence Feed */}
-              {filteredMembers.length > 0 && (
-                <MemberIntelFeed
-                  members={filteredMembers}
-                  onViewProfile={(id) => setSelectedMemberId(id)}
-                />
-              )}
 
               {/* Relationship Heatmap */}
               <div>
@@ -254,15 +339,41 @@ export default function CommunityROIDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Member Intelligence Feed */}
+              {filteredMembers.length > 0 && (
+                <MemberIntelFeed
+                  members={filteredMembers}
+                  onViewProfile={(id) => setSelectedMemberId(id)}
+                />
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
 
+    {/* Floating button to show sidebar when hidden */}
+    {!sidebarVisible && !sidebarPinned && (
+      <button
+        data-sidebar-toggle="true"
+        onClick={() => setSidebarVisible(true)}
+        className="fixed left-4 top-4 p-3 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-all z-40"
+        title="Show members sidebar"
+      >
+        <Users className="w-5 h-5" />
+      </button>
+    )}
+
     {showNetworkGraph && (
       <NetworkGrowthGraph onClose={() => setShowNetworkGraph(false)} />
     )}
+
+    <OnboardNewMembersModal
+      isOpen={showOnboardModal}
+      onClose={() => setShowOnboardModal(false)}
+      tenantId={tenantId}
+    />
     </>
   )
 }

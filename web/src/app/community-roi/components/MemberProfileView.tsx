@@ -4,6 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Users,
   MessageSquare,
   Handshake,
@@ -25,7 +34,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  Zap
+  Zap,
+  Trash2
 } from 'lucide-react'
 import {
   useMember,
@@ -89,6 +99,10 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
   const [draftMessage, setDraftMessage] = useState<DraftMessage | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Delete member state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   useEffect(() => {
     if (!memberId) return
     const fetchStats = async () => {
@@ -271,6 +285,34 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
     };
   }, [member, memberStats]);
 
+  // Handle delete member
+  const handleDeleteMember = useCallback(async () => {
+    setIsDeleting(true)
+    try {
+      const { base, token } = getBaseURL()
+      const res = await fetch(`${base}/api/community-roi/members/${memberId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+      })
+      if (res.ok) {
+        setShowDeleteDialog(false)
+        // Navigate back to dashboard after successful deletion
+        onBack()
+      } else {
+        alert('Failed to delete member. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error deleting member:', error)
+      alert('Error deleting member. Please try again.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [memberId, onBack, getBaseURL])
+
   const lastInteractionDate = useMemo(() => {
     if (!activity?.[0]) return 'No activity yet';
     try {
@@ -316,8 +358,40 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
           <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-100 rounded-lg">
             <Calendar className="w-4 h-4" /> Book 1-to-1
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isDeleting}
+            className="gap-2 rounded-lg border-red-200 text-red-600 hover:bg-red-50 shadow-sm"
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {isDeleting ? 'Deleting...' : 'Remove Member'}
+          </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member from Community</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{member?.name}</strong> from BNI Rising Phoenix? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMember}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? 'Removing...' : 'Remove Member'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Hero Profile Section */}
       <div className="relative">
