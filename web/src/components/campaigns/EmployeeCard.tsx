@@ -86,8 +86,8 @@ export default function EmployeeCard({
   return (
     <Card
       className={`
-        flex-1 min-h-full bg-white rounded-xl border border-gray-200 shadow-sm
-        transition-all duration-300 ease-in-out relative overflow-hidden
+        flex-1 bg-white rounded-xl border border-gray-200 shadow-sm
+        transition-all duration-300 ease-in-out relative
         hover:shadow-lg hover:border-[#0b1957]
         ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
       `}

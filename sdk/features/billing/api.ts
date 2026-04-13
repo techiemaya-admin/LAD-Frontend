@@ -181,31 +181,47 @@ export async function listTransactions(params?: {
 }): Promise<any> {
   const response = await apiClient.get('/api/billing/transactions', { params });
   
+  const creditsPerDollar: number = response.data.creditsPerDollar ?? (1000 / 99);
+  const planTier: string = response.data.planTier ?? 'starter';
+
   // Normalize transactions: map transaction_type to type, handle string amounts
-  const normalizedTransactions = response.data.transactions?.map((tx: any) => ({
-    id: tx.id,
-    type: mapTransactionType(tx.transaction_type),
-    transaction_type: tx.transaction_type,
-    amount: tx.amount?.toString() || '0',
-    balance_before: tx.balance_before?.toString(),
-    balance_after: tx.balance_after?.toString(),
-    balanceBefore: tx.balance_before,
-    balanceAfter: tx.balance_after,
-    description: tx.description || '',
-    reference_type: tx.reference_type,
-    reference_id: tx.reference_id,
-    created_at: tx.created_at,
-    createdAt: tx.created_at,
-    status: 'completed',
-    metadata: tx.metadata,
-    tenant_id: tx.tenant_id,
-    wallet_id: tx.wallet_id,
-  })) || [];
+  const normalizedTransactions = response.data.transactions?.map((tx: any) => {
+    const amountUsd = parseFloat(tx.amount || '0');
+    const balanceAfterUsd = tx.balance_after != null ? parseFloat(tx.balance_after) : null;
+    const balanceBeforeUsd = tx.balance_before != null ? parseFloat(tx.balance_before) : null;
+    return {
+      id: tx.id,
+      type: mapTransactionType(tx.transaction_type),
+      transaction_type: tx.transaction_type,
+      source: tx.source || 'ledger',
+      // Raw USD amounts (kept for reference)
+      amount: amountUsd.toString(),
+      balance_before: tx.balance_before?.toString(),
+      balance_after: tx.balance_after?.toString(),
+      balanceBefore: balanceBeforeUsd,
+      balanceAfter: balanceAfterUsd,
+      // Credits equivalents (converted using plan rate)
+      credits_amount: Math.round(Math.abs(amountUsd) * creditsPerDollar * 100) / 100,
+      credits_balance_after: balanceAfterUsd != null ? Math.round(balanceAfterUsd * creditsPerDollar * 100) / 100 : null,
+      credits_balance_before: balanceBeforeUsd != null ? Math.round(balanceBeforeUsd * creditsPerDollar * 100) / 100 : null,
+      description: tx.description || '',
+      reference_type: tx.reference_type,
+      reference_id: tx.reference_id,
+      created_at: tx.created_at,
+      createdAt: tx.created_at,
+      status: 'completed',
+      metadata: tx.metadata,
+      tenant_id: tx.tenant_id,
+      wallet_id: tx.wallet_id,
+    };
+  }) || [];
 
   return {
     transactions: normalizedTransactions,
     count: response.data.count,
     pagination: response.data.pagination,
+    creditsPerDollar,
+    planTier,
   };
 }
 

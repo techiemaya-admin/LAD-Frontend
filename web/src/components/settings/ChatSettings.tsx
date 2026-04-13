@@ -15,6 +15,8 @@ import {
   ToggleRight,
   CheckCircle,
   AlertCircle,
+  Bell,
+  Zap,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -38,10 +40,64 @@ interface ChatSettingsConfig {
   };
 }
 
+// ── Types ────────────────────────────────────────────────────────
+
+interface FollowupStageConfig {
+  enabled: boolean;
+  delay_hours: number;
+}
+
+interface FollowupTimingConfig {
+  enabled: boolean;
+  stages: {
+    FIRST: FollowupStageConfig;
+    SECOND: FollowupStageConfig;
+    THIRD: FollowupStageConfig;
+    FOURTH: FollowupStageConfig;
+  };
+  meeting_reminder_delay_hours: number;
+}
+
+const DEFAULT_FOLLOWUP_CONFIG: FollowupTimingConfig = {
+  enabled: true,
+  stages: {
+    FIRST:  { enabled: true, delay_hours: 24 },
+    SECOND: { enabled: true, delay_hours: 72 },
+    THIRD:  { enabled: true, delay_hours: 168 },
+    FOURTH: { enabled: true, delay_hours: 336 },
+  },
+  meeting_reminder_delay_hours: 24,
+};
+
 // ── API helpers ──────────────────────────────────────────────────
 
 const PROMPTS_API = '/api/whatsapp-conversations/prompts';
 const SETTINGS_API = '/api/whatsapp-conversations/chat-settings';
+const FOLLOWUP_CONFIG_API = '/api/whatsapp-conversations/followup-config';
+
+async function fetchFollowupConfig(): Promise<FollowupTimingConfig> {
+  try {
+    const res = await fetch(FOLLOWUP_CONFIG_API);
+    const data = await res.json();
+    return data.success ? data.data : DEFAULT_FOLLOWUP_CONFIG;
+  } catch {
+    return DEFAULT_FOLLOWUP_CONFIG;
+  }
+}
+
+async function updateFollowupConfig(config: FollowupTimingConfig): Promise<boolean> {
+  try {
+    const res = await fetch(FOLLOWUP_CONFIG_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    const data = await res.json();
+    return data.success;
+  } catch {
+    return false;
+  }
+}
 
 async function fetchPrompts(): Promise<Prompt[]> {
   const res = await fetch(PROMPTS_API);
@@ -151,6 +207,8 @@ export function ChatSettings() {
     knowledge_base: '',
     campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
   });
+  const [followupConfig, setFollowupConfig] = useState<FollowupTimingConfig>(DEFAULT_FOLLOWUP_CONFIG);
+  const [savingFollowup, setSavingFollowup] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [activeChannel, setActiveChannel] = useState('whatsapp');
@@ -169,10 +227,11 @@ export function ChatSettings() {
 
   // Load data on mount
   useEffect(() => {
-    Promise.all([fetchPrompts(), fetchChatSettings()])
-      .then(([p, s]) => {
+    Promise.all([fetchPrompts(), fetchChatSettings(), fetchFollowupConfig()])
+      .then(([p, s, f]) => {
         setPrompts(p);
         setChatSettings(s);
+        setFollowupConfig(f);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -288,6 +347,28 @@ export function ChatSettings() {
     showToast(ok ? 'Campaign settings saved' : 'Failed to save', ok ? 'success' : 'error');
     setSavingSettings(false);
   }, [chatSettings.campaign_frequency, showToast]);
+
+  // ── Follow-up Timing save ────────────────────────────────────
+
+  const handleSaveFollowup = useCallback(async () => {
+    setSavingFollowup(true);
+    const ok = await updateFollowupConfig(followupConfig);
+    showToast(ok ? 'Follow-up timing saved' : 'Failed to save', ok ? 'success' : 'error');
+    setSavingFollowup(false);
+  }, [followupConfig, showToast]);
+
+  const updateStage = useCallback(
+    (stage: keyof FollowupTimingConfig['stages'], field: 'enabled' | 'delay_hours', value: boolean | number) => {
+      setFollowupConfig((prev) => ({
+        ...prev,
+        stages: {
+          ...prev.stages,
+          [stage]: { ...prev.stages[stage], [field]: value },
+        },
+      }));
+    },
+    []
+  );
 
   // ── Render ───────────────────────────────────────────────────
 
@@ -620,6 +701,150 @@ export function ChatSettings() {
             >
               {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Campaign Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 4: Post-Conversation Follow-up Timing ────────── */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <Bell className="h-5 w-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Post-Conversation Follow-ups</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Configure when automated follow-up messages are sent after a conversation ends.
+            Each stage fires once via Cloud Tasks at the scheduled delay.
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* Master enable */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Enable Post-Conversation Follow-ups</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Automatically send follow-up messages when a customer stops responding
+              </p>
+            </div>
+            <button
+              onClick={() => setFollowupConfig((prev) => ({ ...prev, enabled: !prev.enabled }))}
+            >
+              {followupConfig.enabled ? (
+                <ToggleRight className="h-6 w-6 text-indigo-500" />
+              ) : (
+                <ToggleLeft className="h-6 w-6 text-gray-300" />
+              )}
+            </button>
+          </div>
+
+          {/* Stage timing table */}
+          <div className="border border-gray-100 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-32">Stage</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">Description</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-40">Delay (hours)</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-20">Enabled</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(
+                  [
+                    { key: 'FIRST',  label: '1st Follow-up', desc: 'Warm first check-in',           color: 'text-green-600 bg-green-50' },
+                    { key: 'SECOND', label: '2nd Follow-up', desc: 'Value offer / nudge',            color: 'text-yellow-600 bg-yellow-50' },
+                    { key: 'THIRD',  label: '3rd Follow-up', desc: 'Non-pushy check-in (1 week)',    color: 'text-orange-600 bg-orange-50' },
+                    { key: 'FOURTH', label: 'Final message', desc: 'Warm goodbye (2 weeks)',         color: 'text-red-600 bg-red-50' },
+                  ] as Array<{ key: keyof FollowupTimingConfig['stages']; label: string; desc: string; color: string }>
+                ).map(({ key, label, desc, color }) => {
+                  const stage = followupConfig.stages[key];
+                  return (
+                    <tr key={key} className={!followupConfig.enabled ? 'opacity-50' : ''}>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${color}`}>
+                          {label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{desc}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            max={720}
+                            value={stage.delay_hours}
+                            disabled={!followupConfig.enabled || !stage.enabled}
+                            onChange={(e) => updateStage(key, 'delay_hours', parseInt(e.target.value) || 24)}
+                            className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 disabled:opacity-40 disabled:bg-gray-50"
+                          />
+                          <span className="text-xs text-gray-400">h</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          disabled={!followupConfig.enabled}
+                          onClick={() => updateStage(key, 'enabled', !stage.enabled)}
+                        >
+                          {stage.enabled ? (
+                            <ToggleRight className="h-5 w-5 text-indigo-500 disabled:opacity-40" />
+                          ) : (
+                            <ToggleLeft className="h-5 w-5 text-gray-300" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Meeting reminder delay */}
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              Meeting Reminder Delay (hours)
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              How many hours after a 1-2-1 meeting is confirmed to send reminders to both parties
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={72}
+                value={followupConfig.meeting_reminder_delay_hours}
+                onChange={(e) =>
+                  setFollowupConfig((prev) => ({
+                    ...prev,
+                    meeting_reminder_delay_hours: parseInt(e.target.value) || 24,
+                  }))
+                }
+                className="w-24 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+              />
+              <span className="text-sm text-gray-500">hours before the meeting time</span>
+            </div>
+          </div>
+
+          {/* Cloud Tasks indicator */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-md border border-indigo-100">
+            <Zap className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+            <p className="text-xs text-indigo-700">
+              Follow-ups are scheduled via{' '}
+              <span className="font-medium">GCP Cloud Tasks</span> when configured,
+              ensuring reliable delivery even if the server restarts. Falls back to
+              DB polling in local dev.
+            </p>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveFollowup}
+              disabled={savingFollowup}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Follow-up Settings
             </button>
           </div>
         </div>
