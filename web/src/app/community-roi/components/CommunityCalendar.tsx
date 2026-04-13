@@ -23,6 +23,7 @@ import {
   ToggleRight,
   CalendarDays,
   Handshake,
+  ArrowLeft,
 } from 'lucide-react'
 import {
   format,
@@ -108,9 +109,10 @@ function avatarColor(name: string) {
 
 interface CommunityCalendarProps {
   tenantId?: string
+  onBack?: () => void
 }
 
-export default function CommunityCalendar({ tenantId }: CommunityCalendarProps) {
+export default function CommunityCalendar({ tenantId, onBack }: CommunityCalendarProps) {
   const [currentMonth, setCurrentMonth]       = useState(new Date())
   const [selectedDay, setSelectedDay]         = useState<Date>(new Date())
   const [meetings, setMeetings]               = useState<Meeting[]>([])
@@ -401,7 +403,12 @@ export default function CommunityCalendar({ tenantId }: CommunityCalendarProps) 
 
       {/* ── Top Bar ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {onBack && (
+            <Button variant="ghost" size="sm" onClick={onBack} className="gap-2 text-slate-600 hover:text-slate-900 group md:hidden">
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            </Button>
+          )}
           <div className="p-3 bg-blue-50 rounded-xl">
             <CalendarDays className="w-6 h-6 text-blue-600" />
           </div>
@@ -460,6 +467,16 @@ export default function CommunityCalendar({ tenantId }: CommunityCalendarProps) 
             <Plus className="w-4 h-4" />
             Schedule 1-2-1
           </Button>
+          {onBack && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBack}
+              className="gap-2 rounded-xl hidden md:flex text-slate-600 hover:text-slate-900"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            </Button>
+          )}
         </div>
       </div>
 

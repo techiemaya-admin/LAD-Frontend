@@ -145,7 +145,7 @@ export default function CommunityROIDashboard() {
           {selectedMemberId ? (
             <MemberProfileView memberId={selectedMemberId} onBack={() => setSelectedMemberId(null)} />
           ) : activeView === 'calendar' ? (
-            <CommunityCalendar tenantId={tenantId} />
+            <CommunityCalendar tenantId={tenantId} onBack={() => setActiveView('dashboard')} />
           ) : (
             <div className="space-y-8">
               {/* Community Header */}
@@ -155,8 +155,8 @@ export default function CommunityROIDashboard() {
                     const community = communities.find(c => c.id === selectedCommunity)
                     if (community?.logo) {
                       return (
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
-                          <img src={community.logo} alt={community.name} className="w-full h-full object-cover" />
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg bg-white flex items-center justify-center">
+                          <img src={community.logo} alt={community.name} className="w-full h-full object-contain p-2" />
                         </div>
                       )
                     }
