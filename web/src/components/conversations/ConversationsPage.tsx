@@ -47,6 +47,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
 
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
@@ -64,6 +65,13 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     setActiveGroup(null);
     setGroupMemberSelected(false);
     setGroupInfoAutoOpen(false);
+  }, []);
+
+  const handleGroupDeleted = useCallback(() => {
+    setActiveGroup(null);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+    setGroupRefreshKey(k => k + 1); // force sidebar to reload groups list
   }, []);
 
   const handleSelectConversation = useCallback((id: string) => {
@@ -207,6 +215,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
+              groupRefreshKey={groupRefreshKey}
             />
           </motion.div>
         )}
@@ -250,6 +259,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
                 onShowBroadcastModal={onShowBroadcastModal}
+                groupRefreshKey={groupRefreshKey}
               />
             </motion.div>
           </motion.div>
@@ -272,6 +282,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           groupName={activeGroup.name}
           groupColor={activeGroup.color}
           onBack={handleBackFromGroup}
+          onGroupDeleted={handleGroupDeleted}
           autoOpenInfo={groupInfoAutoOpen}
           channel={channel}
         />
@@ -505,10 +516,12 @@ export function ConversationsPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 interface BroadcastModalProps {
   onClose: () => void;
+  onSent?: () => void;
   activeTab: 'personal' | 'waba';
 }
 
-function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
+function BroadcastModal({ onClose, onSent, activeTab }: BroadcastModalProps) {
+  const queryClient = useQueryClient();
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({}); // group ID → conversation IDs
@@ -648,6 +661,9 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
       }
 
       alert(`Broadcast sent! Sent: ${sentCount}, Failed: ${failedCount}`);
+      // Refresh conversation list so newly created conversations (e.g. for new contacts) appear
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      onSent?.();
       onClose();
     } catch (err) {
       console.error('Error sending broadcast:', err);
