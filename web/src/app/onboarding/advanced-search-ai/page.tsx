@@ -978,7 +978,7 @@ export default function AdvancedSearchAIPage() {
                 moduleUsed: lastModuleUsed,
                 lead: feedbackLead as any,
                 feedback: rating,
-            }).catch(() => {});
+            }).catch(() => { });
         }
     };
 
@@ -1960,18 +1960,18 @@ export default function AdvancedSearchAIPage() {
                     if (c.company_overview) parts.push(`**Who They Are:**\n${c.company_overview}\n`);
 
                     const firmoParts: string[] = [];
-                    if (c.industry)           firmoParts.push(`**Industry:** ${c.industry}`);
-                    if (c.headquarters)       firmoParts.push(`**HQ:** ${c.headquarters}`);
-                    if (c.founded_year)       firmoParts.push(`**Founded:** ${c.founded_year}`);
+                    if (c.industry) firmoParts.push(`**Industry:** ${c.industry}`);
+                    if (c.headquarters) firmoParts.push(`**HQ:** ${c.headquarters}`);
+                    if (c.founded_year) firmoParts.push(`**Founded:** ${c.founded_year}`);
                     if (c.company_size_range) firmoParts.push(`**Size:** ${c.company_size_range} employees`);
-                    if (c.funding_stage)      firmoParts.push(`**Funding:** ${c.funding_stage}`);
-                    if (firmoParts.length)    parts.push(`**Company Profile:**\n${firmoParts.join(' · ')}\n`);
+                    if (c.funding_stage) firmoParts.push(`**Funding:** ${c.funding_stage}`);
+                    if (firmoParts.length) parts.push(`**Company Profile:**\n${firmoParts.join(' · ')}\n`);
 
                     const social = c.social || {};
                     const socialParts: string[] = [];
-                    if (social.linkedin_url) socialParts.push(`[LinkedIn](${social.linkedin_url})${social.linkedin_followers ? ` (${(social.linkedin_followers/1000).toFixed(1)}K followers)` : ''}`);
-                    if (social.twitter_url)  socialParts.push(`[Twitter/X](${social.twitter_url})${social.twitter_followers ? ` (${(social.twitter_followers/1000).toFixed(1)}K followers)` : ''}`);
-                    if (socialParts.length)  parts.push(`**Social Presence:**\n${socialParts.join(' · ')}\n`);
+                    if (social.linkedin_url) socialParts.push(`[LinkedIn](${social.linkedin_url})${social.linkedin_followers ? ` (${(social.linkedin_followers / 1000).toFixed(1)}K followers)` : ''}`);
+                    if (social.twitter_url) socialParts.push(`[Twitter/X](${social.twitter_url})${social.twitter_followers ? ` (${(social.twitter_followers / 1000).toFixed(1)}K followers)` : ''}`);
+                    if (socialParts.length) parts.push(`**Social Presence:**\n${socialParts.join(' · ')}\n`);
 
                     const posts: any[] = c.linkedin_posts || [];
                     if (posts.length > 0) {
@@ -1979,7 +1979,7 @@ export default function AdvancedSearchAIPage() {
                         posts.slice(0, 3).forEach((p: any) => {
                             const preview = (p.text || '').substring(0, 160).replace(/\n/g, ' ');
                             const eng = [p.likes ? `👍 ${p.likes}` : null, p.comments ? `💬 ${p.comments}` : null].filter(Boolean).join('  ');
-                            parts.push(`• "${preview}${(p.text||'').length > 160 ? '...' : ''}"\n  ${eng}`);
+                            parts.push(`• "${preview}${(p.text || '').length > 160 ? '...' : ''}"\n  ${eng}`);
                         });
                         parts.push('');
                     }
@@ -1991,7 +1991,7 @@ export default function AdvancedSearchAIPage() {
                         parts.push('');
                     }
 
-                    const dms: any[] = (c.key_decision_makers || []).sort((a: any, b: any) => (b.icp_score||0) - (a.icp_score||0));
+                    const dms: any[] = (c.key_decision_makers || []).sort((a: any, b: any) => (b.icp_score || 0) - (a.icp_score || 0));
                     if (dms.length > 0) {
                         parts.push(`**Key Decision Makers & ICP Scores:**`);
                         dms.slice(0, 6).forEach((dm: any) => {
@@ -2006,7 +2006,7 @@ export default function AdvancedSearchAIPage() {
                         parts.push(`**🎯 Next Best Actions for Account-Based Sales Development:**`);
                         actions.forEach((a: any) => {
                             parts.push(`\n**${a.priority}. ${a.action}** [${a.channel || ''}]${a.target_person ? ` → _${a.target_person}_` : ''}`);
-                            if (a.rationale)              parts.push(`   ${a.rationale}`);
+                            if (a.rationale) parts.push(`   ${a.rationale}`);
                             if (a.suggested_message_hook) parts.push(`   💬 _"${a.suggested_message_hook}"_`);
                         });
                         parts.push('');
@@ -2220,34 +2220,34 @@ export default function AdvancedSearchAIPage() {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        query:      prospectQuery,
+                                        query: prospectQuery,
                                         icpProfile: businessProfile,
-                                        sessionId:  `gps-${Date.now()}`,
-                                        seenIds:    [],
-                                        batchSize:  leadCount,
+                                        sessionId: `gps-${Date.now()}`,
+                                        seenIds: [],
+                                        batchSize: leadCount,
                                     }),
                                 });
                                 const d = await resp.json();
                                 setIsSearching(false);
                                 if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                                     const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
-                                        id:               item.id || `gps-${idx}`,
-                                        name:             item.name || 'Unknown',
-                                        first_name:       item.first_name || '',
-                                        last_name:        item.last_name  || '',
-                                        headline:         item.headline   || item.decision_maker_title || '',
-                                        location:         item.location   || '',
-                                        current_company:  item.current_company || '',
-                                        profile_url:      item.profile_url || '',
-                                        profile_picture:  item.profile_picture || '',
-                                        industry:         item.industry || item.company_type || '',
+                                        id: item.id || `gps-${idx}`,
+                                        name: item.name || 'Unknown',
+                                        first_name: item.first_name || '',
+                                        last_name: item.last_name || '',
+                                        headline: item.headline || item.decision_maker_title || '',
+                                        location: item.location || '',
+                                        current_company: item.current_company || '',
+                                        profile_url: item.profile_url || '',
+                                        profile_picture: item.profile_picture || '',
+                                        industry: item.industry || item.company_type || '',
                                         network_distance: '',
-                                        locked:           idx >= 5,
-                                        phone:            item.phone || item.company_phone || '',
-                                        email:            item.email || '',
-                                        icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
-                                        match_level:      item.match_level  || undefined,
-                                        icp_reasoning:    item.icp_reasoning || undefined,
+                                        locked: idx >= 5,
+                                        phone: item.phone || item.company_phone || '',
+                                        email: item.email || '',
+                                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                        match_level: item.match_level || undefined,
+                                        icp_reasoning: item.icp_reasoning || undefined,
                                         enriched_profile: item.enriched_profile || undefined,
                                     }));
                                     setLeads(prospectLeads);
@@ -2336,34 +2336,34 @@ export default function AdvancedSearchAIPage() {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                query:      text,
+                                query: text,
                                 icpProfile: businessProfile,
-                                sessionId:  `gps-${Date.now()}`,
-                                seenIds:    [],
-                                batchSize:  leadCount,
+                                sessionId: `gps-${Date.now()}`,
+                                seenIds: [],
+                                batchSize: leadCount,
                             }),
                         });
                         const d = await resp.json();
                         setIsSearching(false);
                         if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                             const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
-                                id:               item.id || `gps-${idx}`,
-                                name:             item.name || 'Unknown',
-                                first_name:       item.first_name || '',
-                                last_name:        item.last_name  || '',
-                                headline:         item.headline   || '',
-                                location:         item.location   || '',
-                                current_company:  item.current_company || '',
-                                profile_url:      item.profile_url || '',
-                                profile_picture:  item.profile_picture || '',
-                                industry:         item.industry || item.company_type || '',
+                                id: item.id || `gps-${idx}`,
+                                name: item.name || 'Unknown',
+                                first_name: item.first_name || '',
+                                last_name: item.last_name || '',
+                                headline: item.headline || '',
+                                location: item.location || '',
+                                current_company: item.current_company || '',
+                                profile_url: item.profile_url || '',
+                                profile_picture: item.profile_picture || '',
+                                industry: item.industry || item.company_type || '',
                                 network_distance: '',
-                                locked:           idx >= 5,
-                                phone:            item.phone || item.company_phone || '',
-                                email:            item.email || '',
-                                icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
-                                match_level:      item.match_level  || undefined,
-                                icp_reasoning:    item.icp_reasoning || undefined,
+                                locked: idx >= 5,
+                                phone: item.phone || item.company_phone || '',
+                                email: item.email || '',
+                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                match_level: item.match_level || undefined,
+                                icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
                             }));
                             setLeads(prospectLeads);
@@ -3113,11 +3113,11 @@ export default function AdvancedSearchAIPage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        query:      lastProspectQuery,
+                        query: lastProspectQuery,
                         icpProfile: businessProfile,
-                        sessionId:  `gps-more-${Date.now()}`,
-                        seenIds:    seenProspectIds,
-                        batchSize:  leadCount,
+                        sessionId: `gps-more-${Date.now()}`,
+                        seenIds: seenProspectIds,
+                        batchSize: leadCount,
                     }),
                 });
                 const d = await resp.json();
@@ -3125,23 +3125,23 @@ export default function AdvancedSearchAIPage() {
                 if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                     const existingCount = leads.length;
                     const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
-                        id:               item.id || `gps-more-${existingCount + idx}`,
-                        name:             item.name || 'Unknown',
-                        first_name:       item.first_name || '',
-                        last_name:        item.last_name  || '',
-                        headline:         item.headline || '',
-                        location:         item.location || '',
-                        current_company:  item.current_company || '',
-                        profile_url:      item.profile_url || '',
-                        profile_picture:  item.profile_picture || '',
-                        industry:         item.industry || '',
+                        id: item.id || `gps-more-${existingCount + idx}`,
+                        name: item.name || 'Unknown',
+                        first_name: item.first_name || '',
+                        last_name: item.last_name || '',
+                        headline: item.headline || '',
+                        location: item.location || '',
+                        current_company: item.current_company || '',
+                        profile_url: item.profile_url || '',
+                        profile_picture: item.profile_picture || '',
+                        industry: item.industry || '',
                         network_distance: '',
-                        locked:           (existingCount + idx) >= 5,
-                        phone:            item.phone || '',
-                        email:            item.email || '',
-                        icp_score:        item.icp_score != null ? item.icp_score : undefined,
-                        match_level:      item.match_level || undefined,
-                        icp_reasoning:    item.icp_reasoning || undefined,
+                        locked: (existingCount + idx) >= 5,
+                        phone: item.phone || '',
+                        email: item.email || '',
+                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                        match_level: item.match_level || undefined,
+                        icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
                     }));
                     setLeads(prev => [...prev, ...moreLeads]);
@@ -5648,7 +5648,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                             Suggested Outreach Journey
                         </div>
-                        <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
+                        <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'hidden', paddingBottom: '4px', width: '100%' }}>
                             {msg.outreach_journey.map((step, si) => {
                                 const channelConfig = {
                                     linkedin: {
@@ -8772,7 +8772,7 @@ const css = `
                 .adv-mobile-nav { display: flex; right: 8px !important; left: auto !important; }
                 .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 80px !important; }
                 /* Decrease width for a more contained look on mobile */
-                .adv-chat-msgs { padding: 50px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; }
+                .adv-chat-msgs { padding: 50px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; }
                 .adv-msgs-inner { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px !important; box-sizing: border-box !important; }
                 .adv-panel-body { padding-left: 12px !important; padding-right: 12px !important; }
                 .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px 12px !important; box-sizing: border-box !important; }
@@ -8792,16 +8792,17 @@ const css = `
                 .adv-main-product-card { padding: 12px !important; border-radius: 10px !important; gap: 10px !important; }
                 .adv-main-product-card > div:first-of-type { width: 36px !important; height: 36px !important; font-size: 16px !important; }
                 .adv-main-product-card > div:nth-of-type(2) > div:first-of-type { font-size: 13px !important; }
-                .adv-journey-stepper > div > div { width: 62px !important; }
-                .journey-icon-circle { width: 30px !important; height: 30px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-                .adv-journey-stepper svg { width: 16px !important; height: 16px !important; display: block !important; }
-                /* Target the connector arrow svg containers */
-                .adv-journey-stepper > div > div:nth-of-type(2) { width: 12px !important; padding-top: 7px !important; }
-                .adv-journey-stepper span { font-size: 9.5px !important; }
-                /* Align text and labels to be "straight" */
-                .adv-journey-stepper > div > div:first-child { text-align: left !important; align-items: flex-start !important; }
-                .adv-journey-stepper > div > div:first-child > div { text-align: left !important; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .adv-journey-stepper > div > div:first-child > div:nth-of-type(3) { white-space: normal !important; height: 38px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+                .adv-journey-stepper { margin-left: 10px !important; width: calc(100% - 10px) !important; justify-content: flex-start !important; }
+                .adv-journey-stepper > div { flex: 1 !important; display: flex !important; min-width: 0 !important; align-items: flex-start !important; gap: 10px !important; }
+                .adv-journey-stepper > div > div:first-child { flex: 1 1 auto !important; width: auto !important; display: flex !important; flex-direction: column !important; align-items: center !important; }
+                .journey-icon-circle { width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+                .adv-journey-stepper svg { width: 14px !important; height: 14px !important; display: block !important; }
+                /* Target the connector arrow svg containers cleanly with a fixed width to prevent overlap */
+                .adv-journey-stepper > div > div:nth-of-type(2) { width: 12px !important; padding-top: 10px !important; flex: 0 0 auto !important; display: flex !important; justify-content: center !important; opacity: 0.6 !important; }
+                .adv-journey-stepper span { font-size: 10px !important; }
+                /* Align text and labels to be centered */
+                .adv-journey-stepper > div > div:first-child > div { text-align: center !important; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px !important; }
+                .adv-journey-stepper > div > div:first-child > div:nth-of-type(3) { white-space: normal !important; min-height: 48px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; width: 100% !important; padding: 0 4px !important; line-height: 1.2 !important; }
                 .adv-ai-text p, .adv-ai-text div { text-align: left !important; justify-content: flex-start !important; }
                 .adv-ai-bullet { justify-content: flex-start !important; text-align: left !important; }
                 .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
@@ -8830,10 +8831,10 @@ const css = `
                     background: #0f1842;
                     transform: scale(1.05);
                 }
-                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 20px !important; box-sizing: border-box !important; display: block; }
+                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 40px !important; box-sizing: border-box !important; display: block; }
                 .adv-act-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: center; justify-content: center; font-size: 11px !important; padding: 10px 4px !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
                 .adv-opt-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: left; font-size: 11px !important; padding: 8px 10px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-                .adv-journey-stepper { justify-content: flex-start !important; }
+                .adv-journey-stepper { justify-content: space-between !important; width: 100% !important; }
                 .adv-center { padding: 0 0 60px !important; align-items: center !important; }
                 .adv-input-outer { width: 90% !important; max-width: 90% !important; margin: 0 auto 28px !important; }
                 .adv-title { font-size: 24px !important; width: 88%; margin: 0 auto 24px !important; text-align: center; }
