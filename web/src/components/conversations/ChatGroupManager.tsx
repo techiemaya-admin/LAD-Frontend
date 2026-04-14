@@ -19,6 +19,7 @@ import {
   RefreshCw,
   CheckSquare,
   Square,
+  Megaphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -523,16 +524,16 @@ export function ChatGroupManager({
         <div className="bg-primary/5 border-b border-border px-4 py-3">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Users className="h-5 w-5 text-primary" />
+              <Megaphone className="h-5 w-5 text-primary" />
               {isGroupSelectMode ? (
                 <span>
                   {selectedGroupIds.size > 0
-                    ? `${selectedGroupIds.size} group${selectedGroupIds.size !== 1 ? 's' : ''} selected`
-                    : 'Select Groups'}
+                    ? `${selectedGroupIds.size} broadcast${selectedGroupIds.size !== 1 ? 's' : ''} selected`
+                    : 'Select Broadcasts'}
                 </span>
               ) : (
                 <>
-                  Chat Groups
+                  Broadcasts
                   <Badge variant="secondary" className="text-[10px] ml-1">
                     {groups.length}
                   </Badge>
