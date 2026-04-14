@@ -223,6 +223,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [newChatContactsTotal, setNewChatContactsTotal] = useState(0);
   const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true);
   const [contactsSectionExpanded, setContactsSectionExpanded] = useState(true);
+  const [importRefreshTrigger, setImportRefreshTrigger] = useState(0); // Trigger to refresh after import
 
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -313,7 +314,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         .catch(() => {})
         .finally(() => setNewChatContactsLoading(false));
     }
-  }, [isNewChatOpen, isGroupManagerOpen, backendChannel]); // re-fetch when group manager closes
+  }, [isNewChatOpen, isGroupManagerOpen, backendChannel, importRefreshTrigger]); // re-fetch when group manager closes or after import
 
   // Named-only filter: hide contacts with unknown/unresolved names
   const [namedOnly, setNamedOnly] = useState(false);
@@ -1223,8 +1224,14 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         onImportComplete={() => {
+          // Refresh conversations and reload contacts in New Chat panel
           if (onRefresh) onRefresh();
-          else window.location.reload();
+          // Trigger re-fetch of contacts in New Chat panel
+          setImportRefreshTrigger((prev) => prev + 1);
+          // If New Chat panel is open, ensure it shows new contacts
+          if (isNewChatOpen) {
+            // Panel is already open, the effect will re-fetch due to importRefreshTrigger change
+          }
         }}
       />
     </div>
