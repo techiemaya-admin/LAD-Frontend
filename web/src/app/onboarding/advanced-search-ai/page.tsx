@@ -8792,10 +8792,16 @@ const css = `
                 .adv-main-product-card { padding: 12px !important; border-radius: 10px !important; gap: 10px !important; }
                 .adv-main-product-card > div:first-of-type { width: 36px !important; height: 36px !important; font-size: 16px !important; }
                 .adv-main-product-card > div:nth-of-type(2) > div:first-of-type { font-size: 13px !important; }
-                .adv-journey-stepper > div > div { width: 75px !important; }
-                .journey-icon-circle { width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-                .adv-journey-stepper svg { width: 18px !important; height: 18px !important; display: block !important; }
-                .adv-journey-stepper span { font-size: 10px !important; }
+                .adv-journey-stepper > div > div { width: 62px !important; }
+                .journey-icon-circle { width: 30px !important; height: 30px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+                .adv-journey-stepper svg { width: 16px !important; height: 16px !important; display: block !important; }
+                /* Target the connector arrow svg containers */
+                .adv-journey-stepper > div > div:nth-of-type(2) { width: 12px !important; padding-top: 7px !important; }
+                .adv-journey-stepper span { font-size: 9.5px !important; }
+                /* Align text and labels to be "straight" */
+                .adv-journey-stepper > div > div:first-child { text-align: left !important; align-items: flex-start !important; }
+                .adv-journey-stepper > div > div:first-child > div { text-align: left !important; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .adv-journey-stepper > div > div:first-child > div:nth-of-type(3) { white-space: normal !important; height: 38px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
                 .adv-ai-text p, .adv-ai-text div { text-align: left !important; justify-content: flex-start !important; }
                 .adv-ai-bullet { justify-content: flex-start !important; text-align: left !important; }
                 .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
@@ -8824,7 +8830,7 @@ const css = `
                     background: #0f1842;
                     transform: scale(1.05);
                 }
-                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 60px !important; box-sizing: border-box !important; display: block; }
+                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 20px !important; box-sizing: border-box !important; display: block; }
                 .adv-act-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: center; justify-content: center; font-size: 11px !important; padding: 10px 4px !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
                 .adv-opt-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: left; font-size: 11px !important; padding: 8px 10px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
                 .adv-journey-stepper { justify-content: flex-start !important; }
