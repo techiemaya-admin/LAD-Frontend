@@ -511,6 +511,7 @@ interface BroadcastModalProps {
 function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({}); // group ID → conversation IDs
   const [contacts, setContacts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState('');
@@ -528,7 +529,29 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
         );
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json();
-          setGroups(groupsData.data || groupsData || []);
+          const groupsList = groupsData.data || groupsData || [];
+          setGroups(groupsList);
+
+          // Load members for each group
+          const membersMap: Record<string, string[]> = {};
+          for (const group of groupsList) {
+            try {
+              const membersRes = await fetchWithTenant(
+                `/api/whatsapp-conversations/chat-groups/${group.id}?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+              );
+              if (membersRes.ok) {
+                const memberData = await membersRes.json();
+                const conversationIds = (memberData.data?.conversations || memberData.conversations || [])
+                  .map((c: any) => c.id || c.conversation_id)
+                  .filter((id: any) => id);
+                membersMap[group.id] = conversationIds;
+              }
+            } catch (err) {
+              console.error(`Failed to load members for group ${group.id}:`, err);
+              membersMap[group.id] = [];
+            }
+          }
+          setGroupMembers(membersMap);
         }
 
         // Load contacts (from conversations)
@@ -567,23 +590,64 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
       setIsSending(true);
 
       // Send broadcast to selected recipients
-      for (const recipientId of selectedRecipients) {
-        await fetchWithTenant(
-          `/api/whatsapp-conversations/conversations/bulk`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'send-template',
-              ids: [recipientId],
-              template_id: selectedTemplate,
-              channel: activeTab === 'waba' ? 'waba' : 'personal',
-            }),
-          }
-        );
+      // Fetch template content for personalization
+      const template = templates.find((t) => t.id === selectedTemplate);
+      if (!template) {
+        alert('Template not found');
+        return;
       }
 
-      alert('Broadcast sent successfully!');
+      let sentCount = 0;
+      let failedCount = 0;
+
+      for (const recipientId of selectedRecipients) {
+        try {
+          // Fetch conversation/contact data for personalization
+          const convRes = await fetchWithTenant(
+            `/api/whatsapp-conversations/conversations/${recipientId}?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+          );
+          const convData = convRes.ok ? await convRes.json() : {};
+          const contact = convData.data?.contact || convData.contact || {};
+
+          // Helper: derive first name from contact data
+          const derivedFirstName = contact.name?.trim().split(/\s+/)[0] ||
+                                  contact.contact_name?.trim().split(/\s+/)[0] ||
+                                  '';
+
+          // Personalize template content
+          let personalizedContent = template.content || '';
+          personalizedContent = personalizedContent
+            .replace(/\{\{name\}\}/gi, derivedFirstName)
+            .replace(/\{\{first_name\}\}/gi, derivedFirstName)
+            .replace(/\{\{contact_name\}\}/gi, contact.contact_name || '')
+            .replace(/\{\{email\}\}/gi, contact.email || '')
+            .replace(/\{\{phone\}\}/gi, contact.phone || '');
+
+          // Send personalized message
+          const sendRes = await fetchWithTenant(
+            `/api/whatsapp-conversations/conversations/${recipientId}/send-template`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: personalizedContent,
+                channel: activeTab === 'waba' ? 'waba' : 'personal',
+              }),
+            }
+          );
+
+          if (sendRes.ok) {
+            sentCount++;
+          } else {
+            failedCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to send to ${recipientId}:`, err);
+          failedCount++;
+        }
+      }
+
+      alert(`Broadcast sent! Sent: ${sentCount}, Failed: ${failedCount}`);
       onClose();
     } catch (err) {
       console.error('Error sending broadcast:', err);
@@ -658,12 +722,17 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedRecipients.includes(group.id)}
+                          checked={selectedRecipients.some((id) => groupMembers[group.id]?.includes(id))}
                           onChange={(e) => {
+                            const conversationIds = groupMembers[group.id] || [];
                             if (e.target.checked) {
-                              setSelectedRecipients([...selectedRecipients, group.id]);
+                              // Add all members of this group
+                              setSelectedRecipients([...new Set([...selectedRecipients, ...conversationIds])]);
                             } else {
-                              setSelectedRecipients(selectedRecipients.filter((id) => id !== group.id));
+                              // Remove all members of this group
+                              setSelectedRecipients(
+                                selectedRecipients.filter((id) => !conversationIds.includes(id))
+                              );
                             }
                           }}
                           className="rounded"
