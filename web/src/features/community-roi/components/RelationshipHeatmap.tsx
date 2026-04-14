@@ -16,6 +16,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRelationshipHeatmap } from '@lad/frontend-features/community-roi';
+import { RecommendationPairs } from './RecommendationPairs';
 
 const COLORS = {
   M:  { bg: '#EF444420', border: '#EF4444', badge: '#EF4444', label: 'Meeting Only' },
@@ -269,10 +270,11 @@ export const RelationshipHeatmap: React.FC = () => {
 
       const aId = String(row.member_a_id);
       const bId = String(row.member_b_id);
+      // Only set the directional cell A→B
+      // Bidirectionality is already handled by the database function:
+      // - Meetings are returned in both directions (A→B and B→A)
+      // - Referrals are returned in ONE direction only (as given)
       cellMap.set(`${aId}|${bId}`, cell);
-      if (!cellMap.has(`${bId}|${aId}`)) {
-        cellMap.set(`${bId}|${aId}`, cell);
-      }
     });
 
     return { members, cellMap };
@@ -445,5 +447,14 @@ export const RelationshipHeatmap: React.FC = () => {
     </div>
   );
 };
+
+// ─── Heatmap + Recommendations ──────────────────────────────────────────────
+
+export const RelationshipHeatmapWithRecommendations: React.FC = () => (
+  <div className="flex flex-col gap-6">
+    <RelationshipHeatmap />
+    <RecommendationPairs />
+  </div>
+);
 
 export default RelationshipHeatmap;
