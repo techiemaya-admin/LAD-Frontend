@@ -352,11 +352,11 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
         </Tabs>
 
-        {/* ── Chat Group Assignment ──────────────── */}
+        {/* ── Broadcast Assignment ──────────────── */}
         {groups.length > 0 && (
           <div className="px-4 py-3 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-              Assign to Chat Groups
+              Assign to Broadcasts
             </p>
             <div className="flex flex-wrap gap-1.5">
               {groups.map((g) => {

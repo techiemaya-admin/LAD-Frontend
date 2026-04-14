@@ -893,7 +893,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               <span className="text-sm font-medium">Import Leads</span>
             </button>
 
-            {/* Chat Groups */}
+            {/* Broadcast */}
             <button
               onClick={() => {
                 setIsNewChatOpen(false);
@@ -903,9 +903,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
             >
               <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                <Users className="h-5 w-5 text-white" />
+                <Megaphone className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium">Chat Groups</span>
+              <span className="text-sm font-medium">New Broadcast</span>
             </button>
           </div>
 
