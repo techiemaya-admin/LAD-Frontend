@@ -33,7 +33,7 @@ export { useNetworkStats } from './useNetworkStats';
 export { useDashboardLeaderboards } from './useDashboardLeaderboards';
 
 // Relationship Heatmap
-export { useRelationshipHeatmap, useUpdateRelationshipScores } from './useRelationshipHeatmap';
+export { useRelationshipHeatmap, useUpdateRelationshipScores, useGenerateBulkRecommendations } from './useRelationshipHeatmap';
 
 // Member Sync / Onboarding
 export { useNewMembers, useOnboardNewMembers } from './useNewMembers';

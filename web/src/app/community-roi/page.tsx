@@ -26,7 +26,7 @@ import {
 
 import { useListMembers } from '@lad/frontend-features/community-roi'
 import SimpleAnalyticsCards from '@/features/community-roi/components/SimpleAnalyticsCards'
-import RelationshipHeatmap from '@/features/community-roi/components/RelationshipHeatmap'
+import RelationshipHeatmap, { RelationshipHeatmapWithRecommendations } from '@/features/community-roi/components/RelationshipHeatmap'
 import MemberProfileView from './components/MemberProfileView'
 import LeaderboardPanel from './components/LeaderboardPanel'
 import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
@@ -102,8 +102,8 @@ export default function CommunityROIDashboard() {
 
   const communities = [
     { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, logo: '/assets/community-logos/bni-logo.svg', color: 'text-red-600', bg: 'bg-red-50' },
-    { id: 'WhatsApp', name: 'WhatsApp Group', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
-    { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
+    // { id: 'WhatsApp', name: 'WhatsApp Group', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
+    // { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
 
   const filteredMembers = Array.isArray(members) 
@@ -222,10 +222,10 @@ export default function CommunityROIDashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto p-8">
+        <div className="p-8">
           {selectedMemberId ? (
             <MemberProfileView memberId={selectedMemberId} onBack={() => setSelectedMemberId(null)} />
-          ) : activeView === 'calendar' ? (
+          ) : (activeView as ActiveView) === 'calendar' ? (
             <CommunityCalendar tenantId={tenantId} onBack={() => setActiveView('dashboard')} />
           ) : (
             <div className="space-y-8">
@@ -234,20 +234,27 @@ export default function CommunityROIDashboard() {
                 <div className="flex items-center gap-4">
                   {(() => {
                     const community = communities.find(c => c.id === selectedCommunity)
-                    if (community?.logo) {
-                      return (
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center">
-                          <img src={community.logo} alt={community.name} className="w-full h-full object-contain" />
-                        </div>
-                      )
-                    }
                     return (
-                      <div className={`p-4 rounded-2xl ${community?.bg}`}>
-                        {(() => {
-                          const Icon = community?.icon || Building2
-                          const color = community?.color || 'text-slate-600'
-                          return <Icon className={`w-8 h-8 ${color}`} />
-                        })()}
+                      <div className="w-28 h-28 rounded-2xl overflow-hidden flex items-center justify-center bg-white border-2 border-slate-100 shadow-sm">
+                        {community?.logo ? (
+                          <img 
+                            src={community.logo} 
+                            alt={community.name} 
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => {
+                              console.error('Logo failed to load:', community.logo)
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className={`p-4 flex items-center justify-center ${community?.bg}`}>
+                            {(() => {
+                              const Icon = community?.icon || Building2
+                              const color = community?.color || 'text-slate-600'
+                              return <Icon className={`w-8 h-8 ${color}`} />
+                            })()}
+                          </div>
+                        )}
                       </div>
                     )
                   })()}
@@ -294,31 +301,36 @@ export default function CommunityROIDashboard() {
                   >
                     <UserPlus className="w-4 h-4" /> Onboard New Member
                   </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowNetworkGraph(true)}
+                  >
+                    View Network Graph <ArrowUpRight className="w-4 h-4" />
+                  </Button>
                   <DataImportButton />
                 </div>
               </div>
 
               {/* Stats Panel */}
-              <div>
-                <div className="mb-4">
-                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-amber-500" />
-                    Community Performance
-                  </h2>
-                </div>
+              <div className='flex flex-col'>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                  Community Performance
+                </h2>
                 <SimpleAnalyticsCards />
               </div>
 
-              {/* Relationship Heatmap */}
+              {/* Relationship Heatmap + 1-to-1 Recommendations */}
               <div>
-                <RelationshipHeatmap />
+                <RelationshipHeatmapWithRecommendations />
               </div>
 
               {/* Leaderboards (Excel KPIs) */}
               <LeaderboardPanel />
 
               {/* Quick Actions / Activity Callout */}
-              <Card className="bg-slate-900 border-slate-800 overflow-hidden relative">
+              {/* <Card className="bg-slate-900 border-slate-800 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                   <Network className="w-32 h-32 text-blue-400" />
                 </div>
@@ -328,17 +340,10 @@ export default function CommunityROIDashboard() {
                     <p className="text-slate-400 mb-6">
                       Track your 1-to-1 meetings and referrals to see the real impact of your community involvement.
                     </p>
-                    <div className="flex gap-3">
-                      <Button
-                        className="bg-blue-600 hover:bg-blue-700 font-semibold gap-2"
-                        onClick={() => setShowNetworkGraph(true)}
-                      >
-                        View Network Graph <ArrowUpRight className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               {/* Member Intelligence Feed */}
               {filteredMembers.length > 0 && (

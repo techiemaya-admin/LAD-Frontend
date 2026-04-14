@@ -79,6 +79,7 @@ export {
   useDashboardLeaderboards,
   useRelationshipHeatmap,
   useUpdateRelationshipScores,
+  useGenerateBulkRecommendations,
   useNewMembers,
   useOnboardNewMembers,
   useSendOnboardingTemplate,
