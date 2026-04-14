@@ -8,18 +8,10 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/chat-groups/${groupId}`);
+  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/chat-groups/${groupId}`);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/chat-groups/${groupId}`);
+  return proxyToPythonService(req, getWhatsAppServiceUrl(), `/api/chat-groups/${groupId}`);
 }
