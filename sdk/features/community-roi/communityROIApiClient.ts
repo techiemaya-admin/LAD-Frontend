@@ -53,7 +53,12 @@ class CommunityROIApiClient {
     body?: any,
     options?: RequestOptions
   ): Promise<ApiResponse<T>> {
-    const url = new URL(path, this.baseURL);
+    // new URL(path, base) discards the base pathname when path starts with '/'
+    // e.g. new URL('/foo', 'http://host/api/community-roi') → http://host/foo  (WRONG)
+    // Fix: strip leading slash from path, ensure base ends with '/'
+    const normalizedBase = this.baseURL.endsWith('/') ? this.baseURL : `${this.baseURL}/`;
+    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    const url = new URL(normalizedPath, normalizedBase);
 
     // Add query parameters
     if (options?.params) {
