@@ -145,6 +145,7 @@ export const RecommendationPairs: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMessageSender, setShowMessageSender] = useState(false);
+  const [broadcastToast, setBroadcastToast] = useState<string | null>(null);
 
   // Load saved recommendations on mount
   useEffect(() => { refetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -367,6 +368,13 @@ export const RecommendationPairs: React.FC = () => {
         </div>
       )}
 
+      {/* Broadcast toast */}
+      {broadcastToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-700 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg animate-fade-in">
+          {broadcastToast}
+        </div>
+      )}
+
       {/* Message Sender Modal */}
       {showMessageSender && data?.success && (
         <MessageTemplateSender
@@ -376,8 +384,12 @@ export const RecommendationPairs: React.FC = () => {
           allMembers={members || []}
           onClose={() => setShowMessageSender(false)}
           onSuccess={(result) => {
-            console.log('Messages sent:', result);
             setShowMessageSender(false);
+            if ((result as any)?.broadcasting) {
+              const total = (result as any)?.total ?? '';
+              setBroadcastToast(`📤 Broadcasting to ${total} members in background...`);
+              setTimeout(() => setBroadcastToast(null), 6000);
+            }
           }}
         />
       )}
