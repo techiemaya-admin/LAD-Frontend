@@ -33,11 +33,27 @@ export { useNetworkStats } from './useNetworkStats';
 export { useDashboardLeaderboards } from './useDashboardLeaderboards';
 
 // Relationship Heatmap
-export { useRelationshipHeatmap, useUpdateRelationshipScores, useGenerateBulkRecommendations } from './useRelationshipHeatmap';
+export { useRelationshipHeatmap, useUpdateRelationshipScores, useGenerateBulkRecommendations, useSavedRecommendations } from './useRelationshipHeatmap';
 
 // Member Sync / Onboarding
 export { useNewMembers, useOnboardNewMembers } from './useNewMembers';
 export { useSendOnboardingTemplate } from './useSendOnboardingTemplate';
+
+// Recommendation Messages (WhatsApp sending)
+export {
+  useRecommendationTemplates,
+  useSendInstantMessages,
+  useScheduleMessages,
+  usePendingSchedules,
+} from './useRecommendationMessages';
+export type {
+  CommunicationTemplate,
+  SendInstantMessagesRequest,
+  SendInstantMessagesResponse,
+  ScheduleMessagesRequest,
+  ScheduleMessagesResponse,
+  PendingSchedule,
+} from './useRecommendationMessages';
 
 // Re-export types
 export type { UseListMembersReturn } from './useListMembers';

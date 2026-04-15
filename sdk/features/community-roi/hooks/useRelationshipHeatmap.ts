@@ -85,6 +85,33 @@ export function useGenerateBulkRecommendations() {
 }
 
 /**
+ * Fetches the last saved (already generated) recommendations grouped by week.
+ * Calls GET /api/community-roi/recommendations/saved — no regeneration side effects.
+ */
+export function useSavedRecommendations() {
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetch = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await communityROIApiClient.get<Record<string, unknown>>(
+        '/api/community-roi/recommendations/saved'
+      );
+      setData(response.data);
+    } catch (e) {
+      setError(e as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { data, isLoading, error, refetch: fetch };
+}
+
+/**
  * Hook to update relationship scores (recalculate based on meetings and referrals)
  */
 export function useUpdateRelationshipScores(): UseUpdateRelationshipScoresReturn {
