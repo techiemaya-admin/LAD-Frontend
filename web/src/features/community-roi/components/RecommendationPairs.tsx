@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, X, ChevronDown, Send } from 'lucide-react';
-import { useGenerateBulkRecommendations, useListMembers } from '@lad/frontend-features/community-roi';
+import { useGenerateBulkRecommendations, useSavedRecommendations, useListMembers } from '@lad/frontend-features/community-roi';
 import MessageTemplateSender from './MessageTemplateSender';
 
 interface RecommendationPair {
@@ -126,19 +126,28 @@ const MemberOptionCard: React.FC<{ memberA: string; industryA?: string; options:
 const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
 export const RecommendationPairs: React.FC = () => {
-  const { generate, isGenerating, result, error } = useGenerateBulkRecommendations();
+  const { generate, isGenerating, result: generateResult } = useGenerateBulkRecommendations();
+  const { data: savedData, isLoading: isSavedLoading, refetch } = useSavedRecommendations();
   const { members } = useListMembers();
-  const data = result as GenerateResult | null;
+
   const [activeWeek, setActiveWeek] = useState(1);
   const [selectedWeeks, setSelectedWeeks] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMessageSender, setShowMessageSender] = useState(false);
 
+  // Load saved recommendations on mount
+  useEffect(() => { refetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After a fresh generate completes, switch to showing the new data
+  // generateResult takes precedence over savedData once available
+  const data = (generateResult ?? savedData) as GenerateResult | null;
+  const isLoading = isSavedLoading && !generateResult;
+
   const weekData = data?.weeks?.find(w => w.week_number === activeWeek);
 
-  const handleGenerate = () => {
-    generate(selectedWeeks);
+  const handleGenerate = async () => {
+    await generate(selectedWeeks);
     setActiveWeek(1);
   };
 
@@ -184,8 +193,8 @@ export const RecommendationPairs: React.FC = () => {
             </select>
           </div>
 
-          {/* Send Messages button (only show if data exists) */}
-          {data?.success && (
+          {/* Send Messages button (only show if data loaded with results) */}
+          {!isLoading && data?.success && !!(data as GenerateResult)?.weeks?.length && (
             <button
               onClick={() => setShowMessageSender(true)}
               disabled={isGenerating}
@@ -214,15 +223,24 @@ export const RecommendationPairs: React.FC = () => {
 
       {isExpanded && (
         <div className="p-6">
-          {/* Error */}
-          {(error || (data && !data.success)) && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-sm text-red-600">{(error as any)?.message ?? data?.error ?? 'Failed to generate.'}</p>
+          {/* Loading saved data */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-16 gap-3">
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin" />
+              <span className="text-sm text-slate-500">Loading recommendations&hellip;</span>
             </div>
           )}
 
-          {/* Empty state */}
-          {!data && !isGenerating && !error && (
+          {/* Generating */}
+          {isGenerating && (
+            <div className="flex items-center justify-center py-16 gap-3">
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin" />
+              <span className="text-sm text-slate-500">Analysing industries and building conflict-free pairs&hellip;</span>
+            </div>
+          )}
+
+          {/* Empty state — only after load completes and nothing found */}
+          {!isLoading && !isGenerating && (!data || !data.weeks?.length) && (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-3xl">🤝</div>
               <div>
@@ -232,14 +250,6 @@ export const RecommendationPairs: React.FC = () => {
                   Each member gets 3 personalized 1-to-1 options per week based on industry synergy.
                 </p>
               </div>
-            </div>
-          )}
-
-          {/* Generating */}
-          {isGenerating && (
-            <div className="flex items-center justify-center py-16 gap-3">
-              <div className="w-5 h-5 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin" />
-              <span className="text-sm text-slate-500">Analysing industries and building conflict-free pairs&hellip;</span>
             </div>
           )}
 

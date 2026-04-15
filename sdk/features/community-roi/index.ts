@@ -80,6 +80,7 @@ export {
   useRelationshipHeatmap,
   useUpdateRelationshipScores,
   useGenerateBulkRecommendations,
+  useSavedRecommendations,
   useNewMembers,
   useOnboardNewMembers,
   useSendOnboardingTemplate,
