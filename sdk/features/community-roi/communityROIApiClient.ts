@@ -33,13 +33,16 @@ class CommunityROIApiClient {
         throw new Error('NEXT_PUBLIC_COMMUNITY_API_URL or NEXT_PUBLIC_BACKEND_URL environment variable is required');
       }
       
-      // If URL is provided, append /api; otherwise use production backend as default
+      // If URL is provided, append /api/community-roi; otherwise use production backend as default
       if (communityUrl) {
-        // Check if URL already contains /api suffix
-        this.baseURL = communityUrl.endsWith('/api') ? communityUrl : `${communityUrl}/api`;
+        // Remove trailing slash if present, then append /api/community-roi
+        const baseUrl = communityUrl.endsWith('/') ? communityUrl.slice(0, -1) : communityUrl;
+        this.baseURL = baseUrl.endsWith('/api/community-roi')
+          ? baseUrl
+          : `${baseUrl}/api/community-roi`;
       } else {
-        // Default to production backend
-        this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api`;
+        // Default to production backend with /api/community-roi prefix
+        this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api/community-roi`;
       }
     }
   }
