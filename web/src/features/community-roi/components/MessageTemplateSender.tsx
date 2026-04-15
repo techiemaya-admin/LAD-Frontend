@@ -89,25 +89,32 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev => {
-      if (prev.includes(memberId)) {
-        return prev.filter(id => id !== memberId);
+      const updated = prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId];
+
+      // Auto-check "Select All" if all members are now selected
+      if (updated.length === allMembers.length && allMembers.length > 0) {
+        setSelectAll(true);
       } else {
-        return [...prev, memberId];
+        setSelectAll(false);
       }
+
+      return updated;
     });
-    setSelectAll(false);
   };
 
   const handleSend = async () => {
     try {
       if (sendMode === 'instant') {
-        if (selectedMembers.length === 0) {
+        if (selectedMembers.length === 0 && !selectAll) {
           alert('Please select at least one member');
           return;
         }
 
         const result = await sendMessages({
-          memberIds: selectedMembers,
+          sendToAllMembers: selectAll,
+          memberIds: selectAll ? undefined : selectedMembers,
           templateIds: templates.map(t => t.id),
           recommendations,
         });
@@ -239,22 +246,20 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           </p>
 
           {/* Select All Checkbox */}
-          {sendMode === 'schedule' && (
-            <div className="mb-6 pb-6 border-b border-slate-200">
-              <label className="flex items-center p-3 bg-indigo-50 rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={e => handleSelectAllChange(e.target.checked)}
-                  className="w-4 h-4 mr-3 cursor-pointer"
-                />
-                <span className="font-medium text-slate-900">Send to all {allMembers.length} members</span>
-              </label>
-            </div>
-          )}
+          <div className="mb-6 pb-6 border-b border-slate-200">
+            <label className="flex items-center p-3 bg-indigo-50 rounded-lg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={e => handleSelectAllChange(e.target.checked)}
+                className="w-4 h-4 mr-3 cursor-pointer"
+              />
+              <span className="font-medium text-slate-900">Send to all {allMembers.length} members</span>
+            </label>
+          </div>
 
           {/* Member List */}
-          {(!sendMode === 'schedule' || !selectAll) && (
+          {!selectAll && (
             <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
               {allMembers.map(member => (
                 <label key={member.id} className="flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer">
