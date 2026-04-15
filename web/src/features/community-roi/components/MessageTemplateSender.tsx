@@ -113,19 +113,33 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           return;
         }
 
-        const result = await sendMessages({
+        const memberCount = selectAll ? allMembers.length : selectedMembers.length;
+
+        // For large broadcasts, close immediately and process in background.
+        // Waiting for 90+ members to finish exceeds browser timeout limits.
+        onSuccess({ broadcasting: true, total: memberCount });
+        onClose();
+
+        // Fire-and-forget — don't block UI
+        sendMessages({
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
           templateIds: selectedTemplateIds,
           recommendations,
+        }).then((result) => {
+          const innerData = (result as any)?.data ?? result;
+          const sentCount  = innerData?.sentCount  ?? 0;
+          const failedCount = innerData?.failedCount ?? 0;
+          if (failedCount > 0) {
+            console.warn(`[Broadcast] ${sentCount} sent, ${failedCount} failed`, innerData?.failedMembers);
+          } else {
+            console.log(`[Broadcast] Complete — ${sentCount} messages sent`);
+          }
+        }).catch((err) => {
+          console.error('[Broadcast] Error:', err);
         });
 
-        if (result.success) {
-          onSuccess(result);
-          onClose();
-        } else {
-          alert(`Error: ${result.error}`);
-        }
+        return; // already closed
       } else {
         // Schedule mode
         if (!scheduledTime) {
@@ -140,16 +154,18 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           templateIds: selectedTemplateIds,
         });
 
-        if (result.success) {
+        if ((result as any)?.success || (result as any)?.id) {
           onSuccess(result);
           onClose();
         } else {
-          alert(`Error: ${result.error}`);
+          const errMsg = (result as any)?.error ?? 'Failed to schedule messages';
+          alert(`Schedule failed: ${errMsg}`);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending messages:', error);
-      alert('Failed to send messages');
+      const msg = error?.response?.data?.error ?? error?.message ?? 'Unknown error';
+      alert(`Failed to send messages: ${msg}`);
     }
   };
 
