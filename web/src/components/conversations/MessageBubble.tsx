@@ -7,27 +7,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MrLadAvatar } from './MrLadAvatar';
 
 // ── Template message renderer ─────────────────────────────────────────────────
-// Parses "[Template: <name>] <param>" stored format into a styled card
-function TemplateMessageBubble({ content }: { content: string }) {
-  // Parse format: "[Template: onboard_new_member] John Doe"
-  const match = content.match(/^\[Template:\s*([^\]]+)\]\s*(.*)?$/s);
-  if (!match) return <p className="wa-msg-text">{content}</p>;
-
-  const templateName = match[1].trim();
-  const params = match[2]?.trim() || '';
-
-  // Map template names to human-friendly labels
-  const templateLabels: Record<string, { label: string; description: string }> = {
-    onboard_new_member: {
-      label: 'Welcome Message',
-      description: `Sent onboarding welcome message${params ? ` to ${params}` : ''}`,
-    },
+// Shows a labelled badge above the actual rendered message text
+function TemplateMessageBubble({ content, templateName }: { content: string; templateName: string }) {
+  const LABELS: Record<string, string> = {
+    cohesion_report_no_interaction: 'Cohesion Report',
+    member_121_recommendations:     '1-2-1 Recommendations',
+    onboard_new_member:             'Welcome Message',
   };
-
-  const meta = templateLabels[templateName] || {
-    label: templateName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    description: params ? `Parameters: ${params}` : 'Template message sent',
-  };
+  const label = LABELS[templateName]
+    ?? templateName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
     <div className="flex flex-col gap-1 min-w-[180px]">
@@ -35,11 +23,11 @@ function TemplateMessageBubble({ content }: { content: string }) {
       <div className="flex items-center gap-1.5 pb-1 border-b border-white/20">
         <MessageSquare className="w-3 h-3 opacity-70 shrink-0" />
         <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
-          {meta.label}
+          {label}
         </span>
       </div>
-      {/* Template description */}
-      <p className="wa-msg-text text-[13px] leading-snug">{meta.description}</p>
+      {/* Actual message text with line-breaks preserved */}
+      <p className="wa-msg-text text-[13px] leading-snug whitespace-pre-line">{content}</p>
     </div>
   );
 }
@@ -251,9 +239,9 @@ export const MessageBubble = memo(function MessageBubble({
           </p>
         )}
 
-        {/* Message text — template messages get a styled card, others plain text */}
-        {content?.startsWith('[Template:') ? (
-          <TemplateMessageBubble content={content} />
+        {/* Message text — template messages get a labelled badge, others plain text */}
+        {message.templateName ? (
+          <TemplateMessageBubble content={content} templateName={message.templateName} />
         ) : (
           <p className="wa-msg-text">{content}</p>
         )}

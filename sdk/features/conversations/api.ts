@@ -91,6 +91,7 @@ function mapMessageFromApi(raw: any): Message {
     intent: raw.intent,
     senderName,
     humanAgentId: metadata.human_agent_id || undefined,
+    templateName: metadata.template_name || undefined,
   };
 }
 
