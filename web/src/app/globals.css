@@ -87,10 +87,10 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    /* Message Bubbles */
-    --message-incoming: 210 40% 96%;
-    --message-incoming-foreground: 222 47% 11%;
-    --message-outgoing: 230 74% 19%;
+    /* Message Bubbles - WhatsApp Theme */
+    --message-incoming: 0 0% 100%;
+    --message-incoming-foreground: 0 0% 0%;
+    --message-outgoing: 142 70% 45%;
     --message-outgoing-foreground: 0 0% 100%;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
@@ -138,22 +138,40 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles */
+  /* Message bubbles - WhatsApp Theme */
   .message-bubble-incoming {
-    @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md;
+    @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md border border-gray-200 shadow-sm;
   }
 
   .message-bubble-outgoing {
-    @apply bg-[hsl(var(--message-outgoing))] text-[hsl(var(--message-outgoing-foreground))] rounded-2xl rounded-br-md;
+    @apply bg-[hsl(var(--message-outgoing))] text-[hsl(var(--message-outgoing-foreground))] rounded-2xl rounded-br-md shadow-sm;
   }
 
-  /* Chat background */
+  /* Chat background - WhatsApp Theme */
   .whatsapp-chat-bg {
-    @apply bg-white;
+    @apply bg-[#ECE5DD];
   }
 
-  .dark .whatsapp-chat-bg {
-    @apply bg-gray-950;
+  .wa-msg-time {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Update message bubble base to match WhatsApp ──────────────────────── */
+  .message-bubble-incoming {
+    background: #ffffff;
+    color: #111b21;
+    border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
+  }
+
+  .message-bubble-outgoing {
+    background: #0b1957;
+    color: #ffffff;
+    border-radius: 8px 0 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
 
   /* Event type colors for calendar */

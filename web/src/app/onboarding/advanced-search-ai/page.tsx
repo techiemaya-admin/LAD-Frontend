@@ -443,6 +443,7 @@ export default function AdvancedSearchAIPage() {
     const linkedInSearch = useLinkedInSearch();
     const aiChat = useAIChat();
     const campaignCreation = useCampaignCreation();
+    const { fetchLeadSummaryPreview, saveProspectFeedback, generateProspectSummary } = campaignCreation;
     const voiceAgent = useVoiceAgent(true);
     const billing = useBilling(true);
 
@@ -594,6 +595,8 @@ export default function AdvancedSearchAIPage() {
     const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
+    // Pending location request: stores intent+query for ABM searches missing a location, awaiting user input
+    const [pendingLocationRequest, setPendingLocationRequest] = useState<{ intent: LeadTargeting; originalQuery: string; abmType: string; personName?: string; companyName?: string } | null>(null);
 
     // Generic prospect search (company-type intent queries)
     // ── lastSearchType: distinguishes LinkedIn search from generic prospect search ──
@@ -909,6 +912,7 @@ export default function AdvancedSearchAIPage() {
     // Popup state for bad-feedback comment collection
     const [badFeedbackPopup, setBadFeedbackPopup] = useState<{ leadId: string; leadName: string } | null>(null);
     const [badFeedbackDraft, setBadFeedbackDraft] = useState('');
+    const [lastModuleUsed, setLastModuleUsed] = useState<string>('advanced_search');
 
     const toggleFeedback = (leadId: string, rating: 'good' | 'bad', leadName?: string) => {
         if (rating === 'bad') {
@@ -939,6 +943,17 @@ export default function AdvancedSearchAIPage() {
             try { localStorage.setItem('lad_lead_feedback', JSON.stringify(updated)); } catch { }
             return updated;
         });
+
+        // Persist feedback to backend (non-blocking)
+        const feedbackLead = leads.find(l => l.id === leadId);
+        if (feedbackLead) {
+            saveProspectFeedback({
+                sessionId: convId,
+                moduleUsed: lastModuleUsed,
+                lead: feedbackLead as any,
+                feedback: rating,
+            }).catch(() => {});
+        }
     };
 
     // Build a natural-language enrichment string from the Targeting card form values
@@ -1025,6 +1040,9 @@ export default function AdvancedSearchAIPage() {
     const [profileRecentPosts, setProfileRecentPosts] = useState<any[] | null>(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
+    const [summaryDataAgeDays, setSummaryDataAgeDays] = useState<number | null>(null);
+    const [summaryRefreshLoading, setSummaryRefreshLoading] = useState(false);
+    const [selectedSummaryLead, setSelectedSummaryLead] = useState<any | null>(null);
 
     // Edit inbound lead state
     const [editingLeadIndex, setEditingLeadIndex] = useState<number | null>(null);
@@ -1100,7 +1118,7 @@ export default function AdvancedSearchAIPage() {
         setTgCompanyAge([]); setTgEducation([]); setTgSkills([]); setTgPostedRecently(false);
         // Conversation meta
         setConvId(crypto.randomUUID()); setMsgCount(0); setPendingIntent(null);
-        setPendingSearchConfirmation(null); setPendingContact(null);
+        setPendingSearchConfirmation(null); setPendingLocationRequest(null); setPendingContact(null);
         setConversationSummary('');
         // Inbound / upload
         setInboundMode(false); setInboundLeads([]); setInboundLeadIds([]); setDirectContactLeadIds([]);
@@ -1158,7 +1176,98 @@ export default function AdvancedSearchAIPage() {
         }
     }, [voiceAgent.agents, voiceAgent.numbers]);
 
+    /**
+     * Shared summary loader — used by both initial open and force-refresh.
+     * @param lead        The lead to summarise
+     * @param forceRefresh  When true bypasses the 7-day cache and runs full research
+     */
+    const _loadSummary = async (lead: any, forceRefresh = false) => {
+        try {
+            const data = await generateProspectSummary({
+                sessionId: convId,
+                moduleUsed: lastModuleUsed,
+                lead: lead as any,
+                force_refresh: forceRefresh,
+            } as any);
+
+            if (data?.success) {
+                // Set age (null means freshly researched right now)
+                setSummaryDataAgeDays(
+                    forceRefresh ? null : (typeof data.data_age_days === 'number' ? data.data_age_days : null)
+                );
+
+                // ── 1. Build rich text summary ─────────────────────────────────
+                if (data.profile_summary) {
+                    const ps = data.profile_summary as any;
+                    const parts: string[] = [];
+                    const aboutText = ps.summary || ps.about || ps.description || '';
+                    if (aboutText) parts.push(aboutText);
+                    const currentExp = (ps.experience || []).find((e: any) => e.is_current) || (ps.experience || [])[0];
+                    if (currentExp?.title && currentExp?.company) {
+                        parts.push(`\n📋 ${currentExp.title} at ${currentExp.company}${currentExp.duration ? ` · ${currentExp.duration}` : ''}`);
+                    }
+                    const pastExp = (ps.experience || []).filter((e: any) => !e.is_current).slice(0, 2);
+                    if (pastExp.length) {
+                        const lines = pastExp.map((e: any) =>
+                            `• ${e.title || e.position || ''} at ${e.company || ''}${e.duration ? ` (${e.duration})` : ''}`
+                        ).join('\n');
+                        parts.push(`\n💼 Previous Roles:\n${lines}`);
+                    }
+                    const skills: any[] = ps.skills || ps.top_skills || [];
+                    if (skills.length) {
+                        const names = skills.slice(0, 10).map((s: any) => s.name || s).filter(Boolean).join(', ');
+                        if (names) parts.push(`\n🔧 Skills: ${names}`);
+                    }
+                    const certs: any[] = ps.certifications || [];
+                    if (certs.length) {
+                        const names = certs.slice(0, 3).map((c: any) => c.name || c).filter(Boolean).join(', ');
+                        if (names) parts.push(`\n🎓 Certifications: ${names}`);
+                    }
+                    const langs: any[] = ps.languages || [];
+                    if (langs.length) {
+                        const names = langs.map((l: any) => l.name || l).filter(Boolean).join(', ');
+                        if (names) parts.push(`\n🌐 Languages: ${names}`);
+                    }
+                    const richSummary = parts.join('\n').trim();
+                    if (richSummary) setProfileSummary(richSummary);
+                } else if (data.company_profile) {
+                    setProfileSummary(
+                        data.company_profile.overview ||
+                        data.company_profile.description ||
+                        `${lead.current_company || 'Company'} — ${data.company_profile.industry || ''} ${data.company_profile.company_size_range ? `· ${data.company_profile.company_size_range} employees` : ''}`.trim()
+                    );
+                }
+
+                // ── 2. Web presence ────────────────────────────────────────────
+                if (data.web_presence) setProfileWebPresence(data.web_presence);
+
+                // ── 3. Recent posts ────────────────────────────────────────────
+                if (data.recent_posts?.length) setProfileRecentPosts(data.recent_posts);
+
+                // ── 4. Fallback ────────────────────────────────────────────────
+                if (!data.profile_summary && !data.company_profile) {
+                    const fallback = await campaignCreation.fetchLeadSummaryPreview({
+                        profileData: { name: lead.name, title: lead.headline || '', company: lead.current_company || '', linkedin_url: lead.profile_url || '' }
+                    });
+                    if (fallback?.summary) setProfileSummary(fallback.summary);
+                    if (fallback?.web_presence) setProfileWebPresence(fallback.web_presence);
+                    setProfileRecentPosts(fallback?.recent_posts?.length ? fallback.recent_posts : null);
+                }
+
+                // ── 5. Mark lead as good match ─────────────────────────────────
+                if (!forceRefresh) {
+                    setLeadFeedback(prev => ({ ...prev, [lead.id]: 'good' as const }));
+                }
+            } else {
+                throw new Error(data?.error || 'Failed to generate summary');
+            }
+        } catch (err: any) {
+            setSummaryError(err.message || 'Failed to generate profile summary');
+        }
+    };
+
     const handleViewSummary = async (lead: LeadProfile) => {
+        setSelectedSummaryLead(lead);
         setSelectedEmployee({
             id: 'temp',
             name: lead.name,
@@ -1170,33 +1279,25 @@ export default function AdvancedSearchAIPage() {
         setProfileWebPresence(lead.inferred?.web_presence || null);
         setProfileRecentPosts(null);
         setSummaryError(null);
+        setSummaryDataAgeDays(null);
         setSummaryLoading(true);
 
-        try {
-            const data = await campaignCreation.fetchLeadSummaryPreview({
-                profileData: {
-                    name: lead.name,
-                    title: lead.headline || '',
-                    company: lead.current_company || '',
-                    linkedin_url: lead.profile_url || ''
-                }
-            });
+        await _loadSummary(lead, false);
+        setSummaryLoading(false);
+    };
 
-            if (data?.summary) {
-                setProfileSummary(data.summary);
-                // Prefer web_presence from API (freshest), fall back to already-set inferred data
-                if (data.web_presence) {
-                    setProfileWebPresence(data.web_presence);
-                }
-                setProfileRecentPosts(data.recent_posts?.length ? data.recent_posts : null);
-            } else {
-                throw new Error(data?.error || 'Failed to generate summary');
-            }
-        } catch (err: any) {
-            setSummaryError(err.message || 'Failed to generate profile summary');
-        } finally {
-            setSummaryLoading(false);
-        }
+    /** Force-refresh: bypass cache, run full research, update dialog in-place. */
+    const handleRefreshSummary = async () => {
+        if (!selectedSummaryLead) return;
+        setSummaryRefreshLoading(true);
+        setSummaryError(null);
+        // Clear existing data so fresh data replaces it cleanly
+        setProfileSummary(null);
+        setProfileWebPresence(null);
+        setProfileRecentPosts(null);
+        setSummaryDataAgeDays(null);
+        await _loadSummary(selectedSummaryLead, true);
+        setSummaryRefreshLoading(false);
     };
 
     const handleCloseSummaryDialog = () => {
@@ -1801,6 +1902,109 @@ export default function AdvancedSearchAIPage() {
             }
         }
 
+        // ── ABM INTENT DETECTION ──
+        // Intercept company research / insight queries and route to ABM pipeline.
+        // Must run BEFORE web-search and lead-chat so it gets first priority.
+        const ABM_INTENT_PATTERNS = [
+            /(?:get\s+me\s+|give\s+me\s+|provide\s+|show\s+me\s+)?(?:detailed\s+)?insights?\s+(?:about|on|for|of)\s+(.+)/i,
+            /(?:detailed\s+)?(?:company\s+)?(?:insights?|intelligence|analysis|profile|overview|details?|information|info)\s+(?:about|on|for|of|regarding)\s+(.+)/i,
+            /research\s+(?:the\s+company\s+)?(?:called\s+)?(.+?)(?:\s*,|\s*$)/i,
+            /(?:account[\s-]based|abm)\s+(?:research|insights?|intelligence|analysis)\s+(?:on|for|about)\s+(.+)/i,
+            /(?:prospect|target)\s+company\s+(?:research|analysis|profile)\s+(?:for|on|about)?\s*(.+)/i,
+        ];
+        const isABMQuery = ABM_INTENT_PATTERNS.some(p => p.test(text));
+
+        if (isABMQuery) {
+            try {
+                const abmRes = await fetch('/api/abm/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ query: text }),
+                });
+                const abmData = await abmRes.json();
+
+                if (abmData.success && abmData.data) {
+                    const c = abmData.data;
+                    const actions: any[] = abmData.next_best_actions || [];
+
+                    // Build structured chat response
+                    const parts: string[] = [`# Detailed Insights: ${c.company_name}\n`];
+
+                    if (c.company_overview) parts.push(`**Who They Are:**\n${c.company_overview}\n`);
+
+                    const firmoParts: string[] = [];
+                    if (c.industry)           firmoParts.push(`**Industry:** ${c.industry}`);
+                    if (c.headquarters)       firmoParts.push(`**HQ:** ${c.headquarters}`);
+                    if (c.founded_year)       firmoParts.push(`**Founded:** ${c.founded_year}`);
+                    if (c.company_size_range) firmoParts.push(`**Size:** ${c.company_size_range} employees`);
+                    if (c.funding_stage)      firmoParts.push(`**Funding:** ${c.funding_stage}`);
+                    if (firmoParts.length)    parts.push(`**Company Profile:**\n${firmoParts.join(' · ')}\n`);
+
+                    const social = c.social || {};
+                    const socialParts: string[] = [];
+                    if (social.linkedin_url) socialParts.push(`[LinkedIn](${social.linkedin_url})${social.linkedin_followers ? ` (${(social.linkedin_followers/1000).toFixed(1)}K followers)` : ''}`);
+                    if (social.twitter_url)  socialParts.push(`[Twitter/X](${social.twitter_url})${social.twitter_followers ? ` (${(social.twitter_followers/1000).toFixed(1)}K followers)` : ''}`);
+                    if (socialParts.length)  parts.push(`**Social Presence:**\n${socialParts.join(' · ')}\n`);
+
+                    const posts: any[] = c.linkedin_posts || [];
+                    if (posts.length > 0) {
+                        parts.push(`**Recent LinkedIn Activity (${posts.length} posts):**`);
+                        posts.slice(0, 3).forEach((p: any) => {
+                            const preview = (p.text || '').substring(0, 160).replace(/\n/g, ' ');
+                            const eng = [p.likes ? `👍 ${p.likes}` : null, p.comments ? `💬 ${p.comments}` : null].filter(Boolean).join('  ');
+                            parts.push(`• "${preview}${(p.text||'').length > 160 ? '...' : ''}"\n  ${eng}`);
+                        });
+                        parts.push('');
+                    }
+
+                    const activities: any[] = c.recent_activities || [];
+                    if (activities.length > 0) {
+                        parts.push(`**Recent News & Activities:**`);
+                        activities.slice(0, 4).forEach((a: any) => parts.push(`• **${a.title}**${a.date ? ` _(${a.date})_` : ''}${a.source ? ` — ${a.source}` : ''}`));
+                        parts.push('');
+                    }
+
+                    const dms: any[] = (c.key_decision_makers || []).sort((a: any, b: any) => (b.icp_score||0) - (a.icp_score||0));
+                    if (dms.length > 0) {
+                        parts.push(`**Key Decision Makers & ICP Scores:**`);
+                        dms.slice(0, 6).forEach((dm: any) => {
+                            const score = dm.icp_score >= 80 ? `🟢 ${dm.icp_score}/100` : dm.icp_score >= 60 ? `🟡 ${dm.icp_score}/100` : `🟠 ${dm.icp_score}/100`;
+                            parts.push(`• **${dm.name || 'Unknown'}** — ${dm.title || 'N/A'}${dm.department ? ` · ${dm.department}` : ''} ${score}${dm.linkedin_url ? ` · [LinkedIn](${dm.linkedin_url})` : ''}`);
+                            if (dm.icp_rationale) parts.push(`  _${dm.icp_rationale}_`);
+                        });
+                        parts.push('');
+                    }
+
+                    if (actions.length > 0) {
+                        parts.push(`**🎯 Next Best Actions for Account-Based Sales Development:**`);
+                        actions.forEach((a: any) => {
+                            parts.push(`\n**${a.priority}. ${a.action}** [${a.channel || ''}]${a.target_person ? ` → _${a.target_person}_` : ''}`);
+                            if (a.rationale)              parts.push(`   ${a.rationale}`);
+                            if (a.suggested_message_hook) parts.push(`   💬 _"${a.suggested_message_hook}"_`);
+                        });
+                        parts.push('');
+                    }
+
+                    parts.push(`---\n_Company profile saved to your ABM prospect list._`);
+                    const responseText = parts.join('\n');
+
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai',
+                        text: responseText,
+                        ts: new Date(),
+                        abmData: abmData.data,
+                        nextBestActions: actions,
+                    }));
+                    setBusy(false);
+                    return;
+                }
+            } catch (abmErr) {
+                // ABM call failed — fall through to web-search / lead-chat
+                console.warn('[ABM] Research failed, falling through:', abmErr);
+            }
+        }
+
         // ── WEB SEARCH INTENT DETECTION ──
         // Intercept queries asking about specific companies or people before routing to ICP lead-chat
         const isWebResearchQuery = webSearchEnabled ||
@@ -1890,6 +2094,32 @@ export default function AdvancedSearchAIPage() {
                 console.warn('[WebSearch] Failed, falling back to lead-chat:', webSearchErr);
                 // Fall through to normal ICP flow if web search fails
             }
+        }
+
+        // ── LOCATION REQUEST ──
+        // If we previously asked the user for a location (ABM with no location), handle their reply here.
+        if (pendingLocationRequest) {
+            const locationReply = text.trim();
+            const isGlobal = /^global$/i.test(locationReply) || /^worldwide$/i.test(locationReply) || /^everywhere$/i.test(locationReply);
+            // Merge the supplied location into the stored intent then proceed to confirmation
+            const mergedIntent: LeadTargeting = {
+                ...pendingLocationRequest.intent,
+                locations: isGlobal ? [] : [locationReply],
+            };
+            const mergedConfirmation = { intent: mergedIntent, originalQuery: pendingLocationRequest.originalQuery };
+            setPendingLocationRequest(null);
+            // Show the confirmation preview with the now-resolved location
+            const confirmMsg = buildConfirmationMessage(mergedIntent, pendingLocationRequest.originalQuery);
+            setPendingSearchConfirmation(mergedConfirmation);
+            setMessages(p => p.filter(m => m.id !== lid).concat({
+                id: `a-${Date.now()}`, role: 'ai', text: confirmMsg, ts: new Date(),
+                options: [
+                    { label: '✅ Yes, search this', value: 'yes' },
+                    { label: '✏️ Let me refine this', value: 'I want to change what I\'m looking for' },
+                ],
+            }));
+            setBusy(false);
+            return;
         }
 
         // ── SEARCH CONFIRMATION ──
@@ -2161,6 +2391,11 @@ export default function AdvancedSearchAIPage() {
                         || (previewIntent?.company_names?.length ?? 0) > 0
                         || (previewIntent?.industries?.length ?? 0) > 0;
 
+                    // Extra metadata from extract-intent (abm_type, llm_entities)
+                    let extractedAbmType: string | null = null;
+                    let extractedPersonName: string | null = null;
+                    let extractedCompanyName: string | null = null;
+
                     if (!hasUsableIntent) {
                         try {
                             const intentD = await linkedInSearch.extractIntent(text);
@@ -2176,6 +2411,10 @@ export default function AdvancedSearchAIPage() {
                                     functions: toArr(intentD.intent.functions),
                                 };
                             }
+                            // Capture ABM metadata
+                            if (intentD?.abm_type) extractedAbmType = intentD.abm_type;
+                            if (intentD?.llm_entities?.person_name) extractedPersonName = intentD.llm_entities.person_name;
+                            if (intentD?.llm_entities?.company_name) extractedCompanyName = intentD.llm_entities.company_name;
                         } catch (e) { console.warn('[Search] extract-intent for preview failed', e); }
                     }
 
@@ -2184,6 +2423,40 @@ export default function AdvancedSearchAIPage() {
                         || (previewIntent?.keywords?.length ?? 0) > 0
                         || (previewIntent?.company_names?.length ?? 0) > 0
                         || (previewIntent?.industries?.length ?? 0) > 0;
+
+                    // ── ABM location gate: if ABM query has no location, ask before searching ──
+                    // This prevents hallucinating a location or running a global search silently.
+                    const isAbmQuery = !!extractedAbmType && (extractedAbmType === 'person_at_company' || extractedAbmType === 'person_search' || extractedAbmType === 'company_search');
+                    const hasLocation = (previewIntent?.locations?.length ?? 0) > 0;
+                    if (isAbmQuery && !hasLocation && previewIntent && hasPreviewData) {
+                        // Build a friendly location prompt mentioning what we detected
+                        const whoLabel = extractedPersonName && extractedCompanyName
+                            ? `**${extractedPersonName}** at **${extractedCompanyName}**`
+                            : extractedPersonName
+                                ? `**${extractedPersonName}**`
+                                : extractedCompanyName
+                                    ? `**${extractedCompanyName}**`
+                                    : 'this person/company';
+                        const locationPromptMsg = `📍 I found ${whoLabel}. Which location should I search in?\n\n*(e.g., Dubai, London, New York — or type **global** to search worldwide)*`;
+                        setPendingLocationRequest({
+                            intent: previewIntent,
+                            originalQuery: text,
+                            abmType: extractedAbmType,
+                            personName: extractedPersonName ?? undefined,
+                            companyName: extractedCompanyName ?? undefined,
+                        });
+                        setMessages(p => p.filter(m => m.id !== lid).concat({
+                            id: `a-${Date.now()}`, role: 'ai', text: locationPromptMsg, ts: new Date(),
+                            options: [
+                                { label: '🌍 Global (worldwide)', value: 'global' },
+                                { label: '🇦🇪 Dubai / UAE', value: 'Dubai, UAE' },
+                                { label: '🇬🇧 London / UK', value: 'London, UK' },
+                                { label: '🇺🇸 United States', value: 'United States' },
+                            ],
+                        }));
+                        setBusy(false);
+                        return;
+                    }
 
                     if (previewIntent && hasPreviewData) {
                         // Show the confirmation preview and pause — the search runs only after the user confirms
@@ -2217,28 +2490,30 @@ export default function AdvancedSearchAIPage() {
             // during the first lead-chat call, so re-using it preserves user intent.
             let searchQuery: string;
             if (confirmedForSearch && confirmedForSearch.intent) {
-                // User confirmed the preview — use the pre-parsed intent targeting directly.
-                // Build a readable search query from the intent so the backend can score it properly.
-                // Include company_names and keywords so person+company searches are not lost.
+                // User confirmed the preview — structured targeting is passed separately to the
+                // backend (fast path). The query field is used only for module classification and
+                // as a short queryHint. Use the original user text so:
+                //   (a) the QueryClassifier sees natural language ("muffadal in raj digital in dubai")
+                //       and correctly detects ABM / person_at_company patterns
+                //   (b) the classic LinkedIn API doesn't receive a 200-char blob of all titles/industries
                 ext = confirmedForSearch.intent;
-                searchQuery = [
-                    ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
-                    ...(ext.job_titles || []),
-                    ...(ext.company_names || []),
-                    ...(ext.industries || []),
-                    ...(ext.locations || []),
-                ].filter(Boolean).join(' ') || 'leads';
+                searchQuery = confirmedForSearch.originalQuery || text;
             } else {
-                // If we have updated targeting from lead-chat or custom flows, use that for search query
-                searchQuery = shouldRunSearch && ext && !isFirstMessage
-                    ? [
-                        ...(Array.isArray(ext.keywords) ? ext.keywords : (ext.keywords ? [ext.keywords] : [])),
-                        ...(ext.job_titles || []),
+                // For non-confirmed (lead-chat triggered) searches, build a compact query
+                // from only core keywords + locations (not job titles or industries which are
+                // passed as structured targeting and would bloat the query string).
+                if (shouldRunSearch && ext && !isFirstMessage) {
+                    const kwArr = Array.isArray(ext.keywords)
+                        ? ext.keywords
+                        : (ext.keywords ? [ext.keywords] : []);
+                    searchQuery = [
+                        ...kwArr,
                         ...(ext.company_names || []),
-                        ...(ext.industries || []),
-                        ...(ext.locations || []),
-                      ].filter(Boolean).join(' ')
-                    : text;
+                        ...(ext.locations?.slice(0, 1) || []),   // first location only
+                    ].filter(Boolean).join(' ') || text;
+                } else {
+                    searchQuery = text;
+                }
             }
 
             let searchErrorMessage: string | null = null;
@@ -2273,7 +2548,18 @@ export default function AdvancedSearchAIPage() {
                 // because setTargeting() is async and the React state may not yet reflect
                 // the new nationality / filters when the search fires immediately after confirm.
                 const effectiveTargeting = opts?.targetingOverride || targeting;
-                const d = await linkedInSearch.search({
+                // ── Option A: route fresh searches through the 6-module unified endpoint ──
+                // searchUnified() calls /search/unified, which classifies the query and
+                // routes it to the correct module (ABM / Signal / Competitor / Advanced).
+                // The response is normalised to the same shape as /search/advanced so the
+                // result-handling code below is unchanged.
+                //
+                // Fallback: pagination ("Get More") still calls linkedInSearch.search()
+                // → /search/advanced because /search/unified does not support cursor paging.
+                //
+                // To revert to Option B (old route for all calls), change `searchUnified`
+                // back to `search` on this line and remove the searchUnified hook method.
+                const d = await linkedInSearch.searchUnified({
                     query: searchQuery,
                     count: leadCount,
                     targeting: ext || undefined,
@@ -2359,6 +2645,7 @@ export default function AdvancedSearchAIPage() {
                         };});
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
+                        setLastModuleUsed(d.module_used || 'advanced_search');
 
                         // ── Nationality annotation + secondary filter ─────────────────────
                         // The backend already filters by nationality via LLM name inference.
@@ -2547,7 +2834,7 @@ export default function AdvancedSearchAIPage() {
                 id: `a-${Date.now()}`, role: 'ai', text: '⚠️ Something went wrong. Please try again.', ts: new Date(),
             }));
         } finally { setBusy(false); }
-    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation, webSearchEnabled]);
+    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation, pendingLocationRequest, webSearchEnabled]);
 
     const onChatSend = useCallback(() => {
         if (!input.trim() || busy) return;
@@ -2759,6 +3046,7 @@ export default function AdvancedSearchAIPage() {
         setMsgCount(0);
         setPendingIntent(null);
         setPendingSearchConfirmation(null);
+        setPendingLocationRequest(null);
         setConversationSummary('');
         setSearchPage(1);
         setTotalResults(0);
@@ -4502,6 +4790,9 @@ export default function AdvancedSearchAIPage() {
                 recentPosts={profileRecentPosts}
                 loading={summaryLoading}
                 error={summaryError}
+                dataAgeDays={summaryDataAgeDays}
+                onRefresh={handleRefreshSummary}
+                refreshLoading={summaryRefreshLoading}
             />
 
             {/* ── Bad-feedback comment popup ── */}

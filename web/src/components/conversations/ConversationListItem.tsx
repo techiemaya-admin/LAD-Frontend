@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { Conversation, ContactTag } from '@/types/conversation';
 import { ChannelIcon } from './ChannelIcon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ interface ConversationListItemProps {
   isSelectMode?: boolean;
   isChecked?: boolean;
   onContextStatusClick?: (status: string) => void;
+  onDoubleClick?: () => void;
 }
 
 const tagConfig: Record<ContactTag, { label: string; className: string }> = {
@@ -60,9 +61,34 @@ export const ConversationListItem = memo(function ConversationListItem({
   isSelectMode = false,
   isChecked = false,
   onContextStatusClick,
+  onDoubleClick,
 }: ConversationListItemProps) {
   const { contact, lastMessage, unreadCount, channel, updatedAt } = conversation;
   const hasUnread = unreadCount > 0;
+  const clickCountRef = useRef(0);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleItemClick = () => {
+    clickCountRef.current += 1;
+    if (clickCountRef.current === 1) {
+      clickTimeoutRef.current = setTimeout(() => {
+        // Single click - just select
+        onSelect(conversation.id);
+        clickCountRef.current = 0;
+      }, 300); // Wait 300ms to detect double-click
+    } else if (clickCountRef.current === 2) {
+      // Double click detected
+      clearTimeout(clickTimeoutRef.current);
+      onDoubleClick?.();
+      clickCountRef.current = 0;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    };
+  }, []);
 
   const initials = contact.name
     .split(' ')
@@ -77,9 +103,9 @@ export const ConversationListItem = memo(function ConversationListItem({
 
   return (
     <div
-      onClick={() => onSelect(conversation.id)}
+      onClick={handleItemClick}
       className={cn(
-        'conversation-item flex items-start gap-3 p-3 border-b border-border/50',
+        'conversation-item flex items-start gap-3 p-3 border-b border-border/50 cursor-pointer transition-colors',
         isSelected && 'conversation-item-active bg-primary/5',
         hasUnread && 'conversation-item-unread',
         isChecked && 'bg-primary/10'
@@ -209,8 +235,8 @@ export const ConversationListItem = memo(function ConversationListItem({
             )}
 
             {hasUnread && (
-              <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
+              <span className="h-5 min-w-5 px-1.5 rounded-full bg-[#25D366] text-white text-xs font-bold flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </div>
