@@ -6463,7 +6463,7 @@ function CheckpointFormInline({
                 }
             }
             const t = targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] };
-            const icpMin = parseInt(cpIcpThreshold) || 0;
+            const icpMin = parseInt(icpThreshold) || 0;
             // Build lead feedback summary for campaign config
             const feedbackSummary = leads.reduce((acc, l) => {
                 const fb = leadFeedback[l.id];
