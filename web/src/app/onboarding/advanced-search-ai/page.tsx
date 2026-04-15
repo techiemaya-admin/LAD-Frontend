@@ -3965,7 +3965,7 @@ export default function AdvancedSearchAIPage() {
                             {/* LinkedIn search leads */}
                             {!inboundMode && (
                             <div className="adv-leads-list">
-                                {leads.filter(l => (l.icp_score ?? 0) >= (parseInt(cpIcpThreshold) || 0)).map((lead, i) => (
+                                {leads.map((lead, i) => (
                                     <div key={i} className={`adv-lead-card ${lead.locked ? 'adv-lead-locked' : ''}`}>
                                         {lead.profile_picture ? (
                                             <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" />
