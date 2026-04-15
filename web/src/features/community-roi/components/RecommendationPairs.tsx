@@ -125,6 +125,16 @@ const MemberOptionCard: React.FC<{ memberA: string; industryA?: string; options:
 // ── Week selector options ────────────────────────────────────────────────────
 const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
+/** Returns the upcoming Monday date for week N (week 1 = next Monday, etc.) */
+function getWeekMonday(weekNumber: number): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToNextMonday = (8 - dayOfWeek) % 7; // 0 if today is Monday
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToNextMonday + (weekNumber - 1) * 7);
+  return monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); // e.g. "20 Apr"
+}
+
 export const RecommendationPairs: React.FC = () => {
   const { generate, isGenerating, result: generateResult } = useGenerateBulkRecommendations();
   const { data: savedData, isLoading: isSavedLoading, refetch } = useSavedRecommendations();
@@ -288,7 +298,10 @@ export const RecommendationPairs: React.FC = () => {
                 >
                   Week {w.week_number}
                   <span className={`ml-1.5 text-xs ${activeWeek === w.week_number ? 'text-indigo-200' : 'text-slate-400'}`}>
-                    ({w.pairs.length} options)
+                    · {getWeekMonday(w.week_number)}
+                  </span>
+                  <span className={`ml-1 text-xs ${activeWeek === w.week_number ? 'text-indigo-200' : 'text-slate-400'}`}>
+                    ({w.pairs.length})
                   </span>
                 </button>
               ))}
