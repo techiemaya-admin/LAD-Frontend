@@ -34,9 +34,10 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
 
   const [sendMode, setSendMode] = useState<SendMode>('instant');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [scheduledTime, setScheduledTime] = useState('');
-  const [step, setStep] = useState<'mode' | 'members' | 'confirm'>('mode');
+  const [step, setStep] = useState<'mode' | 'templates' | 'members' | 'confirm'>('mode');
 
   // Calculate week dates for template preview
   const getWeekMonday = (weekNum: number) => {
@@ -51,7 +52,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   // Preview messages with replaced variables
   const previewMessages = useMemo(() => {
     return templates.map(template => {
-      let body = template.body;
+      let body = template.content || template.body || '';
 
       // Replace variables
       body = body.replace(/{{member_name}}/g, memberName);
@@ -115,7 +116,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         const result = await sendMessages({
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
-          templateIds: templates.map(t => t.id),
+          templateIds: selectedTemplateIds,
           recommendations,
         });
 
@@ -136,7 +137,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           scheduledTime,
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
-          templateIds: templates.map(t => t.id),
+          templateIds: selectedTemplateIds,
         });
 
         if (result.success) {
@@ -220,7 +221,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
               Cancel
             </button>
             <button
-              onClick={() => setStep('members')}
+              onClick={() => setStep('templates')}
               className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition"
             >
               Next
@@ -231,7 +232,81 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
     );
   }
 
-  // Step 2: Member Selection
+  // Step 2: Template Selection
+  if (step === 'templates') {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Templates</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Choose which WhatsApp templates to send. Each selected template will be sent as a separate message.
+          </p>
+
+          {templatesLoading ? (
+            <div className="flex items-center justify-center py-10 text-slate-500 text-sm">
+              Loading templates...
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-400 text-sm gap-2">
+              <AlertCircle className="w-8 h-8" />
+              <p>No WhatsApp templates found for this tenant.</p>
+              <p className="text-xs text-slate-400">Run the seed SQL to add Meta-approved templates.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 mb-6">
+              {previewMessages.map((msg) => (
+                <label
+                  key={msg.id}
+                  className={`flex items-start p-4 border rounded-xl cursor-pointer transition ${
+                    selectedTemplateIds.includes(msg.id)
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedTemplateIds.includes(msg.id)}
+                    onChange={() => {
+                      setSelectedTemplateIds(prev =>
+                        prev.includes(msg.id)
+                          ? prev.filter(id => id !== msg.id)
+                          : [...prev, msg.id]
+                      );
+                    }}
+                    className="mt-1 mr-3 cursor-pointer accent-indigo-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm mb-1">{msg.name}</p>
+                    <p className="text-xs text-slate-500 whitespace-pre-wrap break-words leading-relaxed">
+                      {msg.previewBody}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setStep('mode')}
+              className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
+            >
+              Back
+            </button>
+            <button
+              onClick={() => setStep('members')}
+              disabled={selectedTemplateIds.length === 0}
+              className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition"
+            >
+              Next ({selectedTemplateIds.length} selected)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 3: Member Selection
   if (step === 'members') {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -290,7 +365,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end">
             <button
-              onClick={() => setStep('mode')}
+              onClick={() => setStep('templates')}
               className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
             >
               Back
@@ -347,7 +422,14 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
             </p>
             <p>
               <span className="text-slate-600">Templates:</span>{' '}
-              <span className="font-medium text-slate-900">{templates.length} messages</span>
+              <span className="font-medium text-slate-900">
+                {selectedTemplateIds.length === 0
+                  ? 'None selected'
+                  : templates
+                      .filter(t => selectedTemplateIds.includes(t.id))
+                      .map(t => t.name)
+                      .join(', ')}
+              </span>
             </p>
             {sendMode === 'schedule' && scheduledTime && (
               <p>
@@ -363,6 +445,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           <button
             onClick={() => setStep('members')}
             className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
+            disabled={isLoading}
           >
             Back
           </button>

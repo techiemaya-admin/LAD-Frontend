@@ -39,6 +39,22 @@ export { useRelationshipHeatmap, useUpdateRelationshipScores, useGenerateBulkRec
 export { useNewMembers, useOnboardNewMembers } from './useNewMembers';
 export { useSendOnboardingTemplate } from './useSendOnboardingTemplate';
 
+// Recommendation Messages (WhatsApp sending)
+export {
+  useRecommendationTemplates,
+  useSendInstantMessages,
+  useScheduleMessages,
+  usePendingSchedules,
+} from './useRecommendationMessages';
+export type {
+  CommunicationTemplate,
+  SendInstantMessagesRequest,
+  SendInstantMessagesResponse,
+  ScheduleMessagesRequest,
+  ScheduleMessagesResponse,
+  PendingSchedule,
+} from './useRecommendationMessages';
+
 // Re-export types
 export type { UseListMembersReturn } from './useListMembers';
 export type { UseMemberReturn } from './useMember';

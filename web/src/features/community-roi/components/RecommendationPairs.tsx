@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, X, ChevronDown } from 'lucide-react';
-import { useGenerateBulkRecommendations } from '@lad/frontend-features/community-roi';
+import { Search, X, ChevronDown, Send } from 'lucide-react';
+import { useGenerateBulkRecommendations, useListMembers } from '@lad/frontend-features/community-roi';
+import MessageTemplateSender from './MessageTemplateSender';
 
 interface RecommendationPair {
   member_a: string;
@@ -126,11 +127,13 @@ const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
 export const RecommendationPairs: React.FC = () => {
   const { generate, isGenerating, result, error } = useGenerateBulkRecommendations();
+  const { members } = useListMembers();
   const data = result as GenerateResult | null;
   const [activeWeek, setActiveWeek] = useState(1);
   const [selectedWeeks, setSelectedWeeks] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showMessageSender, setShowMessageSender] = useState(false);
 
   const weekData = data?.weeks?.find(w => w.week_number === activeWeek);
 
@@ -180,6 +183,18 @@ export const RecommendationPairs: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Send Messages button (only show if data exists) */}
+          {data?.success && (
+            <button
+              onClick={() => setShowMessageSender(true)}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <Send className="w-4 h-4" />
+              Send Messages
+            </button>
+          )}
 
           {/* Generate button */}
           <button
@@ -327,6 +342,21 @@ export const RecommendationPairs: React.FC = () => {
           </>
         )}
         </div>
+      )}
+
+      {/* Message Sender Modal */}
+      {showMessageSender && data?.success && (
+        <MessageTemplateSender
+          memberName={data?.weeks?.[0]?.pairs?.[0]?.member_a || 'Member'}
+          noInteractionCount={0}
+          recommendations={data?.weeks?.flatMap(w => w.pairs) || []}
+          allMembers={members || []}
+          onClose={() => setShowMessageSender(false)}
+          onSuccess={(result) => {
+            console.log('Messages sent:', result);
+            setShowMessageSender(false);
+          }}
+        />
       )}
     </div>
   );
