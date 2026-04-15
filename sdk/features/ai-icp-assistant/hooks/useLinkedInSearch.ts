@@ -152,6 +152,36 @@ export function useLinkedInSearch() {
   );
 
   /**
+   * Infer nationality from a list of lead names using LLM batch inference.
+   * Body: { leads: [{ id, name }] }
+   * Returns: { success, results: [{ id, name, nationality, confidence, reason }] }
+   */
+  const inferNationality = useCallback(
+    async (leads: { id: string; name: string }[]): Promise<any | null> => {
+      if (!leads || leads.length === 0) return null;
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/campaigns/linkedin/infer-nationality`,
+          {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify({ leads }),
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`Nationality inference failed: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        console.warn('[useLinkedInSearch] inferNationality error:', err);
+        return null;
+      }
+    },
+    []
+  );
+
+  /**
    * Reset state
    */
   const reset = useCallback(() => {
@@ -164,6 +194,7 @@ export function useLinkedInSearch() {
     // Actions
     extractIntent,
     search,
+    inferNationality,
     reset,
   };
 }

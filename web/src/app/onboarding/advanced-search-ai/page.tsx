@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X, MessageSquare, Users, Zap } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
+import AgentVisualizer from '@/components/ui/AgentVisualizer';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
@@ -35,6 +36,8 @@ interface LeadTargeting {
     company_age?: string[];
     decision_maker_education?: string[];
     decision_maker_skills?: string[];
+    posted_recently?: boolean; // true = only show leads who posted on LinkedIn in the last 3 months
+    nationality_filter?: string[]; // nationalities extracted by AI from chat (e.g. ["Indian"])
 }
 
 interface LeadProfile {
@@ -61,6 +64,9 @@ interface LeadProfile {
         education: { school: string; degree: string; field_of_study: string }[];
         skills: string[];
     };
+    inferred?: Record<string, any>;
+    inferred_nationality?: string;
+    nationality_confidence?: number;
 }
 
 interface ParsedInboundLead {
@@ -155,6 +161,44 @@ function avatarColor(name: string): string {
     let h = 0;
     for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
     return colors[Math.abs(h) % colors.length];
+}
+
+/**
+ * Resolve the best LinkedIn profile URL from an API result item.
+ * Priority:
+ *  1. profile_url (already normalised by backend to public_profile_url when available)
+ *  2. public_profile_url (explicit standard LinkedIn URL)
+ *  3. linkedin_url (alternative field name)
+ *  4. Constructed from public_identifier (slug)
+ * Only keeps URLs that point to a real LinkedIn profile (linkedin.com/in/).
+ */
+function resolveProfileUrl(item: any): string {
+    const candidates = [
+        item.profile_url,
+        item.public_profile_url,
+        item.linkedin_url,
+    ].filter((u): u is string => typeof u === 'string' && u.startsWith('http'));
+
+    // Prefer standard linkedin.com/in/ URLs over sales/lead/ URLs
+    const standard = candidates.find(u => u.includes('linkedin.com/in/'));
+    if (standard) return standard;
+    // Fallback: any http URL (covers Sales Nav URLs too)
+    if (candidates.length > 0) return candidates[0];
+    // Last resort: construct from public_identifier slug
+    if (item.public_identifier && typeof item.public_identifier === 'string') {
+        return `https://www.linkedin.com/in/${item.public_identifier}`;
+    }
+    return '';
+}
+
+/**
+ * Compute the display match level from the actual icp_score.
+ * Gemini's match_level label can be inconsistent (e.g. 'weak' for score 52).
+ * Using the score directly ensures the badge colour reflects what the user sees.
+ */
+function scoreToMatchLevel(score: number | undefined): 'strong' | 'moderate' {
+    if ((score ?? 0) >= 70) return 'strong';
+    return 'moderate'; // yellow for everything else — never show red on lead badges
 }
 
 function initials(name: string): string {
@@ -315,6 +359,40 @@ function isConfirmation(text: string): boolean {
     return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
 }
 
+/**
+ * Detect whether a user query is a generic COMPANY-TYPE search
+ * (e.g. "decision makers in hotels with swimming pools in Dubai")
+ * rather than a direct LinkedIn role/industry/location search.
+ *
+ * When true, the query is routed to the enriched prospect discovery pipeline
+ * (Claude company discovery → Serper → Unipile → Apollo → ICP scoring)
+ * instead of searching LinkedIn directly.
+ */
+function isGenericCompanySearchQuery(text: string): boolean {
+    const lower = text.toLowerCase();
+
+    // Must contain a company category noun
+    const hasCompanyType = /\b(hotel|resort|hospital|clinic|pharmacy|school|university|college|bank|restaurant|cafe|coffee\s*shop|salon|spa|gym|fitness\s*(studio|center|club)|mall|shopping\s*(center|centre)|construction\s*(firm|company|compan)|real\s*estate|property\s*(developer|management|firm)|law\s*firm|accounting\s*firm|insurance\s*(compan|firm|broker)|retail(er|er|\s*store|\s*shop|\s*chain)?|supermarket|car\s*(dealership|showroom)|automotive|manufactur|factory|factories|startup|tech\s*compan|software\s*compan|recruitment\s*agenc|staffing\s*agenc|advertising\s*agenc|marketing\s*agenc|logistics\s*compan|travel\s*agenc|tourism\s*compan)\b/i.test(text);
+    if (!hasCompanyType) return false;
+
+    // Must contain a location reference
+    const hasLocation = /\b(in|from|across|based in|located in|around|within)\s+\w+/i.test(text)
+        || /\b(dubai|uae|abu dhabi|sharjah|ajman|riyadh|jeddah|saudi|ksa|qatar|doha|kuwait|bahrain|oman|muscat|london|uk|new york|usa|singapore|india|mumbai|delhi|cairo|egypt|beirut|jordan|istanbul|turkey|australia|canada|germany|france|paris)\b/i.test(lower);
+    if (!hasLocation) return false;
+
+    // Attribute qualifier: "which have", "with pools", "having", "that offer" etc.
+    const hasAttributeQualifier = /\b(with\b|having\b|which\s+(have|has|had|contain|offer|provide|include|feature)|that\s+(have|has|had|offer|provide|sell|serve|include|feature|contain|are|is)|featuring\b|equipped\s+with|known\s+for|famous\s+for|speciali[sz]ing\s+in|\d+[-\s]?star|5[-\s]?star|luxury\b|boutique\b|premium\b|high[-\s]end)\b/i.test(text);
+    if (hasAttributeQualifier) return true;
+
+    // Generic company plural nouns
+    if (/\b(companies|businesses|firms|agencies|stores|establishments|outlets|chains|brands|operators|venues|properties|facilities)\b/i.test(lower)) return true;
+
+    // Decision maker + company type (strongly indicates generic company search)
+    if (/\b(decision[\s-]?maker|gm\b|general\s*manager|managing\s*director|md\b|ceo\b|owner\b|proprietor|director\s+of|head\s+of|vp\s+of|vice\s*president|operations\s*manager)\b/i.test(lower)) return true;
+
+    return false;
+}
+
 /* ═══════════════════════════════════════════════
    TARGETING FILTER OPTIONS (CONSTANTS)
    ═══════════════════════════════════════════════ */
@@ -389,6 +467,9 @@ export default function AdvancedSearchAIPage() {
     const [cpActions, setCpActions] = useState<string[]>([]);
     const [cpConnMsg, setCpConnMsg] = useState('');
     const [cpFollowMsg, setCpFollowMsg] = useState('');
+    const [cpEnableDailyWebPresence, setCpEnableDailyWebPresence] = useState(false);
+    const [cpEnableDailyPosts, setCpEnableDailyPosts] = useState(false);
+    const [cpEnableAiPersonalization, setCpEnableAiPersonalization] = useState(false);
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
     
@@ -494,13 +575,14 @@ export default function AdvancedSearchAIPage() {
     const [cpWaGenLoading, setCpWaGenLoading] = useState(false);
 
     // Targeting form state (inline in chat)
-    const [tgStep, setTgStep] = useState(-1); // -1 = not started, 0-6 = steps
+    const [tgStep, setTgStep] = useState(-1); // -1 = not started, 0-7 = steps
     const [tgNationality, setTgNationality] = useState<string[]>([]);
     const [tgExperienceLevel, setTgExperienceLevel] = useState<string[]>([]);
     const [tgCompanySize, setTgCompanySize] = useState<string[]>([]);
     const [tgCompanyAge, setTgCompanyAge] = useState<string[]>([]);
     const [tgEducation, setTgEducation] = useState<string[]>([]);
     const [tgSkills, setTgSkills] = useState<string[]>([]);
+    const [tgPostedRecently, setTgPostedRecently] = useState<boolean>(false); // posted on LinkedIn in last 3 months
 
     // convId — stable UUID that identifies this browser session's conversation.
     // Initialised once on mount; reset when the user clicks "New search".
@@ -512,6 +594,14 @@ export default function AdvancedSearchAIPage() {
     const [conversationSummary, setConversationSummary] = useState<string>('');
     // Pending search confirmation: stores the parsed intent for the user to confirm before search runs
     const [pendingSearchConfirmation, setPendingSearchConfirmation] = useState<{ intent: LeadTargeting; originalQuery: string } | null>(null);
+
+    // Generic prospect search (company-type intent queries)
+    // ── lastSearchType: distinguishes LinkedIn search from generic prospect search ──
+    const [lastSearchType, setLastSearchType] = useState<'linkedin' | 'generic_prospect'>('linkedin');
+    // ── seenProspectIds: LinkedIn URLs / provider IDs already returned so "Get More" deduplicates ──
+    const [seenProspectIds, setSeenProspectIds] = useState<string[]>([]);
+    // ── lastProspectQuery: the original natural-language query for "Get More" re-runs ──
+    const [lastProspectQuery, setLastProspectQuery] = useState<string>('');
 
     // Premium (Sales Navigator) search toggle
     const [useSalesNav, setUseSalesNav] = useState(false);
@@ -674,7 +764,14 @@ export default function AdvancedSearchAIPage() {
         const { field, type } = pgCurrentCard;
         let value = pgCardValues[field];
         if (type === 'tags') {
-            value = Array.isArray(value) ? value.join(', ') : (value || '');
+            // Flush any pending tag input (supports comma-separated like "CEO, VP of Sales")
+            let committed = Array.isArray(value) ? [...value] : [];
+            if (pgTagInput.trim()) {
+                const pending = pgTagInput.split(',').map((s: string) => s.trim()).filter(Boolean);
+                pending.forEach((t: string) => { if (!committed.includes(t)) committed.push(t); });
+                setPgTagInput('');
+            }
+            value = committed.join(', ');
         } else if (type === 'chips') {
             value = Array.isArray(value) ? value.join(', ') : (value || '');
         }
@@ -683,7 +780,7 @@ export default function AdvancedSearchAIPage() {
         // Send as a card submission message
         const cardMsg = `[Card submission: field=${field} value=${value}]`;
         await pgSendMessage(cardMsg);
-    }, [pgCurrentCard, pgCardValues, pgSendMessage]);
+    }, [pgCurrentCard, pgCardValues, pgTagInput, setPgTagInput, pgSendMessage]);
 
     /** Generate an AI suggestion for the current card field */
     const pgGenerateSuggestion = useCallback(async () => {
@@ -737,17 +834,17 @@ export default function AdvancedSearchAIPage() {
         setPgBusy(false);
     }, []);
 
-    // Build ICP description from business profile for search injection
+    // Build seller context from business profile — only describes WHAT we sell,
+    // NOT who to target (targetCustomers / icpJobTitles / icpPainPoints are excluded
+    // because they reflect a previous ICP setup and would override the current search query).
     const getBusinessContext = () => {
         const p = businessProfile;
         const parts: string[] = [];
-        if (p.companyDescription) parts.push(`Company: ${p.companyDescription}`);
-        if (p.productsServices) parts.push(`Products/Services: ${p.productsServices}`);
-        if (p.targetCustomers) parts.push(`Target Customers: ${p.targetCustomers}`);
-        if (p.icpJobTitles) parts.push(`Target Job Titles: ${p.icpJobTitles}`);
-        if (p.icpPainPoints) parts.push(`Customer Pain Points: ${p.icpPainPoints}`);
+        if (p.companyDescription) parts.push(`Seller Company: ${p.companyDescription}`);
+        if (p.productsServices) parts.push(`Product/Service Being Sold: ${p.productsServices}`);
         if (p.valueProposition) parts.push(`Value Proposition: ${p.valueProposition}`);
-        if (p.geographicFocus) parts.push(`Geographic Focus: ${p.geographicFocus}`);
+        // Deliberately NOT including targetCustomers, icpJobTitles, icpPainPoints, geographicFocus
+        // — those are set via the current search query and targeting filters, not the business profile.
         return parts.join('\n');
     };
 
@@ -924,6 +1021,8 @@ export default function AdvancedSearchAIPage() {
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
     const [profileSummary, setProfileSummary] = useState<string | null>(null);
+    const [profileWebPresence, setProfileWebPresence] = useState<any | null>(null);
+    const [profileRecentPosts, setProfileRecentPosts] = useState<any[] | null>(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
 
@@ -935,6 +1034,50 @@ export default function AdvancedSearchAIPage() {
     // Delete confirmation state
     const [deleteConfirmation, setDeleteConfirmation] = useState<{ index: number; name: string } | null>(null);
     const [deletingLead, setDeletingLead] = useState(false);
+
+    // ── Restore persisted targeting_filters from localStorage (saved up to 7 days) ─
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lad_targeting_filters');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Only restore if saved within the last 7 days
+                const savedAt = parsed.saved_at ? new Date(parsed.saved_at).getTime() : 0;
+                const ageMs = Date.now() - savedAt;
+                const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+                if (ageMs < sevenDaysMs) {
+                    if (parsed.nationality?.length) setTgNationality(parsed.nationality);
+                    if (parsed.experience_level?.length) setTgExperienceLevel(parsed.experience_level);
+                    if (parsed.company_size?.length) setTgCompanySize(parsed.company_size);
+                    if (parsed.company_age?.length) setTgCompanyAge(parsed.company_age);
+                    if (parsed.education?.length) setTgEducation(parsed.education);
+                    if (parsed.skills?.length) setTgSkills(parsed.skills);
+                    // posted_recently is intentionally NOT restored — it must be explicitly set each session
+                    // Restore into targeting state so searches automatically include filters
+                    if (parsed.nationality?.length || parsed.experience_level?.length || parsed.company_size?.length) {
+                        setTargeting(prev => ({
+                            job_titles: prev?.job_titles || [],
+                            industries: prev?.industries || [],
+                            locations: prev?.locations || [],
+                            keywords: prev?.keywords || [],
+                            ...(prev || {}),
+                            decision_maker_nationality: parsed.nationality?.length ? parsed.nationality : prev?.decision_maker_nationality,
+                            decision_maker_experience_level: parsed.experience_level?.length ? parsed.experience_level : prev?.decision_maker_experience_level,
+                            company_size: parsed.company_size?.length ? parsed.company_size : prev?.company_size,
+                            company_age: parsed.company_age?.length ? parsed.company_age : prev?.company_age,
+                            decision_maker_education: parsed.education?.length ? parsed.education : prev?.decision_maker_education,
+                            decision_maker_skills: parsed.skills?.length ? parsed.skills : prev?.decision_maker_skills,
+                            // posted_recently not restored from localStorage — must be set explicitly
+                        }));
+                    }
+                } else {
+                    // Expired — clean up
+                    localStorage.removeItem('lad_targeting_filters');
+                }
+            }
+        } catch { }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount
 
     // ── Clear / Restart campaign setup ──────────────────────────────────────
     const clearChat = useCallback(() => {
@@ -954,7 +1097,7 @@ export default function AdvancedSearchAIPage() {
         setCpWaBody(''); setCpWaFromNumber(''); setCpWaGenLoading(false);
         // Targeting form
         setTgStep(-1); setTgNationality([]); setTgExperienceLevel([]); setTgCompanySize([]);
-        setTgCompanyAge([]); setTgEducation([]); setTgSkills([]);
+        setTgCompanyAge([]); setTgEducation([]); setTgSkills([]); setTgPostedRecently(false);
         // Conversation meta
         setConvId(crypto.randomUUID()); setMsgCount(0); setPendingIntent(null);
         setPendingSearchConfirmation(null); setPendingContact(null);
@@ -1024,6 +1167,8 @@ export default function AdvancedSearchAIPage() {
         });
         setSummaryDialogOpen(true);
         setProfileSummary(null);
+        setProfileWebPresence(lead.inferred?.web_presence || null);
+        setProfileRecentPosts(null);
         setSummaryError(null);
         setSummaryLoading(true);
 
@@ -1039,6 +1184,11 @@ export default function AdvancedSearchAIPage() {
 
             if (data?.summary) {
                 setProfileSummary(data.summary);
+                // Prefer web_presence from API (freshest), fall back to already-set inferred data
+                if (data.web_presence) {
+                    setProfileWebPresence(data.web_presence);
+                }
+                setProfileRecentPosts(data.recent_posts?.length ? data.recent_posts : null);
             } else {
                 throw new Error(data?.error || 'Failed to generate summary');
             }
@@ -1053,6 +1203,8 @@ export default function AdvancedSearchAIPage() {
         setSummaryDialogOpen(false);
         setSelectedEmployee(null);
         setProfileSummary(null);
+        setProfileWebPresence(null);
+        setProfileRecentPosts(null);
         setSummaryError(null);
     };
 
@@ -1792,6 +1944,86 @@ export default function AdvancedSearchAIPage() {
                         if (chatD.summaryUpdate) {
                             setConversationSummary(prev => prev ? `${prev}\n${chatD.summaryUpdate}` : chatD.summaryUpdate);
                         }
+                        // ── Generic prospect search: route to enriched discovery pipeline ──
+                        if (chatD.newSearch && chatD.searchType === 'generic_prospect') {
+                            // Show the AI's loading message immediately
+                            setMessages(p => p.filter(m => m.id !== lid).concat({
+                                id: `a-${Date.now()}`, role: 'ai', text: aiResponseText, ts: new Date(),
+                            }));
+                            setIsSearching(true);
+                            setActivities([]);
+
+                            const prospectQuery = chatD.originalQuery || text;
+                            setLastProspectQuery(prospectQuery);
+                            setLastSearchType('generic_prospect');
+                            setSeenProspectIds([]);
+                            setLeads([]);
+
+                            try {
+                                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        query:      prospectQuery,
+                                        icpProfile: businessProfile,
+                                        sessionId:  `gps-${Date.now()}`,
+                                        seenIds:    [],
+                                        batchSize:  leadCount,
+                                    }),
+                                });
+                                const d = await resp.json();
+                                setIsSearching(false);
+                                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                                    const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                        id:               item.id || `gps-${idx}`,
+                                        name:             item.name || 'Unknown',
+                                        first_name:       item.first_name || '',
+                                        last_name:        item.last_name  || '',
+                                        headline:         item.headline   || item.decision_maker_title || '',
+                                        location:         item.location   || '',
+                                        current_company:  item.current_company || '',
+                                        profile_url:      item.profile_url || '',
+                                        profile_picture:  item.profile_picture || '',
+                                        industry:         item.industry || item.company_type || '',
+                                        network_distance: '',
+                                        locked:           idx >= 5,
+                                        phone:            item.phone || item.company_phone || '',
+                                        email:            item.email || '',
+                                        icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                        match_level:      item.match_level  || undefined,
+                                        icp_reasoning:    item.icp_reasoning || undefined,
+                                        enriched_profile: item.enriched_profile || undefined,
+                                    }));
+                                    setLeads(prospectLeads);
+                                    setShowPanel('leads');
+                                    // Track seen IDs for "get more" dedup
+                                    setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                                    setNoMoreLeads(!d.hasMore);
+                                    setTotalResults(d.total || prospectLeads.length);
+                                    setMessages(p => p.concat({
+                                        id: `a-sr-${Date.now()}`, role: 'ai',
+                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        ts: new Date(),
+                                    }));
+                                } else {
+                                    setMessages(p => p.concat({
+                                        id: `a-err-${Date.now()}`, role: 'ai',
+                                        text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — for example: *"General Managers at 5-star hotels in Dubai"* or *"CEOs of construction companies in Saudi Arabia"*.`,
+                                        ts: new Date(),
+                                    }));
+                                }
+                            } catch (prospectErr) {
+                                setIsSearching(false);
+                                console.error('[ProspectSearch] error', prospectErr);
+                                setMessages(p => p.concat({
+                                    id: `a-err-${Date.now()}`, role: 'ai',
+                                    text: `⚠️ Prospect search failed. Please try again or rephrase your query.`,
+                                    ts: new Date(),
+                                }));
+                            }
+                            setBusy(false);
+                            return;
+                        }
                     }
                 } catch (e) { console.warn('[Lead Chat] lead-chat error', e); }
 
@@ -1822,6 +2054,91 @@ export default function AdvancedSearchAIPage() {
                         // Clear the AI response so we show search results, not the chat response
                         aiResponseText = '';
                     }
+                }
+
+                // ── FRONTEND GENERIC PROSPECT SEARCH SAFETY NET ──────────────────
+                // If the backend didn't return searchType:'generic_prospect' but the query
+                // clearly describes a company TYPE + attribute/location, intercept here and
+                // route directly to the enriched prospect discovery pipeline.
+                // This catches cases where the backend classified the intent as CONTEXT_SEARCH
+                // or extracted LinkedIn keywords instead of detecting the generic pattern.
+                if (shouldRunSearch && isGenericCompanySearchQuery(text)) {
+                    setMessages(p => p.filter(m => m.id !== lid).concat({
+                        id: `a-${Date.now()}`, role: 'ai',
+                        text: `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts. This may take a moment as I research each prospect.\n\n⚡ *Searching across the web, LinkedIn, and company databases...*`,
+                        ts: new Date(),
+                    }));
+                    setIsSearching(true);
+                    setActivities([]);
+                    setLastProspectQuery(text);
+                    setLastSearchType('generic_prospect');
+                    setSeenProspectIds([]);
+                    setLeads([]);
+
+                    try {
+                        const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query:      text,
+                                icpProfile: businessProfile,
+                                sessionId:  `gps-${Date.now()}`,
+                                seenIds:    [],
+                                batchSize:  leadCount,
+                            }),
+                        });
+                        const d = await resp.json();
+                        setIsSearching(false);
+                        if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                            const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                                id:               item.id || `gps-${idx}`,
+                                name:             item.name || 'Unknown',
+                                first_name:       item.first_name || '',
+                                last_name:        item.last_name  || '',
+                                headline:         item.headline   || '',
+                                location:         item.location   || '',
+                                current_company:  item.current_company || '',
+                                profile_url:      item.profile_url || '',
+                                profile_picture:  item.profile_picture || '',
+                                industry:         item.industry || item.company_type || '',
+                                network_distance: '',
+                                locked:           idx >= 5,
+                                phone:            item.phone || item.company_phone || '',
+                                email:            item.email || '',
+                                icp_score:        item.icp_score  != null ? item.icp_score  : undefined,
+                                match_level:      item.match_level  || undefined,
+                                icp_reasoning:    item.icp_reasoning || undefined,
+                                enriched_profile: item.enriched_profile || undefined,
+                            }));
+                            setLeads(prospectLeads);
+                            setShowPanel('leads');
+                            setSeenProspectIds(prospectLeads.map(l => l.profile_url || l.id));
+                            setNoMoreLeads(!d.hasMore);
+                            setTotalResults(d.total || prospectLeads.length);
+                            const strongMatches = prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length;
+                            setMessages(p => p.concat({
+                                id: `a-sr-${Date.now()}`, role: 'ai',
+                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                ts: new Date(),
+                            }));
+                        } else {
+                            setMessages(p => p.concat({
+                                id: `a-err-${Date.now()}`, role: 'ai',
+                                text: `⚠️ I couldn't find specific prospects for that query. Try rephrasing — e.g. *"GMs at 5-star hotels in Dubai"* or *"owners of gyms in Abu Dhabi"*.`,
+                                ts: new Date(),
+                            }));
+                        }
+                    } catch (prospectErr) {
+                        setIsSearching(false);
+                        console.error('[ProspectSearch] error', prospectErr);
+                        setMessages(p => p.concat({
+                            id: `a-err-${Date.now()}`, role: 'ai',
+                            text: `⚠️ Prospect search failed. Please try again.`,
+                            ts: new Date(),
+                        }));
+                    }
+                    setBusy(false);
+                    return;
                 }
 
                 if (!shouldRunSearch && aiResponseText) {
@@ -1931,7 +2248,11 @@ export default function AdvancedSearchAIPage() {
                 // Use the effective searchQuery (never "yes") as the ICP base description
                 const icpBase = confirmedForSearch ? searchQuery : text;
                 const bizCtx = getBusinessContext();
-                let icpDesc = bizCtx ? `${icpBase}\n\n--- Business Context ---\n${bizCtx}` : icpBase;
+                // Business context only describes what the seller offers — it does NOT redefine
+                // who to target. The search query is the sole source of ICP target criteria.
+                let icpDesc = bizCtx
+                    ? `## Search Target (WHO to find):\n${icpBase}\n\n## Seller Context (WHAT they sell — use only to assess relevance, not to redefine the target):\n${bizCtx}`
+                    : icpBase;
                 const goodLeads = leads.filter(l => leadFeedback[l.id] === 'good');
                 const badLeads = leads.filter(l => leadFeedback[l.id] === 'bad');
                 if (goodLeads.length > 0 || badLeads.length > 0) {
@@ -1948,22 +2269,29 @@ export default function AdvancedSearchAIPage() {
                 setIsSearching(true);
                 setActivities([]);
 
+                // Use targetingOverride (from Targeting card confirm) when available,
+                // because setTargeting() is async and the React state may not yet reflect
+                // the new nationality / filters when the search fires immediately after confirm.
+                const effectiveTargeting = opts?.targetingOverride || targeting;
                 const d = await linkedInSearch.search({
                     query: searchQuery,
                     count: leadCount,
                     targeting: ext || undefined,
-                    targeting_filters: targeting && (
-                        targeting.decision_maker_nationality?.length ||
-                        targeting.decision_maker_experience_level?.length ||
-                        targeting.decision_maker_skills?.length ||
-                        targeting.decision_maker_education?.length ||
-                        targeting.company_size?.length
+                    targeting_filters: effectiveTargeting && (
+                        effectiveTargeting.decision_maker_nationality?.length ||
+                        effectiveTargeting.decision_maker_experience_level?.length ||
+                        effectiveTargeting.decision_maker_skills?.length ||
+                        effectiveTargeting.decision_maker_education?.length ||
+                        effectiveTargeting.company_size?.length ||
+                        effectiveTargeting.posted_recently
                     ) ? {
-                        nationality: targeting.decision_maker_nationality,
-                        experience_level: targeting.decision_maker_experience_level,
-                        skills: targeting.decision_maker_skills,
-                        education: targeting.decision_maker_education,
-                        company_size: targeting.company_size,
+                        nationality: effectiveTargeting.decision_maker_nationality,
+                        experience_level: effectiveTargeting.decision_maker_experience_level,
+                        skills: effectiveTargeting.decision_maker_skills,
+                        education: effectiveTargeting.decision_maker_education,
+                        company_size: effectiveTargeting.company_size,
+                        // Only send posted_recently when explicitly set by user
+                        posted_recently: effectiveTargeting.posted_recently === true ? true : undefined,
                     } : undefined,
                     icp_description: icpDesc,
                     search_enrichment: buildSearchEnrichment(),
@@ -1984,6 +2312,8 @@ export default function AdvancedSearchAIPage() {
                             locations: toArr(d.intent.locations), keywords: toArr(d.intent.keywords),
                             profile_language: toArr(d.intent.profile_language),
                             company_names: toArr(d.intent.company_names),
+                            // Carry nationality_filter so subsequent paginated searches pass it through
+                            nationality_filter: toArr(d.intent.nationality_filter),
                         };
                         const hasData = newExt.job_titles.length > 0 || newExt.industries.length > 0 || newExt.locations.length > 0 || (newExt.keywords && newExt.keywords.length > 0) || (newExt.company_names && newExt.company_names.length > 0);
                         if (hasData) {
@@ -1996,6 +2326,7 @@ export default function AdvancedSearchAIPage() {
                     setLastSearchQuery(searchQuery);
                     setLastIcpDescription(icpBase);
                     setLastTargeting(ext);
+                    setLastSearchType('linkedin'); // mark as LinkedIn search for loadMore routing
                     addSearchSession(searchQuery, ext, icpBase);
                     setSearchPage(1);
                     setTotalResults(d.total || 0);
@@ -2005,15 +2336,17 @@ export default function AdvancedSearchAIPage() {
                     icpWasApplied = !!d.icp_applied;
                     if (Array.isArray(d.results) && d.results.length > 0) {
                         rawSearchResults = d.results;
-                        realLeads = d.results.map((item: any, idx: number) => ({
+                        realLeads = d.results.map((item: any, idx: number) => {
+                            const profileUrl = resolveProfileUrl(item);
+                            return {
                             id: item.id || item.provider_id || `lead-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (item.profile_url ? 'LinkedIn User' : 'Contact'),
+                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.phone || item.email || (profileUrl ? 'LinkedIn User' : 'Contact'),
                             first_name: item.first_name || '',
                             last_name: item.last_name || '',
                             headline: item.headline || '',
                             location: item.location || '',
                             current_company: item.current_company || '',
-                            profile_url: item.profile_url || '',
+                            profile_url: profileUrl,
                             profile_picture: item.profile_picture || '',
                             industry: item.industry || '',
                             network_distance: item.network_distance || '',
@@ -2022,21 +2355,76 @@ export default function AdvancedSearchAIPage() {
                             match_level: item.match_level || undefined,
                             icp_reasoning: item.icp_reasoning || undefined,
                             enriched_profile: item.enriched_profile || undefined,
-                        }));
+                            inferred: item.inferred || undefined,
+                        };});
                         setLeads(realLeads);
                         searchTotal = d.total || realLeads.length;
+
+                        // ── Nationality annotation + secondary filter ─────────────────────
+                        // The backend already filters by nationality via LLM name inference.
+                        // This frontend pass: (1) annotates leads with inferred_nationality for
+                        // the UI badge display, (2) acts as a secondary safety net to catch any
+                        // profiles the backend may have missed.
+                        const nationalityFilters = effectiveTargeting?.decision_maker_nationality || (ext || targeting)?.decision_maker_nationality;
+                        if (nationalityFilters && nationalityFilters.length > 0 && realLeads.length > 0) {
+                            // Fire async — annotate after leads are shown (backend already filtered)
+                            (async () => {
+                                try {
+                                    const leadsForInference = realLeads.map(l => ({ id: l.id, name: l.name }));
+                                    const inferResult = await linkedInSearch.inferNationality(leadsForInference);
+                                    if (inferResult?.success && Array.isArray(inferResult.results)) {
+                                        const natMap: Record<string, { nationality: string; confidence: number }> = {};
+                                        for (const r of inferResult.results) {
+                                            if (r.id) natMap[r.id] = { nationality: r.nationality || '', confidence: r.confidence || 0 };
+                                        }
+                                        const annotated = realLeads.map(l => ({
+                                            ...l,
+                                            inferred_nationality: natMap[l.id]?.nationality || undefined,
+                                            nationality_confidence: natMap[l.id]?.confidence || undefined,
+                                        }));
+                                        const normalise = (s: string) => s.toLowerCase().trim();
+                                        const targetNats = nationalityFilters.map(normalise);
+                                        const matching = annotated.filter(l =>
+                                            // Keep if: (a) inferred nationality matches, OR
+                                            //           (b) nationality is unknown/ambiguous (trust backend filter)
+                                            !l.inferred_nationality ||
+                                            (l.inferred_nationality && targetNats.some(t =>
+                                                normalise(l.inferred_nationality!).includes(t) || t.includes(normalise(l.inferred_nationality!))
+                                            ))
+                                        );
+                                        const nonMatching = annotated.filter(l => !matching.find(m => m.id === l.id));
+                                        // Update leads with nationality annotations and remove confirmed non-matches
+                                        setLeads(matching);
+                                        if (nonMatching.length > 0) {
+                                            setFilteredLeads(prev => [...nonMatching, ...prev]);
+                                        }
+                                        console.log('[Nationality] Annotation complete', {
+                                            total: realLeads.length,
+                                            matching: matching.length,
+                                            nonMatching: nonMatching.length,
+                                            targets: nationalityFilters,
+                                        });
+                                    }
+                                } catch (inferErr) {
+                                    console.warn('[Nationality] Annotation failed', inferErr);
+                                }
+                            })();
+                        }
+                        // ── End nationality annotation ─────────────────────────────────────
                     }
                     // Capture below-threshold leads returned from ICP filtering
                     if (Array.isArray(d.filtered_leads) && d.filtered_leads.length > 0) {
-                        const fl = d.filtered_leads.map((item: any, idx: number) => ({
+                        const fl = d.filtered_leads.map((item: any, idx: number) => {
+                            const profileUrl = resolveProfileUrl(item);
+                            return {
                             id: item.id || item.provider_id || `fl-${idx}`,
-                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (item.profile_url ? 'LinkedIn User' : 'Contact'),
+                            name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
                             first_name: item.first_name || '',
                             last_name: item.last_name || '',
                             headline: item.headline || '',
                             location: item.location || '',
                             current_company: item.current_company || '',
-                            profile_url: item.profile_url || '',
+                            profile_url: profileUrl,
                             profile_picture: item.profile_picture || '',
                             industry: item.industry || '',
                             network_distance: item.network_distance || '',
@@ -2045,7 +2433,7 @@ export default function AdvancedSearchAIPage() {
                             match_level: item.match_level || undefined,
                             icp_reasoning: item.icp_reasoning || undefined,
                             enriched_profile: item.enriched_profile || undefined,
-                        }));
+                        };});
                         setFilteredLeads(fl);
                         // Auto-expand when all results were filtered (no qualified leads found)
                         setShowFilteredLeads(realLeads.length === 0);
@@ -2294,23 +2682,50 @@ export default function AdvancedSearchAIPage() {
             company_age: tgCompanyAge.length > 0 ? tgCompanyAge : undefined,
             decision_maker_education: tgEducation.length > 0 ? tgEducation : undefined,
             decision_maker_skills: tgSkills.length > 0 ? tgSkills : undefined,
+            // Only set posted_recently when user explicitly toggled it ON
+            posted_recently: tgPostedRecently ? true : undefined,
         } as LeadTargeting;
 
         // Update targeting state
         setTargeting(updatedTargeting);
 
-        // Build a message for the AI to interpret these filters
+        // Persist targeting_filters to localStorage (reuse for next few days)
+        try {
+            const filtersToSave = {
+                nationality: tgNationality,
+                experience_level: tgExperienceLevel,
+                company_size: tgCompanySize,
+                company_age: tgCompanyAge,
+                education: tgEducation,
+                skills: tgSkills,
+                // posted_recently intentionally excluded — must be set explicitly each session
+                saved_at: new Date().toISOString(),
+            };
+            localStorage.setItem('lad_targeting_filters', JSON.stringify(filtersToSave));
+        } catch { }
+
+        // Build a message for the AI — nationality is intentionally kept out of the text
+        // so the AI/Gemini doesn't misinterpret a nationality like "India" as a search location.
+        // Nationality is applied purely as a post-search LLM filter (infer from names).
         const filterParts: string[] = [];
-        if (tgNationality.length > 0) filterParts.push(`Nationality: ${tgNationality.join(', ')}`);
+        // Nationality deliberately excluded from text — handled as backend post-filter only
         if (tgExperienceLevel.length > 0) filterParts.push(`Experience Level: ${tgExperienceLevel.join(', ')}`);
         if (tgCompanySize.length > 0) filterParts.push(`Company Size: ${tgCompanySize.join(', ')}`);
         if (tgCompanyAge.length > 0) filterParts.push(`Company Age: ${tgCompanyAge.join(', ')}`);
         if (tgEducation.length > 0) filterParts.push(`Education: ${tgEducation.join(', ')}`);
         if (tgSkills.length > 0) filterParts.push(`Skills: ${tgSkills.join(', ')}`);
+        if (tgPostedRecently) filterParts.push(`Activity: Posted on LinkedIn in the last 3 months`);
+
+        // Show nationality in the display label but keep it separate from the search query
+        const nationalityLabel = tgNationality.length > 0
+            ? `Nationality filter applied: ${tgNationality.join(', ')} (results will be filtered by inferred nationality)`
+            : '';
 
         const refinementMessage = filterParts.length > 0
-            ? `Refine my targeting with these additional criteria:\n${filterParts.join('\n')}`
-            : 'Confirm my current targeting criteria';
+            ? `Re-search with my updated targeting filters${nationalityLabel ? ` [${nationalityLabel}]` : ''}:\n${filterParts.join('\n')}`
+            : nationalityLabel
+                ? `Re-search — ${nationalityLabel}`
+                : 'Confirm my current targeting criteria';
 
         // Clear previous results so the UI shows fresh leads after the new search
         if (filterParts.length > 0) {
@@ -2328,7 +2743,7 @@ export default function AdvancedSearchAIPage() {
 
         // Send to AI for refinement with explicit targeting override so stale state isn't used
         doSend(refinementMessage, { targetingOverride: updatedTargeting });
-    }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, doSend]);
+    }, [targeting, tgNationality, tgExperienceLevel, tgCompanySize, tgCompanyAge, tgEducation, tgSkills, tgPostedRecently, doSend]);
 
     const onKey = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); messages.length === 0 ? onLandingSubmit() : onChatSend(); }
@@ -2353,6 +2768,9 @@ export default function AdvancedSearchAIPage() {
         setLastSearchQuery('');
         setLastIcpDescription('');
         setLastTargeting(null);
+        setLastSearchType('linkedin');
+        setSeenProspectIds([]);
+        setLastProspectQuery('');
         setCpStep(-1);
         setTgStep(-1);
         setTgNationality([]);
@@ -2361,11 +2779,65 @@ export default function AdvancedSearchAIPage() {
         setTgCompanyAge([]);
         setTgEducation([]);
         setTgSkills([]);
+        setTgPostedRecently(false);
         setTargetingFiltersActive(false);
     };
 
     /* ── Load more leads (append to existing list) ── */
     const loadMoreLeads = useCallback(async () => {
+        // ── Generic prospect search: "Get More" calls prospect-search with seenIds ──
+        if (lastSearchType === 'generic_prospect') {
+            if (loadingMore || !lastProspectQuery) return;
+            setLoadingMore(true);
+            try {
+                setIsSearching(true);
+                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query:      lastProspectQuery,
+                        icpProfile: businessProfile,
+                        sessionId:  `gps-more-${Date.now()}`,
+                        seenIds:    seenProspectIds,
+                        batchSize:  leadCount,
+                    }),
+                });
+                const d = await resp.json();
+                setIsSearching(false);
+                if (d.success && Array.isArray(d.results) && d.results.length > 0) {
+                    const existingCount = leads.length;
+                    const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                        id:               item.id || `gps-more-${existingCount + idx}`,
+                        name:             item.name || 'Unknown',
+                        first_name:       item.first_name || '',
+                        last_name:        item.last_name  || '',
+                        headline:         item.headline || '',
+                        location:         item.location || '',
+                        current_company:  item.current_company || '',
+                        profile_url:      item.profile_url || '',
+                        profile_picture:  item.profile_picture || '',
+                        industry:         item.industry || '',
+                        network_distance: '',
+                        locked:           (existingCount + idx) >= 5,
+                        phone:            item.phone || '',
+                        email:            item.email || '',
+                        icp_score:        item.icp_score != null ? item.icp_score : undefined,
+                        match_level:      item.match_level || undefined,
+                        icp_reasoning:    item.icp_reasoning || undefined,
+                        enriched_profile: item.enriched_profile || undefined,
+                    }));
+                    setLeads(prev => [...prev, ...moreLeads]);
+                    setSeenProspectIds(prev => [...prev, ...moreLeads.map(l => l.profile_url || l.id)]);
+                    if (!d.hasMore) setNoMoreLeads(true);
+                } else {
+                    setNoMoreLeads(true);
+                }
+            } catch (e) { console.error('[LoadMore:GenericProspect] error', e); setIsSearching(false); }
+            setLoadingMore(false);
+            return;
+        }
+
+        // ── Standard LinkedIn search "Get More" ───────────────────────────────────
         if (loadingMore || !lastSearchQuery) return;
 
         setLoadingMore(true);
@@ -2390,13 +2862,15 @@ export default function AdvancedSearchAIPage() {
                     targeting.decision_maker_experience_level?.length ||
                     targeting.decision_maker_skills?.length ||
                     targeting.decision_maker_education?.length ||
-                    targeting.company_size?.length
+                    targeting.company_size?.length ||
+                    targeting.posted_recently
                 ) ? {
                     nationality: targeting.decision_maker_nationality,
                     experience_level: targeting.decision_maker_experience_level,
                     skills: targeting.decision_maker_skills,
                     education: targeting.decision_maker_education,
                     company_size: targeting.company_size,
+                    posted_recently: targeting.posted_recently === true ? true : undefined,
                 } : undefined,
                 icp_description: icpDesc,
                 search_enrichment: buildSearchEnrichment(),
@@ -2420,24 +2894,26 @@ export default function AdvancedSearchAIPage() {
 
             if (d && Array.isArray(d.results) && d.results.length > 0) {
                 const existingCount = leads.length;
-                const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
+                const moreLeads: LeadProfile[] = d.results.map((item: any, idx: number) => {
+                    const profileUrl = resolveProfileUrl(item);
+                    return {
                     id: item.id || item.provider_id || `lead-${existingCount + idx}`,
-                    name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'LinkedIn User',
+                    name: item.name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || (profileUrl ? 'LinkedIn User' : 'Contact'),
                     first_name: item.first_name || '',
                     last_name: item.last_name || '',
                     headline: item.headline || '',
                     location: item.location || '',
                     current_company: item.current_company || '',
-                    profile_url: item.profile_url || '',
+                    profile_url: profileUrl,
                     profile_picture: item.profile_picture || '',
                     industry: item.industry || '',
                     network_distance: item.network_distance || '',
                     locked: (existingCount + idx) >= 5,
-                    icp_score: item.icp_score || undefined,
+                    icp_score: item.icp_score != null ? item.icp_score : undefined,
                     match_level: item.match_level || undefined,
                     icp_reasoning: item.icp_reasoning || undefined,
                     enriched_profile: item.enriched_profile || undefined,
-                }));
+                };});
                 setLeads(prev => [...prev, ...moreLeads]);
                 setSearchCursor(d.cursor || null);
                 if (d.total) setTotalResults(d.total);
@@ -2623,8 +3099,8 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                     </div>
                                     <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowAttachMenu(false); }}>
-                                        <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                        <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                         </div>
                                         <div>
                                             <div className="adv-attach-label">Select contacts</div>
@@ -2731,16 +3207,16 @@ export default function AdvancedSearchAIPage() {
                             display: 'flex', alignItems: 'center', gap: '7px',
                             padding: '8px 14px', borderRadius: '20px',
                             border: '1.5px solid',
-                            borderColor: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb',
-                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#ede9fe,#f5f3ff)' : '#fff',
-                            color: Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280',
+                            borderColor: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb',
+                            background: Object.values(businessProfile).some(v => v) ? 'linear-gradient(135deg,#e8ecfa,#f0f3ff)' : '#fff',
+                            color: Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280',
                             fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
                             boxShadow: '0 2px 8px rgba(0,0,0,.06)', transition: 'all .15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#0b1957'; e.currentTarget.style.color = '#0b1957'; }}
                         onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#e5e7eb';
-                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#7c3aed' : '#6b7280';
+                            e.currentTarget.style.borderColor = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#e5e7eb';
+                            e.currentTarget.style.color = Object.values(businessProfile).some(v => v) ? '#0b1957' : '#6b7280';
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2849,6 +3325,12 @@ export default function AdvancedSearchAIPage() {
                                 inboundLeads={inboundLeads}
                                 inboundLeadIds={inboundLeadIds}
                                 directContactLeadIds={directContactLeadIds}
+                                enableDailyWebPresence={cpEnableDailyWebPresence}
+                                setEnableDailyWebPresence={setCpEnableDailyWebPresence}
+                                enableDailyPosts={cpEnableDailyPosts}
+                                setEnableDailyPosts={setCpEnableDailyPosts}
+                                enableAiPersonalization={cpEnableAiPersonalization}
+                                setEnableAiPersonalization={setCpEnableAiPersonalization}
                             />
                         </div>
                         )}
@@ -2871,6 +3353,8 @@ export default function AdvancedSearchAIPage() {
                                 setEducation={setTgEducation}
                                 skills={tgSkills}
                                 setSkills={setTgSkills}
+                                postedRecently={tgPostedRecently}
+                                setPostedRecently={setTgPostedRecently}
                                 currentTargeting={targeting}
                                 onConfirm={handleTargetingConfirm}
                                 loading={busy}
@@ -2887,7 +3371,7 @@ export default function AdvancedSearchAIPage() {
                             <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
                                 onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
                                 onKeyDown={onKey}
-                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask your AI Lead Finder...'}
+                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
                                 className="adv-chat-ta" />
                             <div className="adv-chat-input-foot">
                                 <div style={{position:'relative'}}>
@@ -2906,8 +3390,8 @@ export default function AdvancedSearchAIPage() {
                                                 </div>
                                             </div>
                                             <div className="adv-attach-item" onClick={() => { openContactPicker(); setShowChatAttachMenu(false); }}>
-                                                <div className="adv-attach-icon" style={{background:'#ede9fe'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                                <div className="adv-attach-icon" style={{background:'#dce3f5'}}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                                 </div>
                                                 <div>
                                                     <div className="adv-attach-label">Select contacts</div>
@@ -2979,6 +3463,42 @@ export default function AdvancedSearchAIPage() {
                     <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.jpg,.jpeg,.png,.pdf" className="hidden" style={{ display: 'none' }}
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleInboundFile(f); e.target.value = ''; }} />
                 </div>
+
+                {/* MOBILE NAVIGATION SIDEBAR (Right side, top-anchored, mobile only) */}
+                {(messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
+                    <div className="adv-mobile-nav">
+                        {showPanel && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel(false)}
+                                title="Chat"
+                            >
+                                <MessageSquare size={20} />
+                                <span className="adv-nav-label">Chat</span>
+                            </button>
+                        )}
+                        {showPanel !== 'leads' && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('leads')}
+                                title="Leads"
+                            >
+                                <Users size={20} />
+                                <span className="adv-nav-label">Leads</span>
+                            </button>
+                        )}
+                        {showPanel !== 'workflow' && (
+                            <button 
+                                className="adv-nav-btn"
+                                onClick={() => setShowPanel('workflow')}
+                                title="Workflow"
+                            >
+                                <Zap size={20} />
+                                <span className="adv-nav-label">Flow</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* RIGHT: PANELS */}
                 {(showPanel === 'leads' || showPanel === 'workflow') && (leads.length > 0 || inboundLeads.length > 0 || filteredLeads.length > 0 || showPanel === 'workflow') && (
@@ -3179,10 +3699,10 @@ export default function AdvancedSearchAIPage() {
                                                     <span style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                         padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                        background: lead.match_level === 'strong' ? '#dcfce7' : lead.match_level === 'moderate' ? '#fef9c3' : '#fee2e2',
-                                                        color: lead.match_level === 'strong' ? '#166534' : lead.match_level === 'moderate' ? '#854d0e' : '#991b1b',
+                                                        background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                        color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                     }}>
-                                                        {lead.match_level === 'strong' ? '🟢' : lead.match_level === 'moderate' ? '🟡' : '🔴'} {lead.icp_score}%
+                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
                                                     </span>
                                                 )}
                                             </div>
@@ -3190,6 +3710,20 @@ export default function AdvancedSearchAIPage() {
                                                 {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
                                             </div>
                                             {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
+                                            {lead.inferred_nationality && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                        padding: '1px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+                                                        background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                                                    }}>
+                                                        🌍 {lead.inferred_nationality}
+                                                        {lead.nationality_confidence && lead.nationality_confidence >= 70 && (
+                                                            <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '2px' }}>·{lead.nationality_confidence}%</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
                                             {!targetingFiltersActive && lead.icp_reasoning && (
                                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
                                                     {lead.icp_reasoning}
@@ -3309,17 +3843,22 @@ export default function AdvancedSearchAIPage() {
                                                     {/* Info */}
                                                     <div className="adv-lead-info">
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <a href={lead.profile_url || '#'} target="_blank" rel="noopener noreferrer"
-                                                               className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }}>
-                                                                {lead.name}
-                                                            </a>
+                                                            {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                                <a href={lead.profile_url} target="_blank" rel="noopener noreferrer"
+                                                                   className="adv-lead-name" style={{ textDecoration: 'none', color: '#374151' }} onClick={e => e.stopPropagation()}>
+                                                                    {lead.name}
+                                                                </a>
+                                                            ) : (
+                                                                <span className="adv-lead-name" style={{ color: '#374151' }}>{lead.name}</span>
+                                                            )}
                                                             {lead.icp_score !== undefined && (
                                                                 <span style={{
                                                                     display: 'inline-flex', alignItems: 'center', gap: '3px',
                                                                     padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                                                                    background: '#fee2e2', color: '#991b1b',
+                                                                    background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                                    color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                                 }}>
-                                                                    🔴 {lead.icp_score}%
+                                                                    {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
                                                                 </span>
                                                             )}
                                                         </div>
@@ -3471,14 +4010,14 @@ export default function AdvancedSearchAIPage() {
                             <div style={{
                                 padding: '16px 20px 12px',
                                 borderBottom: '1.5px solid #e5e7eb',
-                                background: 'linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)',
+                                background: 'linear-gradient(135deg,#f0f3ff 0%,#e8ecfa 100%)',
                                 flexShrink: 0,
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div style={{
                                             width: 36, height: 36, borderRadius: 10,
-                                            background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                            background: 'linear-gradient(135deg,#0b1957,#172560)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
@@ -3487,7 +4026,7 @@ export default function AdvancedSearchAIPage() {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>ICP Discovery</div>
-                                            <div style={{ fontSize: 11.5, color: '#7c3aed', fontWeight: 500 }}>
+                                            <div style={{ fontSize: 11.5, color: '#0b1957', fontWeight: 500 }}>
                                                 {pgIsComplete ? '✅ ICP profile complete!' : 'Answer questions to power smarter lead discovery'}
                                             </div>
                                         </div>
@@ -3530,12 +4069,12 @@ export default function AdvancedSearchAIPage() {
                                         <div style={{ marginTop: 10 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                                                 <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Profile completeness</span>
-                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#7c3aed', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
+                                                <span style={{ fontSize: 11, color: pct >= 70 ? '#10b981' : '#0b1957', fontWeight: 700 }}>{pct}% ({filled}/{total} fields)</span>
                                             </div>
-                                            <div style={{ height: 5, borderRadius: 99, background: '#ede9fe', overflow: 'hidden' }}>
+                                            <div style={{ height: 5, borderRadius: 99, background: '#dce3f5', overflow: 'hidden' }}>
                                                 <div style={{
                                                     height: '100%', borderRadius: 99,
-                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#0b1957,#172560)',
                                                     width: `${pct}%`, transition: 'width .5s ease',
                                                 }} />
                                             </div>
@@ -3548,10 +4087,8 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
                                 {pgChatHistory.length === 0 && !pgBusy && (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
-                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(124,58,237,.3)' }}>
-                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                                            </svg>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#0b1957,#172560)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(11,25,87,.3)' }}>
+                                            <AgentVisualizer state="idle" size={36} />
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
                                             <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Define Your Ideal Customer Profile</div>
@@ -3563,9 +4100,9 @@ export default function AdvancedSearchAIPage() {
                                             onClick={pgStartConversation}
                                             style={{
                                                 padding: '12px 28px', borderRadius: 12, border: 'none',
-                                                background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                background: 'linear-gradient(135deg,#0b1957,#172560)',
                                                 color: '#fff', fontSize: 14, fontWeight: 700,
-                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,.4)',
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(11,25,87,.4)',
                                                 display: 'flex', alignItems: 'center', gap: 8,
                                             }}
                                         >
@@ -3591,12 +4128,9 @@ export default function AdvancedSearchAIPage() {
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                                <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 14, boxShadow: '0 2px 8px rgba(124,58,237,.3)',
-                                                }}>🧠</div>
+                                                <div className="adv-ai-avatar adv-ai-avatar-viz" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                                                    <AgentVisualizer state="idle" size={32} />
+                                                </div>
                                                 <div style={{ flex: 1 }}>
                                                     <div style={{
                                                         background: '#fff', borderRadius: '4px 18px 18px 18px',
@@ -3615,10 +4149,12 @@ export default function AdvancedSearchAIPage() {
                                 {/* Typing indicator */}
                                 {pgBusy && (
                                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🧠</div>
+                                        <div className="adv-ai-avatar adv-ai-avatar-viz" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                                            <AgentVisualizer state="thinking" size={32} />
+                                        </div>
                                         <div style={{ background: '#fff', borderRadius: '4px 18px 18px 18px', padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.06)', border: '1px solid #f3f4f6', display: 'flex', gap: 4, alignItems: 'center' }}>
                                             {[0,1,2].map(i => (
-                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
+                                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#0b1957', animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />
                                             ))}
                                         </div>
                                     </div>
@@ -3631,10 +4167,10 @@ export default function AdvancedSearchAIPage() {
 
                                     return (
                                         <div style={{
-                                            background: '#fff', border: '1.5px solid #ede9fe', borderRadius: 14,
-                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(124,58,237,.1)',
+                                            background: '#fff', border: '1.5px solid #dce3f5', borderRadius: 14,
+                                            padding: '14px 16px', boxShadow: '0 2px 12px rgba(11,25,87,.08)',
                                         }}>
-                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#0b1957', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <Sparkles size={12} /> {card.label}
                                             </div>
 
@@ -3654,7 +4190,7 @@ export default function AdvancedSearchAIPage() {
                                                             resize: 'vertical', outline: 'none', fontFamily: 'inherit',
                                                             lineHeight: 1.5, background: '#fafafa', boxSizing: 'border-box',
                                                         }}
-                                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                        onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                                         onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && card.type !== 'textarea') { e.preventDefault(); pgSubmitCard(); } }}
                                                     />
@@ -3668,7 +4204,7 @@ export default function AdvancedSearchAIPage() {
                                                                 position: 'absolute', bottom: 8, right: 8,
                                                                 display: 'flex', alignItems: 'center', gap: 4,
                                                                 padding: '4px 10px', borderRadius: 6, border: 'none',
-                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#0b1957,#172560)',
                                                                 color: pgSuggesting ? '#9ca3af' : '#fff',
                                                                 fontSize: 11.5, fontWeight: 600, cursor: pgSuggesting ? 'default' : 'pointer',
                                                                 transition: 'all .15s',
@@ -3704,7 +4240,7 @@ export default function AdvancedSearchAIPage() {
                                                                 style={{
                                                                     padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
                                                                     border: selected ? 'none' : '1.5px solid #e5e7eb',
-                                                                    background: selected ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#f9fafb',
+                                                                    background: selected ? 'linear-gradient(135deg,#0b1957,#172560)' : '#f9fafb',
                                                                     color: selected ? '#fff' : '#374151',
                                                                     cursor: 'pointer', transition: 'all .12s',
                                                                 }}
@@ -3723,13 +4259,13 @@ export default function AdvancedSearchAIPage() {
                                                             onClick={() => setPgCardValues({ [card.field]: opt })}
                                                             style={{
                                                                 textAlign: 'left', padding: '9px 14px', borderRadius: 10, fontSize: 13,
-                                                                border: fieldVal === opt ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                                                                background: fieldVal === opt ? '#faf5ff' : '#fff',
+                                                                border: fieldVal === opt ? '2px solid #0b1957' : '1.5px solid #e5e7eb',
+                                                                background: fieldVal === opt ? '#f0f3ff' : '#fff',
                                                                 color: '#374151', cursor: 'pointer', fontWeight: 500,
                                                                 display: 'flex', alignItems: 'center', gap: 8,
                                                             }}
                                                         >
-                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#7c3aed' : '#d1d5db'}`, background: fieldVal === opt ? '#7c3aed' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${fieldVal === opt ? '#0b1957' : '#d1d5db'}`, background: fieldVal === opt ? '#0b1957' : 'transparent', transition: 'all .12s', flexShrink: 0 }} />
                                                             {opt}
                                                         </button>
                                                     ))}
@@ -3743,15 +4279,15 @@ export default function AdvancedSearchAIPage() {
                                                         {(Array.isArray(fieldVal) ? fieldVal : []).map((tag: string, ti: number) => (
                                                             <div key={ti} style={{
                                                                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                background: '#ede9fe', borderRadius: 16, padding: '4px 10px',
-                                                                fontSize: 12.5, color: '#5b21b6', fontWeight: 600,
+                                                                background: '#dce3f5', borderRadius: 16, padding: '4px 10px',
+                                                                fontSize: 12.5, color: '#0b1957', fontWeight: 600,
                                                             }}>
                                                                 {tag}
                                                                 <button onClick={() => {
                                                                     const updated = [...fieldVal];
                                                                     updated.splice(ti, 1);
                                                                     setPgCardValues({ [card.field]: updated });
-                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#7c3aed', display: 'flex', lineHeight: 1 }}>
+                                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0b1957', display: 'flex', lineHeight: 1 }}>
                                                                     <X size={11} />
                                                                 </button>
                                                             </div>
@@ -3775,7 +4311,7 @@ export default function AdvancedSearchAIPage() {
                                                                 flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 8,
                                                                 padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
                                                             }}
-                                                            onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                                            onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                                             onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                                         />
                                                     </div>
@@ -3802,12 +4338,12 @@ export default function AdvancedSearchAIPage() {
                                             {/* Submit card button */}
                                             <button
                                                 onClick={pgSubmitCard}
-                                                disabled={!fieldVal && card.type !== 'hours'}
+                                                disabled={!fieldVal && !pgTagInput.trim() && card.type !== 'hours'}
                                                 style={{
                                                     marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
-                                                    background: fieldVal || card.type === 'hours' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
-                                                    color: fieldVal || card.type === 'hours' ? '#fff' : '#9ca3af',
-                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || card.type === 'hours' ? 'pointer' : 'default',
+                                                    background: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
+                                                    color: fieldVal || pgTagInput.trim() || card.type === 'hours' ? '#fff' : '#9ca3af',
+                                                    fontSize: 13, fontWeight: 700, cursor: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'pointer' : 'default',
                                                     transition: 'all .15s',
                                                 }}
                                             >
@@ -3838,7 +4374,7 @@ export default function AdvancedSearchAIPage() {
                                             background: pgBusy ? '#f9fafb' : '#fff', color: '#374151',
                                             transition: 'border .15s',
                                         }}
-                                        onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = '#0b1957'; }}
                                         onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
                                     />
                                     <button
@@ -3846,7 +4382,7 @@ export default function AdvancedSearchAIPage() {
                                         disabled={!pgInput.trim() || pgBusy}
                                         style={{
                                             width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
-                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#e5e7eb',
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
                                         }}
@@ -3962,6 +4498,8 @@ export default function AdvancedSearchAIPage() {
                 onClose={handleCloseSummaryDialog}
                 employee={selectedEmployee}
                 summary={profileSummary}
+                webPresence={profileWebPresence}
+                recentPosts={profileRecentPosts}
                 loading={summaryLoading}
                 error={summaryError}
             />
@@ -4311,8 +4849,8 @@ export default function AdvancedSearchAIPage() {
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                                         </button>
                                     )}
-                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#dce3f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
@@ -4337,7 +4875,7 @@ export default function AdvancedSearchAIPage() {
                                         key={src.key}
                                         onClick={() => selectCpSource(src.key)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', transition: 'background 0.1s' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf5ff')}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f0f3ff')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'white')}
                                     >
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: src.color, flexShrink: 0 }} />
@@ -4371,9 +4909,9 @@ export default function AdvancedSearchAIPage() {
                                     onClick={toggleCpSelectAll}
                                     style={{ padding: '8px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#fafafa' }}
                                 >
-                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: cpSelected.size === cpContacts.length ? 'none' : '1.5px solid #d1d5db', background: cpSelected.size === cpContacts.length ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {cpSelected.size === cpContacts.length && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
-                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#7c3aed', borderRadius: '1px' }}/>}
+                                        {cpSelected.size > 0 && cpSelected.size < cpContacts.length && <div style={{ width: '8px', height: '2px', background: '#0b1957', borderRadius: '1px' }}/>}
                                     </div>
                                     <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
                                         {cpSelected.size === cpContacts.length ? 'Deselect all' : `Select all ${cpContacts.length} shown`}
@@ -4400,8 +4938,8 @@ export default function AdvancedSearchAIPage() {
                                     const sub = [c.company || c.company_name, c.email || c.phone].filter(Boolean).join(' · ');
                                     const initl = name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
                                     return (
-                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#faf5ff' : 'white', transition: 'background 0.1s' }}>
-                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#7c3aed' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div key={c.id} onClick={() => toggleCpContact(c.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: checked ? '#f0f3ff' : 'white', transition: 'background 0.1s' }}>
+                                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0, border: checked ? 'none' : '1.5px solid #d1d5db', background: checked ? '#0b1957' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
                                             </div>
                                             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarColor(name), flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: '#fff' }}>{initl}</div>
@@ -4423,7 +4961,7 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                                 <span style={{ fontSize: '13px', color: '#6b7280' }}>
                                     {cpSelected.size > 0
-                                        ? <><strong style={{ color: '#7c3aed' }}>{cpSelected.size}</strong> selected</>
+                                        ? <><strong style={{ color: '#0b1957' }}>{cpSelected.size}</strong> selected</>
                                         : 'None selected'
                                     }
                                 </span>
@@ -4434,7 +4972,7 @@ export default function AdvancedSearchAIPage() {
                                     <button
                                         onClick={confirmContactPicker}
                                         disabled={cpSelected.size === 0}
-                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#7c3aed' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                        style={{ padding: '7px 16px', border: 'none', borderRadius: '8px', background: cpSelected.size > 0 ? '#0b1957' : '#e5e7eb', color: cpSelected.size > 0 ? '#fff' : '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: cpSelected.size > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                                         Start Campaign{cpSelected.size > 0 ? ` (${cpSelected.size})` : ''}
@@ -4476,14 +5014,15 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
     }, [msg.loading]);
     if (msg.loading) return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz">
+                <AgentVisualizer state="thinking" size={36} />
+            </div>
             <div>
-                <div className="adv-ai-name">AI Lead Finder</div>
+                <div className="adv-ai-name">LAD in Action <span className="adv-ai-name-dot" /></div>
                 <div className="adv-thinking-wrap">
                     <span className={`adv-thinking-word${thinkVisible ? ' adv-tw-in' : ' adv-tw-out'}`}>
                         {THINKING_WORDS[thinkIdx]}...
                     </span>
-                    <span className="adv-thinking-dots"><span /><span /><span /></span>
                 </div>
             </div>
         </div>
@@ -4495,7 +5034,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
     );
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp">
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz">
+                <AgentVisualizer state="idle" size={36} />
+            </div>
             <div className="adv-ai-body">
                 {msg.webSearchResult && (
                     <div className="adv-web-searched">
@@ -4504,7 +5045,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     </div>
                 )}
                 <div className="adv-ai-name">
-                    AI Lead Finder
+                    LAD in Action
                     <span className="adv-ai-name-dot" />
                 </div>
 
@@ -4517,7 +5058,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             return tokens.map((t, j) => {
                                 if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2,-2)}</strong>;
                                 if (t.startsWith('*')  && t.endsWith('*'))  return <em key={j} className="adv-ai-em">{t.slice(1,-1)}</em>;
-                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#4f46e5'}}>{t.slice(1,-1)}</code>;
+                                if (t.startsWith('`')  && t.endsWith('`'))  return <code key={j} style={{background:'#f3f4f6',padding:'1px 5px',borderRadius:'4px',fontSize:'13px',fontFamily:'monospace',color:'#0b1957'}}>{t.slice(1,-1)}</code>;
                                 return t;
                             });
                         };
@@ -4975,6 +5516,9 @@ function CheckpointFormInline({
     emailProvider, setEmailProvider,
     waBody, setWaBody, waFromNumber, setWaFromNumber, waGenLoading, setWaGenLoading,
     pendingContact, inboundMode, inboundLeads, inboundLeadIds, directContactLeadIds,
+    enableDailyWebPresence, setEnableDailyWebPresence,
+    enableDailyPosts, setEnableDailyPosts,
+    enableAiPersonalization, setEnableAiPersonalization,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -5013,6 +5557,9 @@ function CheckpointFormInline({
     inboundLeads: ParsedInboundLead[];
     inboundLeadIds: string[];       // Real UUIDs from leads table (CSV/image uploads)
     directContactLeadIds: string[]; // Real UUIDs for chat-entered direct contacts
+    enableDailyWebPresence: boolean; setEnableDailyWebPresence: (v: boolean) => void;
+    enableDailyPosts: boolean; setEnableDailyPosts: (v: boolean) => void;
+    enableAiPersonalization: boolean; setEnableAiPersonalization: (v: boolean) => void;
 }) {
     const totalSteps = CP_QUESTIONS.length;
 
@@ -5142,6 +5689,13 @@ function CheckpointFormInline({
     // Multi-select: 'profile_view' | 'connect' | 'message'
     const [liChannelActions, setLiChannelActions] = useState<string[]>([]);
     const [liFollowGenLoading, setLiFollowGenLoading] = useState(false);
+
+    // AI Generate inline context panel state (one per message type)
+    const [showAiConnPanel, setShowAiConnPanel]     = useState(false);
+    const [showAiFollowPanel, setShowAiFollowPanel] = useState(false);
+    const [aiMsgValueProp, setAiMsgValueProp]       = useState('');
+    const [aiMsgTone, setAiMsgTone]                 = useState('professional');  // 'professional' | 'casual' | 'direct'
+    const [aiMsgGoal, setAiMsgGoal]                 = useState('get_meeting');   // 'get_meeting' | 'share_resource' | 'explore_collab' | 'general'
 
     // LinkedIn message templates (communication_templates table, channel='linkedin')
     const [liTemplates, setLiTemplates] = useState<any[]>([]);
@@ -5470,10 +6024,17 @@ function CheckpointFormInline({
         setName(`${titlePart}${locPart}${indPart} - ${datePart}`);
     };
 
-    // AI-generate a LinkedIn message for the step-3 LinkedIn channel
+    // AI-generate a LinkedIn message for the given type
     const generateLinkedInFollowup = async (type: 'connect' | 'followup') => {
+        // Close whichever inline panel was open
+        if (type === 'connect') setShowAiConnPanel(false);
+        else setShowAiFollowPanel(false);
         setLiFollowGenLoading(true);
         try {
+            const sampleLead = leads && leads.length > 0 ? (leads[0] as any) : null;
+            const sampleLinkedInUrl = sampleLead
+                ? sampleLead.linkedin_url || sampleLead.employee_linkedin_url || null
+                : null;
             const resp = await fetch('/api/campaigns/generate-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -5482,8 +6043,10 @@ function CheckpointFormInline({
                     type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
                     targeting,
                     context: {
-                        connection_message: connMsg || '',
-                        follow_type: type === 'connect' ? 'connection_request' : 'linkedin_followup',
+                        value_prop:          aiMsgValueProp || '',
+                        tone:                aiMsgTone,
+                        goal:                aiMsgGoal,
+                        sample_linkedin_url: sampleLinkedInUrl,
                     },
                 }),
             });
@@ -5619,6 +6182,12 @@ function CheckpointFormInline({
                 trigger_condition: triggerCondition || null,
                 campaign_days: campaignDays,
                 campaign_name: name || 'AI Growth Campaign',
+                enable_daily_web_presence: enableDailyWebPresence,
+                enable_daily_posts: enableDailyPosts,
+                enable_ai_personalization: enableAiPersonalization,
+                ai_value_prop: aiMsgValueProp || '',
+                ai_tone: aiMsgTone || 'professional',
+                ai_goal: aiMsgGoal || 'get_meeting',
             };
 
             // Get original ICP input (first user message in chat)
@@ -5632,6 +6201,19 @@ function CheckpointFormInline({
                 localStorage.setItem('lad_campaign_checkpoints', JSON.stringify(checkpointSelections));
                 localStorage.setItem('lad_campaign_icp_input', initialIcpInput);
                 localStorage.setItem('lad_campaign_user_messages', JSON.stringify(userMessages));
+                // Persist targeting_filters (including nationality) for reuse over next few days
+                if (targeting) {
+                    const filtersToSave = {
+                        nationality: targeting.decision_maker_nationality || [],
+                        experience_level: targeting.decision_maker_experience_level || [],
+                        skills: targeting.decision_maker_skills || [],
+                        education: targeting.decision_maker_education || [],
+                        company_size: targeting.company_size || [],
+                        company_age: targeting.company_age || [],
+                        saved_at: new Date().toISOString(),
+                    };
+                    localStorage.setItem('lad_targeting_filters', JSON.stringify(filtersToSave));
+                }
             } catch { }
 
             // Helper to map a LeadProfile to the API shape
@@ -5704,12 +6286,28 @@ function CheckpointFormInline({
                     leads_per_day: safeLeadsPerDay, daily_lead_limit: safeLeadsPerDay, linkedin_daily_limit: LINKEDIN_DAILY_LIMIT, linkedin_weekly_limit: LINKEDIN_WEEKLY_LIMIT, working_days: 'monday-friday', campaign_days: campaignDays,
                     linkedin_actions: actions, connection_message: connMsg || '', followup_message: followMsg || '',
                     next_channels: nextChannels, trigger_condition: triggerCondition || null,
+                    enable_daily_web_presence: enableDailyWebPresence,
+                    enable_daily_posts: enableDailyPosts,
+                    enable_ai_personalization: enableAiPersonalization,
+                    ai_value_prop: aiMsgValueProp || '',
+                    ai_tone: aiMsgTone || 'professional',
+                    ai_goal: aiMsgGoal || 'get_meeting',
                     location: t.locations?.[0] || '', industries: t.industries || [], job_titles: t.job_titles || [],
                     profile_language: t.profile_language || [],
                     icp_threshold: icpMin,
                     icp_input: initialIcpInput,
                     checkpoint_selections: checkpointSelections,
                     search_filters: { keywords: t.keywords?.join(' ') || '', industries: t.industries || [], locations: t.locations || [], job_titles: t.job_titles || [], profile_language: t.profile_language || [] },
+                    targeting_filters: targeting ? {
+                        nationality: targeting.decision_maker_nationality || [],
+                        experience_level: targeting.decision_maker_experience_level || [],
+                        skills: targeting.decision_maker_skills || [],
+                        education: targeting.decision_maker_education || [],
+                        company_size: targeting.company_size || [],
+                        company_age: targeting.company_age || [],
+                        // Only persisted when explicitly set by user
+                        posted_recently: targeting.posted_recently === true ? true : undefined,
+                    } : undefined,
                     lead_feedback: feedbackSummary,
                     search_sessions: searchSessions.slice(0, 10),
                     user_messages: userMessages,
@@ -5803,9 +6401,9 @@ function CheckpointFormInline({
 
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
-                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>AI Lead Finder</div>
+                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>LAD in Action</div>
 
                 {/* Question header */}
                 <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -6463,9 +7061,9 @@ function CheckpointFormInline({
                                                                         style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
                                                                         {showLiConnTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
-                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('connect')}
-                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
-                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    <button disabled={liFollowGenLoading} onClick={() => { setShowAiConnPanel(v => !v); setShowAiFollowPanel(false); }}
+                                                                        style={{ background: showAiConnPanel ? '#eef2ff' : 'none', border: showAiConnPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiConnPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        {liFollowGenLoading ? '⏳ Generating...' : (showAiConnPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -6526,12 +7124,34 @@ function CheckpointFormInline({
                                                             })()}
                                                             <textarea
                                                                 value={connMsg}
-                                                                onChange={e => setConnMsg(e.target.value)}
+                                                                onChange={e => setConnMsg(e.target.value.slice(0, 300))}
                                                                 placeholder={'Hi {{first_name}}, I noticed your work at {{company}} and would love to connect...'}
                                                                 rows={3}
-                                                                style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                                maxLength={300}
+                                                                style={{ width: '100%', border: `1px solid ${connMsg.length > 270 ? (connMsg.length >= 300 ? '#ef4444' : '#f59e0b') : '#bfdbfe'}`, borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                             />
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                            {/* Character counter */}
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
+                                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+                                                                <div style={{ fontSize: '11px', fontWeight: 700, flexShrink: 0, marginLeft: '8px', color: connMsg.length >= 300 ? '#ef4444' : connMsg.length > 270 ? '#f59e0b' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                                                                    {connMsg.length}/300{connMsg.length >= 300 && ' ⚠️ limit reached'}
+                                                                </div>
+                                                            </div>
+                                                            {connMsg.length >= 300 && (
+                                                                <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px', fontWeight: 500 }}>
+                                                                    LinkedIn hard limit is 300 characters. Message will be sent as-is — keep it concise.
+                                                                </div>
+                                                            )}
+
+                                                            {/* ── AI Generate inline panel (connection) ── */}
+                                                            {showAiConnPanel && <AiMsgContextPanel
+                                                                valueProp={aiMsgValueProp} setValueProp={setAiMsgValueProp}
+                                                                tone={aiMsgTone} setTone={setAiMsgTone}
+                                                                goal={aiMsgGoal} setGoal={setAiMsgGoal}
+                                                                targeting={targeting} leadsCount={leads?.length || 0}
+                                                                loading={liFollowGenLoading}
+                                                                onGenerate={() => generateLinkedInFollowup('connect')}
+                                                            />}
                                                         </div>
                                                     )}
 
@@ -6546,9 +7166,9 @@ function CheckpointFormInline({
                                                                         style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 600, color: '#1e40af', cursor: 'pointer', padding: 0 }}>
                                                                         {showLiFollowTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
-                                                                    <button disabled={liFollowGenLoading} onClick={() => generateLinkedInFollowup('followup')}
-                                                                        style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#1e40af', cursor: liFollowGenLoading ? 'default' : 'pointer', padding: 0 }}>
-                                                                        {liFollowGenLoading ? '...' : '✨ AI Generate'}
+                                                                    <button disabled={liFollowGenLoading} onClick={() => { setShowAiFollowPanel(v => !v); setShowAiConnPanel(false); }}
+                                                                        style={{ background: showAiFollowPanel ? '#eef2ff' : 'none', border: showAiFollowPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiFollowPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        {liFollowGenLoading ? '⏳ Generating...' : (showAiFollowPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -6614,12 +7234,138 @@ function CheckpointFormInline({
                                                                 rows={3}
                                                                 style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                             />
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'}</div>
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+
+                                                            {/* ── AI Generate inline panel (follow-up) ── */}
+                                                            {showAiFollowPanel && <AiMsgContextPanel
+                                                                valueProp={aiMsgValueProp} setValueProp={setAiMsgValueProp}
+                                                                tone={aiMsgTone} setTone={setAiMsgTone}
+                                                                goal={aiMsgGoal} setGoal={setAiMsgGoal}
+                                                                targeting={targeting} leadsCount={leads?.length || 0}
+                                                                loading={liFollowGenLoading}
+                                                                onGenerate={() => generateLinkedInFollowup('followup')}
+                                                            />}
                                                         </div>
                                                     )}
                                                 </div>
                                             );
                                         })}
+                                    </div>
+
+                                    {/* ── 🤖 AI Daily Personalisation ───────────── */}
+                                    <div style={{ marginTop: '14px', borderTop: '1px solid #bfdbfe', paddingTop: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: enableDailyWebPresence || enableDailyPosts || enableAiPersonalization ? '10px' : '0', cursor: 'pointer' }}
+                                            onClick={() => {
+                                                // If any toggle is on, turn all off; otherwise show the panel
+                                                if (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) {
+                                                    setEnableDailyWebPresence(false);
+                                                    setEnableDailyPosts(false);
+                                                    setEnableAiPersonalization(false);
+                                                } else {
+                                                    setEnableDailyWebPresence(true);
+                                                    setEnableDailyPosts(true);
+                                                    setEnableAiPersonalization(true);
+                                                }
+                                            }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                                                <span style={{ fontSize: '13px' }}>🤖</span>
+                                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#4338ca' }}>AI Daily Personalisation</span>
+                                                <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 400 }}>— unique messages per lead, powered by live data</span>
+                                            </div>
+                                            <div style={{
+                                                width: '36px', height: '20px', borderRadius: '99px', flexShrink: 0,
+                                                background: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '#6366f1' : '#d1d5db',
+                                                position: 'relative', transition: 'background 0.2s',
+                                            }}>
+                                                <div style={{
+                                                    position: 'absolute', top: '2px',
+                                                    left: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '18px' : '2px',
+                                                    width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        {(enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {/* Toggle: Web Presence */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableDailyWebPresence ? '#eef2ff' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyWebPresence ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                }} onClick={() => setEnableDailyWebPresence(!enableDailyWebPresence)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>🌐 Refresh web presence daily</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Re-runs Google search for articles, news & social profiles per lead</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableDailyWebPresence ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableDailyWebPresence ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Toggle: LinkedIn Posts */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableDailyPosts ? '#eef2ff' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyPosts ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                }} onClick={() => setEnableDailyPosts(!enableDailyPosts)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>📝 Fetch live LinkedIn posts</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Pulls the lead's recent LinkedIn posts before each send</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableDailyPosts ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableDailyPosts ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Toggle: AI Generate unique message */}
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '9px 12px', background: enableAiPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                    border: `1px solid ${enableAiPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                    opacity: (!enableDailyWebPresence && !enableDailyPosts) ? 0.5 : 1,
+                                                    pointerEvents: (!enableDailyWebPresence && !enableDailyPosts) ? 'none' : 'auto',
+                                                }} onClick={() => setEnableAiPersonalization(!enableAiPersonalization)}>
+                                                    <div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>✨ AI-generate unique message per lead</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Gemini creates a personalised connect + follow-up using live web & post data{(!enableDailyWebPresence && !enableDailyPosts) ? ' — enable web presence or posts first' : ''}</div>
+                                                    </div>
+                                                    <div style={{
+                                                        width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                        background: enableAiPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                    }}>
+                                                        <div style={{
+                                                            position: 'absolute', top: '2px',
+                                                            left: enableAiPersonalization ? '16px' : '2px',
+                                                            width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {(enableDailyWebPresence || enableDailyPosts) && enableAiPersonalization && (
+                                                    <div style={{ fontSize: '11px', color: '#7c3aed', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '7px', padding: '7px 10px', lineHeight: 1.5 }}>
+                                                        ✅ Each lead will receive a <strong>unique AI-generated message</strong> based on their live web presence & LinkedIn posts. Your static template message is used as a fallback.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -6788,13 +7534,14 @@ const TG_QUESTIONS = [
     { id: 'company_age', question: 'What company age ranges interest you?', type: 'multi-select' },
     { id: 'education', question: 'What educational backgrounds are ideal?', type: 'multi-select' },
     { id: 'skills', question: 'Any specific skills you\'re looking for? (e.g., "AI/ML, Cloud Architecture")', type: 'text' },
+    { id: 'posted_recently', question: 'Filter by LinkedIn activity?', type: 'toggle' },
     { id: 'review', question: 'Review your targeting criteria', type: 'review' },
 ];
 
 function TargetingFormInline({
     step, setStep, nationality, setNationality, experienceLevel, setExperienceLevel,
     companySize, setCompanySize, companyAge, setCompanyAge, education, setEducation,
-    skills, setSkills, currentTargeting, onConfirm, loading, setLoading
+    skills, setSkills, postedRecently, setPostedRecently, currentTargeting, onConfirm, loading, setLoading
 }: {
     step: number; setStep: (s: number) => void;
     nationality: string[]; setNationality: React.Dispatch<React.SetStateAction<string[]>>;
@@ -6803,6 +7550,7 @@ function TargetingFormInline({
     companyAge: string[]; setCompanyAge: React.Dispatch<React.SetStateAction<string[]>>;
     education: string[]; setEducation: React.Dispatch<React.SetStateAction<string[]>>;
     skills: string[]; setSkills: React.Dispatch<React.SetStateAction<string[]>>;
+    postedRecently: boolean; setPostedRecently: React.Dispatch<React.SetStateAction<boolean>>;
     currentTargeting: LeadTargeting | null;
     onConfirm: () => void;
     loading?: boolean;
@@ -6850,7 +7598,7 @@ function TargetingFormInline({
 
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
-            <div className="adv-ai-avatar"><span>✦</span></div>
+            <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <div className="adv-ai-name">Targeting Filters</div>
@@ -6986,8 +7734,51 @@ function TargetingFormInline({
                         </div>
                     )}
 
-                    {/* Step 6: Review */}
+                    {/* Step 6: Posted Recently */}
                     {step === 6 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Toggle card */}
+                            <div
+                                onClick={() => setPostedRecently(!postedRecently)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '16px 18px', borderRadius: '12px', cursor: 'pointer',
+                                    border: `2px solid ${postedRecently ? '#172560' : '#e5e7eb'}`,
+                                    background: postedRecently ? '#eef2ff' : '#fff',
+                                    transition: 'all 0.15s',
+                                }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: postedRecently ? '#172560' : '#111827' }}>
+                                        📢 Posted on LinkedIn in last 3 months
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+                                        Only show leads who have been active — posted, shared, or commented recently.
+                                        <br />
+                                        <span style={{ color: '#f59e0b', fontWeight: 500 }}>⚠ Sales Navigator only</span> — ignored for Classic API accounts.
+                                    </div>
+                                </div>
+                                {/* Toggle switch */}
+                                <div style={{
+                                    width: '44px', height: '24px', borderRadius: '12px', flexShrink: 0, marginLeft: '16px',
+                                    background: postedRecently ? '#172560' : '#d1d5db', transition: 'background 0.2s', position: 'relative',
+                                }}>
+                                    <div style={{
+                                        width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                                        position: 'absolute', top: '3px', transition: 'left 0.2s',
+                                        left: postedRecently ? '23px' : '3px',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                    }} />
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.5 }}>
+                                This filter is <strong>not saved</strong> between sessions — you must re-enable it each time you want it applied. It will not be auto-applied to campaigns or prospecting.
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 7: Review */}
+                    {step === 7 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {nationality.length > 0 && <div><strong>Nationalities:</strong> {nationality.join(', ')}</div>}
                             {experienceLevel.length > 0 && <div><strong>Experience Level:</strong> {experienceLevel.join(', ')}</div>}
@@ -6995,7 +7786,8 @@ function TargetingFormInline({
                             {companyAge.length > 0 && <div><strong>Company Age:</strong> {companyAge.join(', ')}</div>}
                             {education.length > 0 && <div><strong>Education:</strong> {education.join(', ')}</div>}
                             {skills.length > 0 && <div><strong>Skills:</strong> {skills.join(', ')}</div>}
-                            {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && (
+                            {postedRecently && <div><strong>Activity:</strong> Posted on LinkedIn in last 3 months ✅</div>}
+                            {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && !postedRecently && (
                                 <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>No additional filters selected</div>
                             )}
                         </div>
@@ -7053,6 +7845,110 @@ function TargetingFormInline({
                     </div>
                 </div>
             </div>
+
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════
+   AI MESSAGE CONTEXT PANEL
+   Inline expandable panel for AI Generate inputs.
+   Rendered directly inside the settings card — no portals,
+   no fixed positioning, no z-index issues.
+   ═══════════════════════════════════════════════ */
+function AiMsgContextPanel({
+    valueProp, setValueProp,
+    tone, setTone,
+    goal, setGoal,
+    targeting, leadsCount,
+    loading, onGenerate,
+}: {
+    valueProp: string; setValueProp: (v: string) => void;
+    tone: string; setTone: (v: string) => void;
+    goal: string; setGoal: (v: string) => void;
+    targeting: any; leadsCount: number;
+    loading: boolean; onGenerate: () => void;
+}) {
+    const tones = [
+        { id: 'professional', label: '🤝 Professional' },
+        { id: 'casual',       label: '😊 Casual' },
+        { id: 'direct',       label: '⚡ Direct' },
+    ];
+    const goals = [
+        { id: 'get_meeting',    label: '📅 Book a call' },
+        { id: 'share_resource', label: '📄 Share a resource' },
+        { id: 'explore_collab', label: '🤝 Explore collab' },
+        { id: 'general',        label: '💬 Start a chat' },
+    ];
+    const targetingTags = [
+        ...(targeting?.job_titles  || []).slice(0, 2),
+        ...(targeting?.industries  || []).slice(0, 2),
+    ].filter(Boolean);
+
+    return (
+        <div style={{ marginTop: '10px', border: '1.5px solid #c7d2fe', borderRadius: '12px', background: '#f8f9ff', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Header */}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ✨ AI Generate — tell us about your offer
+                <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '11px' }}>Will use lead's web presence &amp; posts</span>
+            </div>
+
+            {/* Value prop */}
+            <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>
+                    What do you offer? <span style={{ color: '#9ca3af', fontWeight: 400 }}>product / service / value prop</span>
+                </label>
+                <textarea
+                    value={valueProp}
+                    onChange={e => setValueProp(e.target.value)}
+                    placeholder="e.g. We help SaaS companies reduce churn with AI-powered customer success..."
+                    rows={2}
+                    style={{ width: '100%', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '7px 10px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: '#111827' }}
+                />
+            </div>
+
+            {/* Tone + Goal */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Tone</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {tones.map(t => (
+                            <div key={t.id} onClick={() => setTone(t.id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${tone === t.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: tone === t.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: tone === t.id ? 600 : 400, color: tone === t.id ? '#4f46e5' : '#374151' }}>
+                                {tone === t.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                {t.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Goal</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {goals.map(g => (
+                            <div key={g.id} onClick={() => setGoal(g.id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${goal === g.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: goal === g.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: goal === g.id ? 600 : 400, color: goal === g.id ? '#4f46e5' : '#374151' }}>
+                                {goal === g.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                {g.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Targeting badge */}
+            {targetingTags.length > 0 && (
+                <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '7px', padding: '6px 10px', fontSize: '11px', color: '#4f46e5', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                    <span style={{ fontWeight: 700 }}>🎯</span>
+                    {targetingTags.join(' · ')}
+                    {leadsCount > 0 && <span style={{ marginLeft: '4px', color: '#6366f1' }}>· {leadsCount} lead{leadsCount !== 1 ? 's' : ''} with live web insights</span>}
+                </div>
+            )}
+
+            {/* Generate button */}
+            <button onClick={onGenerate} disabled={loading}
+                style={{ background: loading ? '#9ca3af' : 'linear-gradient(135deg,#4f46e5,#6366f1)', color: '#fff', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: loading ? 'none' : '0 3px 10px rgba(79,70,229,.35)' }}>
+                {loading ? '⏳ Generating...' : '✨ Generate Message'}
+            </button>
         </div>
     );
 }
@@ -7075,6 +7971,7 @@ function buildSummary(t: LeadTargeting): string {
     if (t.job_titles.length) p.push(`🎯 **Job Titles:** ${t.job_titles.join(', ')}`);
     if (t.industries.length) p.push(`🏢 **Industries:** ${t.industries.join(', ')}`);
     if (t.locations.length) p.push(`📍 **Locations:** ${t.locations.join(', ')}`);
+    if (t.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${t.nationality_filter.join(', ')} (results filtered by inferred nationality)`);
     if (t.keywords.length) p.push(`🔑 **Keywords:** ${t.keywords.join(', ')}`);
     if (t.functions?.length) p.push(`⚙️ **Functions:** ${t.functions.join(', ')}`);
     if (t.seniority?.length) p.push(`⭐ **Seniority:** ${t.seniority.join(', ')}`);
@@ -7095,6 +7992,7 @@ function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string)
     if (intent.company_names?.length) p.push(`🏢 **Company:** ${intent.company_names.join(', ')}`);
     if (intent.locations?.length) p.push(`📍 **Location:** ${intent.locations.join(', ')}`);
     if (intent.industries?.length) p.push(`🏭 **Industries:** ${intent.industries.join(', ')}`);
+    if (intent.nationality_filter?.length) p.push(`🌍 **Nationality Filter:** ${intent.nationality_filter.join(', ')}`);
     if (intent.seniority?.length) p.push(`⭐ **Seniority:** ${intent.seniority.join(', ')}`);
     if (intent.functions?.length) p.push(`⚙️ **Functions:** ${intent.functions.join(', ')}`);
 
@@ -7188,31 +8086,27 @@ const css = `
             .adv-bubble-user {display:flex; justify-content:flex-end; margin-bottom:4px; }
             .adv-user-msg {background:linear-gradient(135deg,#172560 0%,#2563eb 100%); color:#fff; border-radius:20px 20px 4px 20px; padding:12px 18px; max-width:72%; font-size:14.5px; line-height:1.65; box-shadow:0 2px 14px rgba(23,37,96,.2); font-weight:450; }
             .adv-bubble-ai {display:flex; gap:12px; align-items:flex-start; margin-bottom:4px; }
-            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#172560 0%,#4f46e5 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(79,70,229,.28); }
+            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#0b1957 0%,#172560 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(11,25,87,.28); }
+            .adv-ai-avatar-viz {background:transparent; box-shadow:none; overflow:visible; }
             .adv-ai-body {flex:1; max-width:90%; }
-            .adv-ai-name {font-size:11px; font-weight:700; color:#4f46e5; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
+            .adv-ai-name {font-size:11px; font-weight:700; color:#0b1957; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
             .adv-ai-text {font-size:14.5px; line-height:1.78; color:#374151; }
             .adv-ai-text p {margin:0 0 6px; }
             .adv-ai-text strong {color:#111827; font-weight:650; }
-            .adv-ai-text em {color:#4f46e5; font-style:normal; font-weight:500; }
+            .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
             .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:4px 0; }
-            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#4f46e5; flex-shrink:0; margin-top:7px; opacity:.7; }
+            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:7px; opacity:.7; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
-            .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4f46e5; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+            .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
-            /* ── THINKING DOTS ── */
-            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden}
-            .adv-thinking-word{font-size:13px;color:#6b7280;font-style:normal;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease}
+            /* ── THINKING STATE ── */
+            .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden;padding-top:2px}
+            .adv-thinking-word{font-size:13px;color:#6366f1;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease;letter-spacing:.01em}
             .adv-tw-in{opacity:1;transform:translateY(0)}
-            .adv-tw-out{opacity:0;transform:translateY(-7px)}
-            .adv-thinking-dots{display:inline-flex;gap:4px;align-items:center}
-            .adv-thinking-dots span{width:5px;height:5px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#2563eb);display:inline-block;animation:adv-db 1.2s ease-in-out infinite}
-            .adv-thinking-dots span:nth-child(2){animation-delay:.2s}
-            .adv-thinking-dots span:nth-child(3){animation-delay:.4s}
-            @keyframes adv-db{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
+            .adv-tw-out{opacity:0;transform:translateY(-6px)}
             /* ── CHAT INPUT ── */
             .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
@@ -7236,6 +8130,61 @@ const css = `
             .adv-tag-row {display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:6px; }
             .adv-tag-label {font - size:11px; font-weight:600; color:#0f1842; min-width:70px; }
             .adv-tag {font - size:11px; background:rgba(255,255,255,.85); color:#0a112e; padding:3px 11px; border-radius:20px; border:1px solid #c2d6eb; }
+
+            /* ── MOBILE NAV SIDEBAR ── */
+            .adv-mobile-nav {
+                display: none;
+                position: fixed;
+                right: 12px;
+                top: 80px;
+                flex-direction: column;
+                gap: 12px;
+                z-index: 100;
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(10px);
+                padding: 10px 8px;
+                border: 1.5px solid #e0eaf5;
+                border-radius: 20px;
+                box-shadow: 0 8px 32px rgba(23, 37, 96, 0.15);
+                animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+            }
+            @keyframes slideInRight {
+                from { opacity: 0; transform: translateX(20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            .adv-nav-btn {
+                width: 46px;
+                height: 48px;
+                border-radius: 14px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                border: none;
+                background: transparent;
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                color: #64748b;
+                padding: 0;
+            }
+            .adv-nav-btn:hover {
+                background: #f1f5f9;
+                color: #172560;
+            }
+            .adv-nav-btn-active {
+                background: #172560 !important;
+                color: #fff !important;
+                box-shadow: 0 4px 12px rgba(23, 37, 96, 0.25);
+                transform: scale(1.05);
+            }
+            .adv-nav-label {
+                font-size: 9px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.02em;
+            }
+
 
             /* ── MINI LEADS IN CHAT ── */
             .adv-mini-leads {margin - top:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:12px 14px; }
@@ -7414,6 +8363,15 @@ const css = `
                 .adv-chat-back {width: 36px; height: 36px; top: 12px; left: 12px; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
                 .adv-chat-left {min-width: 100%; }
+                .adv-mobile-nav { display: flex; }
+                /* Padding to prevent content overlap with sidebar */
+                .adv-chat-msgs { padding-right: 68px !important; }
+                .adv-panel-body { padding-right: 68px !important; }
+                .adv-chat-input-wrap { padding-right: 68px !important; }
+                
+                /* Hide Leads/Workflow cards and action buttons in chat on mobile */
+                .adv-rc-leads { display: none !important; }
+                .adv-action-btns { display: none !important; }
             }
             @media (max-width: 480px) {
                 .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }

@@ -77,6 +77,7 @@ interface GroupChatWindowProps {
   groupColor: string;
   onBack: () => void;
   autoOpenInfo?: boolean;
+  channel?: 'personal' | 'waba';
 }
 
 // ── Sender color palette (WhatsApp-style) ──────────────────────────
@@ -976,6 +977,7 @@ export const GroupChatWindow = memo(function GroupChatWindow({
   groupColor,
   onBack,
   autoOpenInfo = false,
+  channel = 'waba',
 }: GroupChatWindowProps) {
   const [detail, setDetail] = useState<GroupDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -994,8 +996,8 @@ export const GroupChatWindow = memo(function GroupChatWindow({
     senderColorMap.clear();
 
     Promise.allSettled([
-      fetch(`${GROUP_API}/${groupId}/detail`, { headers: authHeaders() }).then((r) => r.json()),
-      fetch(`${GROUP_API}/${groupId}/messages?limit=100`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`${GROUP_API}/${groupId}/detail?channel=${channel}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`${GROUP_API}/${groupId}/messages?limit=100&channel=${channel}`, { headers: authHeaders() }).then((r) => r.json()),
     ])
       .then(([detailResult, messagesResult]) => {
         if (detailResult.status === 'fulfilled') {
@@ -1022,17 +1024,17 @@ export const GroupChatWindow = memo(function GroupChatWindow({
       })
       .catch((err) => console.error('Error loading group chat:', err))
       .finally(() => setLoading(false));
-  }, [groupId, senderColorMap]);
+  }, [groupId, senderColorMap, channel]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Refresh just the detail (after add/remove member)
   const refreshDetail = useCallback(() => {
-    fetch(`${GROUP_API}/${groupId}/detail`, { headers: authHeaders() })
+    fetch(`${GROUP_API}/${groupId}/detail?channel=${channel}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((res) => { if (res.success) setDetail(res.data); })
       .catch(() => {});
-  }, [groupId]);
+  }, [groupId, channel]);
 
   // Build list items with date separators & sender attribution
   const listItems = useMemo<ListItem[]>(() => {

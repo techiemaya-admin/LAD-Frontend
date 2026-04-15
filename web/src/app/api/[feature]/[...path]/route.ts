@@ -83,15 +83,25 @@ async function handler(
       }
     }
     // Forward request to backend
+    // Use redirect:'manual' so OAuth callback 302s are passed through to the browser
+    // instead of being silently followed by fetch() (which would break OAuth flows).
     console.log(`[PROXY] Forwarding ${req.method} to: ${url}`);
     const response = await fetch(url, {
       method: req.method,
       headers,
       body,
+      redirect: 'manual',
     }).catch((err) => {
       console.error(`[PROXY] Fetch error for ${url}:`, err.message);
       throw err;
     });
+    // Pass-through redirects (OAuth callbacks do res.redirect → 302/301/303)
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (location) {
+        return NextResponse.redirect(location, { status: response.status });
+      }
+    }
     // Get response data
     const responseContentType = response.headers.get('content-type');
     const responseIsJson = isJson(responseContentType);

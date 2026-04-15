@@ -20,6 +20,8 @@ import {
   Megaphone,
   FolderPlus,
   RefreshCw,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,7 @@ import { ChatGroupManager, AddToGroupDropdown, type ChatGroup } from './ChatGrou
 import { ImportLeadsDialog } from './ImportLeadsDialog';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { getCurrentUser } from '@/lib/auth';
 import {
   Tooltip,
   TooltipContent,
@@ -63,12 +66,12 @@ interface ConversationSidebarProps {
   onShowBroadcastModal?: () => void;
 }
 
+// LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
 const channelButtons: { id: Channel | 'all'; label: string; channel?: Channel }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn', channel: 'linkedin' },
-  { id: 'gmail', label: 'Gmail', channel: 'gmail' },
-  { id: 'outlook', label: 'Outlook', channel: 'outlook' },
+  { id: 'all',       label: 'All' },
+  { id: 'whatsapp',  label: 'WhatsApp',  channel: 'whatsapp' },
+  { id: 'gmail',     label: 'Gmail',     channel: 'gmail' },
+  { id: 'outlook',   label: 'Outlook',   channel: 'outlook' },
   { id: 'instagram', label: 'Instagram', channel: 'instagram' },
 ];
 
@@ -139,6 +142,20 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [templateSending, setTemplateSending] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((u: any) => setMaskPhoneNumbers(!!(u?.maskPhoneNumber ?? u?.user?.maskPhoneNumber)))
+      .catch(() => {});
+  }, []);
+
+  const displayPhone = useCallback((phone: string | undefined | null): string => {
+    if (!maskPhoneNumbers || !phone) return phone || '';
+    const digits = phone.replace(/\D/g, '');
+    const last4 = digits.slice(-4);
+    return `+${'•'.repeat(Math.max(digits.length - 4, 4))}${last4}`;
+  }, [maskPhoneNumbers]);
 
   const handleRefresh = useCallback(() => {
     if (!onRefresh || isRefreshing) return;
@@ -190,21 +207,25 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [selectedNewChatGroupIds, setSelectedNewChatGroupIds] = useState<Set<string>>(new Set()); // group IDs
   const [newChatContacts, setNewChatContacts] = useState<Conversation[]>([]); // all contacts for New Chat panel
   const [newChatContactsLoading, setNewChatContactsLoading] = useState(false);
+  const [newChatContactsTotal, setNewChatContactsTotal] = useState(0);
+  const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true);
+  const [contactsSectionExpanded, setContactsSectionExpanded] = useState(true);
 
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupConversationIds, setGroupConversationIds] = useState<Set<string>>(new Set());
-  const [groupTemplateSendTarget, setGroupTemplateSendTarget] = useState<{ groupId: string; count: number } | null>(null);
+  const [groupTemplateSendTarget, setGroupTemplateSendTarget] = useState<{ groupIds: string[]; count: number } | null>(null);
 
   // Load (or reload) groups + all contacts whenever the New Chat panel is open.
   // Re-runs when: panel opens, panel closes (skip), or ChatGroupManager closes after editing.
   useEffect(() => {
     if (!isNewChatOpen) return;
 
-    // Load groups
+    // Load groups (channel-aware — personal WA reads from Node.js, WABA from Python)
     setNewChatGroupsLoading(true);
-    fetchWithTenant('/api/whatsapp-conversations/chat-groups')
+    const groupsChannel = backendChannel || 'waba';
+    fetchWithTenant(`/api/whatsapp-conversations/chat-groups?channel=${groupsChannel}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data.data)) setNewChatGroups(data.data);
@@ -212,17 +233,74 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .catch(() => {})
       .finally(() => setNewChatGroupsLoading(false));
 
-    // Load all contacts (limit=500 to show everyone, not just the default 20)
+    // Load contacts from wa_contacts table (personal WA) or conversations (waba)
+    // Supports 6000+ contacts via paginated background loading
+    setNewChatContacts([]);
+    setNewChatContactsTotal(0);
     setNewChatContactsLoading(true);
-    fetchWithTenant('/api/whatsapp-conversations/conversations?limit=500')
-      .then((r) => r.json())
-      .then((data) => {
-        const list: Conversation[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
-        setNewChatContacts(list);
-      })
-      .catch(() => {})
-      .finally(() => setNewChatContactsLoading(false));
-  }, [isNewChatOpen, isGroupManagerOpen]); // re-fetch when group manager closes
+
+    const PAGE_SIZE = 200;
+    const ch = backendChannel || 'waba';
+
+    // Helper: map raw contact/conversation record → { id, contact: { name, phone } }
+    const mapContact = (raw: any): Conversation =>
+      raw.contact
+        ? raw // already shaped as Conversation
+        : { id: raw.id, contact: { name: raw.name || raw.contact_name || '', phone: raw.phone || '' } } as unknown as Conversation;
+
+    if (ch === 'personal') {
+      // Personal WA: load from /contacts endpoint (wa_contacts table)
+      // Paginated background loading with delay + retry to avoid ECONNRESET on large tables
+      const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+      const fetchPage = async (offset: number, retries = 1): Promise<{ raw: any[]; total: number } | null> => {
+        try {
+          const r = await fetchWithTenant(
+            `/api/whatsapp-conversations/contacts?channel=personal&limit=${PAGE_SIZE}&offset=${offset}`
+          );
+          if (!r.ok) return null;
+          const data = await r.json();
+          const raw: any[] = data.contacts || data.data || [];
+          const total: number = data.total || 0;
+          return { raw, total };
+        } catch (_) {
+          if (retries > 0) {
+            await sleep(500); // wait longer before retry
+            return fetchPage(offset, retries - 1);
+          }
+          return null;
+        }
+      };
+
+      const loadPage = async (offset: number, accumulated: Conversation[]) => {
+        const result = await fetchPage(offset);
+        if (!result) return; // give up on this page, keep what we have
+        const { raw, total } = result;
+        const mapped = raw.map(mapContact);
+        const all = [...accumulated, ...mapped];
+        setNewChatContacts(all);
+        setNewChatContactsTotal(total);
+        // Keep fetching until all loaded, with a small delay to avoid overwhelming the backend
+        if (all.length < total && raw.length === PAGE_SIZE) {
+          await sleep(150);
+          await loadPage(offset + PAGE_SIZE, all);
+        }
+      };
+
+      loadPage(0, []).finally(() => setNewChatContactsLoading(false));
+    } else {
+      // WABA: load from conversations endpoint
+      fetchWithTenant(`/api/whatsapp-conversations/conversations?channel=waba&limit=500`)
+        .then((r) => r.json())
+        .then((data) => {
+          const list: Conversation[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+          setNewChatContacts(list);
+          setNewChatContactsTotal(list.length);
+        })
+        .catch(() => {})
+        .finally(() => setNewChatContactsLoading(false));
+    }
+  }, [isNewChatOpen, isGroupManagerOpen, backendChannel]); // re-fetch when group manager closes
 
   // Named-only filter: hide contacts with unknown/unresolved names
   const [namedOnly, setNamedOnly] = useState(false);
@@ -254,7 +332,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       setGroupConversationIds(new Set());
       return;
     }
-    fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations`)
+    const chanParam = backendChannel ? `?channel=${backendChannel}` : '';
+    fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${activeGroup.id}/conversations${chanParam}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -355,26 +434,52 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30 }) => {
       setTemplateSending(true);
       try {
-        // If sending to a group (via group manager), use the group endpoint
+        // If sending to one or more groups (via group manager), call each group's send-template endpoint
         if (groupTemplateSendTarget) {
-          const res = await fetchWithTenant(
-            `/api/whatsapp-conversations/chat-groups/${groupTemplateSendTarget.groupId}/send-template`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                template_name: templateName,
-                language_code: languageCode,
-                parameters,
-                name_format: nameFormat,
-              }),
+          const channelParam = backendChannel === 'personal' ? '?channel=personal' : '';
+          const groupIds = groupTemplateSendTarget.groupIds;
+          const { batchSize, delayMin, delayRandom } = batch;
+          const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+          for (let i = 0; i < groupIds.length; i++) {
+            const groupId = groupIds[i];
+            try {
+              const res = await fetchWithTenant(
+                `/api/whatsapp-conversations/chat-groups/${groupId}/send-template${channelParam}`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    template_name: templateName,
+                    language_code: languageCode,
+                    parameters,
+                    name_format: nameFormat,
+                  }),
+                }
+              );
+              const data = await res.json();
+              if (!data.success) console.error(`Group template send failed for ${groupId}:`, data.error);
+            } catch (err) {
+              console.error(`Group template send error for ${groupId}:`, err);
             }
-          );
-          const data = await res.json();
-          if (!data.success) console.error('Group template send failed:', data.error);
+
+            // Apply batch delay after every batchSize groups (skip delay after last group)
+            const isLastGroup = i === groupIds.length - 1;
+            const batchBoundary = (i + 1) % batchSize === 0;
+            if (!isLastGroup && batchBoundary) {
+              const delayMs = (delayMin + Math.random() * delayRandom) * 1000;
+              await sleep(delayMs);
+            }
+          }
         } else if (selectedIds.size > 0) {
           // Bulk send to selected conversations
-          const res = await fetchWithTenant('/api/whatsapp-conversations/conversations/bulk', {
+          // personal WA → /conversations/bulk/send-template  (Node.js controller)
+          // WABA        → /conversations/bulk                (Python service, action: send-template)
+          const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
+          const bulkEndpoint = backendChannel === 'personal'
+            ? `/api/whatsapp-conversations/conversations/bulk/send-template${channelParam}`
+            : `/api/whatsapp-conversations/conversations/bulk${channelParam}`;
+          const res = await fetchWithTenant(bulkEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -404,9 +509,20 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     [selectedIds, groupTemplateSendTarget, exitSelectMode]
   );
 
-  // Called from ChatGroupManager "Send Template" button
+  // Called from ChatGroupManager single-group "Send Template" hover button
   const handleGroupTemplateSend = useCallback((groupId: string, conversationCount: number) => {
-    setGroupTemplateSendTarget({ groupId, count: conversationCount });
+    setGroupTemplateSendTarget({ groupIds: [groupId], count: conversationCount });
+    setIsTemplatePickerOpen(true);
+  }, []);
+
+  // Called from ChatGroupManager multi-select "Send Template" bar
+  const handleGroupsTemplateSend = useCallback((selectedGroups: ChatGroup[]) => {
+    const groupIds = selectedGroups.map(g => g.id);
+    const totalCount = selectedGroups.reduce((acc, g) =>
+      acc + (g.metadata?.wa_group && g.metadata.participant_count
+        ? g.metadata.participant_count
+        : g.conversation_count), 0);
+    setGroupTemplateSendTarget({ groupIds, count: totalCount });
     setIsTemplatePickerOpen(true);
   }, []);
 
@@ -489,75 +605,6 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             {isSelectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
           </Button>
         </div>
-      </div>
-
-      {/* Channel Filters */}
-      <div className="p-2 flex gap-1 border-b border-border overflow-x-auto">
-        <TooltipProvider>
-          {channelButtons.map(({ id, label, channel }) => {
-            const isActive = channelFilter === id;
-            const count = unreadCounts[id] ?? 0;
-
-            return (
-              <Tooltip key={id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => onChannelFilterChange(id as Channel | 'all')}
-                    className={cn(
-                      'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center gap-1.5 text-xs font-medium transition-all relative',
-                      isActive
-                        ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
-                        : channelColorMap[id]
-                    )}
-                  >
-                    {channel ? (
-                      <ChannelIcon channel={channel} size={14} />
-                    ) : (
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    )}
-                    {count > 0 && (
-                      <span
-                        className={cn(
-                          'absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-card shadow-sm',
-                          isActive ? 'bg-white text-slate-900' : 'bg-primary text-primary-foreground'
-                        )}
-                      >
-                        {count > 99 ? '99+' : count}
-                      </span>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
-                  {label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-
-          {/* Named-only toggle: hide Unknown / unsaved contacts */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={namedOnly ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setNamedOnly((v) => !v)}
-                className={cn(
-                  'flex-shrink-0 h-8 w-8 p-0 flex items-center justify-center text-xs font-medium transition-all',
-                  namedOnly
-                    ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 ring-2 ring-slate-900/10'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                )}
-              >
-                <UserMinus className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
-              {namedOnly ? 'Showing named only' : 'Hide unknown contacts'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
 
       {/* Context Status Filters (tenant-specific) */}
@@ -659,7 +706,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           <span className="text-xs text-muted-foreground flex-1">
             {selectedIds.size} selected
           </span>
-          <AddToGroupDropdown selectedIds={selectedIds} onDone={exitSelectMode} />
+          <AddToGroupDropdown selectedIds={selectedIds} onDone={exitSelectMode} channel={backendChannel} />
           {activeGroup && (
             <Button
               variant="ghost"
@@ -835,6 +882,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     (c.contact?.phone || '').includes(searchLower)
                   )
                 : contactSource;
+              const contactsLoadedAll = newChatContactsTotal > 0 && newChatContacts.length >= newChatContactsTotal;
 
               const noResults = filteredGroups.length === 0 && filteredContacts.length === 0 && !newChatContactsLoading;
 
@@ -844,14 +892,42 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                   {filteredGroups.length > 0 && (
                     <>
                       <div className="px-4 py-2 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {/* Collapse toggle */}
+                        <button
+                          onClick={() => setGroupsSectionExpanded(v => !v)}
+                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                        >
+                          {groupsSectionExpanded
+                            ? <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronRight className="h-3.5 w-3.5" />}
                           Groups
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {selectedNewChatGroupIds.size}/{filteredGroups.length}
-                        </span>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Select-all / Deselect-all */}
+                          <button
+                            onClick={() => {
+                              const allGroupIds = filteredGroups.map(g => g.id);
+                              const allSelected = allGroupIds.every(id => selectedNewChatGroupIds.has(id));
+                              if (allSelected) {
+                                setSelectedNewChatGroupIds(prev => {
+                                  const next = new Set(prev);
+                                  allGroupIds.forEach(id => next.delete(id));
+                                  return next;
+                                });
+                              } else {
+                                setSelectedNewChatGroupIds(prev => new Set([...prev, ...allGroupIds]));
+                              }
+                            }}
+                            className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                          >
+                            {filteredGroups.every(g => selectedNewChatGroupIds.has(g.id)) ? 'Deselect all' : 'Select all'}
+                          </button>
+                          <span className="text-[10px] text-muted-foreground">
+                            {selectedNewChatGroupIds.size}/{filteredGroups.length}
+                          </span>
+                        </div>
                       </div>
-                      {filteredGroups.map((group) => {
+                      {groupsSectionExpanded && filteredGroups.map((group) => {
                         const isChecked = selectedNewChatGroupIds.has(group.id);
                         return (
                           <button
@@ -903,18 +979,50 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     </>
                   )}
 
+
                   {/* ── Contacts Section ── */}
                   {filteredContacts.length > 0 && (
                     <>
                       <div className="px-4 py-2 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {/* Collapse toggle */}
+                        <button
+                          onClick={() => setContactsSectionExpanded(v => !v)}
+                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                        >
+                          {contactsSectionExpanded
+                            ? <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronRight className="h-3.5 w-3.5" />}
                           Contacts
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {selectedNewChatIds.size}/{filteredContacts.length}
-                        </span>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Select-all / Deselect-all */}
+                          <button
+                            onClick={() => {
+                              const allContactIds = filteredContacts.map(c => c.id);
+                              const allSelected = allContactIds.every(id => selectedNewChatIds.has(id));
+                              if (allSelected) {
+                                setSelectedNewChatIds(prev => {
+                                  const next = new Set(prev);
+                                  allContactIds.forEach(id => next.delete(id));
+                                  return next;
+                                });
+                              } else {
+                                setSelectedNewChatIds(prev => new Set([...prev, ...allContactIds]));
+                              }
+                            }}
+                            className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                          >
+                            {filteredContacts.every(c => selectedNewChatIds.has(c.id)) ? 'Deselect all' : 'Select all'}
+                          </button>
+                          <span className="text-[10px] text-muted-foreground">
+                            {selectedNewChatIds.size}/{newChatContactsTotal > 0 ? newChatContactsTotal : filteredContacts.length}
+                            {!contactsLoadedAll && newChatContactsTotal > 0 && (
+                              <span className="text-amber-500 ml-1">({newChatContacts.length} loaded…)</span>
+                            )}
+                          </span>
+                        </div>
                       </div>
-                      {filteredContacts.map((conv) => {
+                      {contactsSectionExpanded && filteredContacts.map((conv) => {
                         const isChecked = selectedNewChatIds.has(conv.id);
                         return (
                           <button
@@ -951,11 +1059,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                             </div>
                             <div className="flex flex-col items-start overflow-hidden">
                               <span className="text-sm font-medium truncate w-full text-left">
-                                {conv.contact?.name || conv.contact?.phone || 'Unknown'}
+                                {conv.contact?.name || displayPhone(conv.contact?.phone) || 'Unknown'}
                               </span>
                               {conv.contact?.phone && conv.contact?.name && (
                                 <span className="text-xs text-muted-foreground truncate w-full text-left">
-                                  {conv.contact.phone}
+                                  {displayPhone(conv.contact.phone)}
                                 </span>
                               )}
                             </div>
@@ -995,13 +1103,14 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                 size="sm"
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs h-9"
                 onClick={() => {
-                  // If any group is selected → always go to broadcast
+                  // If any group is selected → open template picker (same as Send Template)
                   if (selectedNewChatGroupIds.size > 0) {
+                    const selectedGroups = newChatGroups.filter(g => selectedNewChatGroupIds.has(g.id));
                     setIsNewChatOpen(false);
                     setNewChatSearch('');
                     setSelectedNewChatIds(new Set());
                     setSelectedNewChatGroupIds(new Set());
-                    onShowBroadcastModal?.();
+                    handleGroupsTemplateSend(selectedGroups);
                     return;
                   }
                   // Single contact → open that conversation
@@ -1046,7 +1155,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         onOpenChange={setIsGroupManagerOpen}
         onSelectGroup={handleSelectGroup}
         onSendTemplateToGroup={handleGroupTemplateSend}
+        onSendTemplateToGroups={handleGroupsTemplateSend}
         onOpenGroupInfo={onOpenGroupInfo}
+        channel={backendChannel}
       />
 
       {/* Template Picker Dialog */}
@@ -1059,6 +1170,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+        channel={backendChannel ?? 'waba'}
       />
 
       {/* Import Leads Dialog */}

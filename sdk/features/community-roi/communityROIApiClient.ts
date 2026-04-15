@@ -74,29 +74,37 @@ class CommunityROIApiClient {
       }
     }
 
+    let response: Response | undefined;
     try {
-      const response = await fetch(url.toString(), {
+      response = await fetch(url.toString(), {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
         credentials: 'include',
       });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      return {
-        data,
-        status: response.status,
-        statusText: response.statusText,
-      };
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+    } catch (networkError) {
+      // True network failure (offline, DNS, CORS, etc.) — always log
+      console.error('API network error:', networkError);
+      throw networkError;
     }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const err = new Error(`API Error: ${response.status} ${response.statusText}`);
+      // Only log unexpected server errors (5xx). 4xx are handled by callers
+      // (e.g. 401/403 while auth is loading, 404 for optional resources).
+      if (response.status >= 500) {
+        console.error(`[CommunityROI] Server error ${response.status} on ${method} ${path}`, data);
+      }
+      throw err;
+    }
+
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+    };
   }
 
   async get<T>(path: string, options?: RequestOptions): Promise<ApiResponse<T>> {

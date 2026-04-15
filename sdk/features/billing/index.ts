@@ -35,6 +35,7 @@ export {
   getUsageAggregation,
   listTransactions,
   getCreditsBalanceLegacy,
+  getWalletBalanceWithTransactions,
   getCreditPackages,
   createStripeCheckoutSession,
   // Backward compatibility aliases
@@ -55,6 +56,7 @@ export {
   useUsageAggregation,
   useTransactions,
   useCreditsBalanceLegacy,
+  useWalletBalanceWithTransactions,
   useCreditPackages,
   useStripeCheckout,
   // Backward compatibility aliases

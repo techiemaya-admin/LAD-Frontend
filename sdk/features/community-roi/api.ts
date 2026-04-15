@@ -557,6 +557,13 @@ export const getRelationshipHeatmapOptions = (enabled: boolean = true) =>
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,
     enabled,
+    // Don't retry auth/permission errors — they won't resolve on retry and
+    // would only produce repeated console noise. Retry transient 5xx twice.
+    retry: (failureCount: number, error: unknown) => {
+      const msg = error instanceof Error ? error.message : '';
+      if (/40[013]/.test(msg)) return false; // 400, 401, 403 — stop immediately
+      return failureCount < 2;
+    },
   });
 
 // ===== Webhook API =====

@@ -8,6 +8,7 @@ import { isSameDay } from 'date-fns';
 interface MessageListProps {
   messages: Message[];
   conversationId?: string;
+  isAgentTyping?: boolean;
 }
 
 interface ListItem {
@@ -16,7 +17,22 @@ interface ListItem {
   key: string;
 }
 
-export const MessageList = memo(function MessageList({ messages, conversationId }: MessageListProps) {
+// ── Typing indicator bubble ───────────────────────────────────────────────────
+function TypingIndicator() {
+  return (
+    <div className="px-4 py-1">
+      <div className="flex items-end gap-1 max-w-[70%]">
+        <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const MessageList = memo(function MessageList({ messages, conversationId, isAgentTyping }: MessageListProps) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Build list with date separators
@@ -73,6 +89,13 @@ export const MessageList = memo(function MessageList({ messages, conversationId 
     });
   }, [lastMessageId, listItems.length]); // smooth scroll on new message or count change
 
+  // Scroll to bottom when typing indicator appears
+  useEffect(() => {
+    if (isAgentTyping && virtuosoRef.current && listItems.length > 0) {
+      virtuosoRef.current.scrollToIndex({ index: listItems.length - 1, behavior: 'smooth' });
+    }
+  }, [isAgentTyping]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const itemContent = (index: number) => {
     const item = listItems[index];
 
@@ -88,10 +111,10 @@ export const MessageList = memo(function MessageList({ messages, conversationId 
   };
 
   return (
-    <div className="flex-1 overflow-hidden whatsapp-chat-bg">
+    <div className="flex-1 overflow-hidden whatsapp-chat-bg flex flex-col">
       <Virtuoso
         ref={virtuosoRef}
-        style={{ height: '100%' }}
+        style={{ flex: 1 }}
         totalCount={listItems.length}
         itemContent={itemContent}
         followOutput="smooth"
@@ -99,6 +122,7 @@ export const MessageList = memo(function MessageList({ messages, conversationId 
         className="custom-scrollbar"
         initialTopMostItemIndex={listItems.length - 1}
       />
+      {isAgentTyping && <TypingIndicator />}
     </div>
   );
 });

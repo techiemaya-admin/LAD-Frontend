@@ -489,10 +489,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }
   };
   const paginatedLeads = useMemo(() => {
+    // When pagination is server-controlled, the `leads` prop already contains
+    // only the current page's data — skip client-side slicing to avoid returning
+    // an empty array (e.g. page 2: slice(20, 40) on a 20-item array → []).
+    if (isControlledPagination) {
+      return filteredAndSortedLeads;
+    }
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredAndSortedLeads.slice(startIndex, endIndex);
-  }, [filteredAndSortedLeads, currentPage, pageSize]);
+  }, [filteredAndSortedLeads, currentPage, pageSize, isControlledPagination]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
@@ -1009,75 +1015,79 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         </div>
       </div>
-      <Table className={compactMode ? 'text-sm' : ''}>
-        <TableHeader>
-          <TableRow className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-            {visibleColumnKeys.map((column) => (
-              <TableHead
-                key={column}
-                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
-                  }`}
-                onClick={() => handleSort(column)}
-              >
-                <div className="flex items-center gap-2">
-                  {COLUMN_LABELS[column] || column}
-                  {getSortIcon(column)}
-                </div>
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading
-            ? Array.from({ length: 8 }).map((_, rowIndex) => (
-              <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-220px)] border-b border-[#E2E8F0]">
+        <div className="min-w-[800px] w-full relative">
+          <Table className={compactMode ? 'text-sm' : ''}>
+            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
                 {visibleColumnKeys.map((column) => (
-                  <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-            : paginatedLeads.map((lead) => (
-              <TableRow
-                key={lead.id}
-                onClick={(e) => {
-                  if ((e.target as HTMLElement).closest('select, button, input')) {
-                    e.stopPropagation();
-                    return;
-                  }
-                  handleRowClick(lead);
-                }}
-                className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
-              >
-                {visibleColumnKeys.map((column) => (
-                  <TableCell
+                  <TableHead
                     key={column}
-                    className="py-2 whitespace-nowrap px-3"
+                    className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize bg-[#F8FAFC] ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                      }`}
+                    onClick={() => handleSort(column)}
                   >
-                    {renderCellContent(lead, column)}
-                  </TableCell>
+                    <div className="flex items-center gap-2">
+                      {COLUMN_LABELS[column] || column}
+                      {getSortIcon(column)}
+                    </div>
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          {!isLoading && filteredAndSortedLeads.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={visibleColumnKeys.length}
-                className="text-center py-16"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <UserPlus className="w-8 h-8" />
-                  <div className="text-lg font-semibold text-[#1E293B] mb-2">
-                    No leads found
-                  </div>
-                  
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {isLoading
+                ? Array.from({ length: 8 }).map((_, rowIndex) => (
+                  <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+                    {visibleColumnKeys.map((column) => (
+                      <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
+                        <div className="h-4 bg-gray-200 rounded w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+                : paginatedLeads.map((lead) => (
+                  <TableRow
+                    key={lead.id}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('select, button, input')) {
+                        e.stopPropagation();
+                        return;
+                      }
+                      handleRowClick(lead);
+                    }}
+                    className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
+                  >
+                    {visibleColumnKeys.map((column) => (
+                      <TableCell
+                        key={column}
+                        className="py-2 whitespace-nowrap px-3"
+                      >
+                        {renderCellContent(lead, column)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              {!isLoading && filteredAndSortedLeads.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={visibleColumnKeys.length}
+                    className="text-center py-16"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <UserPlus className="w-8 h-8" />
+                      <div className="text-lg font-semibold text-[#1E293B] mb-2">
+                        No leads found
+                      </div>
+                      
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
         <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">

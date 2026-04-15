@@ -42,6 +42,8 @@ interface TemplatePickerProps {
   selectedCount: number;
   onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions) => void;
   sending?: boolean;
+  /** Which backend channel to fetch templates from. Defaults to 'waba'. */
+  channel?: 'personal' | 'waba';
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
@@ -58,6 +60,7 @@ export function TemplatePicker({
   selectedCount,
   onSend,
   sending = false,
+  channel = 'waba',
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,14 +72,15 @@ export function TemplatePicker({
   const [delayMin, setDelayMin] = useState(120);    // seconds
   const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
 
-  // Fetch templates when dialog opens
+  // Fetch templates when dialog opens (re-fetch if channel changes)
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setSelectedTemplate(null);
     setParamValues([]);
     setSearch('');
-    fetchWithTenant(TEMPLATES_API)
+    const apiUrl = `${TEMPLATES_API}?channel=${channel}`;
+    fetchWithTenant(apiUrl)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
@@ -107,7 +111,7 @@ export function TemplatePicker({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, channel]);
 
   const filtered = useMemo(() => {
     if (!search) return templates;
@@ -378,6 +382,7 @@ export function TemplatePicker({
                         min={1} max={50}
                         value={batchSize}
                         onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">msgs / batch</p>
@@ -389,6 +394,7 @@ export function TemplatePicker({
                         min={10} max={3600}
                         value={delayMin}
                         onChange={e => setDelayMin(Math.max(10, parseInt(e.target.value) || 10))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">seconds</p>
@@ -400,6 +406,7 @@ export function TemplatePicker({
                         min={0} max={300}
                         value={delayRandom}
                         onChange={e => setDelayRandom(Math.max(0, parseInt(e.target.value) || 0))}
+                        onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
                       <p className="text-[9px] text-amber-600 text-center">0–N secs</p>

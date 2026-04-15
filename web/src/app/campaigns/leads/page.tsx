@@ -125,6 +125,8 @@ export default function CampaignLeadsPage() {
   const [selectedEmployee, setSelectedEmployee] =
     useState<ExtendedCampaignLead | null>(null);
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
+  const [profileWebPresence, setProfileWebPresence] = useState<any | null>(null);
+  const [profileRecentPosts, setProfileRecentPosts] = useState<any[] | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   useEffect(() => {
@@ -279,6 +281,8 @@ export default function CampaignLeadsPage() {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
     setProfileSummary(null);
+    setProfileWebPresence(null);
+    setProfileRecentPosts(null);
     setSummaryError(null);
     setSummaryLoading(true);
 
@@ -299,8 +303,10 @@ export default function CampaignLeadsPage() {
           linkedin_url: employee.linkedin_url,
         },
       });
-      
+
       setProfileSummary(result.summary);
+      setProfileWebPresence(result.web_presence || null);
+      setProfileRecentPosts(result.recent_posts?.length ? result.recent_posts : null);
     } catch (error: any) {
       console.error("[Profile Summary] Error:", error);
       setSummaryError(error.message || "Failed to load profile summary");
@@ -317,6 +323,8 @@ export default function CampaignLeadsPage() {
     setSummaryDialogOpen(false);
     setSelectedEmployee(null);
     setProfileSummary(null);
+    setProfileWebPresence(null);
+    setProfileRecentPosts(null);
     setSummaryError(null);
   };
   const filteredLeads = useMemo(() => {
@@ -492,6 +500,8 @@ export default function CampaignLeadsPage() {
           onClose={handleCloseSummaryDialog}
           employee={selectedEmployee}
           summary={profileSummary}
+          webPresence={profileWebPresence}
+          recentPosts={profileRecentPosts}
           loading={summaryLoading}
           error={summaryError}
         />
