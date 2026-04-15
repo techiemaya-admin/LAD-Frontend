@@ -79,7 +79,9 @@ class CommunityROIApiClient {
 
     let response: Response | undefined;
     try {
-      response = await fetch(url.toString(), {
+      const fullUrl = url.toString();
+      console.debug(`[CommunityROI API] ${method} ${fullUrl}`, { baseURL: this.baseURL, path });
+      response = await fetch(fullUrl, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -87,7 +89,7 @@ class CommunityROIApiClient {
       });
     } catch (networkError) {
       // True network failure (offline, DNS, CORS, etc.) — always log
-      console.error('API network error:', networkError);
+      console.error('[CommunityROI API] Network error:', networkError);
       throw networkError;
     }
 
@@ -95,11 +97,12 @@ class CommunityROIApiClient {
 
     if (!response.ok) {
       const err = new Error(`API Error: ${response.status} ${response.statusText}`);
-      // Only log unexpected server errors (5xx). 4xx are handled by callers
-      // (e.g. 401/403 while auth is loading, 404 for optional resources).
-      if (response.status >= 500) {
-        console.error(`[CommunityROI] Server error ${response.status} on ${method} ${path}`, data);
-      }
+      // Log all failed requests to help debug
+      console.error(`[CommunityROI API] ${response.status} on ${method} ${url.toString()}`, {
+        baseURL: this.baseURL,
+        path,
+        response: data
+      });
       throw err;
     }
 
