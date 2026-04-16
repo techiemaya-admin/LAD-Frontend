@@ -150,31 +150,46 @@ const TranscriptsTab = ({
 );
 
 /* ----------------- Analysis Tab ------------------ */
-const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
+const StatBox = ({ label, value, subValue, colorClass }: { label: string; value: string; subValue?: string; colorClass?: string }) => (
+  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-1 min-w-[120px] flex-1">
+    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{label}</span>
+    <span className={cn("text-lg font-bold leading-tight", colorClass || "text-[#172560]")}>{value}</span>
+    {subValue && <span className="text-[10px] text-gray-400 font-medium truncate">{subValue}</span>}
+  </div>
+);
+
+const AnalysisTab = ({ analysis, log }: { analysis: any | null; log: any | null }) => {
   const recoList = normalizeList(analysis?.recommendations);
   const summaryText = analysis?.summary ?? "";
   const sentimentText = analysis?.sentiment ?? "";
-  const dispositionText = analysis?.disposition ?? "";
+  const dispositionText = analysis?.disposition ?? analysis?.raw_analysis?.disposition ?? analysis?.raw_analysis?.disposition_full?.disposition ?? log?.disposition ?? "";
 
-  const getSentimentVariant = (sentiment: string) => {
-    const lower = sentiment.toLowerCase();
-    if (lower.includes("positive"))
-      return {
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle,
-      };
-    if (lower.includes("negative"))
-      return {
-        color: "bg-red-100 text-red-800 border-red-200",
-        icon: AlertCircle,
-      };
-    return {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: MinusCircle,
-    };
+  // Data for the boxes
+  const score = analysis?.lead_score ?? 0;
+  const category = (analysis?.lead_category ?? "WARM").toUpperCase();
+  const engagement = analysis?.engagement_level ?? (log?.duration > 60 ? "Medium" : "Low");
+  const durationStr = formatTimestamp(log?.duration || log?.duration_seconds || 0);
+
+  // Logic for sub-labels based on score
+  const getScoreTier = (s: number) => {
+    if (s >= 8) return "High-tier lead";
+    if (s >= 5) return "Mid-tier lead";
+    if (s >= 3) return "Lower-mid tier";
+    return "Cold contact";
   };
 
-  // Color mapping derived from disposition
+  const getCategoryDesc = (c: string) => {
+    if (c === "HOT") return "Qualified interest";
+    if (c === "COLD") return "No interest";
+    return "Unqualified interest";
+  };
+
+  const getPriorityDesc = (s: number) => {
+    if (s >= 8) return "Immediate action";
+    if (s >= 5) return "Follow up needed";
+    return "Nurture sequence";
+  };
+
   const getDispositionVariant = (disposition: string) => {
     const lower = (disposition || "").toLowerCase();
     const compact = lower.replace(/[^a-z0-9]+/g, " ").trim();
@@ -218,71 +233,179 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
     return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
   };
 
+  const getScoreColor = (cat: string) => {
+    if (cat === "HOT") return { bar: "bg-red-100", dot: "bg-red-500", border: "border-red-500", text: "text-red-500", tick: "bg-red-300" };
+    if (cat === "COLD") return { bar: "bg-blue-100", dot: "bg-blue-500", border: "border-blue-500", text: "text-blue-500", tick: "bg-blue-300" };
+    return { bar: "bg-amber-100", dot: "bg-amber-500", border: "border-amber-500", text: "text-amber-500", tick: "bg-amber-300" };
+  };
+
+  const theme = getScoreColor(category);
+
+  const getThemeGradient = (cat: string) => {
+    if (cat === "HOT") return "from-white to-red-50";
+    if (cat === "COLD") return "from-white to-blue-50";
+    return "from-white to-amber-50";
+  };
+  const gradientClass = getThemeGradient(category);
+
   const dispositionInfo = getDispositionVariant(dispositionText);
   const DispoIcon = dispositionInfo.icon;
 
   return (
     <ScrollArea className="h-full p-4">
-      <Card className="border-orange-200 shadow-lg overflow-hidden">
-        <CardContent className="p-6 space-y-6 bg-gradient-to-br from-white to-orange-50">
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Zap className="h-5 w-5 text-[#0b1957]" />
-              <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
+      <div className="space-y-6">
+        {/* Main Analysis Sections (Priority) */}
+        <Card className={cn("shadow-lg overflow-hidden border-gray-100")}>
+          <CardContent className={cn("p-6 space-y-6 bg-gradient-to-br", gradientClass)}>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Zap className={cn("h-5 w-5", theme.text === "text-amber-500" ? "text-amber-600" : theme.text)} />
+                <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
+              </div>
+              <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-100 wrap-break-word whitespace-pre-wrap">
+                {summaryText || "No summary available."}
+              </p>
             </div>
-            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-200 wrap-break-word whitespace-pre-wrap">
-              {summaryText || "No summary available."}
-            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+                <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
+              </div>
+              <Badge
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold shadow-md wrap-break-word whitespace-pre-wrap",
+                  dispositionInfo.color
+                )}
+              >
+                <DispoIcon className="h-4 w-4 mr-1 shrink-0" />
+                <span className="wrap-break-word whitespace-pre-wrap">{sentimentText || "Neutral"}</span>
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Clock className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+                <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
+              </div>
+              <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-100">
+                {dispositionText || "No disposition available."}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Lightbulb className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+                <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
+              </div>
+              <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-100">
+                {recoList.length > 0 ? (
+                  recoList.map((r, i) => (
+                    <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
+                      <div className={cn("w-1.5 h-1.5 rounded-full mt-1.5", theme.dot)} />
+                      <span>{r}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No recommendations available.</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Stats and Tracking (Follow-up) */}
+        <div className="space-y-6">
+          {/* Summary Boxes */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatBox label="Lead Score" value={`${score}/10`} subValue={getScoreTier(score)} colorClass={theme.text} />
+            <StatBox label="Category" value={category} subValue={getCategoryDesc(category)} colorClass={theme.text} />
+            <StatBox label="Engagement" value={engagement} subValue="Call analysis" colorClass="text-blue-600" />
+            <StatBox label="Duration" value={durationStr} subValue="Total time" />
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
-            </div>
-            <Badge
-              className={cn(
-                "px-4 py-2 text-sm font-semibold shadow-md wrap-break-word whitespace-pre-wrap",
-                dispositionInfo.color
-              )}
-            >
-              <DispoIcon className="h-4 w-4 mr-1 shrink-0" />
-              <span className="wrap-break-word whitespace-pre-wrap">
-                {sentimentText || "Neutral"}
-              </span>
-            </Badge>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
-            </div>
-            <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-200">
-              {dispositionText || "Resolved successfully."}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Lightbulb className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
-            </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
-              {recoList.length > 0 ? (
-                recoList.map((r, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{r}</span>
+          {/* Tracking Section: Lead Score & Scaling */}
+          <Card className="border-gray-100 shadow-sm">
+            <CardContent className="p-6 space-y-8">
+              {/* Lead Score Position */}
+              <div className="space-y-4">
+                <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Lead Score Position</h4>
+                <div className="relative pt-6 pb-2">
+                  <div className={cn("h-1.5 w-full rounded-full flex justify-between px-0.5", theme.bar)}>
+                    {[0, 2, 4, 6, 8, 10].map((v) => (
+                      <div key={v} className={cn("w-px h-2 -translate-y-0.5", theme.tick)} />
+                    ))}
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 italic">No recommendations available.</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                  <div
+                    className="absolute top-4 transition-all duration-500 ease-out"
+                    style={{ left: `${score * 10}%`, transform: "translateX(-50%)" }}
+                  >
+                    <div className={cn("w-4 h-4 rounded-full border-2 border-white shadow-md mb-1", theme.dot)} />
+                  </div>
+                  <div className="flex justify-between mt-2 px-0">
+                    {[0, 2, 4, 6, 8, 10].map((v) => (
+                      <span key={v} className="text-[10px] text-gray-400 font-bold">{v}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scaling Indicator */}
+              <div className="space-y-4">
+                <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Scaling — Where this lead sits</h4>
+                <div className="relative h-6 flex items-center">
+                  {/* Background Line */}
+                  <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
+                  
+                  {/* Animated Pointer */}
+                  <div
+                    className="absolute transition-all duration-500 ease-out flex items-center justify-center translate-y-[0px]"
+                    style={{ left: `${(score / 10) * 100}%`, transform: "translateX(-50%)" }}
+                  >
+                    <div className={cn("w-5 h-5 rounded-full border-2 bg-white shadow-md flex items-center justify-center", theme.border)}>
+                      <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Scaling Labels */}
+                <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+                  <span className="text-left">Cold / wrong contact</span>
+                  <span className="text-center">Nurture</span>
+                  <span className="text-center">Active pipeline</span>
+                  <span className="text-right">Close now</span>
+                </div>
+              </div>
+
+              {/* Scaling Note */}
+              <div className={cn("border-l-4 p-4 rounded-r-xl", 
+                category === "HOT" ? "bg-red-50 border-red-400" : 
+                category === "COLD" ? "bg-blue-50 border-blue-400" : 
+                "bg-amber-50 border-amber-400"
+              )}>
+                <h5 className={cn("text-[10px] font-bold uppercase mb-1", 
+                  category === "HOT" ? "text-red-800" : 
+                  category === "COLD" ? "text-blue-800" : 
+                  "text-amber-800"
+                )}>Scaling note</h5>
+                <p className={cn("text-xs leading-relaxed font-medium", 
+                  category === "HOT" ? "text-red-700" : 
+                  category === "COLD" ? "text-blue-700" : 
+                  "text-amber-700"
+                )}>
+                  {score >= 8 ? (
+                    "This lead is a high-priority prospect who showed immediate interest and buying signals. Focus on closing or scheduling the next concrete step."
+                  ) : score >= 5 ? (
+                    "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
+                  ) : (
+                    "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </ScrollArea>
   );
 };
@@ -998,7 +1121,7 @@ export function CallLogModal({
 
                 {hasAnalysis && (
                   <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <AnalysisTab analysis={analysis} />
+                    <AnalysisTab analysis={analysis} log={log} />
                   </TabsContent>
                 )}
 

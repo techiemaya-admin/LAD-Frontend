@@ -78,6 +78,7 @@ interface CallLog {
   recording_url?: string;
   call_recording_url?: string;
   tag?: LeadTag;
+  disposition?: string;
 }
 
 interface CallLogsTableProps {
@@ -516,8 +517,22 @@ export function CallLogsTable({
       },
     },
     {
-      id: 'response',
-      header: 'Response',
+      id: "disposition",
+      accessorKey: "disposition",
+      header: "Disposition",
+      cell: ({ row }) => {
+        const item = row.original as any;
+        const disposition = item.disposition || item.analysis?.disposition || item.analysis?.raw_analysis?.disposition || item.analysis?.raw_analysis?.disposition_full?.disposition || "—";
+        return (
+          <span className="text-sm text-muted-foreground truncate max-w-[120px]" title={disposition}>
+            {disposition}
+          </span>
+        );
+      },
+    },
+    {
+      id: "response",
+      header: "Response",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
           {getStatusReason(row.original) || "—"}
