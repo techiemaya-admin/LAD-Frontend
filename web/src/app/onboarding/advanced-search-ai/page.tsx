@@ -6320,6 +6320,14 @@ function CheckpointFormInline({
         // Close whichever inline panel was open
         if (type === 'connect') setShowAiConnPanel(false);
         else setShowAiFollowPanel(false);
+
+        // Check if user already entered text - if so, don't generate
+        const existingMsg = type === 'connect' ? connMsg : followMsg;
+        if (existingMsg && existingMsg.trim()) {
+            // User has already entered a message, no need to generate
+            return;
+        }
+
         setLiFollowGenLoading(true);
         try {
             const sampleLead = leads && leads.length > 0 ? (leads[0] as any) : null;
@@ -6526,8 +6534,10 @@ function CheckpointFormInline({
             // For LinkedIn search campaigns: include all leads except explicitly thumbs-down'd ones.
             // Previously required explicit thumbs-up (=== 'good') which meant zero leads if user
             // never clicked thumbs-up — leads were lost. Now we only exclude rejected leads.
+            // IMPORTANT: Filter by ICP threshold selected by user (only LinkedIn search leads, not direct/inbound)
             const goodMatchLeads = leads
                 .filter(l => leadFeedback[l.id] !== 'bad')
+                .filter(l => (l.icp_score ?? 0) >= icpMin)  // Apply ICP threshold filter
                 .map(l => mapLead(l, 'user_good_match'));
 
             const directContactLeads = isDirectContact
