@@ -471,6 +471,8 @@ export default function AdvancedSearchAIPage() {
     const [cpEnableDailyWebPresence, setCpEnableDailyWebPresence] = useState(false);
     const [cpEnableDailyPosts, setCpEnableDailyPosts] = useState(false);
     const [cpEnableAiPersonalization, setCpEnableAiPersonalization] = useState(false);
+    const [cpEnableAiConnectionPersonalization, setCpEnableAiConnectionPersonalization] = useState(false);
+    const [cpEnableAiFollowupPersonalization, setCpEnableAiFollowupPersonalization] = useState(false);
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
     
@@ -551,6 +553,8 @@ export default function AdvancedSearchAIPage() {
         setWorkflowPreview(steps);
     }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
     const [cpDays, setCpDays] = useState('30');
+    const [cpChannelConfigStep, setCpChannelConfigStep] = useState(0); // Tracks which channel we're configuring (0-based)
+    const [cpChannelDelays, setCpChannelDelays] = useState<Record<string, { days: string; hours: string }>>({}); // Delays per channel
     const [cpName, setCpName] = useState('');
     const [cpGenLoading, setCpGenLoading] = useState(false);
     const [cpLaunching, setCpLaunching] = useState(false);
@@ -3565,6 +3569,10 @@ export default function AdvancedSearchAIPage() {
                                 setTriggerCondition={setCpTriggerCondition}
                                 days={cpDays}
                                 setDays={setCpDays}
+                                channelConfigStep={cpChannelConfigStep}
+                                setChannelConfigStep={setCpChannelConfigStep}
+                                channelDelays={cpChannelDelays}
+                                setChannelDelays={setCpChannelDelays}
                                 name={cpName}
                                 setName={setCpName}
                                 genLoading={cpGenLoading}
@@ -3619,6 +3627,10 @@ export default function AdvancedSearchAIPage() {
                                 setEnableDailyPosts={setCpEnableDailyPosts}
                                 enableAiPersonalization={cpEnableAiPersonalization}
                                 setEnableAiPersonalization={setCpEnableAiPersonalization}
+                                enableAiConnectionPersonalization={cpEnableAiConnectionPersonalization}
+                                setEnableAiConnectionPersonalization={setCpEnableAiConnectionPersonalization}
+                                enableAiFollowupPersonalization={cpEnableAiFollowupPersonalization}
+                                setEnableAiFollowupPersonalization={setCpEnableAiFollowupPersonalization}
                             />
                         </div>
                         )}
@@ -5793,7 +5805,7 @@ const CP_QUESTIONS = [
 function CheckpointFormInline({
     step, setStep, icpThreshold, setIcpThreshold, actions, setActions, connMsg, setConnMsg, followMsg, setFollowMsg,
     nextChannels, setNextChannels, triggerCondition, setTriggerCondition,
-    days, setDays, name, setName, genLoading, setGenLoading, launching, setLaunching, targeting, leads,
+    days, setDays, channelConfigStep, setChannelConfigStep, channelDelays, setChannelDelays, name, setName, genLoading, setGenLoading, launching, setLaunching, targeting, leads,
     leadFeedback, searchSessions, chatMessages,
     voiceAgents, setVoiceAgents, voiceNumbers, setVoiceNumbers,
     selectedAgentId, setSelectedAgentId, selectedVoiceId, setSelectedVoiceId,
@@ -5810,6 +5822,8 @@ function CheckpointFormInline({
     enableDailyWebPresence, setEnableDailyWebPresence,
     enableDailyPosts, setEnableDailyPosts,
     enableAiPersonalization, setEnableAiPersonalization,
+    enableAiConnectionPersonalization, setEnableAiConnectionPersonalization,
+    enableAiFollowupPersonalization, setEnableAiFollowupPersonalization,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -5819,6 +5833,8 @@ function CheckpointFormInline({
     nextChannels: string[]; setNextChannels: React.Dispatch<React.SetStateAction<string[]>>;
     triggerCondition: string; setTriggerCondition: (v: string) => void;
     days: string; setDays: (v: string) => void;
+    channelConfigStep: number; setChannelConfigStep: (v: number) => void;
+    channelDelays: Record<string, { days: string; hours: string }>; setChannelDelays: (v: Record<string, { days: string; hours: string }>) => void;
     name: string; setName: (v: string) => void;
     genLoading: boolean; setGenLoading: (v: boolean) => void;
     launching: boolean; setLaunching: (v: boolean) => void;
@@ -5851,6 +5867,8 @@ function CheckpointFormInline({
     enableDailyWebPresence: boolean; setEnableDailyWebPresence: (v: boolean) => void;
     enableDailyPosts: boolean; setEnableDailyPosts: (v: boolean) => void;
     enableAiPersonalization: boolean; setEnableAiPersonalization: (v: boolean) => void;
+    enableAiConnectionPersonalization: boolean; setEnableAiConnectionPersonalization: (v: boolean) => void;
+    enableAiFollowupPersonalization: boolean; setEnableAiFollowupPersonalization: (v: boolean) => void;
 }) {
     const totalSteps = CP_QUESTIONS.length;
 
@@ -5876,6 +5894,13 @@ function CheckpointFormInline({
         return CP_QUESTIONS[s];
     };
     const q = getQuestion(step);
+
+    // Sequential channel configuration helpers
+    const selectedChannelsList = nextChannels.filter(ch => ch !== 'linkedin' || !isDirectContact || hasLinkedInInfo);
+    const channelIcons: Record<string, string> = { linkedin: '💼', email: '✉️', whatsapp: '💬', voice_call: '📞' };
+    const channelNames: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', voice_call: 'Voice Call' };
+    const currentChannelBeingConfigured = selectedChannelsList[channelConfigStep];
+    const isInChannelConfiguration = nextChannels.length > 0 && step === 1 && currentChannelBeingConfigured;
 
     // True when no lead has a meaningful ICP score (e.g. imported/inbound leads without scoring)
     const hasNoIcpScores = leads.length === 0 || leads.every(l => !l.icp_score || l.icp_score === 0);
@@ -6370,26 +6395,28 @@ function CheckpointFormInline({
             console.log('🔍 Building actionSteps:', { inboundMode, isDirectContact, liChannelActions, nextChannels });
             if (!isDirectContact && nextChannels.includes('linkedin')) {
                 // Primary LinkedIn steps — configured in channels step via liChannelActions
-                if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                const liDelayConfig = { delayDays: parseInt(channelDelays.linkedin?.days) || 0, delayHours: parseInt(channelDelays.linkedin?.hours) || 0 };
+                if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...liDelayConfig } });
+                if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...liDelayConfig } });
+                if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...liDelayConfig } });
                 // Default to profile visit if no specific action selected
-                if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...liDelayConfig } });
             }
             console.log('📋 Primary LinkedIn actionSteps:', actionSteps);
 
             if (isDirectContact && nextChannels.length > 0) {
                 // Direct contact (phone/email only): add channel steps immediately — no LinkedIn trigger needed
                 for (const ch of nextChannels) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                     if (ch === 'linkedin') {
-                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...chDelayConfig } });
                         // Default to profile visit if no specific action selected
-                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
                     }
                 }
             } else if (!isDirectContact && hasMultipleChannels && triggerCondition && triggerCondition !== 'no_dependency') {
@@ -6435,31 +6462,34 @@ function CheckpointFormInline({
                 });
                 // Follow-up channels: all channels except the primary trigger channel
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                     if (ch === 'linkedin') {
-                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
-                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
                     }
                 }
             } else if (!isDirectContact && hasMultipleChannels) {
                 // no_dependency or no trigger condition selected — execute all channels sequentially without waiting
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                 }
             } else if (!isDirectContact && !hasMultipleChannels && nextChannels.length > 0) {
                 // LinkedIn search source but only a single non-LinkedIn channel selected (e.g. WhatsApp-only).
                 // The first block above already added LinkedIn steps (if linkedin is in nextChannels).
                 // This block handles the gap: add outreach steps for any non-LinkedIn single channel.
                 for (const ch of nextChannels) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                 }
             }
             const t = targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] };
@@ -6484,6 +6514,8 @@ function CheckpointFormInline({
                 enable_daily_web_presence: enableDailyWebPresence,
                 enable_daily_posts: enableDailyPosts,
                 enable_ai_personalization: enableAiPersonalization,
+                enable_ai_connection_personalization: enableAiConnectionPersonalization,
+                enable_ai_followup_personalization: enableAiFollowupPersonalization,
                 ai_value_prop: aiMsgValueProp || '',
                 ai_tone: aiMsgTone || 'professional',
                 ai_goal: aiMsgGoal || 'get_meeting',
@@ -6590,6 +6622,8 @@ function CheckpointFormInline({
                     enable_daily_web_presence: enableDailyWebPresence,
                     enable_daily_posts: enableDailyPosts,
                     enable_ai_personalization: enableAiPersonalization,
+                    enable_ai_connection_personalization: enableAiConnectionPersonalization,
+                    enable_ai_followup_personalization: enableAiFollowupPersonalization,
                     ai_value_prop: aiMsgValueProp || '',
                     ai_tone: aiMsgTone || 'professional',
                     ai_goal: aiMsgGoal || 'get_meeting',
@@ -6777,18 +6811,29 @@ function CheckpointFormInline({
                                     </div>
                                 </div>
                             ))}
-                            {!isDirectContact && (
-                            <div onClick={() => { setNextChannels([]); setStep(step + 1); }} style={optStyle(nextChannels.length === 0)}>
-                                <div style={numBadge(4, nextChannels.length === 0)}>{nextChannels.length === 0 ? '✓' : 4}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600 }}>Skip</div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>No additional channels — LinkedIn only</div>
+
+                            {/* Channel Configuration Sequential UI */}
+                            {isInChannelConfiguration && (
+                                <div style={{ marginTop: '12px', padding: '16px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
+                                    {/* Step indicator */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                                            {channelIcons[currentChannelBeingConfigured]} Configure {channelNames[currentChannelBeingConfigured]}
+                                        </div>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280', background: '#fff', padding: '4px 10px', borderRadius: '12px', border: '1px solid #d1d5db' }}>
+                                            Step {channelConfigStep + 1} of {selectedChannelsList.length}
+                                        </div>
+                                    </div>
+
+                                    {/* Progress bar */}
+                                    <div style={{ width: '100%', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden', marginBottom: '16px' }}>
+                                        <div style={{ height: '100%', background: '#3b82f6', width: `${((channelConfigStep + 1) / selectedChannelsList.length) * 100}%`, transition: 'width 0.3s' }}></div>
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
                             {/* Email Config (inline when email selected) */}
-                            {nextChannels.includes('email') && (
+                            {nextChannels.includes('email') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'email' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560' }}>✉️ Email Settings</div>
@@ -6898,8 +6943,71 @@ function CheckpointFormInline({
                                 </div>
                             )}
 
+                            {/* Navigation & Summary for Channel Configuration */}
+                            {isInChannelConfiguration && (
+                                <div style={{ marginTop: '16px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
+                                    {/* Per-Channel Delay Configuration */}
+                                    <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>⏱️ Delay before next step (Optional)</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', display: 'block' }}>Days</label>
+                                                <input
+                                                    type="number"
+                                                    value={channelDelays[currentChannelBeingConfigured]?.days || '0'}
+                                                    onChange={e => {
+                                                        const updated = { ...channelDelays, [currentChannelBeingConfigured]: { ...(channelDelays[currentChannelBeingConfigured] || { hours: '0' }), days: e.target.value } };
+                                                        setChannelDelays(updated);
+                                                    }}
+                                                    min="0" max="365" placeholder="0"
+                                                    style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', background: '#fff', outline: 'none' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', display: 'block' }}>Hours</label>
+                                                <input
+                                                    type="number"
+                                                    value={channelDelays[currentChannelBeingConfigured]?.hours || '0'}
+                                                    onChange={e => {
+                                                        const updated = { ...channelDelays, [currentChannelBeingConfigured]: { ...(channelDelays[currentChannelBeingConfigured] || { days: '0' }), hours: e.target.value } };
+                                                        setChannelDelays(updated);
+                                                    }}
+                                                    min="0" max="23" placeholder="0"
+                                                    style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', background: '#fff', outline: 'none' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Back/Forward Navigation */}
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => {
+                                                if (channelConfigStep > 0) setChannelConfigStep(channelConfigStep - 1);
+                                            }}
+                                            disabled={channelConfigStep === 0}
+                                            style={{ padding: '10px 16px', background: channelConfigStep === 0 ? '#f3f4f6' : '#fff', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: channelConfigStep === 0 ? '#9ca3af' : '#374151', cursor: channelConfigStep === 0 ? 'not-allowed' : 'pointer' }}>
+                                            ← Back
+                                        </button>
+                                        {channelConfigStep < selectedChannelsList.length - 1 ? (
+                                            <button
+                                                onClick={() => setChannelConfigStep(channelConfigStep + 1)}
+                                                style={{ padding: '10px 16px', background: '#172560', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                Next → ({selectedChannelsList.length - channelConfigStep - 1} remaining)
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => setStep(step + 1)}
+                                                style={{ padding: '10px 16px', background: '#10b981', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                Continue →
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* WhatsApp Config (inline when whatsapp selected) */}
-                            {nextChannels.includes('whatsapp') && (
+                            {nextChannels.includes('whatsapp') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'whatsapp' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
                                     {/* Header row */}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -7310,7 +7418,7 @@ function CheckpointFormInline({
                             )}
 
                             {/* LinkedIn Activity Config (inline when linkedin selected as follow-up channel in step 3) */}
-                            {nextChannels.includes('linkedin') && (
+                            {nextChannels.includes('linkedin') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'linkedin' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
                                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e40af', marginBottom: '10px' }}>💼 LinkedIn Activity Settings</div>
                                     <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select LinkedIn actions (multi-select):</div>
@@ -7665,6 +7773,62 @@ function CheckpointFormInline({
                                                         ✅ Each lead will receive a <strong>unique AI-generated message</strong> based on their live web presence & LinkedIn posts. Your static template message is used as a fallback.
                                                     </div>
                                                 )}
+
+                                                {(enableDailyWebPresence || enableDailyPosts) && enableAiPersonalization && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Granular AI Message Control:</div>
+
+                                                        {/* Toggle: AI Generate Connection Message */}
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: '9px 12px', background: enableAiConnectionPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                            border: `1px solid ${enableAiConnectionPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                        }} onClick={() => setEnableAiConnectionPersonalization(!enableAiConnectionPersonalization)}>
+                                                            <div>
+                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>🔗 AI-generate connection request</div>
+                                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Create personalized connection messages</div>
+                                                            </div>
+                                                            <div style={{
+                                                                width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                                background: enableAiConnectionPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                            }}>
+                                                                <div style={{
+                                                                    position: 'absolute', top: '2px',
+                                                                    left: enableAiConnectionPersonalization ? '16px' : '2px',
+                                                                    width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                                }} />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Toggle: AI Generate Followup Message */}
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: '9px 12px', background: enableAiFollowupPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                            border: `1px solid ${enableAiFollowupPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                        }} onClick={() => setEnableAiFollowupPersonalization(!enableAiFollowupPersonalization)}>
+                                                            <div>
+                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>💬 AI-generate follow-up message</div>
+                                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Create personalized follow-up messages</div>
+                                                            </div>
+                                                            <div style={{
+                                                                width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                                background: enableAiFollowupPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                            }}>
+                                                                <div style={{
+                                                                    position: 'absolute', top: '2px',
+                                                                    left: enableAiFollowupPersonalization ? '16px' : '2px',
+                                                                    width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                                }} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ fontSize: '11px', color: '#7c3aed', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '7px', padding: '7px 10px', lineHeight: 1.5 }}>
+                                                            💡 <strong>Tip:</strong> Choose which message(s) should be AI-generated. Unchecked messages will use your static template.
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -7672,6 +7836,7 @@ function CheckpointFormInline({
                             )}
                         </div>
                     )}
+
 
                     {/* Step 2: Trigger Condition — options are dynamic based on primary channel */}
                     {step === 2 && (
