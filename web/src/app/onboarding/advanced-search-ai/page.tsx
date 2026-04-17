@@ -3525,7 +3525,7 @@ export default function AdvancedSearchAIPage() {
             <div className="adv-yellow-bar" />
             <div className="adv-chat-main">
                 {/* LEFT: CHAT */}
-                <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '50%' : '100%' }}>
+                <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '60%' : '100%' }}>
                     <button className="adv-chat-back" onClick={reset}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                     </button>
@@ -5620,7 +5620,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
 
                 {/* ── NAS.io-style action buttons ── */}
                 {msg.targeting && (
-                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px", justifyContent:"space-between" }}>
                         <button className="adv-act-btn" style={{
                             padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
@@ -5682,7 +5682,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                             Suggested Outreach Journey
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px', justifyContent:"center" }}>
                             {msg.outreach_journey.map((step, si) => {
                                 const icons: Record<string, React.ReactNode> = {
                                     linkedin: (
@@ -8640,7 +8640,7 @@ const css = `
             .adv-chat-back {position:absolute; top:16px; left:20px; z-index:10; width:42px; height:42px; border-radius:50%; border:1px solid #e5e7eb; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.06); transition:all .15s; }
             .adv-chat-back:hover {background:#f3f4f6; }
             .adv-chat-msgs {flex:1; overflow-y:auto; padding:72px 0 8px; display:flex; flex-direction:column; }
-            .adv-msgs-inner {max-width:70%; margin:0 auto; padding:0 20px; width:100%; }
+            .adv-msgs-inner {max-width:80%; margin:0 auto; padding:0 10px; width:100%; }
             .adv-msgs-inner + .adv-msgs-inner {padding-top:8px; }
             /* ── BUBBLES ── */
             .adv-bubble {padding:6px 0; }
@@ -8783,7 +8783,7 @@ const css = `
             .adv-opt-btn:first-child:hover {background:#0a1447; border-color:#0a1447; box-shadow:0 4px 14px rgba(11,25,87,.35); }
 
             /* ── LEADS PANEL ── */
-            .adv-leads-panel {width:50%; background:#fff; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
+            .adv-leads-panel {width:40%; background:#fff; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
             .adv-chat-left {display:flex; flex-direction:column; position:relative; background:#fff; transition:width .35s cubic-bezier(.4,0,.2,1); border-right:none; min-width:0; }
             .adv-chat-left-empty {justify-content:center; }
             .adv-chat-left-empty .adv-chat-msgs {flex:none; overflow:visible; padding-top:0; }
