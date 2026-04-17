@@ -452,6 +452,36 @@ export default function AdvancedSearchAIPage() {
     const [messages, setMessages] = useState<ChatMsg[]>([]);
     const [input, setInput] = useState('');
     const [busy, setBusy] = useState(false);
+    const [typedPlaceholder, setTypedPlaceholder] = useState('');
+    useEffect(() => {
+        if (messages.length > 0) { setTypedPlaceholder(''); return; }
+        const suggestions = [
+            'Connect me with founders in trading companies in UAE',
+            'Connect me with CFO in Goldman Sachs in USA',
+            'Schedule sales meetings with procurement managers in HVAC in UAE',
+            'Find VP of Sales in SaaS companies in UK',
+            'Reach out to HR directors in manufacturing in Germany',
+            'Strengthen my relationship with existing clients',
+        ];
+        let sIdx = 0, cIdx = 0, deleting = false;
+        let timer: ReturnType<typeof setTimeout>;
+        const tick = () => {
+            const current = suggestions[sIdx];
+            if (!deleting) {
+                cIdx++;
+                setTypedPlaceholder(current.slice(0, cIdx));
+                if (cIdx === current.length) { deleting = true; timer = setTimeout(tick, 1800); return; }
+                timer = setTimeout(tick, 50);
+            } else {
+                cIdx--;
+                setTypedPlaceholder(current.slice(0, cIdx));
+                if (cIdx === 0) { deleting = false; sIdx = (sIdx + 1) % suggestions.length; timer = setTimeout(tick, 400); return; }
+                timer = setTimeout(tick, 25);
+            }
+        };
+        timer = setTimeout(tick, 600);
+        return () => clearTimeout(timer);
+    }, [messages.length]);
     const [targeting, setTargeting] = useState<LeadTargeting | null>(null);
     const [leads, setLeads] = useState<LeadProfile[]>([]);
     const [filteredLeads, setFilteredLeads] = useState<LeadProfile[]>([]);   // below ICP threshold
@@ -471,6 +501,8 @@ export default function AdvancedSearchAIPage() {
     const [cpEnableDailyWebPresence, setCpEnableDailyWebPresence] = useState(false);
     const [cpEnableDailyPosts, setCpEnableDailyPosts] = useState(false);
     const [cpEnableAiPersonalization, setCpEnableAiPersonalization] = useState(false);
+    const [cpEnableAiConnectionPersonalization, setCpEnableAiConnectionPersonalization] = useState(false);
+    const [cpEnableAiFollowupPersonalization, setCpEnableAiFollowupPersonalization] = useState(false);
     const [cpNextChannels, setCpNextChannels] = useState<string[]>([]); // email, whatsapp, voice_call
     const [cpTriggerCondition, setCpTriggerCondition] = useState(''); // connection_accepted, message_replied, profile_visited
     
@@ -551,6 +583,8 @@ export default function AdvancedSearchAIPage() {
         setWorkflowPreview(steps);
     }, [cpActions, cpNextChannels, cpTriggerCondition, setWorkflowPreview]);
     const [cpDays, setCpDays] = useState('30');
+    const [cpChannelConfigStep, setCpChannelConfigStep] = useState(0); // Tracks which channel we're configuring (0-based)
+    const [cpChannelDelays, setCpChannelDelays] = useState<Record<string, { days: string; hours: string }>>({}); // Delays per channel
     const [cpName, setCpName] = useState('');
     const [cpGenLoading, setCpGenLoading] = useState(false);
     const [cpLaunching, setCpLaunching] = useState(false);
@@ -1742,14 +1776,13 @@ export default function AdvancedSearchAIPage() {
                 console.warn('Error saving leads:', saveErr);
             }
 
-            let summaryText = `✅ **Successfully extracted ${counts.total} leads from your file!**\n\n📊 **Contact Channels Detected:**\n`;
-            if (counts.linkedin > 0) summaryText += `\n🔗 **LinkedIn:** ${counts.linkedin} profiles`;
-            if (counts.email > 0) summaryText += `\n✉️ **Email:** ${counts.email} addresses`;
-            if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
-            if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
-            if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
-            summaryText += `\n\n🔍 **Running background research** — searching Google + LinkedIn to build profiles for each lead...`;
-            summaryText += `\n\n👉 Click **"Create Outreach Journey"** to set up your campaign with these leads!`;
+            let summaryText = `**${counts.total} lead${counts.total !== 1 ? 's' : ''} successfully imported.**\n\n**Contact data detected:**\n`;
+            if (counts.linkedin > 0) summaryText += `\n• LinkedIn: ${counts.linkedin} profile${counts.linkedin !== 1 ? 's' : ''}`;
+            if (counts.email > 0) summaryText += `\n• Email: ${counts.email} address${counts.email !== 1 ? 'es' : ''}`;
+            if (counts.whatsapp > 0) summaryText += `\n• WhatsApp: ${counts.whatsapp} number${counts.whatsapp !== 1 ? 's' : ''}`;
+            if (counts.phone > 0) summaryText += `\n• Phone: ${counts.phone} number${counts.phone !== 1 ? 's' : ''}`;
+            if (counts.website > 0) summaryText += `\n• Website: ${counts.website} URL${counts.website !== 1 ? 's' : ''}`;
+            summaryText += `\n\nBuilding profiles in the background — searching Google and LinkedIn for additional context on each lead.\n\nWhen ready, click **"Create Outreach Journey"** below to configure your campaign.`;
 
             setMessages(p => p.filter(m => m.id !== processingId).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
@@ -1773,6 +1806,17 @@ export default function AdvancedSearchAIPage() {
         setMessages(p => [...p, { id: uid, role: 'user', text, ts: new Date() }, { id: lid, role: 'ai', text: '', ts: new Date(), loading: true }]);
         setBusy(true);
         setMsgCount(c => c + 1);
+
+        // ── PRIORITY -1a: Existing client / relationship-building intent ──
+        const isRelationshipIntent = /existing client|strengthen.*relation|strengthen.*client|client relation|re.engage.*client|re-engage.*client/i.test(text);
+        if (isRelationshipIntent) {
+            setMessages(p => p.filter(m => m.id !== lid).concat({
+                id: lid, role: 'ai', ts: new Date(),
+                text: `Excellent goal. To strengthen client relationships, import their existing data like company name, email, LinkedIn URL, phone etc., and complete the next steps (campaign setup).`,
+            }));
+            setBusy(false);
+            return;
+        }
 
         // ── PRIORITY -1: Outreach / phone / email direct-contact commands ──
         // "Hey LAD outreach to +971...", "+971506341191", "reach out to john@x.com", etc.
@@ -3435,17 +3479,17 @@ export default function AdvancedSearchAIPage() {
 
                 {/* Suggestion chips */}
                 <div className="adv-chips-row">
-                    <button className="adv-chip" onClick={() => { setInput('Marketing directors at fintech startups in London'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        Find leads in fintech
+                        Founders in trading companies in UAE
                     </button>
-                    <button className="adv-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Connect me with CFO in Goldman Sachs in USA'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        Target specific company
+                        CFO in Goldman Sachs in USA
                     </button>
-                    <button className="adv-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                        VP of Sales in UAE
+                        VP of Sales in UK SaaS
                     </button>
                 </div>
 
@@ -3543,6 +3587,53 @@ export default function AdvancedSearchAIPage() {
                                 : m;
                             return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
                         })}
+                        {/* Import leads prompt — shown when conversation is about existing client relationships */}
+                        {(() => {
+                            const allText = messages.map(m => m.text?.toLowerCase() || '').join(' ');
+                            const isRelationshipContext = /existing client|strengthen.*relation|client relation|account manager|customer success|re.engage|re-engage/.test(allText);
+                            if (!isRelationshipContext || messages.length === 0) return null;
+                            const downloadTemplate = () => {
+                                const headers = ['first_name', 'last_name', 'job_title', 'company_name', 'email', 'linkedin_url', 'phone', 'website'];
+                                const example = ['Jane', 'Doe', 'VP of Sales', 'Acme Corp', 'jane@acme.com', 'https://linkedin.com/in/janedoe', '+971501234567', 'https://acme.com'];
+                                const csv = [headers.join(','), example.join(',')].join('\n');
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url; a.download = 'client_import_template.csv';
+                                a.click(); URL.revokeObjectURL(url);
+                            };
+                            const hasUploadedLeads = inboundLeads.length > 0;
+                            return (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '8px 0 16px' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    </div>
+                                    {hasUploadedLeads ? (
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                            Upload More
+                                        </button>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#172560', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Import your leads & create outreach journey
+                                            </button>
+                                            <button
+                                                onClick={downloadTemplate}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Download CSV Template
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                         </div>
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
@@ -3565,6 +3656,10 @@ export default function AdvancedSearchAIPage() {
                                 setTriggerCondition={setCpTriggerCondition}
                                 days={cpDays}
                                 setDays={setCpDays}
+                                channelConfigStep={cpChannelConfigStep}
+                                setChannelConfigStep={setCpChannelConfigStep}
+                                channelDelays={cpChannelDelays}
+                                setChannelDelays={setCpChannelDelays}
                                 name={cpName}
                                 setName={setCpName}
                                 genLoading={cpGenLoading}
@@ -3619,6 +3714,10 @@ export default function AdvancedSearchAIPage() {
                                 setEnableDailyPosts={setCpEnableDailyPosts}
                                 enableAiPersonalization={cpEnableAiPersonalization}
                                 setEnableAiPersonalization={setCpEnableAiPersonalization}
+                                enableAiConnectionPersonalization={cpEnableAiConnectionPersonalization}
+                                setEnableAiConnectionPersonalization={setCpEnableAiConnectionPersonalization}
+                                enableAiFollowupPersonalization={cpEnableAiFollowupPersonalization}
+                                setEnableAiFollowupPersonalization={setCpEnableAiFollowupPersonalization}
                             />
                         </div>
                         )}
@@ -3659,7 +3758,7 @@ export default function AdvancedSearchAIPage() {
                             <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
                                 onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
                                 onKeyDown={onKey}
-                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
+                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : (typedPlaceholder || 'Ask Mr LAD...')}
                                 className="adv-chat-ta" />
                             <div className="adv-chat-input-foot">
                                 <div style={{position:'relative'}}>
@@ -3729,21 +3828,21 @@ export default function AdvancedSearchAIPage() {
                     </div>
                     {messages.length === 0 && (
                         <div className="adv-gemini-chips">
-                            <button className="adv-gemini-chip" onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                Find leads in fintech
+                                Founders in trading in UAE
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Schedule sales meetings with procurement managers in HVAC in UAE'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                Target specific company
+                                Sales meetings with HVAC managers
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                                VP of Sales in UAE
+                                VP of Sales in UK SaaS
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('Find decision makers in healthcare startups in Dubai'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Strengthen my relationship with existing clients'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                                Healthcare leads in Dubai
+                                Strengthen client relationships
                             </button>
                         </div>
                     )}
@@ -5355,7 +5454,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         };
 
                         const trimmed = line.trim();
-                        if (!trimmed) return <br key={i} />;
+                        if (!trimmed) return <div key={i} style={{ height: '6px' }} />;
 
                         // ### Heading
                         if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
@@ -5451,9 +5550,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     >
                         <div style={{
                             width: "48px", height: "48px", background: "#172560", borderRadius: "10px",
-                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                         }}>
-                            🏆
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: "15px", fontWeight: 700, color: "#111827", marginBottom: "4px" }}>
@@ -5472,7 +5571,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         <div className="adv-rc" onClick={onStartTargeting} style={{
                             flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
-                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</div>
+                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="2" cy="6" r="1" fill="#172560"/><circle cx="4" cy="12" r="1" fill="#172560"/><circle cx="8" cy="18" r="1" fill="#172560"/></svg>
+                            </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
                                 {!useSalesNav && (
@@ -5506,7 +5607,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                ⚡
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5"/></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
@@ -5524,8 +5625,12 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
                         <button className="adv-act-btn" style={{
-                            padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
-                        }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
+                            padding: "9px 20px", background: "#172560", border: "none", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "#fff",
+                            boxShadow: "0 2px 8px rgba(23,37,96,0.35)", display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.01em"
+                        }} onClick={onStartCheckpoints}>
+                            Create Outreach Journey
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
                     </div>
                 )}
 
@@ -5793,7 +5898,7 @@ const CP_QUESTIONS = [
 function CheckpointFormInline({
     step, setStep, icpThreshold, setIcpThreshold, actions, setActions, connMsg, setConnMsg, followMsg, setFollowMsg,
     nextChannels, setNextChannels, triggerCondition, setTriggerCondition,
-    days, setDays, name, setName, genLoading, setGenLoading, launching, setLaunching, targeting, leads,
+    days, setDays, channelConfigStep, setChannelConfigStep, channelDelays, setChannelDelays, name, setName, genLoading, setGenLoading, launching, setLaunching, targeting, leads,
     leadFeedback, searchSessions, chatMessages,
     voiceAgents, setVoiceAgents, voiceNumbers, setVoiceNumbers,
     selectedAgentId, setSelectedAgentId, selectedVoiceId, setSelectedVoiceId,
@@ -5810,6 +5915,8 @@ function CheckpointFormInline({
     enableDailyWebPresence, setEnableDailyWebPresence,
     enableDailyPosts, setEnableDailyPosts,
     enableAiPersonalization, setEnableAiPersonalization,
+    enableAiConnectionPersonalization, setEnableAiConnectionPersonalization,
+    enableAiFollowupPersonalization, setEnableAiFollowupPersonalization,
 }: {
     step: number; setStep: (s: number) => void;
     icpThreshold: string; setIcpThreshold: (v: string) => void;
@@ -5819,6 +5926,8 @@ function CheckpointFormInline({
     nextChannels: string[]; setNextChannels: React.Dispatch<React.SetStateAction<string[]>>;
     triggerCondition: string; setTriggerCondition: (v: string) => void;
     days: string; setDays: (v: string) => void;
+    channelConfigStep: number; setChannelConfigStep: (v: number) => void;
+    channelDelays: Record<string, { days: string; hours: string }>; setChannelDelays: (v: Record<string, { days: string; hours: string }>) => void;
     name: string; setName: (v: string) => void;
     genLoading: boolean; setGenLoading: (v: boolean) => void;
     launching: boolean; setLaunching: (v: boolean) => void;
@@ -5851,6 +5960,8 @@ function CheckpointFormInline({
     enableDailyWebPresence: boolean; setEnableDailyWebPresence: (v: boolean) => void;
     enableDailyPosts: boolean; setEnableDailyPosts: (v: boolean) => void;
     enableAiPersonalization: boolean; setEnableAiPersonalization: (v: boolean) => void;
+    enableAiConnectionPersonalization: boolean; setEnableAiConnectionPersonalization: (v: boolean) => void;
+    enableAiFollowupPersonalization: boolean; setEnableAiFollowupPersonalization: (v: boolean) => void;
 }) {
     const totalSteps = CP_QUESTIONS.length;
 
@@ -5876,6 +5987,13 @@ function CheckpointFormInline({
         return CP_QUESTIONS[s];
     };
     const q = getQuestion(step);
+
+    // Sequential channel configuration helpers
+    const selectedChannelsList = nextChannels.filter(ch => ch !== 'linkedin' || !isDirectContact || hasLinkedInInfo);
+    const channelIcons: Record<string, string> = { linkedin: '💼', email: '✉️', whatsapp: '💬', voice_call: '📞' };
+    const channelNames: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', voice_call: 'Voice Call' };
+    const currentChannelBeingConfigured = selectedChannelsList[channelConfigStep];
+    const isInChannelConfiguration = nextChannels.length > 0 && step === 1 && currentChannelBeingConfigured;
 
     // True when no lead has a meaningful ICP score (e.g. imported/inbound leads without scoring)
     const hasNoIcpScores = leads.length === 0 || leads.every(l => !l.icp_score || l.icp_score === 0);
@@ -6370,26 +6488,28 @@ function CheckpointFormInline({
             console.log('🔍 Building actionSteps:', { inboundMode, isDirectContact, liChannelActions, nextChannels });
             if (!isDirectContact && nextChannels.includes('linkedin')) {
                 // Primary LinkedIn steps — configured in channels step via liChannelActions
-                if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                const liDelayConfig = { delayDays: parseInt(channelDelays.linkedin?.days) || 0, delayHours: parseInt(channelDelays.linkedin?.hours) || 0 };
+                if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...liDelayConfig } });
+                if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...liDelayConfig } });
+                if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...liDelayConfig } });
                 // Default to profile visit if no specific action selected
-                if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...liDelayConfig } });
             }
             console.log('📋 Primary LinkedIn actionSteps:', actionSteps);
 
             if (isDirectContact && nextChannels.length > 0) {
                 // Direct contact (phone/email only): add channel steps immediately — no LinkedIn trigger needed
                 for (const ch of nextChannels) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                     if (ch === 'linkedin') {
-                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...chDelayConfig } });
                         // Default to profile visit if no specific action selected
-                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
                     }
                 }
             } else if (!isDirectContact && hasMultipleChannels && triggerCondition && triggerCondition !== 'no_dependency') {
@@ -6435,31 +6555,34 @@ function CheckpointFormInline({
                 });
                 // Follow-up channels: all channels except the primary trigger channel
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                     if (ch === 'linkedin') {
-                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
-                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '' } });
-                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '' } });
-                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: {} });
+                        if (liChannelActions.includes('profile_view')) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
+                        if (liChannelActions.includes('connect')) actionSteps.push({ type: 'linkedin_connect', title: 'Send LinkedIn Connection Request', channel: 'linkedin', order_index: orderIdx++, config: { message: connMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.includes('message')) actionSteps.push({ type: 'linkedin_message', title: 'Send LinkedIn Follow-up Message', channel: 'linkedin', order_index: orderIdx++, config: { message: followMsg || '', ...chDelayConfig } });
+                        if (liChannelActions.length === 0) actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++, config: { ...chDelayConfig } });
                     }
                 }
             } else if (!isDirectContact && hasMultipleChannels) {
                 // no_dependency or no trigger condition selected — execute all channels sequentially without waiting
                 for (const ch of nextChannels.filter(ch => ch !== primaryTriggerChannel)) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Follow-up Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                 }
             } else if (!isDirectContact && !hasMultipleChannels && nextChannels.length > 0) {
                 // LinkedIn search source but only a single non-LinkedIn channel selected (e.g. WhatsApp-only).
                 // The first block above already added LinkedIn steps (if linkedin is in nextChannels).
                 // This block handles the gap: add outreach steps for any non-LinkedIn single channel.
                 for (const ch of nextChannels) {
-                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined } });
-                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined } });
-                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined } });
+                    const chDelayConfig = { delayDays: parseInt(channelDelays[ch]?.days) || 0, delayHours: parseInt(channelDelays[ch]?.hours) || 0 };
+                    if (ch === 'email') actionSteps.push({ type: 'email_send', title: 'Send Email', channel: 'email', order_index: orderIdx++, config: { subject: emailSubject || '', body: emailBody || '', template_id: selectedEmailTemplateId || undefined, from_email: emailFromAddress || undefined, email_provider: emailProvider || undefined, ...chDelayConfig } });
+                    if (ch === 'whatsapp') actionSteps.push({ type: 'whatsapp_send', title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: orderIdx++, config: { whatsappMessage: waBody || '', whatsapp_account_id: waAccountId || undefined, whatsapp_template_id: selectedWaTemplateId || undefined, ...chDelayConfig } });
+                    if (ch === 'voice_call') actionSteps.push({ type: 'voice_agent_call', title: 'AI Voice Call', channel: 'voice', order_index: orderIdx++, config: { agent_id: selectedAgentId || undefined, voice_id: selectedVoiceId || undefined, from_number: selectedFromNumber || undefined, ...chDelayConfig } });
                 }
             }
             const t = targeting || { keywords: [], industries: [], locations: [], job_titles: [], profile_language: [] };
@@ -6484,6 +6607,8 @@ function CheckpointFormInline({
                 enable_daily_web_presence: enableDailyWebPresence,
                 enable_daily_posts: enableDailyPosts,
                 enable_ai_personalization: enableAiPersonalization,
+                enable_ai_connection_personalization: enableAiConnectionPersonalization,
+                enable_ai_followup_personalization: enableAiFollowupPersonalization,
                 ai_value_prop: aiMsgValueProp || '',
                 ai_tone: aiMsgTone || 'professional',
                 ai_goal: aiMsgGoal || 'get_meeting',
@@ -6590,6 +6715,8 @@ function CheckpointFormInline({
                     enable_daily_web_presence: enableDailyWebPresence,
                     enable_daily_posts: enableDailyPosts,
                     enable_ai_personalization: enableAiPersonalization,
+                    enable_ai_connection_personalization: enableAiConnectionPersonalization,
+                    enable_ai_followup_personalization: enableAiFollowupPersonalization,
                     ai_value_prop: aiMsgValueProp || '',
                     ai_tone: aiMsgTone || 'professional',
                     ai_goal: aiMsgGoal || 'get_meeting',
@@ -6704,7 +6831,14 @@ function CheckpointFormInline({
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
             <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
-                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>LAD in Action</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div className="adv-ai-name">LAD in Action</div>
+                    <button onClick={() => setStep(-1)} title="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
 
                 {/* Question header */}
                 <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -6777,18 +6911,29 @@ function CheckpointFormInline({
                                     </div>
                                 </div>
                             ))}
-                            {!isDirectContact && (
-                            <div onClick={() => { setNextChannels([]); setStep(step + 1); }} style={optStyle(nextChannels.length === 0)}>
-                                <div style={numBadge(4, nextChannels.length === 0)}>{nextChannels.length === 0 ? '✓' : 4}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600 }}>Skip</div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>No additional channels — LinkedIn only</div>
+
+                            {/* Channel Configuration Sequential UI */}
+                            {isInChannelConfiguration && (
+                                <div style={{ marginTop: '12px', padding: '16px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
+                                    {/* Step indicator */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                                            {channelIcons[currentChannelBeingConfigured]} Configure {channelNames[currentChannelBeingConfigured]}
+                                        </div>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280', background: '#fff', padding: '4px 10px', borderRadius: '12px', border: '1px solid #d1d5db' }}>
+                                            Step {channelConfigStep + 1} of {selectedChannelsList.length}
+                                        </div>
+                                    </div>
+
+                                    {/* Progress bar */}
+                                    <div style={{ width: '100%', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden', marginBottom: '16px' }}>
+                                        <div style={{ height: '100%', background: '#3b82f6', width: `${((channelConfigStep + 1) / selectedChannelsList.length) * 100}%`, transition: 'width 0.3s' }}></div>
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
                             {/* Email Config (inline when email selected) */}
-                            {nextChannels.includes('email') && (
+                            {nextChannels.includes('email') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'email' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560' }}>✉️ Email Settings</div>
@@ -6898,8 +7043,71 @@ function CheckpointFormInline({
                                 </div>
                             )}
 
+                            {/* Navigation & Summary for Channel Configuration */}
+                            {isInChannelConfiguration && (
+                                <div style={{ marginTop: '16px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
+                                    {/* Per-Channel Delay Configuration */}
+                                    <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>⏱️ Delay before next step (Optional)</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', display: 'block' }}>Days</label>
+                                                <input
+                                                    type="number"
+                                                    value={channelDelays[currentChannelBeingConfigured]?.days || '0'}
+                                                    onChange={e => {
+                                                        const updated = { ...channelDelays, [currentChannelBeingConfigured]: { ...(channelDelays[currentChannelBeingConfigured] || { hours: '0' }), days: e.target.value } };
+                                                        setChannelDelays(updated);
+                                                    }}
+                                                    min="0" max="365" placeholder="0"
+                                                    style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', background: '#fff', outline: 'none' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', display: 'block' }}>Hours</label>
+                                                <input
+                                                    type="number"
+                                                    value={channelDelays[currentChannelBeingConfigured]?.hours || '0'}
+                                                    onChange={e => {
+                                                        const updated = { ...channelDelays, [currentChannelBeingConfigured]: { ...(channelDelays[currentChannelBeingConfigured] || { days: '0' }), hours: e.target.value } };
+                                                        setChannelDelays(updated);
+                                                    }}
+                                                    min="0" max="23" placeholder="0"
+                                                    style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', background: '#fff', outline: 'none' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Back/Forward Navigation */}
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => {
+                                                if (channelConfigStep > 0) setChannelConfigStep(channelConfigStep - 1);
+                                            }}
+                                            disabled={channelConfigStep === 0}
+                                            style={{ padding: '10px 16px', background: channelConfigStep === 0 ? '#f3f4f6' : '#fff', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: channelConfigStep === 0 ? '#9ca3af' : '#374151', cursor: channelConfigStep === 0 ? 'not-allowed' : 'pointer' }}>
+                                            ← Back
+                                        </button>
+                                        {channelConfigStep < selectedChannelsList.length - 1 ? (
+                                            <button
+                                                onClick={() => setChannelConfigStep(channelConfigStep + 1)}
+                                                style={{ padding: '10px 16px', background: '#172560', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                Next → ({selectedChannelsList.length - channelConfigStep - 1} remaining)
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => setStep(step + 1)}
+                                                style={{ padding: '10px 16px', background: '#10b981', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                Continue →
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* WhatsApp Config (inline when whatsapp selected) */}
-                            {nextChannels.includes('whatsapp') && (
+                            {nextChannels.includes('whatsapp') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'whatsapp' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
                                     {/* Header row */}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -7310,7 +7518,7 @@ function CheckpointFormInline({
                             )}
 
                             {/* LinkedIn Activity Config (inline when linkedin selected as follow-up channel in step 3) */}
-                            {nextChannels.includes('linkedin') && (
+                            {nextChannels.includes('linkedin') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'linkedin' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
                                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e40af', marginBottom: '10px' }}>💼 LinkedIn Activity Settings</div>
                                     <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select LinkedIn actions (multi-select):</div>
@@ -7665,6 +7873,62 @@ function CheckpointFormInline({
                                                         ✅ Each lead will receive a <strong>unique AI-generated message</strong> based on their live web presence & LinkedIn posts. Your static template message is used as a fallback.
                                                     </div>
                                                 )}
+
+                                                {(enableDailyWebPresence || enableDailyPosts) && enableAiPersonalization && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Granular AI Message Control:</div>
+
+                                                        {/* Toggle: AI Generate Connection Message */}
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: '9px 12px', background: enableAiConnectionPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                            border: `1px solid ${enableAiConnectionPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                        }} onClick={() => setEnableAiConnectionPersonalization(!enableAiConnectionPersonalization)}>
+                                                            <div>
+                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>🔗 AI-generate connection request</div>
+                                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Create personalized connection messages</div>
+                                                            </div>
+                                                            <div style={{
+                                                                width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                                background: enableAiConnectionPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                            }}>
+                                                                <div style={{
+                                                                    position: 'absolute', top: '2px',
+                                                                    left: enableAiConnectionPersonalization ? '16px' : '2px',
+                                                                    width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                                }} />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Toggle: AI Generate Followup Message */}
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: '9px 12px', background: enableAiFollowupPersonalization ? '#f5f3ff' : '#f9fafb',
+                                                            border: `1px solid ${enableAiFollowupPersonalization ? '#ddd6fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                        }} onClick={() => setEnableAiFollowupPersonalization(!enableAiFollowupPersonalization)}>
+                                                            <div>
+                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>💬 AI-generate follow-up message</div>
+                                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Create personalized follow-up messages</div>
+                                                            </div>
+                                                            <div style={{
+                                                                width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
+                                                                background: enableAiFollowupPersonalization ? '#7c3aed' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                            }}>
+                                                                <div style={{
+                                                                    position: 'absolute', top: '2px',
+                                                                    left: enableAiFollowupPersonalization ? '16px' : '2px',
+                                                                    width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                                                                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                                }} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ fontSize: '11px', color: '#7c3aed', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '7px', padding: '7px 10px', lineHeight: 1.5 }}>
+                                                            💡 <strong>Tip:</strong> Choose which message(s) should be AI-generated. Unchecked messages will use your static template.
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -7672,6 +7936,7 @@ function CheckpointFormInline({
                             )}
                         </div>
                     )}
+
 
                     {/* Step 2: Trigger Condition — options are dynamic based on primary channel */}
                     {step === 2 && (
@@ -7815,11 +8080,6 @@ function CheckpointFormInline({
                     );
                 })()}
 
-                {/* Dismiss */}
-                <button onClick={() => setStep(-1)} style={{
-                    background: 'none', border: 'none', fontSize: '12px', color: '#9ca3af', cursor: 'pointer',
-                    marginTop: '8px', padding: 0, fontWeight: 500,
-                }}>Dismiss</button>
             </div>
         </div>
     );
@@ -8392,14 +8652,14 @@ const css = `
             .adv-ai-body {flex:1; max-width:90%; }
             .adv-ai-name {font-size:11px; font-weight:700; color:#0b1957; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
-            .adv-ai-text {font-size:14.5px; line-height:1.78; color:#374151; }
-            .adv-ai-text p {margin:0 0 6px; }
+            .adv-ai-text {font-size:14px; line-height:1.6; color:#374151; }
+            .adv-ai-text p {margin:0 0 4px; }
             .adv-ai-text strong {color:#111827; font-weight:650; }
             .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
-            .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:4px 0; }
-            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:7px; opacity:.7; }
+            .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:2px 0; }
+            .adv-ai-bullet-dot {width:5px; height:5px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:8px; opacity:.6; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
             .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
@@ -8416,7 +8676,7 @@ const css = `
             .adv-chat-input-box:focus-within::before {animation:adv-border-move 2s linear infinite; opacity:1; }
             @keyframes adv-border-move {0%{background-position:0% 50%}100%{background-position:300% 50%}}
             .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
-            .adv-chat-ta::placeholder {color:#9ca3af; font-weight:400; }
+            .adv-chat-ta::placeholder {color:#0b1959; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#172560; }
