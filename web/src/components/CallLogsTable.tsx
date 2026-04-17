@@ -78,7 +78,7 @@ interface CallLog {
   recording_url?: string;
   call_recording_url?: string;
   tag?: LeadTag;
-  disposition?: string;
+
 }
 
 interface CallLogsTableProps {
@@ -228,18 +228,30 @@ export function CallLogsTable({
 
   // Get lead tag for categorization
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    const tags = item.lead_tags;
-    const primary = Array.isArray(tags) && tags.length > 0 ? String(tags[0]) : "";
-    const normalizedPrimary = primary.toLowerCase();
-    if (normalizedPrimary.includes("hot")) return "hot";
-    if (normalizedPrimary.includes("warm")) return "warm";
-    if (normalizedPrimary.includes("cold")) return "cold";
+    // Check multiple locations for lead_category
+    const analysis = (item as any).analysis || {};
+    const rawAnalysis = analysis.raw_analysis || {};
+    const score = item.lead_score ?? analysis.lead_score ?? rawAnalysis.lead_score ?? 0;
 
-    if (item.lead_category) {
-      const normalized = normalizeLeadCategory(item.lead_category);
-      if (normalized) return normalized;
-    }
-    return "unknown";
+    const cat = String(
+      item.lead_category || 
+      analysis.lead_category || 
+      analysis.category || 
+      rawAnalysis.lead_category || 
+      rawAnalysis.category || 
+      ""
+    ).toLowerCase();
+
+    // DIRECT DATABASE MAPPING: Category always takes precedence
+    if (cat.includes("hot")) return "hot";
+    if (cat.includes("cold")) return "cold";
+    if (cat.includes("warm")) return "warm";
+    
+    // Safety check for score if category is missing/unknown in DB
+    if (score >= 8) return "hot";
+    if (score > 0 && score <= 3) return "cold";
+
+    return "warm"; // Defaulting to warm per user request to show something meaningful
   }, []);
 
   // Helper function to clean lead names from placeholder text
@@ -516,20 +528,7 @@ export function CallLogsTable({
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
     },
-    {
-      id: "disposition",
-      accessorKey: "disposition",
-      header: "Disposition",
-      cell: ({ row }) => {
-        const item = row.original as any;
-        const disposition = item.disposition || item.analysis?.disposition || item.analysis?.raw_analysis?.disposition || item.analysis?.raw_analysis?.disposition_full?.disposition || "—";
-        return (
-          <span className="text-sm text-muted-foreground truncate max-w-[120px]" title={disposition}>
-            {disposition}
-          </span>
-        );
-      },
-    },
+
     {
       id: "response",
       header: "Response",

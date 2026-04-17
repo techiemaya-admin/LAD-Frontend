@@ -158,17 +158,78 @@ const StatBox = ({ label, value, subValue, colorClass }: { label: string; value:
   </div>
 );
 
-const AnalysisTab = ({ analysis, log }: { analysis: any | null; log: any | null }) => {
-  const recoList = normalizeList(analysis?.recommendations);
+const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | null; log: any | null; leadData?: any; segments?: any[] }) => {
+  const lead = leadData?.lead ?? leadData?.data?.lead ?? leadData ?? null;
+  const recoList = normalizeList(analysis?.recommendations || analysis?.raw_analysis?.recommendations);
   const summaryText = analysis?.summary ?? "";
   const sentimentText = analysis?.sentiment ?? "";
-  const dispositionText = analysis?.disposition ?? analysis?.raw_analysis?.disposition ?? analysis?.raw_analysis?.disposition_full?.disposition ?? log?.disposition ?? "";
+  const dispositionText = analysis?.disposition || analysis?.raw_analysis?.disposition || analysis?.raw_analysis?.lead_disposition || analysis?.raw_analysis?.disposition_full?.disposition || log?.disposition || "";
 
   // Data for the boxes
-  const score = analysis?.lead_score ?? 0;
-  const category = (analysis?.lead_category ?? "WARM").toUpperCase();
-  const engagement = analysis?.engagement_level ?? (log?.duration > 60 ? "Medium" : "Low");
-  const durationStr = formatTimestamp(log?.duration || log?.duration_seconds || 0);
+  const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? (log as any)?.lead_score ?? (log as any)?.score ?? 0;
+  let category = (
+    analysis?.lead_category || 
+    analysis?.category || 
+    analysis?.raw_analysis?.lead_category || 
+    analysis?.raw_analysis?.category || 
+    log?.lead_category || 
+    log?.category || 
+    "WARM"
+  ).toUpperCase();
+
+  // Score enforcement as safety (if score >= 8, it MUST be hot)
+  if (score >= 8 && category !== "HOT") category = "HOT";
+  if (score > 0 && score <= 3 && category !== "COLD") category = "COLD";
+  // Logic for completion percentage based on questions asked vs answered
+  const getCompletionStats = () => {
+    if (!segments || segments.length === 0) return { percent: 0, answered: 0, total: 0 };
+    
+    let total = 0;
+    let answered = 0;
+    
+    // Keywords for filler/greeting questions to ignore
+    const fillerKeywords = ["hello", "hi ", "hey ", "are you there", "am i audible", "anybody there", "how are you"];
+    
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const speaker = (seg.speaker || "").toLowerCase();
+      const text = seg.text.trim().toLowerCase();
+      
+      // Heuristic for agent/assistant
+      const isAgent = speaker.includes("agent") || speaker.includes("assistant") || speaker.includes("ai") || speaker.includes("mira");
+      
+      // Filter out greetings and short filler questions
+      const isFiller = text.length < 15 || fillerKeywords.some(k => text.includes(k));
+
+      if (isAgent && seg.text.includes("?") && !isFiller) {
+        total++;
+        // Check if user (any non-agent) responded in next 2 turns
+        for (let j = 1; j <= 2; j++) {
+          const next = segments[i + j];
+          if (next) {
+            const nextSpeaker = (next.speaker || "").toLowerCase();
+            const nextText = next.text.trim().toLowerCase();
+            
+            const isUser = nextSpeaker.includes("user") || nextSpeaker.includes("lead") || nextSpeaker.includes("customer") || nextSpeaker.includes("human") || nextSpeaker.includes("prospect") ||
+                           (!nextSpeaker.includes("agent") && !nextSpeaker.includes("assistant") && !nextSpeaker.includes("ai") && !nextSpeaker.includes("mira"));
+            
+            // Ignore very short responses or simple greetings as an "answer"
+            const isMeaningfulResponse = nextText.length > 3 && !["hi", "hello", "yes", "okay"].includes(nextText);
+            
+            if (isUser && isMeaningfulResponse) {
+              answered++;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
+    return { percent, answered, total };
+  };
+
+  const { percent: completionPercent, answered: answeredCount, total: totalQuestions } = getCompletionStats();
 
   // Logic for sub-labels based on score
   const getScoreTier = (s: number) => {
@@ -197,7 +258,7 @@ const AnalysisTab = ({ analysis, log }: { analysis: any | null; log: any | null 
 
     // Green
     if (compact.includes("proceed immediately") || noPunct.includes("proceedimmediately")) {
-      return { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle };
+      return { color: "bg-green-100 text-green-800 border-green-200", icon: () => null };
     }
 
     // Yellow (3-7 days)
@@ -254,157 +315,142 @@ const AnalysisTab = ({ analysis, log }: { analysis: any | null; log: any | null 
   return (
     <ScrollArea className="h-full p-4">
       <div className="space-y-6">
-        {/* Main Analysis Sections (Priority) */}
-        <Card className={cn("shadow-lg overflow-hidden border-gray-100")}>
-          <CardContent className={cn("p-6 space-y-6 bg-gradient-to-br", gradientClass)}>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Zap className={cn("h-5 w-5", theme.text === "text-amber-500" ? "text-amber-600" : theme.text)} />
-                <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
-              </div>
-              <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-100 wrap-break-word whitespace-pre-wrap">
-                {summaryText || "No summary available."}
-              </p>
-            </div>
+        {/* Summary Boxes */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatBox label="Lead Score" value={`${score}/10`} subValue={getScoreTier(score)} colorClass={theme.text} />
+          <StatBox label="Category" value={category} subValue={getCategoryDesc(category)} colorClass={theme.text} />
+          <StatBox 
+            label="Emotion" 
+            value={(() => {
+              const text = (analysis?.sentiment || analysis?.raw_analysis?.sentiment || "").toLowerCase();
+              if (text.includes("interested")) return "Interested";
+              if (text.includes("excited")) return "Excited";
+              if (text.includes("frustrated")) return "Frustrated";
+              if (text.includes("hesitant") || text.includes("hesitation")) return "Hesitant";
+              if (text.includes("curious")) return "Curious";
+              if (text.includes("angry")) return "Angry";
+              if (text.includes("polite")) return "Polite";
+              return "Neutral";
+            })()} 
+            subValue="Call mindset" 
+            colorClass="text-purple-600" 
+          />
+          <StatBox label="Stage Completion" value={`${completionPercent}%`} subValue={`${answeredCount}/${totalQuestions} answered`} colorClass="text-blue-600" />
+        </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-                <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
-              </div>
-              <Badge
-                className={cn(
-                  "px-4 py-2 text-sm font-semibold shadow-md wrap-break-word whitespace-pre-wrap",
-                  dispositionInfo.color
-                )}
+        {/* Scaling Indicator */}
+        <div className="p-6 space-y-8 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          {/* Scaling Indicator */}
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Scaling — Where this lead sits</h4>
+            <div className="relative h-6 flex items-center">
+              {/* Background Line */}
+              <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
+
+              {/* Animated Pointer */}
+              <div
+                className="absolute transition-all duration-500 ease-out flex items-center justify-center translate-y-[0px]"
+                style={{ left: `${(score / 10) * 100}%`, transform: "translateX(-50%)" }}
               >
-                <DispoIcon className="h-4 w-4 mr-1 shrink-0" />
-                <span className="wrap-break-word whitespace-pre-wrap">{sentimentText || "Neutral"}</span>
-              </Badge>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Clock className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-                <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
-              </div>
-              <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-100">
-                {dispositionText || "No disposition available."}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Lightbulb className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-                <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
-              </div>
-              <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-100">
-                {recoList.length > 0 ? (
-                  recoList.map((r, i) => (
-                    <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                      <div className={cn("w-1.5 h-1.5 rounded-full mt-1.5", theme.dot)} />
-                      <span>{r}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 italic">No recommendations available.</p>
-                )}
+                <div className={cn("w-5 h-5 rounded-full border-2 bg-white shadow-md flex items-center justify-center", theme.border)}>
+                  <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Detailed Stats and Tracking (Follow-up) */}
-        <div className="space-y-6">
-          {/* Summary Boxes */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatBox label="Lead Score" value={`${score}/10`} subValue={getScoreTier(score)} colorClass={theme.text} />
-            <StatBox label="Category" value={category} subValue={getCategoryDesc(category)} colorClass={theme.text} />
-            <StatBox label="Engagement" value={engagement} subValue="Call analysis" colorClass="text-blue-600" />
-            <StatBox label="Duration" value={durationStr} subValue="Total time" />
+            {/* Scaling Labels */}
+            <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+              <span className="text-left">Cold / wrong contact</span>
+              <span className="text-center">Nurture</span>
+              <span className="text-center">Active pipeline</span>
+              <span className="text-right">Close now</span>
+            </div>
           </div>
 
-          {/* Tracking Section: Lead Score & Scaling */}
-          <Card className="border-gray-100 shadow-sm">
-            <CardContent className="p-6 space-y-8">
-              {/* Lead Score Position */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Lead Score Position</h4>
-                <div className="relative pt-6 pb-2">
-                  <div className={cn("h-1.5 w-full rounded-full flex justify-between px-0.5", theme.bar)}>
-                    {[0, 2, 4, 6, 8, 10].map((v) => (
-                      <div key={v} className={cn("w-px h-2 -translate-y-0.5", theme.tick)} />
-                    ))}
-                  </div>
-                  <div
-                    className="absolute top-4 transition-all duration-500 ease-out"
-                    style={{ left: `${score * 10}%`, transform: "translateX(-50%)" }}
-                  >
-                    <div className={cn("w-4 h-4 rounded-full border-2 border-white shadow-md mb-1", theme.dot)} />
-                  </div>
-                  <div className="flex justify-between mt-2 px-0">
-                    {[0, 2, 4, 6, 8, 10].map((v) => (
-                      <span key={v} className="text-[10px] text-gray-400 font-bold">{v}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Scaling Indicator */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Scaling — Where this lead sits</h4>
-                <div className="relative h-6 flex items-center">
-                  {/* Background Line */}
-                  <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
-                  
-                  {/* Animated Pointer */}
-                  <div
-                    className="absolute transition-all duration-500 ease-out flex items-center justify-center translate-y-[0px]"
-                    style={{ left: `${(score / 10) * 100}%`, transform: "translateX(-50%)" }}
-                  >
-                    <div className={cn("w-5 h-5 rounded-full border-2 bg-white shadow-md flex items-center justify-center", theme.border)}>
-                      <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Scaling Labels */}
-                <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
-                  <span className="text-left">Cold / wrong contact</span>
-                  <span className="text-center">Nurture</span>
-                  <span className="text-center">Active pipeline</span>
-                  <span className="text-right">Close now</span>
-                </div>
-              </div>
-
-              {/* Scaling Note */}
-              <div className={cn("border-l-4 p-4 rounded-r-xl", 
-                category === "HOT" ? "bg-red-50 border-red-400" : 
-                category === "COLD" ? "bg-blue-50 border-blue-400" : 
+          {/* Scaling Note */}
+          <div className={cn("border-l-4 p-4 rounded-r-xl",
+            category === "HOT" ? "bg-red-50 border-red-400" :
+              category === "COLD" ? "bg-blue-50 border-blue-400" :
                 "bg-amber-50 border-amber-400"
-              )}>
-                <h5 className={cn("text-[10px] font-bold uppercase mb-1", 
-                  category === "HOT" ? "text-red-800" : 
-                  category === "COLD" ? "text-blue-800" : 
+          )}>
+            <h5 className={cn("text-[10px] font-bold uppercase mb-1",
+              category === "HOT" ? "text-red-800" :
+                category === "COLD" ? "text-blue-800" :
                   "text-amber-800"
-                )}>Scaling note</h5>
-                <p className={cn("text-xs leading-relaxed font-medium", 
-                  category === "HOT" ? "text-red-700" : 
-                  category === "COLD" ? "text-blue-700" : 
+            )}>Scaling note</h5>
+            <p className={cn("text-xs leading-relaxed font-medium",
+              category === "HOT" ? "text-red-700" :
+                category === "COLD" ? "text-blue-700" :
                   "text-amber-700"
-                )}>
-                  {score >= 8 ? (
-                    "This lead is a high-priority prospect who showed immediate interest and buying signals. Focus on closing or scheduling the next concrete step."
-                  ) : score >= 5 ? (
-                    "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
-                  ) : (
-                    "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
-                  )}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            )}>
+              {analysis?.scaling_note || (score >= 8 ? (
+                "This lead is a high-priority prospect who showed immediate interest and buying signals. Focus on closing or scheduling the next concrete step."
+              ) : score >= 5 ? (
+                "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
+              ) : (
+                "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
+              ))}
+            </p>
+          </div>
         </div>
+
+        {/* Main Analysis Sections (Priority) */}
+        <div className={cn("p-6 space-y-6 bg-gradient-to-br rounded-2xl border border-gray-100 shadow-sm", gradientClass)}>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Zap className={cn("h-5 w-5", theme.text === "text-amber-500" ? "text-amber-600" : theme.text)} />
+              <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-100 wrap-break-word whitespace-pre-wrap">
+              {summaryText || "No summary available."}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+              <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
+            </div>
+            <Badge
+              className={cn(
+                "px-4 py-2 text-sm font-semibold shadow-md wrap-break-word whitespace-pre-wrap",
+                dispositionInfo.color
+              )}
+            >
+              <span className="wrap-break-word whitespace-pre-wrap">{sentimentText || "Neutral"}</span>
+            </Badge>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Clock className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+              <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
+            </div>
+            <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-100">
+              {dispositionText || "No disposition available."}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Lightbulb className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+              <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
+            </div>
+            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-100">
+              {recoList.length > 0 ? (
+                recoList.map((r, i) => (
+                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
+                    <div className={cn("w-1.5 h-1.5 rounded-full mt-1.5", theme.dot)} />
+                    <span>{r}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No recommendations available.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </ScrollArea>
   );
@@ -705,7 +751,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
       </ScrollArea>
     );
   }
-  
+
 
   const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
   const phoneValue =
@@ -844,11 +890,13 @@ export function CallLogModal({
 
   useEffect(() => {
     async function load() {
+      setLogLoading(true);
+      setLog(null);
+      setAnalysis(null);
+      setSegments([]);
+      setMessages(null);
+
       if (!open || !id) {
-        setLog(null);
-        setSegments([]);
-        setAnalysis(null);
-        setMessages(null);
         return;
       }
 
@@ -932,14 +980,13 @@ export function CallLogModal({
   const hasAudio = Boolean(signedRecordingUrl);
   const hasAnalysis = analysis && typeof analysis === "object" && Object.keys(analysis).length > 0;
 
-  const availableTabs: Array<"transcripts" | "analysis" | "messages" | "cost"> = [];
+  const availableTabs: Array<"transcripts" | "analysis" | "messages"> = [];
   if (hasTranscripts) availableTabs.push("transcripts");
   if (hasAnalysis) {
     availableTabs.push("analysis");
     availableTabs.push("messages");
   }
-  availableTabs.push("cost");
-  const defaultTab = availableTabs[0] ?? "cost";
+  const defaultTab = availableTabs[0] ?? "analysis";
 
   // Download handler
   const handleDownloadRecording = async () => {
@@ -1100,13 +1147,6 @@ export function CallLogModal({
                     </TabsTrigger>
                   )}
 
-                  <TabsTrigger
-                    value="cost"
-                    className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
-                  >
-                    <DollarSign className="h-4 w-4 shrink-0" />
-                    <span>Cost</span>
-                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="lead" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
@@ -1121,7 +1161,7 @@ export function CallLogModal({
 
                 {hasAnalysis && (
                   <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <AnalysisTab analysis={analysis} log={log} />
+                    <AnalysisTab analysis={analysis} log={log} leadData={leadData} segments={segments} />
                   </TabsContent>
                 )}
 
@@ -1131,9 +1171,6 @@ export function CallLogModal({
                   </TabsContent>
                 )}
 
-                <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
-                  <CallCostTab log={log} analysis={analysis} />
-                </TabsContent>
               </Tabs>
             </>
           )}

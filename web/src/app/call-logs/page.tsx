@@ -113,7 +113,7 @@ export default function CallLogsPage() {
   // SDK Hooks
   // Use lead-status hook when status or lead_tag filter is active, otherwise use regular call logs
   const shouldUseLeadStatusHook = !!(statusFilter || leadTagFilter);
-  
+
   const callLogsQuery = useCallLogs(
     {
       from_date: dateRange.from,
@@ -276,9 +276,20 @@ export default function CallLogsPage() {
           r.lead_name ||
           "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? r.lead_score ?? r.score ?? 0;
+        let category = (
+          analysis?.lead_category ||
+          analysis?.category ||
+          analysis?.raw_analysis?.lead_category ||
+          analysis?.raw_analysis?.category ||
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          r.category ||
+          "WARM"
+        ).toUpperCase();
+
+        if (score >= 8 && category !== "HOT") category = "HOT";
+        if (score > 0 && score <= 3 && category !== "COLD") category = "COLD";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -293,9 +304,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id || selectedBatchId,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
-          disposition: r.disposition || r.analysis?.disposition || r.analysis?.raw_analysis?.disposition || r.analysis?.raw_analysis?.disposition_full?.disposition,
+          disposition: r.analysis?.disposition || r.disposition || r.analysis?.raw_analysis?.disposition || r.analysis?.raw_analysis?.lead_disposition || "PROCEED",
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -373,9 +385,25 @@ export default function CallLogsPage() {
         const leadName =
           [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const rawAnalysis = (r as any).raw_analysis || analysis?.raw_analysis || {};
+        const score = r.lead_score ?? analysis?.lead_score ?? rawAnalysis?.lead_score ?? (r as any).score ?? 0;
+
+        let category = (
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          analysis?.lead_category ||
+          analysis?.category ||
+          rawAnalysis?.lead_category ||
+          rawAnalysis?.category ||
+          (r.lead_tags?.length ? r.lead_tags[0] : "") ||
+          "WARM"
+        ).toUpperCase();
+
+        // Safety Nets: Force status based on score thresholds
+        if (score >= 8) category = "HOT";
+        else if (score > 0 && score <= 3) category = "COLD";
+
+        const disposition = analysis?.disposition || r.disposition || rawAnalysis?.disposition || rawAnalysis?.lead_disposition || "PROCEED";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -390,9 +418,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
-          disposition: r.disposition || r.analysis?.disposition || r.analysis?.raw_analysis?.disposition || r.analysis?.raw_analysis?.disposition_full?.disposition,
+          disposition: disposition,
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
