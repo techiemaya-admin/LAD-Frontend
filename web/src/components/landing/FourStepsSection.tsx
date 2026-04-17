@@ -270,49 +270,95 @@ export default function FourStepsSection() {
                         {steps[activeStep].description}
                       </p>
 
-                      {/* Image Placeholder */}
-                      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-black border border-white/10 aspect-video flex items-center justify-center group">
-                        <div className="absolute inset-0 bg-gradient-to-b from-cyan-600/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {/* Step Preview */}
+                      {activeStep === 0 ? (
+                        /* Lead Results Preview for "Import Prospects" */
+                        <div className="relative rounded-2xl overflow-hidden border border-white/10" style={{ background: '#0b1959', aspectRatio: '16/9' }}>
+                          {/* Window chrome */}
+                          <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#071245', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <div className="flex gap-1.5">
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#ff5f57' }} />
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#febc2e' }} />
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28c840' }} />
+                            </div>
+                            <div className="flex-1 mx-3 rounded" style={{ background: 'rgba(255,255,255,0.08)', height: '16px', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>LAD — AI Prospect Search</span>
+                            </div>
+                          </div>
 
-                        <div className="relative z-10 flex flex-col items-center justify-center space-y-4">
-                          <motion.div
-                            animate={{ y: [0, -10, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 flex items-center justify-center border border-cyan-400/30"
-                          >
-                            <svg
-                              className="w-10 h-10 text-cyan-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </motion.div>
-                          <div className="text-center">
-                            <p className="text-blue-200 font-semibold text-lg">
-                              {steps[activeStep].title}
-                            </p>
-                            <p className="text-blue-400/70 text-sm">Application Interface</p>
+                          {/* Chat content */}
+                          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}>
+                            {/* User message */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                              <div style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#fff', borderRadius: '12px 12px 3px 12px', padding: '6px 10px', fontSize: '10px', maxWidth: '70%' }}>
+                                Find Founders in real estate in Dubai
+                              </div>
+                            </div>
+
+                            {/* AI response */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #06b6d4, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '7px', fontWeight: 'bold', color: '#fff' }}>AI</div>
+                              <div style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', borderRadius: '3px 12px 12px 12px', padding: '6px 10px', fontSize: '10px' }}>
+                                Found <span style={{ color: '#22d3ee', fontWeight: 700 }}>30 verified leads</span> via Sales Navigator
+                              </div>
+                            </div>
+
+                            {/* Lead rows */}
+                            {[
+                              { name: 'Amir Ahamraoui', role: 'Founder & CEO', company: 'Dubai Realty Group', hue: 210 },
+                              { name: 'Islam Alakaly', role: 'Co-Founder', company: 'Gulf Property Ventures', hue: 240 },
+                              { name: 'Sarah Al Mansouri', role: 'Founder', company: 'Emirates Real Estate', hue: 195 },
+                              { name: 'Khalid Rashid', role: 'Managing Director', company: 'Prime Properties Dubai', hue: 225 },
+                            ].map((lead, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '5px 8px' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: `hsl(${lead.hue}, 65%, 38%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff', fontSize: '9px', fontWeight: 700 }}>
+                                  {lead.name[0]}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ color: '#fff', fontSize: '9.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+                                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '8.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.role} · {lead.company}</div>
+                                </div>
+                                <div style={{ width: '52px', background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)', borderRadius: '4px', padding: '2px 5px', fontSize: '7.5px', color: '#22d3ee', textAlign: 'center', flexShrink: 0 }}>Connect</div>
+                              </div>
+                            ))}
+
+                            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '8.5px' }}>+26 more leads found</div>
                           </div>
                         </div>
+                      ) : (
+                        /* Placeholder for other steps */
+                        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-black border border-white/10 aspect-video flex items-center justify-center group">
+                          <div className="absolute inset-0 bg-gradient-to-b from-cyan-600/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                        {/* Try to load actual image */}
-                        <Image
-                          src={steps[activeStep].image}
-                          alt={steps[activeStep].alt}
-                          fill
-                          className="object-cover opacity-60"
-                          onError={() => {
-                            // Image failed to load, placeholder is shown
-                          }}
-                        />
-                      </div>
+                          <div className="relative z-10 flex flex-col items-center justify-center space-y-4">
+                            <motion.div
+                              animate={{ y: [0, -10, 0] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                              className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 flex items-center justify-center border border-cyan-400/30"
+                            >
+                              <svg
+                                className="w-10 h-10 text-cyan-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </motion.div>
+                            <div className="text-center">
+                              <p className="text-blue-200 font-semibold text-lg">
+                                {steps[activeStep].title}
+                              </p>
+                              <p className="text-blue-400/70 text-sm">Application Interface</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* CTA Button */}
                       <motion.button

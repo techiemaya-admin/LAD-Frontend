@@ -138,18 +138,24 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles - WhatsApp Theme */
+  /* Message bubbles — WhatsApp styling */
   .message-bubble-incoming {
-    @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md border border-gray-200 shadow-sm;
+    background: #ffffff;
+    color: #111b21;
+    border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
   }
 
   .message-bubble-outgoing {
-    @apply bg-[hsl(var(--message-outgoing))] text-[hsl(var(--message-outgoing-foreground))] rounded-2xl rounded-br-md shadow-sm;
+    background: #0b1957;
+    color: #ffffff;
+    border-radius: 8px 0 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
 
-  /* Chat background - WhatsApp Theme */
+  /* ── Chat window background ────────────────────────────────────────────── */
   .whatsapp-chat-bg {
-    @apply bg-[#ECE5DD];
+    background-color: #ffffff;
   }
 
   .dark .whatsapp-chat-bg {
@@ -171,21 +177,6 @@
     font-size: 11px;
     line-height: 1.2;
     letter-spacing: 0.01em;
-  }
-
-  /* ── Update message bubble base to match WhatsApp ──────────────────────── */
-  .message-bubble-incoming {
-    background: #ffffff;
-    color: #111b21;
-    border-radius: 0 8px 8px 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
-  }
-
-  .message-bubble-outgoing {
-    background: #0b1957;
-    color: #ffffff;
-    border-radius: 8px 0 8px 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
 
   /* Event type colors for calendar */
