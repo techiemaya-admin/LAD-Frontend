@@ -42,7 +42,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
   } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);

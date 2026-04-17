@@ -113,35 +113,33 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           return;
         }
 
-        const result = await sendMessages({
+        const memberCount = selectAll ? allMembers.length : selectedMembers.length;
+
+        // For large broadcasts, close immediately and process in background.
+        // Waiting for 90+ members to finish exceeds browser timeout limits.
+        onSuccess({ broadcasting: true, total: memberCount });
+        onClose();
+
+        // Fire-and-forget — don't block UI
+        sendMessages({
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
           templateIds: selectedTemplateIds,
           recommendations,
+        }).then((result) => {
+          const innerData = (result as any)?.data ?? result;
+          const sentCount  = innerData?.sentCount  ?? 0;
+          const failedCount = innerData?.failedCount ?? 0;
+          if (failedCount > 0) {
+            console.warn(`[Broadcast] ${sentCount} sent, ${failedCount} failed`, innerData?.failedMembers);
+          } else {
+            console.log(`[Broadcast] Complete — ${sentCount} messages sent`);
+          }
+        }).catch((err) => {
+          console.error('[Broadcast] Error:', err);
         });
 
-        const innerData = (result as any)?.data ?? result;
-        const sentCount = innerData?.sentCount ?? 0;
-        const failedCount = innerData?.failedCount ?? 0;
-        const errMsg = (result as any)?.error
-          ?? innerData?.failedMembers?.[0]?.error
-          ?? null;
-
-        if (sentCount > 0 && failedCount === 0) {
-          onSuccess(result);
-          onClose();
-        } else if (sentCount > 0 && failedCount > 0) {
-          // Partial success — still close but inform
-          onSuccess(result);
-          onClose();
-          alert(`Sent ${sentCount} message(s). ${failedCount} failed.`);
-        } else {
-          // All failed
-          alert(errMsg
-            ? `Send failed: ${errMsg}`
-            : `All ${failedCount || 'messages'} failed to send. Check WABA credentials and template approval in Meta.`
-          );
-        }
+        return; // already closed
       } else {
         // Schedule mode
         if (!scheduledTime) {

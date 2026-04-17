@@ -128,7 +128,7 @@ export default function LeadCard({
                   {leadName}
                 </h3>
                 {lead.title && (
-                  <p className="text-slate-500 text-xs mt-1">
+                  <p className="text-slate-500 text-xs mt-1 line-clamp-2">
                     {lead.title}
                   </p>
                 )}
@@ -146,10 +146,10 @@ export default function LeadCard({
           <div className="mb-0">
             {/* Company */}
             {lead.company && (
-              <div className="min-h-[24px] mb-2">
-                <Badge variant="outline" className="font-bold h-6 gap-1">
-                  <Building2 className="w-4 h-4" />
-                  {lead.company}
+              <div className="min-h-[24px] mb-2 min-w-0">
+                <Badge variant="outline" className="font-bold h-6 gap-1 max-w-full">
+                  <Building2 className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">{lead.company}</span>
                 </Badge>
               </div>
             )}
@@ -166,18 +166,18 @@ export default function LeadCard({
               )}
               {/* Email */}
               {lead.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="w-[18px] h-[18px] text-[#0b1957]" />
-                  <span className="text-[#0b1957] text-sm font-semibold">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Mail className="w-[18px] h-[18px] text-[#0b1957] flex-shrink-0" />
+                  <span className="text-[#0b1957] text-sm font-semibold truncate">
                     {lead.email}
                   </span>
                 </div>
               )}
               {/* Location */}
               {locationLabel && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-[18px] h-[18px] text-[#0b1957]" />
-                  <span className="text-[#0b1957] text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin className="w-[18px] h-[18px] text-[#0b1957] flex-shrink-0" />
+                  <span className="text-[#0b1957] text-sm truncate">
                     {locationLabel}
                   </span>
                 </div>

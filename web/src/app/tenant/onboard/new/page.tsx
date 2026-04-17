@@ -77,11 +77,15 @@ const DEFAULT_FEATURES = [
   'ai_assistant', 'ai_business_profile', 'ai_playground_history',
   'apollo_leads', 'followups', 'social_integration', 'deals_pipeline',
   'whatsapp-conversations', 'personal-whatsapp',
+  // New billing and ROI features
+  'billing_management', 'usage_tracking', 'community_roi',
 ];
 
 const DEFAULT_FLAGS = [
   'overview', 'dashboard', 'campaigns', 'settings', 'social-integration',
   'whatsapp-conversations', 'personal-whatsapp', 'deals-pipeline', 'ai-icp-assistant',
+  // New feature flags
+  'billing-management', 'community-roi', 'campaign-execution-logs',
 ];
 
 const DEFAULT_CAPABILITIES = [
@@ -89,6 +93,8 @@ const DEFAULT_CAPABILITIES = [
   'view_pipeline', 'view_community_roi', 'view_make_call', 'view_call_logs',
   'view_ai_assistant', 'apollo.search', 'apollo.email_reveal',
   'campaigns', 'chat_with_ai', 'deals-pipeline', 'social-integration', 'business-hours',
+  // New capabilities
+  'view_billing', 'manage_billing_ledger', 'track_usage', 'view_recommendations',
 ];
 
 const STEPS = [
@@ -478,6 +484,69 @@ function StepFeatures({ form, set }: { form: FormData; set: (k: keyof FormData, 
             </div>
           )}
         </div>
+
+        <div className="border-t border-gray-800 pt-4 mt-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">New Features (Billing & ROI)</p>
+          <p className="text-xs text-gray-500 mb-3">These features will be initialized with the tenant's core schema.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.features.includes('billing_management')}
+                onChange={e => {
+                  const newFeatures = e.target.checked
+                    ? [...form.features, 'billing_management']
+                    : form.features.filter(f => f !== 'billing_management');
+                  set('features', newFeatures);
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-300">💰 Billing Management (ledger, usage tracking)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.features.includes('community_roi')}
+                onChange={e => {
+                  const newFeatures = e.target.checked
+                    ? [...form.features, 'community_roi']
+                    : form.features.filter(f => f !== 'community_roi');
+                  set('features', newFeatures);
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-300">👥 Community ROI (member relationships, recommendations)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.features.includes('apollo_leads')}
+                onChange={e => {
+                  const newFeatures = e.target.checked
+                    ? [...form.features, 'apollo_leads']
+                    : form.features.filter(f => f !== 'apollo_leads');
+                  set('features', newFeatures);
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-300">🔍 Apollo Integration (company search, enrichment cache)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.features.includes('usage_tracking')}
+                onChange={e => {
+                  const newFeatures = e.target.checked
+                    ? [...form.features, 'usage_tracking']
+                    : form.features.filter(f => f !== 'usage_tracking');
+                  set('features', newFeatures);
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-300">📊 Usage Tracking (LLM billing, campaign logs)</span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -526,10 +595,11 @@ function StepReview({ form }: { form: FormData }) {
         </div>
 
         <div className="bg-[#1a1f2e] rounded-lg border border-gray-800 p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Features</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Features & Configuration</p>
           <ReviewRow label="Tenant Features" value={`${form.features.length} enabled`} />
           <ReviewRow label="Feature Flags" value={`${form.featureFlags.length} enabled`} />
           <ReviewRow label="Capabilities" value={`${form.capabilities.length} enabled`} />
+          <ReviewRow label="Core Schema Tables" value="37 tables (billing, community ROI, apollo, etc.)" />
           <ReviewRow label="WABA" value={form.enableWaba ? `✓ ${form.wabaPhoneNumber}` : 'Not configured'} />
           <ReviewRow label="Voice Agent" value={form.enableVoice ? `✓ ${form.voiceAgentName} (${form.voiceProvider})` : 'Not configured'} />
         </div>

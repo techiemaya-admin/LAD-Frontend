@@ -286,16 +286,44 @@ export default function CampaignLeadsPage() {
   const [followupPreviewing, setFollowupPreviewing]         = useState(false);
   const [followupSending, setFollowupSending]               = useState(false);
   const [followupHistoryOpen, setFollowupHistoryOpen]       = useState(false);
+  const [connectedSenders, setConnectedSenders]             = useState<{ provider: string; email: string; label: string }[]>([]);
+  const [followupFromEmail, setFollowupFromEmail]           = useState('');
+  // Cache: key = `${leadId}_${channel}` → { message, context }
+  // Survives tab-switches and re-opens within the same page session.
+  const followupCache = React.useRef<Map<string, { message: string; context: FollowupContext }>>(new Map());
 
   const openFollowupDialog = useCallback(async (lead: ExtendedCampaignLead, channel: FollowupChannel = 'linkedin') => {
     setFollowupLead(lead);
     setFollowupChannel(channel);
+    setFollowupHistoryOpen(false);
+    setFollowupDialogOpen(true);
+
+    // Fetch connected email senders when switching to email channel
+    if (channel === 'email' && connectedSenders.length === 0) {
+      try {
+        const data = await apiGet<{ success: boolean; data: { provider: string; email: string; label: string }[] }>(
+          '/api/campaigns/email/connected-senders'
+        );
+        if (data.success && data.data.length > 0) {
+          setConnectedSenders(data.data);
+          setFollowupFromEmail(data.data[0].email);
+        }
+      } catch { /* non-fatal — user will see "no account" error on send */ }
+    }
+
+    // Use cached message if available — skip LLM call entirely
+    const cacheKey = `${lead.id}_${channel}`;
+    const cached = followupCache.current.get(cacheKey);
+    if (cached) {
+      setFollowupMessage(cached.message);
+      setFollowupContext(cached.context);
+      return;
+    }
+
+    // No cache — generate via LLM
     setFollowupMessage('');
     setFollowupSubject('');
     setFollowupContext(null);
-    setFollowupHistoryOpen(false);
-    setFollowupDialogOpen(true);
-    // Immediately kick off preview
     setFollowupPreviewing(true);
     try {
       const resp = await proxyPost<{ success: boolean; message: string | null; context: FollowupContext }>(
@@ -303,8 +331,10 @@ export default function CampaignLeadsPage() {
         { channel }
       );
       if (resp.success) {
-        setFollowupMessage(resp.message || '');
+        const msg = resp.message || '';
+        setFollowupMessage(msg);
         setFollowupContext(resp.context);
+        followupCache.current.set(cacheKey, { message: msg, context: resp.context });
       } else {
         push({ variant: 'error', title: 'Preview failed', description: (resp as any).error || 'Could not generate message' });
       }
@@ -313,10 +343,13 @@ export default function CampaignLeadsPage() {
     } finally {
       setFollowupPreviewing(false);
     }
-  }, [campaignId, push]);
+  }, [campaignId, push, connectedSenders.length]);
 
   const regenerateFollowup = useCallback(async () => {
     if (!followupLead) return;
+    // Bust cache for this lead+channel so next open also gets fresh
+    const cacheKey = `${followupLead.id}_${followupChannel}`;
+    followupCache.current.delete(cacheKey);
     setFollowupPreviewing(true);
     try {
       const resp = await proxyPost<{ success: boolean; message: string | null; context: FollowupContext }>(
@@ -324,8 +357,10 @@ export default function CampaignLeadsPage() {
         { channel: followupChannel }
       );
       if (resp.success) {
-        setFollowupMessage(resp.message || '');
+        const msg = resp.message || '';
+        setFollowupMessage(msg);
         setFollowupContext(resp.context);
+        followupCache.current.set(cacheKey, { message: msg, context: resp.context });
       }
     } catch (e: any) {
       push({ variant: 'error', title: 'Regenerate failed', description: e.message });
@@ -340,7 +375,12 @@ export default function CampaignLeadsPage() {
     try {
       const resp = await proxyPost<{ success: boolean; channel: string; messageId?: string }>(
         `/api/campaigns/${campaignId}/leads/${followupLead.id}/send-followup`,
-        { channel: followupChannel, message: followupMessage, subject: followupSubject || undefined }
+        {
+          channel: followupChannel,
+          message: followupMessage,
+          subject: followupSubject || undefined,
+          from_email: followupChannel === 'email' && followupFromEmail ? followupFromEmail : undefined,
+        }
       );
       if (resp.success) {
         push({ title: 'Sent!', description: `Follow-up sent via ${followupChannel} to ${followupContext?.leadName || followupLead.name}` });
@@ -354,7 +394,7 @@ export default function CampaignLeadsPage() {
     } finally {
       setFollowupSending(false);
     }
-  }, [followupLead, followupChannel, followupMessage, followupSubject, followupContext, campaignId, push, refetch]);
+  }, [followupLead, followupChannel, followupMessage, followupSubject, followupFromEmail, followupContext, campaignId, push, refetch]);
   const filteredLeads = useMemo(() => {
     // Cast to any[] so we can access backend-provided fields (has_sent, has_connected, has_replied)
     // that are not in the SDK type definition
@@ -610,16 +650,36 @@ export default function CampaignLeadsPage() {
               ))}
             </div>
 
-            {/* Email subject */}
+            {/* Email From + Subject */}
             {followupChannel === 'email' && (
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Subject</label>
-                <Input
-                  placeholder="e.g. Quick follow-up from our conversation"
-                  value={followupSubject}
-                  onChange={e => setFollowupSubject(e.target.value)}
-                  className="text-sm"
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">From</label>
+                  {connectedSenders.length > 0 ? (
+                    <select
+                      value={followupFromEmail}
+                      onChange={e => setFollowupFromEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]"
+                    >
+                      {connectedSenders.map(s => (
+                        <option key={s.email} value={s.email}>{s.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      No connected email account — connect Gmail or Outlook in Settings → Integrations.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Subject</label>
+                  <Input
+                    placeholder="e.g. Quick follow-up from our conversation"
+                    value={followupSubject}
+                    onChange={e => setFollowupSubject(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
               </div>
             )}
 
