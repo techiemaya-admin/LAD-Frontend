@@ -100,10 +100,10 @@ export default function EnterprisePlans() {
         >
           ENTERPRISE
         </motion.div>
-        <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+        <h3 className="text-2xl font-semibold text-[#222B45] mb-2">
           Complete Sales Pipeline Automation with Customizations
         </h3>
-        <p className="text-gray-600">
+        <p className="text-[#8F9BB3]">
           One-time agent setup and training:{" "}
           <span className="font-bold text-purple-600">$3,000</span>
         </p>
@@ -142,13 +142,13 @@ export default function EnterprisePlans() {
             )}
 
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+              <h3 className="text-xl font-bold text-[#222B45]">{plan.name}</h3>
+              <p className="text-sm text-[#8F9BB3] mt-1">{plan.description}</p>
             </div>
 
             <div className="mb-6">
               <div className="flex items-baseline">
-                <span className="text-4xl font-bold text-gray-900">
+                <span className="text-4xl font-bold text-[#222B45]">
                   {plan.price}
                 </span>
               </div>
