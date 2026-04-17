@@ -80,6 +80,20 @@ const ContactFormModal: React.FC = () => {
     setIsSubmitting(true);
     setFeedback(null);
 
+    // Log form submission details
+    console.log('📝 Contact Form Submitted:', {
+      timestamp: new Date().toISOString(),
+      source: 'React Component (LAD Frontend)',
+      formData: {
+        name: formData.name,
+        email: formData.email,
+        company: formData.company || 'Not provided',
+        message: formData.message,
+      },
+      sourceUrl: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+    });
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -94,6 +108,8 @@ const ContactFormModal: React.FC = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to submit form');
       }
+
+      console.log('✅ Form submission successful:', data);
 
       setFeedback({
         type: 'success',
@@ -110,6 +126,7 @@ const ContactFormModal: React.FC = () => {
         setFeedback(null);
       }, 4000);
     } catch (error) {
+      console.error('❌ Form submission error:', error);
       setFeedback({
         type: 'error',
         message:
