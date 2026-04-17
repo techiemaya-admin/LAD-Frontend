@@ -8654,7 +8654,7 @@ const css = `
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
             .adv-ai-text {font-size:14px; line-height:1.6; color:#374151; }
             .adv-ai-text p {margin:0 0 4px; }
-            .adv-ai-text strong {color:#111827; font-weight:650; }
+            .adv-ai-text strong {color:#111827; font-weight:500; }
             .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
