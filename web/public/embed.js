@@ -14,36 +14,48 @@
   `;
   document.body.appendChild(container);
 
-  // Create floating button
+  // Create floating button with image
   const button = document.createElement('button');
   button.id = 'lad-contact-trigger';
-  button.innerHTML = '💬 Get in Touch';
   button.style.cssText = `
     position: fixed;
     bottom: 24px;
     right: 24px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #0b1957 0%, #1a3a8f 100%);
-    color: white;
+    padding: 0;
+    background: none;
     border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(11, 25, 87, 0.4);
     z-index: 9999;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 20px rgba(11, 25, 87, 0.4));
   `;
 
+  // Create image element
+  const img = document.createElement('img');
+  img.src = EMBED_URL + '/lad.png';
+  img.alt = 'Contact us';
+  img.style.cssText = `
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  `;
+
+  button.appendChild(img);
+
   button.addEventListener('mouseover', () => {
-    button.style.transform = 'translateY(-3px)';
-    button.style.boxShadow = '0 8px 28px rgba(11, 25, 87, 0.5)';
+    img.style.transform = 'scale(1.1) translateY(-5px)';
+    button.style.filter = 'drop-shadow(0 8px 28px rgba(11, 25, 87, 0.5))';
   });
 
   button.addEventListener('mouseout', () => {
-    button.style.transform = 'translateY(0)';
-    button.style.boxShadow = '0 4px 20px rgba(11, 25, 87, 0.4)';
+    img.style.transform = 'scale(1) translateY(0)';
+    button.style.filter = 'drop-shadow(0 4px 20px rgba(11, 25, 87, 0.4))';
   });
 
   document.body.appendChild(button);
