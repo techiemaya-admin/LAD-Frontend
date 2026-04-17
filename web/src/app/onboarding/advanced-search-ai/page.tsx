@@ -452,6 +452,36 @@ export default function AdvancedSearchAIPage() {
     const [messages, setMessages] = useState<ChatMsg[]>([]);
     const [input, setInput] = useState('');
     const [busy, setBusy] = useState(false);
+    const [typedPlaceholder, setTypedPlaceholder] = useState('');
+    useEffect(() => {
+        if (messages.length > 0) { setTypedPlaceholder(''); return; }
+        const suggestions = [
+            'Connect me with founders in trading companies in UAE',
+            'Connect me with CFO in Goldman Sachs in USA',
+            'Schedule sales meetings with procurement managers in HVAC in UAE',
+            'Find VP of Sales in SaaS companies in UK',
+            'Reach out to HR directors in manufacturing in Germany',
+            'Strengthen my relationship with existing clients',
+        ];
+        let sIdx = 0, cIdx = 0, deleting = false;
+        let timer: ReturnType<typeof setTimeout>;
+        const tick = () => {
+            const current = suggestions[sIdx];
+            if (!deleting) {
+                cIdx++;
+                setTypedPlaceholder(current.slice(0, cIdx));
+                if (cIdx === current.length) { deleting = true; timer = setTimeout(tick, 1800); return; }
+                timer = setTimeout(tick, 50);
+            } else {
+                cIdx--;
+                setTypedPlaceholder(current.slice(0, cIdx));
+                if (cIdx === 0) { deleting = false; sIdx = (sIdx + 1) % suggestions.length; timer = setTimeout(tick, 400); return; }
+                timer = setTimeout(tick, 25);
+            }
+        };
+        timer = setTimeout(tick, 600);
+        return () => clearTimeout(timer);
+    }, [messages.length]);
     const [targeting, setTargeting] = useState<LeadTargeting | null>(null);
     const [leads, setLeads] = useState<LeadProfile[]>([]);
     const [filteredLeads, setFilteredLeads] = useState<LeadProfile[]>([]);   // below ICP threshold
@@ -1746,14 +1776,13 @@ export default function AdvancedSearchAIPage() {
                 console.warn('Error saving leads:', saveErr);
             }
 
-            let summaryText = `✅ **Successfully extracted ${counts.total} leads from your file!**\n\n📊 **Contact Channels Detected:**\n`;
-            if (counts.linkedin > 0) summaryText += `\n🔗 **LinkedIn:** ${counts.linkedin} profiles`;
-            if (counts.email > 0) summaryText += `\n✉️ **Email:** ${counts.email} addresses`;
-            if (counts.whatsapp > 0) summaryText += `\n💬 **WhatsApp:** ${counts.whatsapp} numbers`;
-            if (counts.phone > 0) summaryText += `\n📞 **Phone:** ${counts.phone} numbers`;
-            if (counts.website > 0) summaryText += `\n🌐 **Website:** ${counts.website} URLs`;
-            summaryText += `\n\n🔍 **Running background research** — searching Google + LinkedIn to build profiles for each lead...`;
-            summaryText += `\n\n👉 Click **"Create Outreach Journey"** to set up your campaign with these leads!`;
+            let summaryText = `**${counts.total} lead${counts.total !== 1 ? 's' : ''} successfully imported.**\n\n**Contact data detected:**\n`;
+            if (counts.linkedin > 0) summaryText += `\n• LinkedIn: ${counts.linkedin} profile${counts.linkedin !== 1 ? 's' : ''}`;
+            if (counts.email > 0) summaryText += `\n• Email: ${counts.email} address${counts.email !== 1 ? 'es' : ''}`;
+            if (counts.whatsapp > 0) summaryText += `\n• WhatsApp: ${counts.whatsapp} number${counts.whatsapp !== 1 ? 's' : ''}`;
+            if (counts.phone > 0) summaryText += `\n• Phone: ${counts.phone} number${counts.phone !== 1 ? 's' : ''}`;
+            if (counts.website > 0) summaryText += `\n• Website: ${counts.website} URL${counts.website !== 1 ? 's' : ''}`;
+            summaryText += `\n\nBuilding profiles in the background — searching Google and LinkedIn for additional context on each lead.\n\nWhen ready, click **"Create Outreach Journey"** below to configure your campaign.`;
 
             setMessages(p => p.filter(m => m.id !== processingId).concat({
                 id: `a-${Date.now()}`, role: 'ai', text: summaryText, ts: new Date(),
@@ -1777,6 +1806,17 @@ export default function AdvancedSearchAIPage() {
         setMessages(p => [...p, { id: uid, role: 'user', text, ts: new Date() }, { id: lid, role: 'ai', text: '', ts: new Date(), loading: true }]);
         setBusy(true);
         setMsgCount(c => c + 1);
+
+        // ── PRIORITY -1a: Existing client / relationship-building intent ──
+        const isRelationshipIntent = /existing client|strengthen.*relation|strengthen.*client|client relation|re.engage.*client|re-engage.*client/i.test(text);
+        if (isRelationshipIntent) {
+            setMessages(p => p.filter(m => m.id !== lid).concat({
+                id: lid, role: 'ai', ts: new Date(),
+                text: `Excellent goal. To strengthen client relationships, import their existing data like company name, email, LinkedIn URL, phone etc., and complete the next steps (campaign setup).`,
+            }));
+            setBusy(false);
+            return;
+        }
 
         // ── PRIORITY -1: Outreach / phone / email direct-contact commands ──
         // "Hey LAD outreach to +971...", "+971506341191", "reach out to john@x.com", etc.
@@ -3439,17 +3479,17 @@ export default function AdvancedSearchAIPage() {
 
                 {/* Suggestion chips */}
                 <div className="adv-chips-row">
-                    <button className="adv-chip" onClick={() => { setInput('Marketing directors at fintech startups in London'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        Find leads in fintech
+                        Founders in trading companies in UAE
                     </button>
-                    <button className="adv-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Connect me with CFO in Goldman Sachs in USA'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        Target specific company
+                        CFO in Goldman Sachs in USA
                     </button>
-                    <button className="adv-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
+                    <button className="adv-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                        VP of Sales in UAE
+                        VP of Sales in UK SaaS
                     </button>
                 </div>
 
@@ -3547,6 +3587,53 @@ export default function AdvancedSearchAIPage() {
                                 : m;
                             return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => setTgStep(0)} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
                         })}
+                        {/* Import leads prompt — shown when conversation is about existing client relationships */}
+                        {(() => {
+                            const allText = messages.map(m => m.text?.toLowerCase() || '').join(' ');
+                            const isRelationshipContext = /existing client|strengthen.*relation|client relation|account manager|customer success|re.engage|re-engage/.test(allText);
+                            if (!isRelationshipContext || messages.length === 0) return null;
+                            const downloadTemplate = () => {
+                                const headers = ['first_name', 'last_name', 'job_title', 'company_name', 'email', 'linkedin_url', 'phone', 'website'];
+                                const example = ['Jane', 'Doe', 'VP of Sales', 'Acme Corp', 'jane@acme.com', 'https://linkedin.com/in/janedoe', '+971501234567', 'https://acme.com'];
+                                const csv = [headers.join(','), example.join(',')].join('\n');
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url; a.download = 'client_import_template.csv';
+                                a.click(); URL.revokeObjectURL(url);
+                            };
+                            const hasUploadedLeads = inboundLeads.length > 0;
+                            return (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '8px 0 16px' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    </div>
+                                    {hasUploadedLeads ? (
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                            Upload More
+                                        </button>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#172560', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Import your leads & create outreach journey
+                                            </button>
+                                            <button
+                                                onClick={downloadTemplate}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Download CSV Template
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                         </div>
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
@@ -3671,7 +3758,7 @@ export default function AdvancedSearchAIPage() {
                             <textarea ref={taRef} value={input} rows={1} disabled={busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)}
                                 onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
                                 onKeyDown={onKey}
-                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : 'Ask Mr LAD...'}
+                                placeholder={creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : (typedPlaceholder || 'Ask Mr LAD...')}
                                 className="adv-chat-ta" />
                             <div className="adv-chat-input-foot">
                                 <div style={{position:'relative'}}>
@@ -3741,21 +3828,21 @@ export default function AdvancedSearchAIPage() {
                     </div>
                     {messages.length === 0 && (
                         <div className="adv-gemini-chips">
-                            <button className="adv-gemini-chip" onClick={() => { setInput('Find leads in fintech'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                Find leads in fintech
+                                Founders in trading in UAE
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('I want to find leads at a specific company'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Schedule sales meetings with procurement managers in HVAC in UAE'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                Target specific company
+                                Sales meetings with HVAC managers
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('VP of Sales in UAE SaaS companies with 50-250 employees'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                                VP of Sales in UAE
+                                VP of Sales in UK SaaS
                             </button>
-                            <button className="adv-gemini-chip" onClick={() => { setInput('Find decision makers in healthcare startups in Dubai'); taRef.current?.focus(); }}>
+                            <button className="adv-gemini-chip" onClick={() => { setInput('Strengthen my relationship with existing clients'); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                                Healthcare leads in Dubai
+                                Strengthen client relationships
                             </button>
                         </div>
                     )}
@@ -5367,7 +5454,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         };
 
                         const trimmed = line.trim();
-                        if (!trimmed) return <br key={i} />;
+                        if (!trimmed) return <div key={i} style={{ height: '6px' }} />;
 
                         // ### Heading
                         if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
@@ -5463,9 +5550,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                     >
                         <div style={{
                             width: "48px", height: "48px", background: "#172560", borderRadius: "10px",
-                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                         }}>
-                            🏆
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: "15px", fontWeight: 700, color: "#111827", marginBottom: "4px" }}>
@@ -5484,7 +5571,9 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         <div className="adv-rc" onClick={onStartTargeting} style={{
                             flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
-                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</div>
+                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="2" cy="6" r="1" fill="#172560"/><circle cx="4" cy="12" r="1" fill="#172560"/><circle cx="8" cy="18" r="1" fill="#172560"/></svg>
+                            </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
                                 {!useSalesNav && (
@@ -5518,7 +5607,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                ⚡
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5"/></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
@@ -5536,8 +5625,12 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
                         <button className="adv-act-btn" style={{
-                            padding: "6px 14px", background: "#f2f6fa", border: "1px solid #172560", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#172560"
-                        }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
+                            padding: "9px 20px", background: "#172560", border: "none", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "#fff",
+                            boxShadow: "0 2px 8px rgba(23,37,96,0.35)", display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.01em"
+                        }} onClick={onStartCheckpoints}>
+                            Create Outreach Journey
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
                     </div>
                 )}
 
@@ -6738,7 +6831,14 @@ function CheckpointFormInline({
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
             <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
             <div style={{ flex: 1, maxWidth: '540px' }}>
-                <div className="adv-ai-name" style={{ marginBottom: '8px' }}>LAD in Action</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div className="adv-ai-name">LAD in Action</div>
+                    <button onClick={() => setStep(-1)} title="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
 
                 {/* Question header */}
                 <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -7980,11 +8080,6 @@ function CheckpointFormInline({
                     );
                 })()}
 
-                {/* Dismiss */}
-                <button onClick={() => setStep(-1)} style={{
-                    background: 'none', border: 'none', fontSize: '12px', color: '#9ca3af', cursor: 'pointer',
-                    marginTop: '8px', padding: 0, fontWeight: 500,
-                }}>Dismiss</button>
             </div>
         </div>
     );
@@ -8557,14 +8652,14 @@ const css = `
             .adv-ai-body {flex:1; max-width:90%; }
             .adv-ai-name {font-size:11px; font-weight:700; color:#0b1957; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
-            .adv-ai-text {font-size:14.5px; line-height:1.78; color:#374151; }
-            .adv-ai-text p {margin:0 0 6px; }
+            .adv-ai-text {font-size:14px; line-height:1.6; color:#374151; }
+            .adv-ai-text p {margin:0 0 4px; }
             .adv-ai-text strong {color:#111827; font-weight:650; }
             .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
-            .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:4px 0; }
-            .adv-ai-bullet-dot {width:6px; height:6px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:7px; opacity:.7; }
+            .adv-ai-bullet {display:flex; align-items:flex-start; gap:8px; margin:2px 0; }
+            .adv-ai-bullet-dot {width:5px; height:5px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:8px; opacity:.6; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
             .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
@@ -8581,7 +8676,7 @@ const css = `
             .adv-chat-input-box:focus-within::before {animation:adv-border-move 2s linear infinite; opacity:1; }
             @keyframes adv-border-move {0%{background-position:0% 50%}100%{background-position:300% 50%}}
             .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
-            .adv-chat-ta::placeholder {color:#9ca3af; font-weight:400; }
+            .adv-chat-ta::placeholder {color:#0b1959; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#172560; }
