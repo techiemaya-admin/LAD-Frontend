@@ -141,7 +141,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
         <div className="text-right">
           <button
             className="p-1 hover:bg-gray-100 rounded"
-            onClick={(e) => onMenuOpen(e, row.original)}
+            onClick={(e) => { e.stopPropagation(); onMenuOpen(e, row.original); }}
           >
             <MoreVertical className="h-4 w-4" />
           </button>

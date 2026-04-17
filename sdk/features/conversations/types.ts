@@ -47,6 +47,8 @@ export interface Message {
   senderName?: string;
   /** User ID of the human agent (if stored in message metadata) */
   humanAgentId?: string;
+  /** Template name if this message was sent via a WhatsApp template */
+  templateName?: string;
 }
 
 export interface Attachment {

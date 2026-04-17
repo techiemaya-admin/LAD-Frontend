@@ -33,7 +33,27 @@ export { useNetworkStats } from './useNetworkStats';
 export { useDashboardLeaderboards } from './useDashboardLeaderboards';
 
 // Relationship Heatmap
-export { useRelationshipHeatmap, useUpdateRelationshipScores } from './useRelationshipHeatmap';
+export { useRelationshipHeatmap, useUpdateRelationshipScores, useGenerateBulkRecommendations, useSavedRecommendations } from './useRelationshipHeatmap';
+
+// Member Sync / Onboarding
+export { useNewMembers, useOnboardNewMembers } from './useNewMembers';
+export { useSendOnboardingTemplate } from './useSendOnboardingTemplate';
+
+// Recommendation Messages (WhatsApp sending)
+export {
+  useRecommendationTemplates,
+  useSendInstantMessages,
+  useScheduleMessages,
+  usePendingSchedules,
+} from './useRecommendationMessages';
+export type {
+  CommunicationTemplate,
+  SendInstantMessagesRequest,
+  SendInstantMessagesResponse,
+  ScheduleMessagesRequest,
+  ScheduleMessagesResponse,
+  PendingSchedule,
+} from './useRecommendationMessages';
 
 // Re-export types
 export type { UseListMembersReturn } from './useListMembers';
@@ -49,4 +69,5 @@ export type { MemberImpactScore, UseMemberImpactScoreReturn } from './useMemberI
 export type { UseTopContributorsReturn } from './useTopContributors';
 export type { NetworkStats, UseNetworkStatsReturn } from './useNetworkStats';
 export type { UseRelationshipHeatmapReturn, UseUpdateRelationshipScoresReturn } from './useRelationshipHeatmap';
+export type { NewMembersResponse, UseNewMembersReturn } from './useNewMembers';
 

@@ -5,7 +5,14 @@ function getBackendBase() {
 }
 
 function getAuthHeaders(req: NextRequest): Record<string, string> {
-  const token = req.cookies.get('access_token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
+  // Cookie name is 'token' (set by js-cookie / safeStorage in the SDK)
+  // Also accept Authorization header as fallback (sent by some client components)
+  const authHeader = req.headers.get('authorization');
+  const token =
+    (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null) ||
+    req.cookies.get('token')?.value ||
+    req.cookies.get('access_token')?.value || // legacy fallback
+    '';
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

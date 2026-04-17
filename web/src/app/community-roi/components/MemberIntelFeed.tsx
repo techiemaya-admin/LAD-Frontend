@@ -5,16 +5,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Sparkles,
-  Building2,
-  Newspaper,
   Loader2,
   Trophy,
-  Zap,
   ChevronDown,
   RefreshCw,
-  ExternalLink,
   TrendingUp,
   Users,
+  Building2,
+  MapPin,
+  DollarSign,
+  Globe,
 } from 'lucide-react'
 
 interface Member {
@@ -26,13 +26,56 @@ interface Member {
   linkedin_url?: string
 }
 
+// Shape of the ABM data object returned by POST /api/abm/research
+interface ABMData {
+  id?: string
+  company_name?: string
+  industry?: string
+  sub_industry?: string
+  headquarters?: string
+  description?: string
+  company_overview?: string
+  company_size_range?: string
+  employee_count_estimate?: number
+  founded_year?: number
+  funding_stage?: string
+  recent_funding?: Array<{ title?: string; snippet?: string; source?: string; date?: string }>
+  recent_activities?: Array<{ title?: string; snippet?: string; url?: string; date?: string }>
+  recent_achievements?: Array<{ title?: string; snippet?: string }>
+  key_decision_makers?: Array<{
+    name?: string
+    title?: string
+    linkedin_url?: string
+    icp_score?: number
+    icp_rationale?: string
+    department?: string
+    seniority_level?: string
+  }>
+  linkedin_url?: string
+  linkedin_followers?: number
+  twitter_url?: string
+  website?: string
+  web_presence?: Record<string, any>
+  metadata?: {
+    next_best_actions?: Array<{
+      action?: string
+      priority?: number
+      rationale?: string
+      channel?: string
+      target_person?: string
+      suggested_message_hook?: string
+    }>
+  }
+  enrichment_status?: string
+  last_enriched_at?: string
+}
+
 interface IntelData {
-  company_profile: Record<string, any> | null
-  profile_summary: Record<string, any> | null
-  web_presence: Record<string, any> | null
-  recent_posts: Array<Record<string, any>>
+  abmData: ABMData | null
+  nextBestActions: Array<Record<string, any>>
   cached: boolean
-  status: 'idle' | 'loading' | 'done' | 'error'
+  status: 'idle' | 'loading' | 'researching' | 'done' | 'error'
+  errorMsg?: string
 }
 
 interface MemberIntelCardProps {
@@ -42,28 +85,62 @@ interface MemberIntelCardProps {
 
 function MemberIntelCard({ member, onViewProfile }: MemberIntelCardProps) {
   const [intel, setIntel] = useState<IntelData>({
-    company_profile: null,
-    profile_summary: null,
-    web_presence: null,
-    recent_posts: [],
+    abmData: null,
+    nextBestActions: [],
     cached: false,
     status: 'idle',
   })
   const cardRef = useRef<HTMLDivElement>(null)
   const fetchedRef = useRef(false)
 
-  const fetchIntel = useCallback(async () => {
+  // Shared helper — reads token from cookie (safeStorage) or localStorage fallback
+  const getToken = () =>
+    typeof window !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)token=([^;]+)/)?.[1] || localStorage.getItem('token'))
+      : null
+
+  // ── GET: read prospect_companies cache — instant, no external API calls ──────
+  const loadCached = useCallback(async () => {
     if (fetchedRef.current) return
     fetchedRef.current = true
-    setIntel(prev => ({ ...prev, status: 'loading' }))
-
+    if (!member.company_name) {
+      // No company name — nothing to look up, show Research button immediately
+      setIntel(prev => ({ ...prev, status: 'done' }))
+      return
+    }
+    setIntel(prev => ({ ...prev, status: 'loading', errorMsg: undefined }))
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const base = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-        ? window.location.origin
-        : 'https://lad-backend-develop-160078175457.us-central1.run.app'
+      const token  = getToken()
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const params = new URLSearchParams({ company_name: member.company_name! })
+      const res = await fetch(`${origin}/api/community-roi/member-intel?${params}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
+      })
+      if (res.ok) {
+        const json = await res.json()
+        const abmData: ABMData | null = json.data || null
+        setIntel({
+          abmData,
+          nextBestActions: json.next_best_actions || abmData?.metadata?.next_best_actions || [],
+          cached: !!abmData,
+          status: 'done',
+        })
+      } else {
+        setIntel(prev => ({ ...prev, status: 'done', abmData: null }))
+      }
+    } catch {
+      setIntel(prev => ({ ...prev, status: 'done', abmData: null }))
+    }
+  }, [member])
 
-      const res = await fetch(`${base}/api/campaigns/search-prospects/generate-summary`, {
+  // ── POST: run full ABM research → updates prospect_companies, returns fresh data ──
+  const runResearch = useCallback(async () => {
+    setIntel(prev => ({ ...prev, status: 'researching', errorMsg: undefined }))
+    try {
+      const token  = getToken()
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const res = await fetch(`${origin}/api/community-roi/member-intel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,73 +148,63 @@ function MemberIntelCard({ member, onViewProfile }: MemberIntelCardProps) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          sessionId: `community-roi-intel-${member.id}`,
-          moduleUsed: 'community_roi_feed',
-          lead: {
-            name: member.name,
-            profile_url: member.linkedin_url || null,
-            current_company: member.company_name || null,
-            headline: member.designation || null,
-            location: 'Dubai, UAE',
-          },
+          name:          member.name,
+          company_name:  member.company_name || undefined,
+          force_refresh: true,
         }),
       })
-
       if (res.ok) {
         const json = await res.json()
+        const abmData: ABMData = json.data || {}
         setIntel({
-          company_profile: json.company_profile,
-          profile_summary: json.profile_summary,
-          web_presence: json.web_presence,
-          recent_posts: json.recent_posts || [],
-          cached: json.cached,
+          abmData,
+          nextBestActions: json.next_best_actions || abmData?.metadata?.next_best_actions || [],
+          cached: false,
           status: 'done',
         })
       } else {
-        setIntel(prev => ({ ...prev, status: 'error' }))
+        const err = await res.json().catch(() => ({}))
+        setIntel(prev => ({ ...prev, status: 'error', errorMsg: err?.error || `Error ${res.status}` }))
       }
-    } catch {
-      setIntel(prev => ({ ...prev, status: 'error' }))
+    } catch (e: any) {
+      setIntel(prev => ({ ...prev, status: 'error', errorMsg: e?.message }))
     }
   }, [member])
 
-  // Lazy-load via IntersectionObserver — only fetch when card scrolls into view
+  // Lazy-load via IntersectionObserver — read cache when card scrolls into view
   useEffect(() => {
     const el = cardRef.current
     if (!el) return
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { fetchIntel(); observer.disconnect() } },
+      ([entry]) => { if (entry.isIntersecting) { loadCached(); observer.disconnect() } },
       { threshold: 0.1 }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [fetchIntel])
+  }, [loadCached])
 
-  const cp = intel.company_profile
-  const ps = intel.profile_summary
+  const d = intel.abmData
   const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
-  // ── Derive highlight snippets ──────────────────────────────────────────────
-  const industry = cp?.industry || cp?.sector || ''
-  const description = cp?.description || cp?.short_description || ps?.summary || ps?.about || ''
-  const isHiring = cp?.hiring_signals?.is_hiring
-  const recentNews = Array.isArray(cp?.recent_news) ? cp.recent_news.slice(0, 2) : []
-  const latestPost = intel.recent_posts?.[0]
-  const postText = latestPost?.text || latestPost?.content || latestPost?.body || ''
-  const achievements = Array.isArray(cp?.achievements) ? cp.achievements.slice(0, 2) : []
-  const awards = Array.isArray(cp?.awards) ? cp.awards.slice(0, 2) : []
-  const nextActions = Array.isArray(cp?.metadata?.next_best_actions)
-    ? cp.metadata.next_best_actions.slice(0, 1)
-    : []
+  // ── Derived display values ──────────────────────────────────────────────────
+  const overview       = d?.company_overview || d?.description || ''
+  const industry       = d?.industry || d?.sub_industry || ''
+  const hq             = d?.headquarters || ''
+  const sizeRange      = d?.company_size_range || ''
+  const fundingStage   = d?.funding_stage || ''
+  const recentFunding  = (d?.recent_funding  || []).slice(0, 2)
+  const achievements   = (d?.recent_achievements  || []).slice(0, 2)
+  const topAction      = intel.nextBestActions?.[0]
+  const websiteUrl     = d?.website || d?.linkedin_url || ''
 
-  const hasContent = intel.status === 'done' && (description || recentNews.length || postText || isHiring)
+  const hasContent = intel.status === 'done' && !!(overview || recentFunding.length || achievements.length || topAction)
 
   return (
     <div
       ref={cardRef}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
     >
-      {/* Card Header */}
+      {/* ── Card Header ── */}
       <div className="p-5 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0">
@@ -152,133 +219,185 @@ function MemberIntelCard({ member, onViewProfile }: MemberIntelCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {intel.cached && (
+          {intel.cached && intel.status === 'done' && (
             <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">Cached</span>
           )}
-          {intel.status === 'loading' && (
+          {(intel.status === 'loading' || intel.status === 'researching') && (
             <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
           )}
-          {intel.status === 'idle' && (
-            <Sparkles className="w-4 h-4 text-slate-300" />
-          )}
-          {intel.status === 'done' && (
-            <Sparkles className="w-4 h-4 text-violet-500" />
-          )}
+          {intel.status === 'idle'  && <Sparkles className="w-4 h-4 text-slate-300" />}
+          {intel.status === 'done'  && <Sparkles className="w-4 h-4 text-violet-500" />}
+          {intel.status === 'error' && <span className="text-[9px] font-bold text-rose-500 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">Error</span>}
         </div>
       </div>
 
-      {/* Intel Body */}
+      {/* ── Intel Body ── */}
       <div className="px-5 pb-4 flex-1 space-y-3">
 
-        {/* Loading skeleton */}
+        {/* Loading skeleton — reading cache */}
         {intel.status === 'loading' && (
           <div className="space-y-2 animate-pulse">
             <div className="h-3 bg-slate-100 rounded w-3/4" />
             <div className="h-3 bg-slate-100 rounded w-full" />
             <div className="h-3 bg-slate-100 rounded w-2/3" />
+            <div className="h-3 bg-slate-100 rounded w-5/6" />
           </div>
         )}
 
-        {/* Idle — no fetch yet */}
+        {/* Researching skeleton — running ABM */}
+        {intel.status === 'researching' && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[11px] text-violet-500 font-medium">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Running ABM research…
+            </div>
+            <div className="space-y-1.5 animate-pulse">
+              <div className="h-3 bg-violet-50 rounded w-full" />
+              <div className="h-3 bg-violet-50 rounded w-4/5" />
+              <div className="h-3 bg-violet-50 rounded w-3/4" />
+            </div>
+          </div>
+        )}
+
+        {/* Idle */}
         {intel.status === 'idle' && (
-          <p className="text-[11px] text-slate-400 italic">Researching on scroll…</p>
+          <p className="text-[11px] text-slate-400 italic">Loading on scroll…</p>
         )}
 
         {/* Error */}
         {intel.status === 'error' && (
-          <button
-            onClick={() => { fetchedRef.current = false; fetchIntel() }}
-            className="text-[11px] text-rose-500 flex items-center gap-1 hover:underline"
-          >
-            <RefreshCw className="w-3 h-3" /> Retry research
-          </button>
+          <div className="space-y-1">
+            {intel.errorMsg && (
+              <p className="text-[10px] text-rose-400 truncate">{intel.errorMsg}</p>
+            )}
+            <button
+              onClick={runResearch}
+              className="text-[11px] text-rose-500 flex items-center gap-1 hover:underline"
+            >
+              <RefreshCw className="w-3 h-3" /> Retry research
+            </button>
+          </div>
         )}
 
-        {/* Industry badge + description */}
+        {/* ── Rich ABM content ── */}
         {hasContent && (
           <>
-            {industry && (
-              <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-100 px-2 py-0.5">
-                {industry}
-              </Badge>
-            )}
+            {/* Firmographic badges row */}
+            <div className="flex flex-wrap gap-1.5">
+              {industry && (
+                <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-100 bg-blue-50 px-2 py-0.5 gap-1">
+                  <Building2 className="w-2.5 h-2.5" />{industry}
+                </Badge>
+              )}
+              {hq && (
+                <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-100 px-2 py-0.5 gap-1">
+                  <MapPin className="w-2.5 h-2.5" />{hq}
+                </Badge>
+              )}
+              {sizeRange && (
+                <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-100 px-2 py-0.5 gap-1">
+                  <Users className="w-2.5 h-2.5" />{sizeRange}
+                </Badge>
+              )}
+              {fundingStage && (
+                <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-100 bg-emerald-50 px-2 py-0.5 gap-1">
+                  <DollarSign className="w-2.5 h-2.5" />{fundingStage}
+                </Badge>
+              )}
+            </div>
 
-            {description && (
-              <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-3">
-                {String(description).slice(0, 200)}
+            {/* Company overview */}
+            {overview && (
+              <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-4">
+                {String(overview).slice(0, 280)}
               </p>
             )}
 
-            {/* Hiring signal */}
-            {isHiring && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
-                  🚀 Actively Hiring
-                </span>
-              </div>
-            )}
-
-            {/* Achievements / Awards */}
-            {(achievements.length > 0 || awards.length > 0) && (
+            {/* Recent funding */}
+            {recentFunding.length > 0 && (
               <div className="space-y-1">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Trophy className="w-3 h-3" /> Achievements
+                  <DollarSign className="w-3 h-3 text-emerald-500" /> Recent Funding
                 </p>
-                {[...achievements, ...awards].slice(0, 2).map((item: any, i: number) => (
+                {recentFunding.map((f, i) => (
                   <p key={i} className="text-[11px] text-slate-600 line-clamp-1">
-                    🏆 {typeof item === 'string' ? item : item.title || item.name || String(item).slice(0, 80)}
+                    💰 {f.title || f.snippet || 'Funding round'}
                   </p>
                 ))}
               </div>
             )}
 
-            {/* Recent news */}
-            {recentNews.length > 0 && (
-              <div className="space-y-1.5">
+            {/* Achievements */}
+            {achievements.length > 0 && (
+              <div className="space-y-1">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Newspaper className="w-3 h-3" /> Recent News
+                  <Trophy className="w-3 h-3 text-amber-500" /> Achievements
                 </p>
-                {recentNews.map((news: any, i: number) => (
-                  <p key={i} className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                    • {news.title || news.headline || String(news).slice(0, 100)}
+                {achievements.map((a, i) => (
+                  <p key={i} className="text-[11px] text-slate-600 line-clamp-1">
+                    🏆 {typeof a === 'string' ? a : a.title || a.snippet || ''}
                   </p>
                 ))}
               </div>
             )}
 
-            {/* Latest LinkedIn post */}
-            {postText && (
-              <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 space-y-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-500" /> Latest Post
-                </p>
-                <p className="text-[11px] text-slate-700 line-clamp-3 leading-relaxed italic">
-                  "{String(postText).slice(0, 180)}"
-                </p>
-              </div>
-            )}
-
-            {/* Next best action */}
-            {nextActions.length > 0 && (
-              <div className="bg-violet-50 rounded-xl border border-violet-100 p-3">
-                <p className="text-[9px] font-black text-violet-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+            {/* Top next best action */}
+            {topAction && (
+              <div className="bg-violet-50 rounded-xl border border-violet-100 p-3 space-y-1">
+                <p className="text-[9px] font-black text-violet-400 uppercase tracking-widest flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" /> Suggested Action
                 </p>
-                <p className="text-[11px] text-violet-700 leading-relaxed">
-                  {typeof nextActions[0] === 'string' ? nextActions[0] : nextActions[0].action || String(nextActions[0]).slice(0, 100)}
+                <p className="text-[11px] font-semibold text-violet-800 leading-snug">
+                  {topAction.action}
                 </p>
+                {topAction.rationale && (
+                  <p className="text-[10px] text-violet-600 leading-relaxed line-clamp-2">
+                    {topAction.rationale}
+                  </p>
+                )}
+                {topAction.suggested_message_hook && (
+                  <p className="text-[10px] text-violet-500 italic line-clamp-2 border-t border-violet-100 pt-1 mt-1">
+                    "{topAction.suggested_message_hook}"
+                  </p>
+                )}
+                {topAction.channel && (
+                  <span className="inline-flex text-[9px] font-bold text-violet-500 bg-violet-100 px-1.5 py-0.5 rounded-full">
+                    via {topAction.channel}
+                  </span>
+                )}
               </div>
+            )}
+
+            {/* Website / social links row */}
+            {websiteUrl && (
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-blue-600 transition-colors"
+              >
+                <Globe className="w-3 h-3" />
+                <span className="truncate">{websiteUrl.replace(/^https?:\/\//, '')}</span>
+              </a>
             )}
           </>
         )}
 
-        {/* No intel after load */}
+        {/* No cached data — prompt user to run research */}
         {intel.status === 'done' && !hasContent && (
-          <p className="text-[11px] text-slate-400 italic">No public research data found yet.</p>
+          <div className="flex flex-col items-start gap-2 py-1">
+            <p className="text-[11px] text-slate-400 italic">No research data yet.</p>
+            <button
+              onClick={runResearch}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Run Research
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div className="px-5 py-3 border-t border-slate-50 flex items-center justify-between">
         <button
           onClick={() => onViewProfile(member.id)}
@@ -286,14 +405,21 @@ function MemberIntelCard({ member, onViewProfile }: MemberIntelCardProps) {
         >
           <Users className="w-3.5 h-3.5" /> View Profile
         </button>
-        {intel.status === 'done' && (
+
+        {intel.status === 'researching' ? (
+          <span className="text-[10px] text-violet-500 flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" /> Researching…
+          </span>
+        ) : intel.status === 'done' && hasContent ? (
+          /* Data exists — show Refresh to re-run ABM */
           <button
-            onClick={() => { fetchedRef.current = false; fetchIntel() }}
-            className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+            onClick={runResearch}
+            className="text-[10px] text-slate-400 hover:text-violet-600 flex items-center gap-1 transition-colors"
+            title="Re-run fresh ABM research"
           >
             <RefreshCw className="w-3 h-3" /> Refresh
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -325,7 +451,7 @@ export default function MemberIntelFeed({ members, onViewProfile }: MemberIntelF
           <div>
             <h2 className="text-lg font-bold text-slate-900">Member Intelligence</h2>
             <p className="text-xs text-slate-500 font-medium">
-              Latest achievements, posts &amp; company signals — auto-researched
+              ABM research — company overview, decision makers &amp; next best actions
             </p>
           </div>
         </div>

@@ -14,7 +14,9 @@ import {
   Plus,
   Trash2,
   FileSpreadsheet,
+  Download,
 } from 'lucide-react';
+import { Workbook } from 'exceljs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -99,9 +101,13 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
     success: boolean;
     imported: number;
     conversations: number;
+    conversationIds?: string[];
     errors: { name: string; error: string }[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const [broadcastName, setBroadcastName] = useState('');
+  const [showBroadcastPrompt, setShowBroadcastPrompt] = useState(false);
 
   // Load chat groups when dialog opens
   useEffect(() => {
@@ -203,6 +209,124 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
+  // Excel parsing
+  const handleExcelUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const buffer = ev.target?.result as ArrayBuffer;
+        const workbook = new Workbook();
+        await workbook.xlsx.load(buffer);
+        const worksheet = workbook.worksheets[0];
+
+        if (!worksheet || !worksheet.rowCount || worksheet.rowCount < 2) return;
+
+        // Parse header
+        const headerRow = worksheet.getRow(1);
+        const headers = headerRow.values
+          ?.map((h) => String(h || '').trim().toLowerCase().replace(/['"]/g, ''))
+          .filter((h) => h) || [];
+
+        const nameIdx = headers.findIndex((h) => h === 'name' || h === 'full name' || h === 'fullname');
+        const phoneIdx = headers.findIndex((h) => h === 'phone' || h === 'whatsapp' || h === 'mobile' || h === 'phone number');
+        const emailIdx = headers.findIndex((h) => h === 'email' || h === 'email address');
+        const companyIdx = headers.findIndex((h) => h === 'company' || h === 'organization' || h === 'org');
+        const linkedinIdx = headers.findIndex((h) => h === 'linkedin' || h === 'linkedin_url' || h === 'linkedin url');
+        const instagramIdx = headers.findIndex((h) => h === 'instagram' || h === 'instagram_url' || h === 'instagram url');
+        const sourceIdx = headers.findIndex((h) => h === 'source');
+
+        const parsedLeads: LeadEntry[] = [];
+        for (let i = 2; i <= worksheet.rowCount; i++) {
+          const row = worksheet.getRow(i);
+          const cells = row.values || [];
+          const name = nameIdx >= 0 ? String(cells[nameIdx + 1] || '').trim() : '';
+          if (!name) continue;
+
+          parsedLeads.push({
+            id: crypto.randomUUID(),
+            name,
+            phone: phoneIdx >= 0 ? String(cells[phoneIdx + 1] || '').trim() : '',
+            email: emailIdx >= 0 ? String(cells[emailIdx + 1] || '').trim() : '',
+            company: companyIdx >= 0 ? String(cells[companyIdx + 1] || '').trim() : '',
+            linkedin_url: linkedinIdx >= 0 ? String(cells[linkedinIdx + 1] || '').trim() : '',
+            instagram_url: instagramIdx >= 0 ? String(cells[instagramIdx + 1] || '').trim() : '',
+            source: sourceIdx >= 0 ? String(cells[sourceIdx + 1] || '').trim() : 'excel_import',
+          });
+        }
+
+        if (parsedLeads.length > 0) {
+          setLeads(parsedLeads);
+          setActiveTab('single');
+        }
+      } catch (err) {
+        console.error('Failed to parse Excel file:', err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+    // Reset input
+    if (excelInputRef.current) excelInputRef.current.value = '';
+  }, []);
+
+  // Download template
+  const downloadTemplate = useCallback(async () => {
+    try {
+      const workbook = new Workbook();
+      const worksheet = workbook.addWorksheet('Leads Template');
+
+      // Add header row
+      worksheet.columns = [
+        { header: 'Name', key: 'name', width: 20 },
+        { header: 'Phone', key: 'phone', width: 18 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Company', key: 'company', width: 20 },
+        { header: 'LinkedIn', key: 'linkedin', width: 30 },
+        { header: 'Instagram', key: 'instagram', width: 20 },
+        { header: 'Source', key: 'source', width: 15 },
+      ];
+
+      // Style header
+      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F5496' } };
+
+      // Add sample data
+      worksheet.addRow({
+        name: 'John Doe',
+        phone: '+971501234567',
+        email: 'john@example.com',
+        company: 'Acme Inc',
+        linkedin: 'linkedin.com/in/john',
+        instagram: '@johndoe',
+        source: 'manual',
+      });
+
+      worksheet.addRow({
+        name: 'Jane Smith',
+        phone: '+971507654321',
+        email: 'jane@corp.com',
+        company: 'Corp Ltd',
+        linkedin: '',
+        instagram: '@janesmith',
+        source: 'manual',
+      });
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'leads_template.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate template:', err);
+    }
+  }, []);
+
   // Import
   const handleImport = useCallback(async () => {
     const validLeads = leads.filter((l) => l.name.trim());
@@ -239,12 +363,9 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
           imported: data.data.imported,
           conversations: data.data.conversations_created,
           errors: data.data.errors || [],
+          conversationIds: data.data.conversation_ids || [], // Store IDs for broadcast creation
         });
-        // Refresh conversations after a short delay
-        setTimeout(() => {
-          onImportComplete();
-          onOpenChange(false);
-        }, 1500);
+        // Don't auto-close — wait for user to create broadcast or skip
       } else {
         setImportResult({
           success: false,
@@ -287,6 +408,10 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
               <FileSpreadsheet className="h-3.5 w-3.5" />
               CSV Upload
             </TabsTrigger>
+            <TabsTrigger value="excel" className="text-xs gap-1.5">
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Excel Upload
+            </TabsTrigger>
           </TabsList>
 
           {/* ── CSV Upload Tab ─────────────────────── */}
@@ -323,6 +448,42 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
             </div>
           </TabsContent>
 
+          {/* ── Excel Upload Tab ─────────────────────── */}
+          <TabsContent value="excel" className="px-4 py-3 flex-1">
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+              <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-sm font-medium mb-1">Upload Excel file (.xlsx)</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Required: <span className="font-medium">name</span>. Optional: phone, email, company, linkedin, instagram, source
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => excelInputRef.current?.click()}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Choose Excel File
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadTemplate}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </div>
+              <input
+                ref={excelInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleExcelUpload}
+              />
+            </div>
+          </TabsContent>
+
           {/* ── Single/List Add Tab ────────────────── */}
           <TabsContent value="single" className="flex-1 flex flex-col overflow-hidden px-4 py-2">
             <ScrollArea className="flex-1 max-h-[40vh] pr-2">
@@ -352,11 +513,11 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
         </Tabs>
 
-        {/* ── Chat Group Assignment ──────────────── */}
+        {/* ── Broadcast Assignment ──────────────── */}
         {groups.length > 0 && (
           <div className="px-4 py-3 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-              Assign to Chat Groups
+              Assign to Broadcasts
             </p>
             <div className="flex flex-wrap gap-1.5">
               {groups.map((g) => {
@@ -394,12 +555,81 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
               : 'bg-red-50 text-red-700 border border-red-200'
           )}>
             {importResult.success ? (
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                <span>
-                  Imported {importResult.imported} lead{importResult.imported !== 1 ? 's' : ''}, created{' '}
-                  {importResult.conversations} conversation{importResult.conversations !== 1 ? 's' : ''}
-                </span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  <span>
+                    Imported {importResult.imported} lead{importResult.imported !== 1 ? 's' : ''}, created{' '}
+                    {importResult.conversations} conversation{importResult.conversations !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {!showBroadcastPrompt && (
+                  <div className="mt-2 pt-2 border-t border-green-200">
+                    <p className="text-xs font-medium mb-2">Create a broadcast group for these leads?</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => setShowBroadcastPrompt(true)}
+                    >
+                      Create Broadcast Group
+                    </Button>
+                  </div>
+                )}
+                {showBroadcastPrompt && (
+                  <div className="mt-2 pt-2 border-t border-green-200 space-y-2">
+                    <Input
+                      placeholder="Enter broadcast name..."
+                      value={broadcastName}
+                      onChange={(e) => setBroadcastName(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex-1"
+                        onClick={() => {
+                          setShowBroadcastPrompt(false);
+                          setBroadcastName('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs flex-1"
+                        onClick={async () => {
+                          if (!broadcastName.trim()) return;
+                          try {
+                            const conversationIds = importResult?.conversationIds || [];
+                            const res = await fetch(`${API_BASE}/chat-groups`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+                              },
+                              body: JSON.stringify({
+                                name: broadcastName.trim(),
+                                conversation_ids: conversationIds,
+                              }),
+                            });
+                            if (res.ok) {
+                              setShowBroadcastPrompt(false);
+                              setBroadcastName('');
+                              onOpenChange(false);
+                              onImportComplete();
+                            }
+                          } catch (err) {
+                            console.error('Failed to create broadcast:', err);
+                          }
+                        }}
+                      >
+                        Create
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -411,39 +641,54 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
         )}
 
         {/* ── Footer ─────────────────────────────── */}
-        <div className="p-4 border-t border-border flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
-            {selectedGroupIds.size > 0 && (
-              <span className="ml-1">
-                into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleImport}
-              disabled={importing || validCount === 0}
-              className="gap-1.5"
-            >
-              {importing ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Import {validCount} Lead{validCount !== 1 ? 's' : ''}
-                </>
+        {!importResult?.success ? (
+          <div className="p-4 border-t border-border flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
+              {selectedGroupIds.size > 0 && (
+                <span className="ml-1">
+                  into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
+                </span>
               )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleImport}
+                disabled={importing || validCount === 0}
+                className="gap-1.5"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Import {validCount} Lead{validCount !== 1 ? 's' : ''}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 border-t border-border flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                onImportComplete();
+              }}
+            >
+              {showBroadcastPrompt ? 'Cancel' : 'Skip & Close'}
             </Button>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

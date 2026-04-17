@@ -409,23 +409,7 @@ export const contributionApi = {
    */
   async getNetworkStats(): Promise<DashboardKPIs['data']> {
     const response = await communityROIApiClient.get<{ data: DashboardKPIs['data'] }>(`${API_PREFIX}/analytics/overview`);
-    
-    console.log('%c[contributionApi] getNetworkStats - Raw Response:', 'color: #FF6B6B; font-weight: bold;', {
-      fullResponse: response,
-      responseData: response.data,
-      innerData: response.data?.data,
-    });
-    
-    const result = response.data.data;
-    console.log('%c[contributionApi] getNetworkStats - Returning:', 'color: #4ECDC4; font-weight: bold;', {
-      hasNetworkBreakdown: !!result?.networkBreakdown,
-      hasConnectivity: !!result?.connectivityAnalysis,
-      networkBreakdown: result?.networkBreakdown,
-      connectivityAnalysis: result?.connectivityAnalysis,
-      fullResult: result,
-    });
-    
-    return result;
+    return response.data.data;
   },
 
   /**

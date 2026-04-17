@@ -1,10 +1,36 @@
 import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
-import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MrLadAvatar } from './MrLadAvatar';
+
+// ── Template message renderer ─────────────────────────────────────────────────
+// Shows a labelled badge above the actual rendered message text
+function TemplateMessageBubble({ content, templateName }: { content: string; templateName: string }) {
+  const LABELS: Record<string, string> = {
+    cohesion_report_no_interaction: 'Cohesion Report',
+    member_121_recommendations:     '1-2-1 Recommendations',
+    onboard_new_member:             'Welcome Message',
+  };
+  const label = LABELS[templateName]
+    ?? templateName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[180px]">
+      {/* Template badge */}
+      <div className="flex items-center gap-1.5 pb-1 border-b border-white/20">
+        <MessageSquare className="w-3 h-3 opacity-70 shrink-0" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+          {label}
+        </span>
+      </div>
+      {/* Actual message text with line-breaks preserved */}
+      <p className="wa-msg-text text-[13px] leading-snug whitespace-pre-line">{content}</p>
+    </div>
+  );
+}
 
 interface Contact {
   id: string;
@@ -213,8 +239,12 @@ export const MessageBubble = memo(function MessageBubble({
           </p>
         )}
 
-        {/* Message text — WhatsApp-style typography */}
-        <p className="wa-msg-text">{content}</p>
+        {/* Message text — template messages get a labelled badge, others plain text */}
+        {message.templateName ? (
+          <TemplateMessageBubble content={content} templateName={message.templateName} />
+        ) : (
+          <p className="wa-msg-text">{content}</p>
+        )}
 
         {/* Timestamp + status row */}
         <div
