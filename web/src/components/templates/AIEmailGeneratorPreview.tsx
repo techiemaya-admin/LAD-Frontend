@@ -126,8 +126,8 @@ export default function AIEmailGeneratorPreview({
         body: JSON.stringify({
           name: templateName,
           subject,
-          body: editorMode === 'html' ? body : body,
-          body_html: editorMode === 'html' ? bodyHtml : null,
+          body,
+          ...(editorMode === 'html' && bodyHtml ? { body_html: bodyHtml } : {}),
           content_format: editorMode === 'html' ? 'html' : 'plain_text',
           category: templateCategory,
           description: templateDescription,
