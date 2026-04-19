@@ -14,7 +14,8 @@ import { Toaster, toast } from 'sonner';
 import { Concept } from '../../types/concept';
 import { cn } from '../../lib/utils';
 // Import the LeadRequirements component (ensure path is correct based on your project)
-import { LeadRequirements, RequirementConfig } from './LeadRequirements';
+import { LeadRequirements } from './LeadRequirements';
+import { RequirementConfig } from '../../types/requirement_config';
 import { ConceptManagement } from './ConceptManagement';
 import { PricingRules } from './PricingRules';
 import {
@@ -52,7 +53,8 @@ const SettingsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
-  const [pricingModals, setPricingModals] = useState<{ value: string; label: string }[]>([]);
+  const [pricingModels, setpricingModels] = useState<{ value: string; label: string }[]>([]);
+  const [selectedConceptServices, setSelectedConceptServices] = useState<string[]>([]);
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -70,7 +72,7 @@ const SettingsPage: React.FC = () => {
         await fetchConfigs(userTenantId);
         await fetchConcepts(userTenantId);
         await fetchPricingRules(userTenantId);
-        await fetchPricingModals(userTenantId); // Fetch pricing modals after getting tenant_id
+        await fetchpricingModels(userTenantId); // Fetch pricing modals after getting tenant_id
       } catch (error) {
         setAuthed(false); // <--- ADD THIS
         logger.error("[Call Logs] Failed to get user tenant_id", error);
@@ -88,20 +90,14 @@ const SettingsPage: React.FC = () => {
       }
     }
   };
-  const fetchPricingModals = async (tenantId: string) => {
+  const fetchpricingModels = async (tenantId: string) => {
     try {
       const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-models/${tenantId}`); // Your backend endpoint [cite: 238, 256]
       const data = await res.json();
       console.log('Fetched pricing modals:', data);
-      setPricingModals(data); // Expecting [{ value: 'per_person', label: 'Per Person (Event)' }, ...] [cite: 238]
+      setpricingModels(data); // Expecting [{ value: 'per_person', label: 'Per Person (Event)' }, ...] [cite: 238]
     } catch (error) {
       logger.error("Failed to fetch pricing modals", error); // 
-      // Fallback in case of error
-      setPricingModals([
-        { value: 'per_person', label: 'Per Person (Event)' },
-        { value: 'per_day', label: 'Per Day (Hall)' },
-        { value: 'fixed', label: 'Fixed Price (Package)' }
-      ]);
     }
   };
 
@@ -118,10 +114,15 @@ const SettingsPage: React.FC = () => {
   };
 
   const fetchConcepts = async (tenantId: string) => {
-    const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tenantId}`);
-    const data = await res.json();
-    console.log('Fetched concepts:', data);
-    setConcepts(data);
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tenantId}`);
+      const data = await res.json();
+      console.log('Fetched concepts:', data);
+      setConcepts(data);
+    } catch (error) {
+      logger.error("Failed to fetch concepts", error);
+
+    }
   };
 
 
@@ -129,6 +130,7 @@ const SettingsPage: React.FC = () => {
     try {
       const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tenantId}`);
       const data = await res.json();
+      console.log('Fetched pricing rules:', data);
       setPricingRules(data);
     } catch (error) {
       logger.error("Failed to fetch pricing rules", error);
@@ -172,7 +174,7 @@ const SettingsPage: React.FC = () => {
       pricing_type: formData.get('pricing_type'),
       minimum_cost: parseFloat(formData.get('minimum_cost') as string) || 0,
       description: formData.get('description'),
-      base_price: parseFloat(formData.get('base_price') as string) || 0,
+      requirement_config_ids: selectedConceptServices // Assuming this is an array of selected requirement config IDs
     };
     console.log('Saving concept:', conceptData);
     const url = editingConcept ? `${getApiBaseUrlForLocal()}/api/concepts/${editingConcept.id}` : `${getApiBaseUrlForLocal()}/api/concepts`;
@@ -213,8 +215,8 @@ const SettingsPage: React.FC = () => {
       field_key: formData.get('field_key'),
       label: formData.get('label'),
       is_active: formData.get('is_active') === 'on',
-      default_value: formData.get('default_value'),
-      order_index: parseInt(formData.get('order_index') as string) || 0,
+      base_price: parseFloat(formData.get('base_price') as string) || 0,
+      pricing_model_id: formData.get('pricing_model_id') // Assuming this is a select input with pricing model IDs as values
     };
     console.log('Saving config:', configData);
     // ... rest of your fetch logic [cite: 13, 20, 21]
@@ -243,7 +245,6 @@ const SettingsPage: React.FC = () => {
   const [renewalDate, setRenewalDate] = useState<string>('');
   const [logoError, setLogoError] = useState(false);
   const [concepts, setConcepts] = useState<Concept[]>([]);
-  const [pricingMatrix, setPricingMatrix] = useState<ConceptPricingMatrix[]>([]);
   useEffect(() => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
@@ -659,6 +660,7 @@ const SettingsPage: React.FC = () => {
             {proposalSubTab === 'lead_config' && (
               <LeadRequirements
                 requirementConfigs={requirementConfigs}
+                pricingModels={pricingModels}
                 onEdit={(config) => {
                   setEditingConfig(config);
                   setIsConfigModalOpen(true);
@@ -674,13 +676,19 @@ const SettingsPage: React.FC = () => {
             {proposalSubTab === 'concepts' && (
               <ConceptManagement
                 concepts={concepts}
+                requirementConfigs={requirementConfigs}
                 onEdit={(concept) => {
                   setEditingConcept(concept);
+                  
+                  const requirementConfigIds = concept.requirement_configs.map(item => item.id);
+                  console.log('Editing concept with requirement config IDs:', requirementConfigIds);
+                  setSelectedConceptServices(requirementConfigIds || []);
                   setIsConceptModalOpen(true);
                 }}
                 onDelete={handleDeleteConcept}
                 onAdd={() => {
                   setEditingConcept(null);
+                  setSelectedConceptServices([]);
                   setIsConceptModalOpen(true);
                 }}
               />
@@ -697,6 +705,7 @@ const SettingsPage: React.FC = () => {
             )}
           </div>
         )}
+
         {/* Concept Modal */}
         <AnimatePresence>
           {isConceptModalOpen && (
@@ -725,34 +734,52 @@ const SettingsPage: React.FC = () => {
                     <div>
                       <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Concept Name</label>
                       <input name="name" defaultValue={editingConcept?.name} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. LITE, IMPACT" />
-                    </div>{/* Inside the Concept Modal Form */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">
-                        Pricing Type
-                      </label>
-                      <select
-                        name="pricing_type"
-                        defaultValue={editingConcept?.pricing_type || 'per_person'}
-                        required
-                        className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm"
-                      >
-                        {/* Dynamically render options from backend data  */}
-                        {pricingModals.map((type) => (
-                          <option key={type.value} value={type.value}>
-                            {type.value} ({type.label})
-                          </option>
-                        ))}
-                      </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Base Price</label>
-                        <input name="base_price" type="number" step="0.01" defaultValue={editingConcept?.base_price} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. 100.00" />
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Minimum Cost</label>
+                      <input name="minimum_cost" type="number" step="0.01" defaultValue={editingConcept?.minimum_cost} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. 5000.00" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Included Services</label>
+                      <div className="space-y-3">
+                        <select
+                          className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !selectedConceptServices.includes(val)) {
+                              setSelectedConceptServices([...selectedConceptServices, val]);
+                            }
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="">Add a service...</option>
+                          {requirementConfigs.filter(c => !selectedConceptServices.includes(c.id)).map(config => (
+                            <option key={config.id} value={config.id}>{config.label}</option>
+                          ))}
+                        </select>
+
+                        <div className="flex flex-wrap gap-2">
+                          {selectedConceptServices.length === 0 && (
+                            <p className="text-[10px] text-[#9CA3AF] italic">No services selected.</p>
+                          )}
+                          {selectedConceptServices.map(id => {
+                            const config = requirementConfigs.find(c => c.id === id);
+                            return (
+                              <div key={id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FF] text-[#4F46E5] rounded-xl text-xs font-bold border border-[#C7D2FE] shadow-sm">
+                                {config?.label || id}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedConceptServices(selectedConceptServices.filter(sid => sid !== id))}
+                                  className="hover:text-[#4338CA] transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Minimum Cost</label>
-                        <input name="minimum_cost" type="number" step="0.01" defaultValue={editingConcept?.minimum_cost} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. 5000.00" />
-                      </div>
+                      <p className="text-[10px] text-[#9CA3AF] mt-2">Select the services that are part of this concept. Pricing will be calculated based on these selections.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Description</label>
@@ -806,18 +833,24 @@ const SettingsPage: React.FC = () => {
                       <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Field Key</label>
                       <input name="field_key" defaultValue={editingConfig?.field_key} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Base Price</label>
+                        <input name="base_price" type="number" step="0.01" defaultValue={editingConfig?.base_price} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Pricing Model</label>
+                        <select name="pricing_model_id" defaultValue={editingConfig?.pricing_model_id} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm">
+                          {pricingModels.map(pm => (
+                            <option key={pm.id} value={pm.id}>{pm.value} ({pm.label})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-sm text-[#4B5563]">
                         <input type="checkbox" name="is_active" defaultChecked={editingConfig?.is_active ?? true} /> Active
                       </label>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Default Value</label>
-                      <input name="default_value" defaultValue={editingConfig?.default_value} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Order Index</label>
-                      <input type="number" name="order_index" defaultValue={editingConfig?.order_index || 0} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
                     </div>
                   </div>
                   <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">

@@ -6,6 +6,7 @@
 import { User, Booking, CallLog, DashboardUsersResponse, DashboardBookingsResponse, DashboardCallsResponse } from './types';
 
 const getBackendUrl = (): string => {
+  console.log('Backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
   return process.env.NEXT_PUBLIC_BACKEND_URL || '';
 };
 

@@ -1,27 +1,20 @@
 import React from 'react';
 import { Settings, Plus, Edit2, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
- export interface RequirementConfig {
-  id: string;
-  tenant_id: string;
-  field_key: string;
-  label: string;
-  is_active: boolean;
-  default_value: any;
-  order_index: number;
-  created_at: string;
-}
-
+import { RequirementConfig } from '../../types/requirement_config';
+import { PricingModel } from '../../types/pricing_model';
+ 
 interface LeadRequirementsProps {
   requirementConfigs: RequirementConfig[];
+  pricingModels: PricingModel[];
   onEdit: (config: RequirementConfig) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
 }
-
+ 
 export const LeadRequirements: React.FC<LeadRequirementsProps> = ({ 
   requirementConfigs, 
+  pricingModels,
   onEdit, 
   onDelete, 
   onAdd 
@@ -47,19 +40,21 @@ export const LeadRequirements: React.FC<LeadRequirementsProps> = ({
             <tr>
               <th className="px-4 py-3">Label</th>
               <th className="px-4 py-3">Key</th>
-              <th className="px-4 py-3">Default Value</th>
-              <th className="px-4 py-3">Order Index</th>
+              <th className="px-4 py-3">Base Price</th>
+              <th className="px-4 py-3">Pricing Model</th>
               <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {requirementConfigs?.map(config => (
+            {requirementConfigs.map(config => (
               <tr key={config.id} className="border-b border-[#F3F4F6] hover:bg-[#F9FAFB]">
                 <td className="px-4 py-3 font-medium text-[#1F2937]">{config.label}</td>
                 <td className="px-4 py-3 text-[#6B7280]">{config.field_key}</td>
-                <td className="px-4 py-3 text-[#6B7280] capitalize">{config.default_value}</td>
-                <td className="px-4 py-3 text-[#6B7280]">{config.order_index}</td>
+                <td className="px-4 py-3 text-[#1F2937] font-bold">${config.base_price?.toLocaleString()}</td>
+                <td className="px-4 py-3 text-[#6B7280]">
+                  {pricingModels.find(m => m.id === config.pricing_model_id)?.label}
+                </td>
                 <td className="px-4 py-3">
                   <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold", config.is_active ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600")}>
                     {config.is_active ? 'ACTIVE' : 'INACTIVE'}

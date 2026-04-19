@@ -1,10 +1,12 @@
 import React from 'react';
 import { Sparkles, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Concept } from '../../types/concept';
+import { RequirementConfig } from '../../types/requirement_config';
 import { cn } from '../../lib/utils';
 
 interface ConceptManagementProps {
   concepts: Concept[];
+  requirementConfigs: RequirementConfig[];
   onEdit: (concept: Concept) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
@@ -12,6 +14,7 @@ interface ConceptManagementProps {
 
 export const ConceptManagement: React.FC<ConceptManagementProps> = ({ 
   concepts, 
+  requirementConfigs,
   onEdit, 
   onDelete, 
   onAdd 
@@ -41,8 +44,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
           <thead className="text-xs text-[#9CA3AF] uppercase bg-[#F9FAFB]">
             <tr>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Pricing Type</th>
-              <th className="px-4 py-3">Base Price</th>
+              <th className="px-4 py-3">Included Services</th>
               <th className="px-4 py-3">Min. Cost</th>
               <th className="px-4 py-3">Description</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -51,7 +53,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
           <tbody>
             {concepts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[#9CA3AF]">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#9CA3AF]">
                   No concepts found. Click "Add Concept" to create one.
                 </td>
               </tr>
@@ -60,11 +62,17 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
                 <tr key={concept.id} className="border-b border-[#F3F4F6] hover:bg-[#F9FAFB] transition-colors">
                   <td className="px-4 py-4 font-bold text-[#1F2937]">{concept.name}</td>
                   <td className="px-4 py-4">
-          
-                      {concept.pricing_model.label}
-                  </td>
-                  <td className="px-4 py-4 text-[#6B7280] font-mono">
-                    {concept.base_price ? `$${Number(concept.base_price).toLocaleString()}` : '-'}
+                    {concept.requirement_configs && concept.requirement_configs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {concept.requirement_configs.map((config, index) => (
+                          <span key={index} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] rounded font-mono border border-gray-200">
+                            {config.field_key}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs italic text-[#9CA3AF]">None</span>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-[#6B7280]">
                     {concept.minimum_cost ? `$${Number(concept.minimum_cost).toLocaleString()}` : '-'}

@@ -1,3 +1,5 @@
+import { RequirementConfig } from "./requirement_config";
+
 export interface Concept {
     id: string;
     is_deleted: boolean;
@@ -6,8 +8,7 @@ export interface Concept {
     tenant_id: string;
     metadata?: any;
     name: string;
-    pricing_type: string;
-    base_price?: number;
     minimum_cost?: number;
     description?: string;
+    requirement_config?: RequirementConfig[]; // For mapping
 }

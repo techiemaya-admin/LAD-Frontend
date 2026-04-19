@@ -2,9 +2,11 @@
 export interface PricingRule {
   id: string;
   concept_id: string;
+  requirement_config_id:string;
   name: string;
   priority: number;
   is_active: boolean;
+  target_type?: 'package' | 'service';
   condition_field: string;
   condition_operator: string;
   condition_value: number;
