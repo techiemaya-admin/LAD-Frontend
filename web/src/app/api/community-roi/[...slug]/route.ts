@@ -61,10 +61,17 @@ async function handleRequest(
       tokenLength: token.length,
     });
 
-    // Prepare headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    // Prepare headers - preserve original content-type for FormData/multipart uploads
+    const headers: Record<string, string> = {};
+
+    // Copy content-type from request if present (important for FormData/multipart)
+    const contentType = req.headers.get('content-type');
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    } else if (['POST', 'PUT', 'PATCH'].includes(method)) {
+      // Only set default JSON content-type for non-FormData requests
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Add auth token if available
     if (token) {
@@ -74,13 +81,18 @@ async function handleRequest(
       logger.warn('[community-roi-proxy] No auth token found');
     }
 
-    // Forward other headers (exclude host-specific ones)
+    // Forward other headers (exclude host-specific ones and content-type which we handle above)
     const forwardHeaders = ['accept', 'accept-encoding', 'user-agent', 'x-tenant-id', 'x-workspace-id'];
     forwardHeaders.forEach((header) => {
       const value = req.headers.get(header);
       if (value) {
         headers[header] = value;
       }
+    });
+
+    logger.debug('[community-roi-proxy] Request headers', {
+      contentType: headers['Content-Type'],
+      hasAuth: !!headers['Authorization'],
     });
 
     // Build the request - use the original request to avoid body-reading issues
@@ -94,8 +106,8 @@ async function handleRequest(
       try {
         // Clone the request to avoid consuming the body
         const clonedReq = req.clone();
-        const body = await clonedReq.text();
-        if (body) {
+        const body = await clonedReq.arrayBuffer();
+        if (body && body.byteLength > 0) {
           requestInit.body = body;
         }
       } catch (error) {

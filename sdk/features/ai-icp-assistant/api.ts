@@ -16,6 +16,7 @@ import type {
   LeadsValidation,
   ParsedLead,
   PlatformDetection,
+  LinkedInLimitsResponse,
 } from './types';
 
 // Re-export types that are used by hooks
@@ -34,6 +35,11 @@ const logger = {
  * DEVELOPMENT: Falls back to localhost:3000
  */
 function getBackendUrl(): string {
+  // In the browser, always use same-origin so auth token issuer/validator stay aligned.
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
   const url = (
     process.env.NEXT_PUBLIC_ICP_BACKEND_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -45,7 +51,7 @@ function getBackendUrl(): string {
     throw new Error('NEXT_PUBLIC_ICP_BACKEND_URL or NEXT_PUBLIC_API_URL is required in production');
   }
   // DEVELOPMENT: Use localhost fallback
-  return url || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+  return url || 'http://localhost:3000';
 }
 /**
  * Get authorization headers from browser storage
@@ -529,6 +535,30 @@ export async function validateLeadsForExecution(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to validate leads: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
+// LinkedIn Limits API
+// ============================================================================
+
+/**
+ * Fetch LinkedIn daily limits (remaining and total)
+ */
+export async function fetchLinkedInLimits(): Promise<LinkedInLimitsResponse> {
+  const baseUrl = getBackendUrl();
+  const url = `${baseUrl}/api/campaigns/linkedin/limits`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch LinkedIn limits: ${response.statusText}`);
   }
   return response.json();
 }

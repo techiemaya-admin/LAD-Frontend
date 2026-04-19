@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
 import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
+import { ChatSettings } from '../../components/settings/ChatSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';
@@ -25,7 +26,8 @@ import {
   Sparkles,
   Tag,
   Settings,
-  DollarSign
+  DollarSign,
+  MessageSquare
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -34,10 +36,7 @@ import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { PricingRule } from '@/types/pricing_rule';
 
-
-type ActiveTab = 'company' | 'team' | 'accounts' | 'website' |
-  'integrations' | 'api' | 'billing' | 'credits' | 'proposal_settings';
-
+type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits'| 'proposal_settings';
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -250,10 +249,7 @@ const SettingsPage: React.FC = () => {
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
 
-    const allowed: ActiveTab[] = [
-      'company', 'team', 'accounts', 'website', 'integrations',
-      'api', 'billing', 'credits', 'proposal_settings'
-    ];
+    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
     if (allowed.includes(tabParam as ActiveTab)) {
       setActiveTab(tabParam as ActiveTab);
     }
@@ -292,13 +288,14 @@ const SettingsPage: React.FC = () => {
     // { id: 'accounts' as ActiveTab, label: 'Accounts', icon: UserCircle },
     // { id: 'website' as ActiveTab, label: 'Website', icon: Globe },
     { id: 'integrations' as ActiveTab, label: 'Integrations', icon: Plug },
+    { id: 'chat' as ActiveTab, label: 'Chat Settings', icon: MessageSquare },
     { id: 'api' as ActiveTab, label: 'Voice Settings', icon: Terminal },
     { id: 'billing' as ActiveTab, label: 'Billing', icon: CreditCard },
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
     { id: 'proposal_settings' as ActiveTab, label: 'Proposal Settings', icon: ClipboardCheck },
   ];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Combined Header with Logo, Company Name, Renewal Date, and Tabs */}
       <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Top Section: Logo, Company Name, and Renewal */}
@@ -339,8 +336,8 @@ const SettingsPage: React.FC = () => {
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                  ? 'bg-white text-blue-700 shadow-md font-semibold'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-white text-blue-700 shadow-md font-semibold'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
                   }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -361,6 +358,7 @@ const SettingsPage: React.FC = () => {
           />
         )}
         {activeTab === 'integrations' && <IntegrationsSettings />}
+        {activeTab === 'chat' && <ChatSettings />}
         {activeTab === 'api' && <VoiceAgentSettings />}
         {/* Placeholder for other tabs */}
         {activeTab === 'team' && <TeamManagement />}

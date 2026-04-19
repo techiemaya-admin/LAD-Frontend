@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore, ChannelConnection, WorkflowPreviewStep, InboundLeadData } from '@/store/onboardingStore';
 import InboundDataForm from '@/components/onboarding/InboundDataForm';
+import LeadImportChat from '@/components/onboarding/LeadImportChat';
 import { analyzeInboundData, getNextInboundQuestion, hasPlatformData } from '@/services/inboundCampaignService';
 import ChatInputClaude from '@/components/onboarding/ChatInputClaude';
 import ChatMessageBubble from '@/components/onboarding/ChatMessageBubble';
@@ -9,14 +10,14 @@ import { parseMessageOptions } from '@/lib/parseMessageOptions';
 import WorkflowLibrary from '@/components/onboarding/WorkflowLibrary';
 import GuidedFlowPanel from '@/components/onboarding/GuidedFlowPanel';
 import { useChatStepController } from '@/components/onboarding/ChatStepController';
-import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Zap, Users, Loader2, Bot, ArrowLeft, Trash2, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import { sendGeminiPrompt, askPlatformFeatures, askFeatureUtilities, buildWorkflowNode } from '@/services/geminiFlashService';
-import { clearBufferedMessages, clearAllBufferedMessages } from '@lad/frontend-features/ai-icp-assistant';
+import { clearBufferedMessages, clearAllBufferedMessages, useLinkedInLimits } from '@lad/frontend-features/ai-icp-assistant';
 import { questionSequences, getPlatformFeaturesQuestion, getUtilityQuestions } from '@/lib/onboardingQuestions';
 import { saveInboundLeads, cancelLeadBookingsForReNurturing, getCampaign } from '@lad/frontend-features/campaigns';
 import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
 import { filterFeaturesByCategory } from '@/lib/categoryFilters';
-import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { toast } from '@/hooks/use-toast';
@@ -31,7 +32,15 @@ type FlowState =
   | 'inbound_campaign_name' // Inbound: Ask campaign name
   | 'inbound_campaign_days' // Inbound: Ask campaign days
   | 'inbound_leads_per_day' // Inbound: Ask leads per day
-  | 'icp_discovery_mode'; // ICP: Conversational discovery mode
+  | 'icp_discovery_mode' // ICP: Conversational discovery mode
+  | 'adv_search_location' // Advanced Search: Ask specific location
+  | 'adv_search_leads_per_day' // Advanced Search: Ask leads per day
+  | 'adv_search_actions' // Advanced Search: Ask LinkedIn actions
+  | 'adv_search_connection_msg' // Advanced Search: Connection message template
+  | 'adv_search_followup_msg' // Advanced Search: Follow-up message template
+  | 'adv_search_campaign_name' // Advanced Search: Campaign name
+  | 'adv_search_campaign_days' // Advanced Search: How many days
+  | 'adv_search_working_days'; // Advanced Search: Which days to run
 interface ChatPanelProps {
   campaignId?: string | null;
 }
@@ -92,32 +101,14 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     setIsInboundFormVisible,
   } = useOnboardingStore();
 
-  const [limits, setLimits] = useState<{ remaining: number; total: number } | null>(null);
-  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
-
-  useEffect(() => {
-    setIsLoadingLimits(true);
-    apiGet<{ success: boolean; totalDailyLimit: number; remainingDailyLimit: number }>('/api/campaigns/linkedin/limits')
-      .then(res => {
-        logger.debug('LinkedIn limits received', res);
-        if (res.success) {
-          setLimits({
-            remaining: res.remainingDailyLimit,
-            total: res.totalDailyLimit
-          });
-        }
-      })
-      .catch(err => {
-        logger.error('Failed to fetch limits', err);
-        // Fallback to 0 if error, to be safe
-        setLimits({ remaining: 0, total: 0 });
-      })
-      .finally(() => setIsLoadingLimits(false));
-  }, []);
+  const { limits, loading: isLoadingLimits } = useLinkedInLimits();
 
   // State for duplicate lead detection
   const [duplicateLeadsInfo, setDuplicateLeadsInfo] = useState<any>(null);
   const [pendingLeadsData, setPendingLeadsData] = useState<any>(null);
+
+  // Advanced Search flow answers
+  const [advSearchAnswers, setAdvSearchAnswers] = useState<Record<string, any>>({});
 
   // Initialize workflow preview on mount ONLY if there's no existing workflow
   // This preserves workflow when navigating back
@@ -232,6 +223,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
   const [showWorkflowLibrary, setShowWorkflowLibrary] = useState(false);
   const [isICPOnboardingActive, setIsICPOnboardingActive] = useState(false);
   const [isSubmittingInbound, setIsSubmittingInbound] = useState(false);
+  const [showLeadImport, setShowLeadImport] = useState(false);
   const [inboundCollectedAnswers, setInboundCollectedAnswers] = useState<Record<string, any>>({});
   const [currentInboundStepIndex, setCurrentInboundStepIndex] = useState(0);
   // Handle inbound answer processing (simplified flow: leads per day → campaign name → complete)
@@ -538,18 +530,30 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       setIsSubmittingInbound(false);
     }
   };
-  // Handle campaign data type selection (Inbound vs Outbound)
-  const handleCampaignDataTypeSelect = (type: 'inbound' | 'outbound') => {
+  // Handle campaign data type selection (Inbound vs Outbound vs Advanced Search)
+  const handleCampaignDataTypeSelect = (type: 'inbound' | 'outbound' | 'advanced_search') => {
     logger.debug('Campaign data type selected', { type });
     setCampaignDataType(type);
     if (type === 'inbound') {
-      // Show the inbound data entry form
-      setIsInboundFormVisible(true);
+      // Show options: manual entry OR CSV/Excel import
       addAIMessage({
         role: 'ai',
-        content: `Great! You've selected **Inbound** lead management.\n\nPlease fill out the form below with your inbound lead data. I'll analyze what platforms are available and ask only the relevant questions based on your data.`,
+        content: `Great! You've selected **Inbound** lead management.\n\nHow would you like to add your leads?`,
+        timestamp: new Date(),
+        options: [
+          { label: 'Import CSV / Excel', value: 'import_csv' },
+          { label: 'Enter Manually', value: 'enter_manually' },
+        ],
+      });
+    } else if (type === 'advanced_search') {
+      // Advanced Search: Show specific prompt to start extracting intent
+      addAIMessage({
+        role: 'ai',
+        content: `🔍 **Advanced LinkedIn Search**\n\nI'll search LinkedIn directly to find your perfect leads.\n\n**What type of leads do you need to target?**\n\n_Example: "oil and energy office managers in hyderabad" or "VP of Engineering at SaaS companies in USA"_`,
         timestamp: new Date(),
       });
+      // Set state directly to icp_discovery_mode but for advanced search
+      setFlowState('icp_discovery_mode');
     } else {
       // Outbound: Show options for ICP discovery
       addAIMessage({
@@ -563,6 +567,331 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       });
     }
   };
+
+  // Handle Advanced Search conversational flow answers
+  const handleAdvancedSearchAnswer = async (msg: string) => {
+    const intent = useOnboardingStore.getState().advancedSearchIntent;
+
+    addAIMessage({ role: 'user', content: msg, timestamp: new Date() });
+    setIsProcessingAI(true);
+
+    switch (flowState) {
+      case 'adv_search_location': {
+        // Step 2: Location - user can type a location or "skip"
+        const isSkip = msg.toLowerCase().trim() === 'skip' || msg.toLowerCase().trim() === 'no';
+        const location = isSkip ? (intent?.locations?.[0] || '') : msg.trim();
+        setAdvSearchAnswers(prev => ({ ...prev, location }));
+
+        // Move to Step 3: Leads per day
+        setFlowState('adv_search_leads_per_day');
+        addAIMessage({
+          role: 'ai',
+          content: `📊 **How many leads do you want to reach per day?**\n\n_This controls how many LinkedIn actions are performed daily._`,
+          timestamp: new Date(),
+          options: [
+            { label: '5 leads/day', value: '5' },
+            { label: '10 leads/day', value: '10' },
+            { label: '25 leads/day', value: '25' },
+            { label: '50 leads/day', value: '50' },
+          ]
+        });
+        break;
+      }
+
+      case 'adv_search_leads_per_day': {
+        // Step 3: Leads per day
+        const leadsPerDay = parseInt(msg.replace(/[^0-9]/g, '')) || 10;
+        setAdvSearchAnswers(prev => ({ ...prev, leads_per_day: leadsPerDay }));
+
+        // Move to Step 4: LinkedIn actions (show as action combos for better multi-select UX)
+        setFlowState('adv_search_actions');
+        addAIMessage({
+          role: 'ai',
+          content: `⚡ **What LinkedIn actions do you want to perform?**\n\nChoose a campaign action set:`,
+          timestamp: new Date(),
+          options: [
+            { label: '🤝 Connect Only', value: 'connect' },
+            { label: '🤝 Connect + 💬 Message', value: 'connect,message' },
+            { label: '🚀 Full Campaign (Visit + Connect + Message)', value: 'visit,connect,message' },
+            { label: '👀 Visit + Follow + Connect', value: 'visit,follow,connect' },
+          ]
+        });
+        break;
+      }
+
+      case 'adv_search_actions': {
+        // Step 4: LinkedIn actions
+        const actions = msg.split(',').map(a => a.trim().toLowerCase());
+        setAdvSearchAnswers(prev => ({ ...prev, linkedin_actions: actions }));
+
+        // Check if connection request is selected - ask for template
+        const hasConnect = actions.some(a =>
+          a.includes('connect') || a.includes('connection') || a.includes('send connection')
+        );
+
+        if (hasConnect) {
+          // Move to Step 5: Connection message template
+          setFlowState('adv_search_connection_msg');
+          addAIMessage({
+            role: 'ai',
+            content: `📝 **Connection Request Message**\n\nPlease type or paste your connection request message template.\n\n_You can use placeholders like {first_name}, {company}, {title}_\n\n_Example: "Hi {first_name}, I noticed you're working in {company}. I'd love to connect!"_\n\nOr type **skip** to send without a message.`,
+            timestamp: new Date(),
+          });
+        } else {
+          // Skip to Step 7: Campaign name
+          setFlowState('adv_search_campaign_name');
+          addAIMessage({
+            role: 'ai',
+            content: `📛 **What would you like to name this campaign?**\n\n_Example: "Oil & Energy Hyderabad Outreach Q1"_`,
+            timestamp: new Date(),
+          });
+        }
+        break;
+      }
+
+      case 'adv_search_connection_msg': {
+        // Step 5: Connection message template
+        const isSkip = msg.toLowerCase().trim() === 'skip';
+        const connectionMsg = isSkip ? '' : msg.trim();
+        setAdvSearchAnswers(prev => ({ ...prev, connection_message: connectionMsg }));
+
+        // Check if message action was also selected - ask for follow-up
+        const prevActions = advSearchAnswers.linkedin_actions || [];
+        const hasMessage = prevActions.some((a: string) =>
+          a.includes('message') || a.includes('send message')
+        );
+
+        if (hasMessage) {
+          // Move to Step 6: Follow-up message template
+          setFlowState('adv_search_followup_msg');
+          addAIMessage({
+            role: 'ai',
+            content: `📝 **Follow-up Message Template**\n\nThis message will be sent after the connection is accepted.\n\n_You can use placeholders like {first_name}, {company}, {title}_\n\n_Example: "Thanks for connecting, {first_name}! I wanted to share how we help companies like {company} improve their operations..."_\n\nOr type **skip** to proceed without a follow-up.`,
+            timestamp: new Date(),
+          });
+        } else {
+          // Skip to Step 7: Campaign name
+          setFlowState('adv_search_campaign_name');
+          addAIMessage({
+            role: 'ai',
+            content: `📛 **What would you like to name this campaign?**\n\n_Example: "Oil & Energy Hyderabad Outreach Q1"_`,
+            timestamp: new Date(),
+          });
+        }
+        break;
+      }
+
+      case 'adv_search_followup_msg': {
+        // Step 6: Follow-up message
+        const isSkip = msg.toLowerCase().trim() === 'skip';
+        const followupMsg = isSkip ? '' : msg.trim();
+        setAdvSearchAnswers(prev => ({ ...prev, followup_message: followupMsg }));
+
+        // Move to Step 7: Campaign name
+        setFlowState('adv_search_campaign_name');
+        addAIMessage({
+          role: 'ai',
+          content: `📛 **What would you like to name this campaign?**\n\n_Example: "Oil & Energy Hyderabad Outreach Q1"_`,
+          timestamp: new Date(),
+        });
+        break;
+      }
+
+      case 'adv_search_campaign_name': {
+        // Step 7: Campaign name → Ask campaign days
+        const campaignName = msg.trim();
+        setAdvSearchAnswers(prev => ({ ...prev, campaign_name: campaignName }));
+
+        // Move to Step 8: How many days
+        setFlowState('adv_search_campaign_days');
+        addAIMessage({
+          role: 'ai',
+          content: `📅 **How many days should this campaign run?**\n\n_This determines the total campaign duration._`,
+          timestamp: new Date(),
+          options: [
+            { label: '7 days', value: '7' },
+            { label: '14 days', value: '14' },
+            { label: '30 days', value: '30' },
+            { label: '60 days', value: '60' },
+            { label: '90 days', value: '90' },
+          ]
+        });
+        break;
+      }
+
+      case 'adv_search_campaign_days': {
+        // Step 8: Campaign days
+        const campaignDays = parseInt(msg.replace(/[^0-9]/g, '')) || 30;
+        setAdvSearchAnswers(prev => ({ ...prev, campaign_days: campaignDays }));
+
+        // Move to Step 9: Working days
+        setFlowState('adv_search_working_days');
+        addAIMessage({
+          role: 'ai',
+          content: `🗓️ **Which days should the campaign run?**`,
+          timestamp: new Date(),
+          options: [
+            { label: 'Monday - Friday', value: 'monday-friday' },
+            { label: 'All Days (Mon-Sun)', value: 'all-days' },
+            { label: 'Weekends Only (Sat-Sun)', value: 'weekends' },
+          ]
+        });
+        break;
+      }
+
+      case 'adv_search_working_days': {
+        // Step 9: Working days → CREATE CAMPAIGN
+        const workingDays = msg.trim().toLowerCase();
+        const finalAnswers: Record<string, any> = { ...advSearchAnswers, working_days: workingDays };
+        setAdvSearchAnswers(finalAnswers);
+
+        const campaignName = finalAnswers.campaign_name || 'LinkedIn Search Campaign';
+        const campaignDays = finalAnswers.campaign_days || 30;
+
+        // Calculate start and end dates
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + campaignDays);
+
+        // Show summary
+        addAIMessage({
+          role: 'ai',
+          content: `✅ **Campaign Summary:**\n\n` +
+            `📛 **Name:** ${campaignName}\n` +
+            `🎯 **Target:** ${intent?.job_titles?.join(', ') || intent?.keywords || 'LinkedIn Professionals'}\n` +
+            `🏭 **Industry:** ${intent?.industries?.join(', ') || 'All'}\n` +
+            `📍 **Location:** ${finalAnswers.location || intent?.locations?.join(', ') || 'Global'}\n` +
+            `📊 **Leads/Day:** ${finalAnswers.leads_per_day || 10}\n` +
+            `⚡ **Actions:** ${(finalAnswers.linkedin_actions || []).join(', ') || 'Connect'}\n` +
+            `📅 **Duration:** ${campaignDays} days\n` +
+            `🗓️ **Schedule:** ${workingDays}\n\n` +
+            `Creating your campaign now...`,
+          timestamp: new Date(),
+        });
+
+        // Create the campaign
+        try {
+          // Build steps array — lead_generation FIRST, then action steps
+          const actionSteps: any[] = [];
+          let orderIdx = 1; // Start at 1 since lead_generation is 0
+
+          const actions = finalAnswers.linkedin_actions || ['connect'];
+          if (actions.some((a: string) => a.includes('visit'))) {
+            actionSteps.push({ type: 'linkedin_visit', title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: orderIdx++ });
+          }
+          if (actions.some((a: string) => a.includes('follow'))) {
+            actionSteps.push({ type: 'linkedin_follow', title: 'Follow Profile', channel: 'linkedin', order_index: orderIdx++ });
+          }
+          if (actions.some((a: string) => a.includes('connect'))) {
+            actionSteps.push({
+              type: 'linkedin_connect', title: 'Send Connection Request', channel: 'linkedin', order_index: orderIdx++,
+              config: { message: finalAnswers.connection_message || '' }
+            });
+          }
+          if (actions.some((a: string) => a.includes('message'))) {
+            actionSteps.push({
+              type: 'linkedin_message', title: 'Send Follow-up Message', channel: 'linkedin', order_index: orderIdx++,
+              config: { message: finalAnswers.followup_message || '' }
+            });
+          }
+
+          const campaignPayload = {
+            name: campaignName,
+            status: 'active',
+            campaign_type: 'linkedin_outreach',
+            leads_per_day: finalAnswers.leads_per_day || 10,
+            campaign_start_date: startDate.toISOString(),
+            campaign_end_date: endDate.toISOString(),
+            config: {
+              data_source: 'linkedin_search',
+              search_intent: intent,
+              search_query: intent?.keywords || '',
+              leads_per_day: finalAnswers.leads_per_day || 10,
+              daily_lead_limit: finalAnswers.leads_per_day || 10,
+              working_days: workingDays,
+              campaign_days: campaignDays,
+              linkedin_actions: finalAnswers.linkedin_actions || ['connect'],
+              connection_message: finalAnswers.connection_message || '',
+              followup_message: finalAnswers.followup_message || '',
+              location: finalAnswers.location || intent?.locations?.[0] || '',
+              industries: intent?.industries || [],
+              job_titles: intent?.job_titles || [],
+              profile_language: intent?.profile_language || [],
+              search_filters: {
+                keywords: intent?.keywords || '',
+                industries: intent?.industries || [],
+                locations: [finalAnswers.location || intent?.locations?.[0] || ''],
+                job_titles: intent?.job_titles || [],
+                profile_language: intent?.profile_language || [],
+              }
+            },
+            steps: [
+              // Lead generation step FIRST — the processor needs this to find leads
+              {
+                type: 'lead_generation',
+                title: 'LinkedIn Lead Search',
+                channel: 'linkedin',
+                order_index: 0,
+                config: {
+                  source: 'linkedin_search',
+                  leadGenerationFilters: {
+                    keywords: intent?.keywords || '',
+                    industries: intent?.industries || [],
+                    locations: [finalAnswers.location || intent?.locations?.[0] || ''],
+                    job_titles: intent?.job_titles || [],
+                  },
+                  leadGenerationLimit: finalAnswers.leads_per_day || 10,
+                }
+              },
+              // Then action steps
+              ...actionSteps,
+            ],
+          };
+
+          const createRes = await apiPost<{ success: boolean; campaign: any; data: any }>('/api/campaigns', campaignPayload);
+
+          if (createRes.success) {
+            const createdCampaign = createRes.data || createRes.campaign;
+            addAIMessage({
+              role: 'ai',
+              content: `🎉 **Campaign "${campaignName}" created successfully!**\n\n` +
+                `Your LinkedIn search campaign is now active for **${campaignDays} days** (${workingDays}).\n` +
+                `Leads matching your criteria will be sourced and outreach will begin automatically.\n\n` +
+                `📊 You can monitor progress in the Campaigns dashboard.`,
+              timestamp: new Date(),
+            });
+
+            // Navigate to campaigns
+            setTimeout(() => {
+              router.push('/campaigns');
+            }, 2000);
+          } else {
+            addAIMessage({
+              role: 'ai',
+              content: `⚠️ Campaign creation had an issue. Please try again or contact support.\n\nError: ${(createRes as any)?.error || 'Unknown error'}`,
+              timestamp: new Date(),
+            });
+          }
+        } catch (error: any) {
+          logger.error('Error creating advanced search campaign', error);
+          addAIMessage({
+            role: 'ai',
+            content: `❌ Error creating campaign: ${error.message}\n\nPlease try again.`,
+            timestamp: new Date(),
+          });
+        }
+
+        setFlowState('complete');
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    setIsProcessingAI(false);
+  };
+
   // Chat step controller for ICP onboarding
   const chatStepController = useChatStepController(
     async (answers, conversationId) => {
@@ -930,10 +1259,18 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
             currentState: 'STATE_1'
           }
         );
+        // Add fallback options if Gemini doesn't provide them
+        const options = response.options || [
+          { label: 'Give me an idea', value: 'give_idea' },
+          { label: 'Target Specific Leads', value: 'target_specific_leads' },
+          { label: 'I Have Leads Data', value: 'i_have_leads_data' }
+        ];
+
         addAIMessage({
           role: 'ai',
           content: response.text || 'Hello! How can I help you set up your campaign?',
           timestamp: new Date(),
+          options: options,
         });
       } catch (error) {
         logger.error('Error starting AI conversation', error);
@@ -956,11 +1293,11 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     }
     setIsProcessingAI(false);
   };
-  const handleOptionSelect = (option: 'automation' | 'leads') => {
+  const handleOptionSelect = (option: 'automation' | 'leads' | 'advanced_search') => {
     logger.debug('handleOptionSelect called', { option });
 
-    // Check limits for lead generation
-    if (option === 'leads') {
+    // Check limits for lead generation and advanced search
+    if (option === 'leads' || option === 'advanced_search') {
       if (isLoadingLimits) {
         toast({
           title: "Please wait",
@@ -986,11 +1323,13 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
           });
           return;
         }
-      } else {
-        // Limits not loaded - block just in case or allow? 
-        // Better to allow if we can't fetch, or show error.
-        // Given user requirement, we should probably ensure it works first.
       }
+    }
+
+    // Advanced Search opens the dedicated AI search page
+    if (option === 'advanced_search') {
+      router.push('/onboarding/advanced-search-ai');
+      return;
     }
 
     setSelectedPath(option);
@@ -1006,7 +1345,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
       // Don't start ICP flow yet - wait for user to select inbound/outbound
       addAIMessage({
         role: 'ai',
-        content: `Great choice! Let's set up your lead campaign.\n\n**First, what type of lead data will you be working with?**\n\n• **Inbound** - You have leads that came to you (via website, referrals, etc.)\n• **Outbound** - You want to find and reach out to new prospects\n\nPlease select below:`,
+        content: `Great choice! Let's set up your lead campaign.\n\n**First, what type of lead data will you be working with?**\n\n• **Inbound** - You have leads that came to you (via website, referrals, etc.)\n• **Outbound** - You want to find and reach out to new prospects via Apollo\n\nPlease select below:`,
         timestamp: new Date(),
       });
       // Don't start AI conversation yet - wait for inbound/outbound selection
@@ -1347,6 +1686,12 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
     });
   };
   const handleAnswer = async (answer: string | string[], questionKey: string) => {
+    // Guard: If in Advanced Search flow, redirect to the custom handler
+    if (campaignDataType === 'advanced_search' && flowState.startsWith('adv_search_')) {
+      const answerText = Array.isArray(answer) ? answer.join(', ') : answer;
+      await handleAdvancedSearchAnswer(answerText);
+      return;
+    }
     setIsProcessingAI(true);
     const answerText = Array.isArray(answer) ? answer.join(', ') : answer;
     addAIMessage({
@@ -1975,6 +2320,40 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 </div>
               </div>
             </button>
+            <button
+              onClick={() => handleOptionSelect('advanced_search')}
+              className={`w-64 text-left p-4 bg-white border-2 rounded-xl transition-all group shadow-sm hover:shadow-md relative ${limits && (limits.total === 0 || limits.remaining <= 0)
+                ? 'border-red-100 opacity-80 cursor-not-allowed'
+                : 'border-gray-200 hover:border-purple-500 hover:bg-purple-50'
+                }`}
+            >
+              {limits && limits.total > 0 && limits.remaining <= 0 && (
+                <div className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg z-10 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  LIMIT REACHED
+                </div>
+              )}
+              {limits && limits.total === 0 && (
+                <div className="absolute -top-3 -right-3 bg-amber-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg z-10 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  NO ACCOUNT
+                </div>
+              )}
+              <div className="flex flex-col items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform ${limits && (limits.total === 0 || limits.remaining <= 0)
+                  ? 'bg-gray-400'
+                  : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                  }`}>
+                  <Search className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Advanced Search</h3>
+                  <p className="text-gray-600 text-xs">
+                    Search and source prospects directly from LinkedIn
+                  </p>
+                </div>
+              </div>
+            </button>
           </div>
 
           {limits && limits.total > 0 && limits.remaining <= 0 && (
@@ -2004,6 +2383,57 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                   });
                   // Set default path if none selected
                   if (!selectedPath) {
+                    // Check for lead/outreach intent BEFORE starting ICP flow
+                    const hasPhoneInitial = /\+?\d[\d\s\-().]{8,}\d/.test(msg);
+                    const hasEmailInitial = /[\w.-]+@[\w.-]+\.\w+/.test(msg);
+                    const hasOutreachInitial = /\b(outreach|reach out)\s+(to\s+)?[\+\d\w]/i.test(msg);
+
+                    if (hasPhoneInitial || hasEmailInitial || hasOutreachInitial) {
+                      // Route to lead import flow instead of ICP flow
+                      setSelectedPath('leads');
+                      setOnboardingMode('CHAT');
+                      setCampaignDataType('inbound');
+                      setIsProcessingAI(true);
+
+                      try {
+                        const parseResult = await apiPost<any>('/api/campaigns/leads/parse-chat-input', {
+                          message: msg,
+                          conversationHistory: []
+                        });
+
+                        if (parseResult.detectedLeads && parseResult.detectedLeads.length > 0) {
+                          const lead = parseResult.detectedLeads[0];
+                          const details: string[] = [];
+                          if (lead.phone) details.push(`📞 Phone: \`${lead.phone}\``);
+                          if (lead.email) details.push(`📧 Email: \`${lead.email}\``);
+                          if (lead.first_name) details.push(`👤 Name: ${lead.first_name}${lead.last_name ? ' ' + lead.last_name : ''}`);
+                          if (lead.company) details.push(`🏢 Company: ${lead.company}`);
+
+                          addAIMessage({
+                            role: 'ai',
+                            content: `📱 **I found a contact!**\n\n${details.join('\n')}\n\nI can create a **WhatsApp or Voice Call campaign** for this number. Use the import panel below to confirm and set up your campaign.`,
+                            timestamp: new Date()
+                          });
+                        } else {
+                          addAIMessage({
+                            role: 'ai',
+                            content: `I'll help you reach out! Use the panel below to add your contact details or upload a file.`,
+                            timestamp: new Date()
+                          });
+                        }
+                      } catch (err) {
+                        addAIMessage({
+                          role: 'ai',
+                          content: `I'll help you set up outreach! Use the panel below to add your contact details.`,
+                          timestamp: new Date()
+                        });
+                      }
+
+                      setShowLeadImport(true);
+                      setIsProcessingAI(false);
+                      return;
+                    }
+
                     setSelectedPath('leads'); // Default to leads for general chat
                     setSelectedCategory('leadops');
                     setWorkflowState('STATE_2');
@@ -2239,6 +2669,8 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 status={message.status}
                 missing={message.missing}
                 searchResults={message.searchResults}
+                moduleUsed={(message as any).moduleUsed}
+                moduleLabel={(message as any).moduleLabel}
                 workflow={message.workflow}
                 isLastMessage={index === aiMessages.length - 1}
                 onOptionSubmit={
@@ -2386,9 +2818,52 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                         <button
                           key={option.value || `option-${index}`}
                           onClick={() => {
+                            // Handle "I Have Leads Data" option from initial Gemini greeting - match by label for reliability
+                            if (option.label?.toLowerCase().includes('leads') && !option.label?.toLowerCase().includes('target')) {
+                              addAIMessage({ role: 'user', content: option.label || 'I Have Leads Data', timestamp: new Date() });
+                              setSelectedPath('leads');
+                              // Add the campaign type selection message
+                              addAIMessage({
+                                role: 'ai',
+                                content: `Great choice! Let's set up your lead campaign.\n\n**First, what type of lead data will you be working with?**\n\n• **Inbound** - You have leads that came to you (via website, referrals, etc.)\n• **Outbound** - You want to find and reach out to new prospects via Apollo\n\nPlease select below:`,
+                                timestamp: new Date(),
+                              });
+                            }
+                            // Handle "Give me an idea" or other discovery paths
+                            else if (option.label?.toLowerCase().includes('idea')) {
+                              addAIMessage({ role: 'user', content: option.label || 'Give me an idea', timestamp: new Date() });
+                              setSelectedPath('leads');
+                              // Show outbound flow
+                              handleCampaignDataTypeSelect('outbound');
+                            }
+                            // Handle "Target Specific Leads" - advanced search
+                            else if (option.label?.toLowerCase().includes('target')) {
+                              addAIMessage({ role: 'user', content: option.label || 'Target Specific Leads', timestamp: new Date() });
+                              setSelectedPath('leads');
+                              handleCampaignDataTypeSelect('advanced_search');
+                            }
                             // If ICP flow is active and we have the controller, use it
-                            if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
+                            else if (isICPOnboardingActive && chatStepController.handleOptionSubmit) {
                               chatStepController.handleOptionSubmit([option.value]);
+                            }
+                            // Handle inbound import method selection
+                            else if (option.value === 'import_csv') {
+                              addAIMessage({ role: 'user', content: 'Import CSV / Excel', timestamp: new Date() });
+                              setShowLeadImport(true);
+                              addAIMessage({
+                                role: 'ai',
+                                content: `📁 **Import Your Leads**\n\nUpload a CSV or Excel file with your lead data below. You can download our template first to see the expected format.\n\nAll fields are optional — I'll auto-detect which channels to enable based on your data.`,
+                                timestamp: new Date(),
+                              });
+                            }
+                            else if (option.value === 'enter_manually') {
+                              addAIMessage({ role: 'user', content: 'Enter Manually', timestamp: new Date() });
+                              setIsInboundFormVisible(true);
+                              addAIMessage({
+                                role: 'ai',
+                                content: `Please fill out the form below with your inbound lead data. I'll analyze what platforms are available and ask only the relevant questions based on your data.`,
+                                timestamp: new Date(),
+                              });
                             }
                             // For old inbound flow state (before platform selection), use handleInboundAnswer
                             else if (flowState === 'inbound_leads_per_day' || flowState === 'inbound_campaign_name' || flowState === 'inbound_campaign_days') {
@@ -2450,7 +2925,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">Outbound</h3>
-                  <p className="text-gray-600 text-sm">Find and reach out to new prospects</p>
+                  <p className="text-gray-600 text-sm">Find and reach out to new prospects via Apollo Integration</p>
                 </div>
               </button>
             </div>
@@ -2468,6 +2943,67 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                   useOnboardingStore.setState({ aiMessages: newMessages });
                 }}
                 isSubmitting={isSubmittingInbound}
+              />
+            </div>
+          )}
+          {/* Lead Import (CSV/Excel) - Inline in chat */}
+          {showLeadImport && (
+            <div className="w-full max-w-3xl mx-auto px-4 py-2">
+              <LeadImportChat
+                onImportComplete={(result) => {
+                  setShowLeadImport(false);
+                  // Store leads in the onboarding store
+                  const store = useOnboardingStore.getState();
+                  store.setInboundLeadData?.({
+                    leadIds: result.leadIds,
+                    totalLeads: result.totalLeads,
+                    linkedinProfiles: [],
+                    emailIds: [],
+                    phoneNumbers: [],
+                    whatsappNumbers: [],
+                    firstNames: [],
+                    lastNames: [],
+                  } as any);
+
+                  // Map detected channels to platform names for the ICP flow
+                  const channelToPlatform: Record<string, string> = {
+                    linkedin: 'linkedin',
+                    email: 'email',
+                    voice: 'voice',
+                    whatsapp: 'whatsapp',
+                    instagram: 'instagram',
+                  };
+                  const platforms = result.selectedChannels
+                    .map((ch: string) => channelToPlatform[ch])
+                    .filter(Boolean);
+
+                  // Auto-set selected platforms
+                  if (platforms.length > 0) {
+                    store.setSelectedPlatforms?.(platforms);
+                  }
+
+                  // Show success AI message
+                  const channelLabels = result.selectedChannels
+                    .map((c: string) => c.charAt(0).toUpperCase() + c.slice(1))
+                    .join(', ');
+                  addAIMessage({
+                    role: 'ai',
+                    content: `✅ **Successfully imported ${result.savedCount} leads!**\n\nBased on your data, I've enabled these channels: **${channelLabels}**.\n\nLet's configure your campaign workflow now.`,
+                    timestamp: new Date(),
+                  });
+
+                  // Transition to ICP flow with detected platforms
+                  if (platforms.length > 0) {
+                    setIsICPOnboardingActive(true);
+                    chatStepController.startFlowWithPlatforms?.(platforms, store.inboundLeadData);
+                  }
+                }}
+                onCancel={() => {
+                  setShowLeadImport(false);
+                  setCampaignDataType(null);
+                  const newMessages = aiMessages.slice(0, -1);
+                  useOnboardingStore.setState({ aiMessages: newMessages });
+                }}
               />
             </div>
           )}
@@ -2606,10 +3142,79 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               isComplete: chatStepController.isComplete,
               currentStepIndex: chatStepController.currentStepIndex
             });
+
+            // PRIORITY -1: Detect outreach/lead commands (phone, email, or "outreach to" keywords)
+            // This intercepts messages like "Hey LAD, outreach to +971506341191" before they hit the ICP flow
+            const hasPhoneInMsg = /\+?\d[\d\s\-().]{8,}\d/.test(msg);
+            const hasEmailInMsg = /[\w.-]+@[\w.-]+\.\w+/.test(msg);
+            const hasOutreachKeyword = /\b(outreach|reach out)\s+(to\s+)?[\+\d\w]/i.test(msg);
+
+            if ((hasPhoneInMsg || hasEmailInMsg || hasOutreachKeyword) && !showLeadImport) {
+              // User is sending lead contact info — route to lead import flow, NOT ICP flow
+              addAIMessage({ role: 'user', content: msg, timestamp: new Date() });
+              setIsProcessingAI(true);
+
+              // Ensure we're in the right state for lead import
+              if (!selectedPath) {
+                setSelectedPath('leads');
+                setOnboardingMode('CHAT');
+              }
+              setCampaignDataType('inbound');
+
+              try {
+                const parseResult = await apiPost<any>('/api/campaigns/leads/parse-chat-input', {
+                  message: msg,
+                  conversationHistory: []
+                });
+
+                if (parseResult.detectedLeads && parseResult.detectedLeads.length > 0) {
+                  const lead = parseResult.detectedLeads[0];
+                  const phone = lead.phone || '';
+                  const email = lead.email || '';
+                  const name = lead.first_name ? `${lead.first_name}${lead.last_name ? ' ' + lead.last_name : ''}` : '';
+                  const company = lead.company || '';
+
+                  const details: string[] = [];
+                  if (phone) details.push(`📞 Phone: \`${phone}\``);
+                  if (email) details.push(`📧 Email: \`${email}\``);
+                  if (name) details.push(`👤 Name: ${name}`);
+                  if (company) details.push(`🏢 Company: ${company}`);
+
+                  addAIMessage({
+                    role: 'ai',
+                    content: `📱 **I found a contact!**\n\n${details.join('\n')}\n\nI can create a **WhatsApp or Voice Call campaign** for this number. Use the import panel below to confirm and set up your campaign.`,
+                    timestamp: new Date()
+                  });
+                } else {
+                  addAIMessage({
+                    role: 'ai',
+                    content: parseResult.aiMessage || `I'm ready to help you reach out! Use the panel below to add your contact details or upload a file.`,
+                    timestamp: new Date()
+                  });
+                }
+              } catch (err) {
+                addAIMessage({
+                  role: 'ai',
+                  content: `I'll help you set up outreach! Use the panel below to add your contact details.`,
+                  timestamp: new Date()
+                });
+              }
+
+              setShowLeadImport(true);
+              setIsProcessingAI(false);
+              return; // Skip all other flow routing
+            }
+
             // PRIORITY 0: Handle inbound flow answers ONLY if not in ICP flow
             if (selectedPath === 'leads' && campaignDataType === 'inbound' && inboundAnalysis && !isInboundFormVisible && !isICPOnboardingActive) {
               logger.debug('Handling answer in inbound flow');
               await handleInboundAnswer(msg);
+              return;
+            }
+            // PRIORITY 0.5: Handle Advanced Search conversational flow
+            if (selectedPath === 'leads' && campaignDataType === 'advanced_search' && flowState.startsWith('adv_search_')) {
+              logger.debug('Handling advanced search flow answer', { flowState });
+              await handleAdvancedSearchAnswer(msg);
               return;
             }
             // PRIORITY 1: If ICP flow is active, use ICP flow handler regardless of campaignDataType
@@ -2629,9 +3234,130 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
               await chatStepController.handleAnswer(msg);
               return;
             }
-            // PRIORITY 2: If in leads path with CHAT mode and OUTBOUND, start ICP flow if not started
-            if (selectedPath === 'leads' && onboardingMode === 'CHAT' && campaignDataType === 'outbound' && !isICPOnboardingActive && !chatStepController.isComplete) {
-              logger.debug('Starting ICP flow for leads path');
+            // PRIORITY 2: If in leads path with CHAT mode and OUTBOUND or ADVANCED SEARCH, start ICP flow if not started
+            if (selectedPath === 'leads' && onboardingMode === 'CHAT' && (campaignDataType === 'outbound' || campaignDataType === 'advanced_search') && !isICPOnboardingActive && !chatStepController.isComplete) {
+              logger.debug('Starting ICP flow for leads path', { campaignDataType });
+
+              if (campaignDataType === 'advanced_search') {
+                setIsProcessingAI(true);
+                addAIMessage({
+                  role: 'user',
+                  content: msg,
+                  timestamp: new Date(),
+                });
+                // ── Unified Search: classify intent → route to correct module → return scored leads ──
+                try {
+                  addAIMessage({
+                    role: 'ai',
+                    content: `🔍 Analyzing your search and routing to the best module...`,
+                    timestamp: new Date(),
+                  });
+
+                  const unifiedRes = await apiPost<{
+                    success: boolean;
+                    module_used: string;
+                    module_label: string;
+                    subtype?: string;
+                    confidence: string;
+                    confidence_score: number;
+                    needs_refinement: boolean;
+                    intent: any;
+                    leads: any[];
+                    stats: any;
+                    suggestions?: string[];
+                    message?: string;
+                    module_error?: string;
+                  }>('/api/campaigns/linkedin/search/unified', { query: msg });
+
+                  if (!unifiedRes.success) {
+                    throw new Error('Unified search returned failure');
+                  }
+
+                  // ── Case 1: Low confidence → ask for refinement ─────────────────────────
+                  if (unifiedRes.needs_refinement) {
+                    const suggestions = unifiedRes.suggestions || [];
+                    const suggestionText = suggestions.length
+                      ? '\n\n💡 **Try one of these:**\n' + suggestions.map(s => `• "${s}"`).join('\n')
+                      : '';
+
+                    addAIMessage({
+                      role: 'ai',
+                      content: `${unifiedRes.message || 'Could you be more specific about your search?'}${suggestionText}`,
+                      timestamp: new Date(),
+                    });
+                    // Reset to let the user type a new query
+                    setFlowState('');
+                    setIsProcessingAI(false);
+                    return;
+                  }
+
+                  const intent   = unifiedRes.intent   || {};
+                  const leads    = unifiedRes.leads    || [];
+                  const stats    = unifiedRes.stats    || {};
+                  const modLabel = unifiedRes.module_label || 'Lead Search';
+                  const modUsed  = unifiedRes.module_used  || 'advanced_search';
+
+                  // ── Case 2: Results found ────────────────────────────────────────────────
+                  if (leads.length > 0) {
+                    const highIntent = leads.filter((l: any) => l.intent_level === 'high').length;
+                    const avgScore   = stats.avg || 0;
+
+                    const summaryParts: string[] = [
+                      `✅ **${modLabel}** · ${unifiedRes.confidence} confidence`,
+                      ``,
+                      `Found **${leads.length} leads** with avg buy-intent score **${avgScore}/100**`,
+                    ];
+                    if (highIntent > 0) summaryParts.push(`🔥 **${highIntent} high-intent** leads ready to engage`);
+                    if (intent.job_titles?.length)  summaryParts.push(`• Titles: ${intent.job_titles.slice(0, 3).join(', ')}`);
+                    if (intent.industries?.length)  summaryParts.push(`• Industry: ${intent.industries.slice(0, 2).join(', ')}`);
+                    if (intent.locations?.length)   summaryParts.push(`• Location: ${intent.locations.slice(0, 2).join(', ')}`);
+                    if (unifiedRes.module_error) summaryParts.push(`\n⚠️ Some results may be incomplete: ${unifiedRes.module_error}`);
+
+                    addAIMessage({
+                      role: 'ai',
+                      content: summaryParts.join('\n'),
+                      timestamp: new Date(),
+                      searchResults: leads,
+                      moduleUsed: modUsed,
+                      moduleLabel: modLabel,
+                    } as any);
+
+                    // Store extracted intent for campaign setup
+                    useOnboardingStore.setState({ advancedSearchIntent: intent });
+
+                    // Proceed to campaign setup — skip location question since we have leads
+                    setFlowState('adv_search_location');
+                    addAIMessage({
+                      role: 'ai',
+                      content: `📋 **Ready to create a campaign with these leads?**\n\nType a location to refine further, or type **skip** to use all ${leads.length} leads found.`,
+                      timestamp: new Date(),
+                    });
+
+                  } else {
+                    // ── Case 3: No results ───────────────────────────────────────────────
+                    useOnboardingStore.setState({ advancedSearchIntent: intent });
+                    setFlowState('adv_search_location');
+                    addAIMessage({
+                      role: 'ai',
+                      content: `🔍 **No leads found yet via ${modLabel}.**\n\nLet's refine the search. 📍 **Where should the leads be located?**\n\nType a location or **skip** to search globally.`,
+                      timestamp: new Date(),
+                    });
+                  }
+                } catch (e) {
+                  logger.error('Error in unified search', e);
+                  // Fallback: use extract-intent so the campaign flow can still proceed
+                  useOnboardingStore.setState({ advancedSearchIntent: { keywords: msg } });
+                  setFlowState('adv_search_location');
+                  addAIMessage({
+                    role: 'ai',
+                    content: `⚠️ I had trouble with the search, but let's continue manually.\n\n📍 **Where should the leads be located?**\n\nType a location (city/country) or **skip** to search globally.`,
+                    timestamp: new Date(),
+                  });
+                }
+                setIsProcessingAI(false);
+                return;
+              }
+
               setIsICPOnboardingActive(true);
               await chatStepController.startFlow();
               // After flow starts, process the user message as an answer

@@ -11,6 +11,12 @@ const nextConfig = {
     externalDir: true,
   },
 
+  // ✅ REQUIRED for monorepo standalone output.
+  // Next.js traces file dependencies starting from this directory.
+  // Without this, the tracer starts from /app/web and cannot reach ../sdk
+  // or root node_modules, so .next/standalone/ is never generated.
+  outputFileTracingRoot: path.resolve(__dirname, '..'),
+
   // ✅ Use webpack instead - it handles monorepo workspace packages correctly
   webpack: (config, { isServer }) => {
     // Force all @tanstack/react-query imports to use root node_modules (monorepo setup)
@@ -59,6 +65,30 @@ const nextConfig = {
       '@lad/frontend-features/apollo-leads': '../sdk/features/apollo-leads',
       '@lad/frontend-features/dashboard': '../sdk/features/dashboard',
     },
+  },
+
+  // Proxy OAuth callback routes to the backend.
+  // Google / Microsoft redirect the browser back to the frontend domain
+  // (web.mrlads.com/api/social-integration/email/{provider}/callback) because
+  // that URL is registered as the authorized redirect URI in Google Cloud Console
+  // and Azure Portal. The actual handler lives on the backend, so we transparently
+  // forward the request — including all query params (code, state, etc.) —
+  // to the backend. The backend then redirects the user back to the frontend
+  // settings page upon success.
+  async rewrites() {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      'https://lad-backend-develop-160078175457.us-central1.run.app';
+    return [
+      {
+        source: '/api/social-integration/email/google/callback',
+        destination: `${backendUrl}/api/social-integration/email/google/callback`,
+      },
+      {
+        source: '/api/social-integration/email/microsoft/callback',
+        destination: `${backendUrl}/api/social-integration/email/microsoft/callback`,
+      },
+    ];
   },
 
   async headers() {

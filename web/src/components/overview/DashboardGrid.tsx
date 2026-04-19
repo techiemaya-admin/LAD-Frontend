@@ -1,6 +1,18 @@
 
 "use client";
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
+
+// Hook to detect window width client-side
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 import {
   DndContext,
   closestCenter,
@@ -74,13 +86,15 @@ type CallLog = {
 
 interface DashboardGridProps {
   className?: string;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 const DAYS_RANGE = 30;
 
-export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
+export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadingChange }) => {
   const { layout, setLayout, isEditMode } = useDashboardStore();
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Data states
   // SDK Data
@@ -121,6 +135,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
   const { stats: creditsData, loading: creditsLoading } = useWalletStats();
   const { numbers, loading: numbersLoading } = useAvailableNumbers();
 
+  const isLoading = callsLoading || creditsLoading || numbersLoading;
+
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [isLoading, onLoadingChange]);
 
   // Format call duration - prefer duration_seconds from API if available
   const formatDuration = (call: BackendCallLog) => {
@@ -468,12 +487,21 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
     };
   };
 
-  // Get responsive grid style for mobile
+  // Get responsive grid style: on mobile stack as single column, on desktop use span
   const getResponsiveGridStyle = (item: WidgetLayoutItem) => {
-    // On mobile (< 768px), ignore gridColumn span. On desktop, use it.
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobile) {
+      const type = getWidgetTypeFromId(item.i);
+      // Let the first 3 stat cards be in one line on mobile (3 columns)
+      if (type && ['calls-today', 'answer-rate', 'calls-monthly'].includes(type)) {
+        return {
+          gridColumn: 'span 4',
+          minHeight: '120px',
+        };
+      }
+      // Other widgets take full width on mobile
       return {
-        minHeight: `${item.h * 80}px`,
+        gridColumn: 'span 12',
+        minHeight: `${Math.min(item.h, 4) * 80}px`,
       };
     }
     return getGridStyle(item);
@@ -490,7 +518,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className }) => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 auto-rows-min">
+          <div className="grid grid-cols-12 gap-3 md:gap-6 auto-rows-min">
             {layout.map((item) => (
               <div
                 key={item.i}

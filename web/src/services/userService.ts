@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { getApiUrl, defaultFetchOptions } from '../config/api';
 import { User } from '../store/slices/usersSlice';
 import { logger } from '@/lib/logger';
@@ -88,7 +88,7 @@ export async function getPipelinePreferences(): Promise<PipelinePreferences> {
     if (!token) {
       throw new Error('Not authenticated');
     }
-    const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
+    const response = await fetchWithTimeout(getApiUrl('/api/deals-pipeline/settings'), {
       ...defaultFetchOptions(),
       headers: {
         ...defaultFetchOptions().headers,
@@ -113,7 +113,7 @@ export async function savePipelinePreferences(preferences: PipelinePreferences):
       throw new Error('Not authenticated');
     }
     // Send preferences as structured object (not flattened)
-    const response = await fetchWithTimeout(getApiUrl('/api/deal-pipeline/settings'), {
+    const response = await fetchWithTimeout(getApiUrl('/api/deals-pipeline/settings'), {
       ...defaultFetchOptions(),
       method: 'PUT',
       headers: {

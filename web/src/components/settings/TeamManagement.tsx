@@ -10,8 +10,8 @@ import {
   Eye, EyeOff 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { safeStorage } from '../../utils/storage';
-import { LoadingSpinner } from '../LoadingSpinner';
+import { safeStorage } from '@lad/shared/storage';  
+import { TeamManagementSkeleton } from '../skeletons';
 import { getApiBaseUrl } from '@/lib/api-utils';
 interface User {
   id: string;
@@ -23,9 +23,14 @@ interface User {
   phoneNumber?: string;
   capabilities?: string[];
   created_at?: string;
+  maskPhoneNumber?: boolean;
+  metadata?: { mask_phone_number?: boolean; [key: string]: unknown };
 }
 const PAGE_CAPABILITIES = [
   { key: 'view_overview', label: 'View Overview' },
+  { key: 'view_conversations', label: 'View Conversations' },
+  { key: 'view_followup', label: 'View Follow-up' },
+  { key: 'view_community_roi', label: 'View Community ROI' },
   { key: 'view_scraper', label: 'View Scraper' },
   { key: 'view_make_call', label: 'View Make a Call' },
   { key: 'view_call_logs', label: 'View Call Logs' },
@@ -33,13 +38,20 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
 ];
+// Valid tenant_role enum values in database: owner, admin, member, viewer
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
-  { value: 'co_admin', label: 'Co Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'sales_rep', label: 'Sales Representative' },
+  { value: 'member', label: 'Manager / Sales Rep' },
   { value: 'viewer', label: 'Viewer' },
 ];
+
+// Maps UI labels back to valid DB enum values (for display)
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  member: 'Member',
+  viewer: 'Viewer',
+};
 export const TeamManagement: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -55,6 +67,7 @@ export const TeamManagement: React.FC = () => {
     role: 'sales_rep',
     phoneNumber: '',
     capabilities: [] as string[],
+    maskPhoneNumber: false,
   });
   useEffect(() => {
     fetchUsers();
@@ -101,8 +114,12 @@ export const TeamManagement: React.FC = () => {
         const errorMsg = errorData.details ? `${errorData.error}: ${errorData.details}` : (errorData.error || `HTTP ${response.status}`);
         throw new Error(errorMsg);
       }
-      const data = await response.json();
-      setUsers(Array.isArray(data) ? data : []);
+      const rawData: any[] = await response.json();
+      const mapped = (Array.isArray(rawData) ? rawData : []).map((u: any) => ({
+        ...u,
+        maskPhoneNumber: !!(u.mask_phone_number ?? u.metadata?.mask_phone_number),
+      }));
+      setUsers(mapped);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setError(error.message || 'Failed to load team members');
@@ -124,7 +141,7 @@ export const TeamManagement: React.FC = () => {
       });
       if (response.ok) {
         setShowAddModal(false);
-        setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [] });
+        setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [], maskPhoneNumber: false });
         fetchUsers();
       } else {
         const errorData = await response.json();
@@ -180,6 +197,24 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating capabilities:', error);
     }
   };
+  const toggleMaskPhone = async (userId: string, current: boolean) => {
+    try {
+      const token = safeStorage.getItem('token');
+      const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/mask-phone`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ maskPhoneNumber: !current }),
+      });
+      if (response.ok) {
+        setUsers(users.map(u =>
+          u.id === userId ? { ...u, maskPhoneNumber: !current } : u
+        ));
+      }
+    } catch (err) {
+      console.error('Error toggling phone masking:', err);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
@@ -199,12 +234,11 @@ export const TeamManagement: React.FC = () => {
   };
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'co_admin': return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'manager': return 'bg-green-50 text-green-700 border border-green-200';
-      case 'sales_rep': return 'bg-orange-50 text-orange-700 border border-orange-200';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200';
+      case 'member': return 'bg-green-50 text-green-700 border border-green-200';
       case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200';
-      default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+      default:       return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
   };
   return (
@@ -223,6 +257,7 @@ export const TeamManagement: React.FC = () => {
           Add Team Member
         </button>
       </div>
+
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm">{error}</p>
@@ -234,111 +269,187 @@ export const TeamManagement: React.FC = () => {
           </button>
         </div>
       )}
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Capabilities</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+
+      {loading ? (
+        <TeamManagementSkeleton />
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan={6} className="px-6 py-12">
-                    <LoadingSpinner size="md" message="Loading team members..." />
-                  </td>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Capabilities</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Phone Masking</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
                 </tr>
-              ) : !Array.isArray(users) || users.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    {error ? 'Unable to load team members.' : 'No team members found. Add your first team member to get started.'}
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{user.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="relative inline-block">
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                          disabled={user.role === 'admin'}
-                          className={`px-3 py-1.5 rounded-md text-sm font-medium appearance-none pr-8 ${getRoleBadgeColor(user.role)} ${
-                            user.role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
-                          }`}
-                        >
-                          {ROLE_OPTIONS.map(role => (
-                            <option key={role.value} value={role.value}>{role.label}</option>
-                          ))}
-                        </select>
-                        {user.role !== 'admin' && (
-                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {user.status === 'active' ? 'active' : 'inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <ul className="text-sm text-gray-700 space-y-1">
-                        {PAGE_CAPABILITIES.map(cap => {
-                          const hasCapability = (user.capabilities || []).includes(cap.key);
-                          return (
-                            <li key={cap.key} className="flex items-start gap-2">
-                              <button
-                                onClick={() => user.role !== 'admin' && toggleCapability(user.id, cap.key)}
-                                disabled={user.role === 'admin'}
-                                className={`flex items-start gap-2 text-sm ${
-                                  user.role === 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:text-blue-600'
-                                }`}
-                              >
-                                <span className="mt-0.5 w-4 h-4 flex items-center justify-center">
-                                  {hasCapability ? '•' : '○'}
-                                </span>
-                                <span>{cap.label}</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {user.role !== 'admin' && (
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors text-gray-600 hover:text-red-600"
-                            title="Delete user"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {!Array.isArray(users) || users.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      {error ? 'Unable to load team members.' : 'No team members found. Add your first team member to get started.'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">{user.name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-600">{user.email}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="relative inline-block">
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                            disabled={user.role === 'admin'}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium appearance-none pr-8 ${getRoleBadgeColor(user.role)} ${
+                              user.role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
+                            }`}
+                          >
+                            {ROLE_OPTIONS.map(role => (
+                              <option key={role.value} value={role.value}>{role.label}</option>
+                            ))}
+                          </select>
+                          {user.role !== 'admin' && (
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-500" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {user.status === 'active' ? 'active' : 'inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {PAGE_CAPABILITIES.map(cap => {
+                            const hasCapability = (user.capabilities || []).includes(cap.key);
+                            return (
+                              <li key={cap.key} className="flex items-start gap-2">
+                                <button
+                                  onClick={() => user.role !== 'admin' && toggleCapability(user.id, cap.key)}
+                                  disabled={user.role === 'admin'}
+                                  className={`flex items-start gap-2 text-sm ${
+                                    user.role === 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:text-blue-600'
+                                  }`}
+                                >
+                                  <span className="mt-0.5 w-4 h-4 flex items-center justify-center">
+                                    {hasCapability ? '•' : '○'}
+                                  </span>
+                                  <span>{cap.label}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
+                          title={user.maskPhoneNumber ? 'Phone numbers are masked — click to unmask' : 'Phone numbers are visible — click to mask'}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                            user.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              user.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">{user.maskPhoneNumber ? 'Masked' : 'Visible'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {user.role !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors text-gray-600 hover:text-red-600"
+                              title="Delete user"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
+
+      {/* Conversation Assignments Section */}
+      <div className="space-y-4 mt-8">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Conversation Assignments</h3>
+          <p className="text-sm text-gray-600 mt-1">View team member workload and active assignments</p>
+        </div>
+
+        {loading ? (
+          <div className="bg-white rounded-lg p-8 text-center">
+            <p className="text-gray-500">Loading workload data...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Team Member</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Active Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Total Assignments</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {Array.isArray(users) && users.length > 0 ? (
+                    users
+                      .filter(user => user.role !== 'viewer')
+                      .map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-semibold text-blue-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-600">0</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                              Available
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                        No team members to display. Add a team member first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
+
       {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -368,39 +479,36 @@ export const TeamManagement: React.FC = () => {
                 />
               </div>
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Password
-  </label>
-  <div className="relative">
-    <input
-      type={showPassword ? 'text' : 'password'}
-      value={newUser.password}
-      onChange={(e) =>
-        setNewUser({ ...newUser, password: e.target.value })
-      }
-      placeholder="••••••••"
-      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg
-                 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-    <button
-      type="button"
-      onClick={() => setShowPassword((prev) => !prev)}
-      className="absolute inset-y-0 right-3 flex items-center text-gray-500
-                 hover:text-gray-700 focus:outline-none"
-      aria-label={showPassword ? 'Hide password' : 'Show password'}
-    >
-      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-    </button>
-  </div>
-</div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="tel"
                   value={newUser.phoneNumber}
                   onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="+1 (555) 123-4567"
+                  required
                 />
               </div>
               <div>
@@ -417,61 +525,75 @@ export const TeamManagement: React.FC = () => {
                   ))}
                 </select>
               </div>
+              {/* Phone Number Masking */}
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Mask Phone Numbers</label>
+                  <p className="text-xs text-gray-500 mt-0.5">When enabled, this user will see contact phone numbers masked (e.g. ••••3456)</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    newUser.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      newUser.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="relative capabilities-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Page Access</label>
-               <div className="relative">
-  <button
-    type="button"
-    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
-    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between
-      bg-white transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-      ${showCapabilitiesDropdown ? 'border-blue-500' : 'border-gray-300'}
-    `}
-  >
-    <span className="text-sm text-gray-700">
-      {newUser.capabilities.length === 0
-        ? 'Select pages...'
-        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
-    </span>
-    <ChevronDown
-      className={`w-4 h-4 text-gray-500 transition-transform ${
-        showCapabilitiesDropdown ? 'rotate-180' : ''
-      }`}
-    />
-  </button>
-  {showCapabilitiesDropdown && (
-    <div
-      className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500
-                 rounded-lg shadow-lg max-h-56 overflow-y-auto"
-    >
-      <div className="py-2">
-        {PAGE_CAPABILITIES.map(cap => (
-          <label
-            key={cap.key}
-            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50
-                       cursor-pointer transition-colors"
-          >
-            <input
-              type="checkbox"
-              checked={newUser.capabilities.includes(cap.key)}
-              onChange={(e) => {
-                setNewUser({
-                  ...newUser,
-                  capabilities: e.target.checked
-                    ? [...newUser.capabilities, cap.key]
-                    : newUser.capabilities.filter(c => c !== cap.key),
-                });
-              }}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded
-                         focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">{cap.label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
+                    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between bg-white transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      showCapabilitiesDropdown ? 'border-blue-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <span className="text-sm text-gray-700">
+                      {newUser.capabilities.length === 0
+                        ? 'Select pages...'
+                        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-500 transition-transform ${
+                        showCapabilitiesDropdown ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {showCapabilitiesDropdown && (
+                    <div className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                      <div className="py-2">
+                        {PAGE_CAPABILITIES.map(cap => (
+                          <label
+                            key={cap.key}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={newUser.capabilities.includes(cap.key)}
+                              onChange={(e) => {
+                                setNewUser({
+                                  ...newUser,
+                                  capabilities: e.target.checked
+                                    ? [...newUser.capabilities, cap.key]
+                                    : newUser.capabilities.filter(c => c !== cap.key),
+                                });
+                              }}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">{cap.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
@@ -483,7 +605,7 @@ export const TeamManagement: React.FC = () => {
               </button>
               <button
                 onClick={handleAddUser}
-                disabled={!newUser.name || !newUser.email || !newUser.password}
+                disabled={!newUser.name || !newUser.email || !newUser.password || !newUser.phoneNumber}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Member
@@ -495,4 +617,3 @@ export const TeamManagement: React.FC = () => {
     </div>
   );
 };
-// Component already exported inline above

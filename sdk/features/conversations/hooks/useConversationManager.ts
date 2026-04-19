@@ -14,7 +14,9 @@ import {
   getConversationMessagesOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
+  markConversationRead as markConversationReadApi,
   conversationKeys,
+  type ConversationQueryOptions,
 } from '../api';
 import type {
   Conversation,
@@ -24,28 +26,41 @@ import type {
   ConversationListFilters,
 } from '../types';
 
+export interface UseConversationsOptions {
+  /**
+   * Lock this hook instance to a specific backend.
+   * 'personal' → LAD_backend (Baileys)
+   * 'waba'     → LAD-WABA-Comms (Meta Business API)
+   * Omit to use the current localStorage.whatsappChannel setting.
+   */
+  channel?: 'personal' | 'waba';
+}
+
 /**
  * Main hook for managing conversations state.
  * Fetches real data from the backend via TanStack Query
  * while maintaining local UI state for selection, filtering, etc.
  */
-export function useConversations(): UseConversationsReturn {
+export function useConversations(hookOptions?: UseConversationsOptions): UseConversationsReturn {
   const queryClient = useQueryClient();
 
   // Local UI state
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
+  const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Build filters from local state
-  const filters: ConversationListFilters = useMemo(() => ({
-    channel: channelFilter !== 'all' ? channelFilter : undefined,
+  // Build filters from local state — include the channel override so both the
+  // query key and the HTTP request carry it, keeping personal/waba caches separate.
+  const filters: ConversationQueryOptions = useMemo(() => ({
+    backendChannel: hookOptions?.channel,
     search: searchQuery || undefined,
-  }), [channelFilter, searchQuery]);
+    context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
 
   // Fetch conversations from backend
   const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions());
+  const allConversationsQuery = useQuery(getConversationsOptions({ backendChannel: hookOptions?.channel }));
 
   const conversations = conversationsQuery.data || [];
   const allConversations = allConversationsQuery.data || [];
@@ -76,7 +91,19 @@ export function useConversations(): UseConversationsReturn {
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
-  }, []);
+
+    // Optimistically zero the unread badge in every conversation-list cache entry
+    // so the sidebar updates immediately without waiting for the next poll.
+    queryClient.setQueriesData<Conversation[]>(
+      { queryKey: conversationKeys.lists() },
+      (old) => (old || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
+    );
+
+    // Fire-and-forget: persist the reset to the DB so polls stay at 0
+    markConversationReadApi(id, hookOptions?.channel).catch(() => {
+      // Non-critical — the next poll will re-sync from DB
+    });
+  }, [queryClient, hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -98,6 +125,7 @@ export function useConversations(): UseConversationsReturn {
         conversationId: effectiveSelectedId,
         content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
+        phoneNumber: selectedConversation.contact.phone,
       });
     },
     [effectiveSelectedId, selectedConversation, sendMutation]
@@ -137,6 +165,8 @@ export function useConversations(): UseConversationsReturn {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,

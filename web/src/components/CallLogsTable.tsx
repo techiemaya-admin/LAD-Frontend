@@ -19,6 +19,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CalendarRange,
   Copy,
+  Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,10 @@ interface CallLog {
   lead_id?: string;
   type: string;
   status: string;
+  metadata?: {
+    status_reason?: string;
+    [key: string]: any;
+  };
   startedAt?: string;
   duration?: number;
   cost?: number;
@@ -110,6 +115,9 @@ interface CallLogsTableProps {
   onSortChange?: (sort: any) => void;
   totalFilteredCount?: number;
   batchStats?: BatchStats;
+  onRetrySelected?: () => void;
+  onEndSelected?: () => void;
+  failedCount?: number;
 }
 
 export function CallLogsTable({
@@ -147,6 +155,9 @@ export function CallLogsTable({
   onSortChange,
   totalFilteredCount,
   batchStats,
+  onRetrySelected,
+  onEndSelected,
+  failedCount = 0,
 }: CallLogsTableProps) {
   const router = useRouter();
   const { push: toast } = useToast();
@@ -253,6 +264,43 @@ export function CallLogsTable({
     return cleaned;
   };
 
+  // Download attachment helper - uses pre-signed URL directly
+  const downloadAttachment = (signedUrl: string, fileName: string) => {
+    const link = document.createElement("a");
+    link.href = signedUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Format attachment filename - convert timestamp to readable date
+  const formatAttachmentFileName = (fileName: string): string => {
+    // Match pattern like "2026-03-09T12-41-19-128Z-bulk_call_template__9_.xlsx"
+    const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/;
+    const match = fileName.match(timestampPattern);
+    
+    if (match) {
+      const [_, year, month, day, hours, minutes] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+      const formattedDateTime = date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      // Extract the rest of the filename after the timestamp and Z-
+      const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
+      
+      return `${formattedDateTime} - ${restOfFileName}`;
+    }
+    
+    return fileName;
+  };
+
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return "—";
     return formatDateTimeUnified(dateStr);
@@ -265,11 +313,26 @@ export function CallLogsTable({
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  // Add computed tag to items
-  const itemsWithTags = useMemo(() => items.map(item => ({
+  const getStatusReason = (item: CallLog): string | undefined => {
+    const raw: any = (item as any)?.metadata;
+    if (!raw) return undefined;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed?.status_reason || parsed?.sip_trail?.status_reason;
+      } catch {
+        return undefined;
+      }
+    }
+    return raw?.status_reason || raw?.sip_trail?.status_reason;
+  };
+
+  // Add computed tag and serial number to items
+  const itemsWithTags = useMemo(() => items.map((item, index) => ({
     ...item,
     tag: getLeadTag(item),
-  })), [items, getLeadTag]);
+    serialNo: ((currentPage - 1) * perPage) + index + 1,
+  })), [items, getLeadTag, currentPage, perPage]);
 
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
@@ -336,43 +399,48 @@ export function CallLogsTable({
         const isIndeterminate = selectAllMode === 'page' && !allPageSelected;
 
         return (
-          <input
-            type="checkbox"
-            ref={(el) => {
-              if (el) {
-                el.checked = isChecked;
-                el.indeterminate = isIndeterminate;
-              }
-            }}
-            onChange={(e) => {
-              e.stopPropagation();
-              onSelectAll(!isChecked, visibleIds);
-            }}
-            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-          />
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              ref={(el) => {
+                if (el) {
+                  el.checked = isChecked;
+                  el.indeterminate = isIndeterminate;
+                }
+              }}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelectAll(!isChecked, visibleIds);
+              }}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+            />
+          </div>
         );
       },
       cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            onSelectCall(row.original.id);
-          }}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
-        />
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={selectAllMode === 'all' || selectedCalls.has(row.original.id)}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelectCall(row.original.id);
+            }}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50 cursor-pointer"
+          />
+        </div>
       ),
     },
     {
-      id: 'id',
-      accessorKey: 'id',
-      header: 'Serial No',
+      id: 'serialNo',
+      accessorKey: 'serialNo',
+      header: 'S/No',
       size: 60,
       maxSize: 80,
-      cell: ({ row }) => (
+      enableSortingRemoval: false,
+      cell: ({ getValue }) => (
         <span className="font-mono text-xs text-muted-foreground">
-          {((currentPage - 1) * perPage) + row.index + 1}
+          {getValue() as number}
         </span>
       ),
     },
@@ -446,6 +514,15 @@ export function CallLogsTable({
         const status = row.getValue(columnId) as string;
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
+    },
+    {
+      id: 'response',
+      header: 'Response',
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground capitalize">
+          {getStatusReason(row.original) || "—"}
+        </span>
+      ),
     },
     {
       id: 'startedAt',
@@ -536,18 +613,18 @@ export function CallLogsTable({
         );
       },
     },
-    {
-      id: 'cost',
-      header: 'Cost',
-      cell: ({ row }) => {
-        const cost = row.original.cost || row.original.call_cost;
-        return (
-          <span className="font-mono text-sm">
-            {cost ? `$${Number(cost).toFixed(2)}` : "—"}
-          </span>
-        );
-      },
-    },
+    // {
+    //   id: 'cost',
+    //   header: 'Cost',
+    //   cell: ({ row }) => {
+    //     const cost = row.original.cost || row.original.call_cost;
+    //     return (
+    //       <span className="font-mono text-sm">
+    //         {cost ? `$${Number(cost).toFixed(2)}` : "—"}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       id: 'schedule',
       header: 'Schedule',
@@ -623,6 +700,11 @@ export function CallLogsTable({
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
 
+    // Get attachment data from header row
+    const attachmentFileName = (headerRow as any)?.attachment_file_name;
+    const attachmentSignedUrl = (headerRow as any)?.attachment_signed_url;
+    const hasAttachment = attachmentSignedUrl && attachmentFileName;
+
     return (
       <TableRow
         key={`batch-${batchId}`}
@@ -653,8 +735,24 @@ export function CallLogsTable({
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
+                <span className="text-muted-foreground">
+                  {hasAttachment && `${formatAttachmentFileName(attachmentFileName)}`}
+                </span>
               </div>
             </div>
+            {hasAttachment && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadAttachment(attachmentSignedUrl, attachmentFileName);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm font-medium"
+                title={`Download ${attachmentFileName}`}
+              >
+                <Download className="w-6 h-6" />
+                
+              </button>
+            )}
           </div>
         </TableCell>
       </TableRow>
@@ -745,63 +843,100 @@ export function CallLogsTable({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
-      {/* Search Bar */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-red">
-        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground " />
-            <input
-              type="text"
-              placeholder="Search Call Logs..."
-              value={globalFilter ?? ''}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
-            />
+    <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Search Bar & Filters Area */}
+      <div className="p-4 border-b border-[#E2E8F0]">
+        <div className="flex flex-col gap-4">
+          {/* Row 1: Search Bar & Selection Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search Call Logs..."
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Selection Actions - ONLY ON MOBILE */}
+            {selectedCalls.size > 0 && (
+              <div className="flex sm:hidden gap-2 items-center w-full">
+                {failedCount > 0 && onRetrySelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetrySelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                  >
+                    Retry ({failedCount})
+                  </button>
+                )}
+                {onEndSelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEndSelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                  >
+                    End ({selectedCalls.size})
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="ended">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="calling">Calling</SelectItem>
-              <SelectItem value="ongoing">Ongoing</SelectItem>
-              <SelectItem value="queue">Queue</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={dateFilter} onValueChange={onDateFilterChange}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Date Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={callFilter} onValueChange={onCallFilterChange}>
-            <SelectTrigger className="min-w-[150px] h-10">
-              <SelectValue placeholder="Call Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Calls</SelectItem>
-              <SelectItem value="current">Current Batch</SelectItem>
-              <SelectItem value="batch">Batch View</SelectItem>
-            </SelectContent>
-          </Select>
+          
+          {/* Row 2: Status, Time, and Call Filters grouped together */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 items-center justify-end">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ended">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="calling">Calling</SelectItem>
+                <SelectItem value="ongoing">Ongoing</SelectItem>
+                <SelectItem value="queue">Queue</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={dateFilter} onValueChange={onDateFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Date Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={callFilter} onValueChange={onCallFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+                <SelectValue placeholder="Call Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Calls</SelectItem>
+                <SelectItem value="current">Current Batch</SelectItem>
+                <SelectItem value="batch">Batch View</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        {/* Custom Date Inputs (only show when custom is selected) */}
+        
+        {/* Custom Date Inputs Picker (only show when custom is selected) */}
         {dateFilter === 'custom' && (
-          <div className="flex gap-3 px-4">
+          <div className="flex gap-3 px-4 justify-end mt-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">From:</label>
               <input
                 type="date"
                 value={fromDate || ""}
+                max={toDate || undefined}
                 onChange={(e) => onFromDateChange?.(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
@@ -811,44 +946,58 @@ export function CallLogsTable({
               <input
                 type="date"
                 value={toDate || ""}
-                onChange={(e) => onToDateChange?.(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                min={fromDate || undefined}
+                onChange={(e) => {
+                  const newToDate = e.target.value;
+                  if (fromDate && newToDate < fromDate) {
+                    toast({
+                      title: "Invalid Date Range",
+                      description: "To date cannot be before From date",
+                      variant: "error",
+                    });
+                    return;
+                  }
+                  onToDateChange?.(newToDate);
+                }}
+                className={`px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${fromDate && toDate && toDate < fromDate ? 'border-destructive' : 'border-[#E2E8F0]'}`}
               />
             </div>
           </div>
         )}
       </div>
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className={`font-semibold text-[#1E293B] whitespace-nowrap ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                    }`}
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  {header.isPlaceholder ? null : (
-                    <div className="flex items-center gap-2">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && (
-                        <span>
-                          {{
-                            asc: <ArrowUp className="w-4 h-4 text-primary" />,
-                            desc: <ArrowDown className="w-4 h-4 text-primary" />,
-                          }[header.column.getIsSorted() as string] ?? (
-                              <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
-                            )}
-                        </span>
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+        <div className="min-w-[1000px] w-full">
+          <Table>
+            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0] hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={`font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                        }`}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div className="flex items-center gap-2">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() && (
+                            <span>
+                              {{
+                                asc: <ArrowUp className="w-4 h-4 text-primary" />,
+                                desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                              }[header.column.getIsSorted() as string] ?? (
+                                  <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                                )}
+                            </span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                </TableHead>
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
+            </TableHeader>
         <TableBody>
           {isLoading ? (
             // Skeleton rows
@@ -1061,45 +1210,49 @@ export function CallLogsTable({
             ))
           )}
         </TableBody>
-      </Table>
+          </Table>
+        </div>
+      </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          {/* Left: Show [N] of X calls + batch stats */}
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
-            <span>Show</span>
-            <select
-              value={perPage}
-              onChange={(e) => {
-                const newSize = parseInt(e.target.value, 10);
-                onPageSizeChange?.(newSize);
-                onPageChange?.(1);
-              }}
-              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <span>of {totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+          {/* Left Side: Records per page */}
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  const newSize = parseInt(e.target.value, 10);
+                  onPageSizeChange?.(newSize);
+                  onPageChange?.(1);
+                }}
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
+              >
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="whitespace-nowrap">of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
+            </div>
+            {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (
+              <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
+            )}
             {callFilter === 'batch' && batchStats && (
-              <div className="ml-4 flex items-center gap-3 border-l pl-4">
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> completed
+              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0]">
+                <span className="text-[10px] xs:text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> comp
                 </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> running
-                </span>
-                <span className="text-xs">
-                  <span className="font-semibold text-foreground">{batchStats.failed_batches}</span> failed
+                <span className="text-[10px] xs:text-xs">
+                  <span className="font-semibold text-foreground">{batchStats.running_batches}</span> run
                 </span>
               </div>
             )}
           </div>
 
-          {/* Right: Page N of N + nav buttons */}
+          {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
             <div className="flex items-center gap-1">
@@ -1147,7 +1300,7 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar rounded-3xl">
           <DialogTitle className="text-lg font-semibold mb-4">
             Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
           </DialogTitle>

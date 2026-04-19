@@ -42,6 +42,13 @@ export { default as ProfileSummaryDialog } from './ProfileSummaryDialog';
 export { LiveActivityTable } from './LiveActivityTable';
 
 // ============================================================================
+// STEPPER COMPONENTS
+// ============================================================================
+export { default as StatusStepper } from './StatusStepper';
+export { default as MiniStepper } from './MiniStepper';
+export { default as LeadStepperRow } from './LeadStepperRow';
+
+// ============================================================================
 // FLOW NODE COMPONENTS
 // ============================================================================
 export { default as CustomNode } from './nodes/CustomNode';

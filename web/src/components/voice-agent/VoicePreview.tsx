@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Play, Square, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { safeStorage } from '@lad/shared/storage';
+ 
 
 interface VoicePreviewProps {
   language: string;
@@ -17,7 +19,7 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
   // Helper to get auth token
   const getAuthToken = () => {
     try {
-      return localStorage.getItem('token') || '';
+      return safeStorage.getItem('token') || '';
     } catch {
       return '';
     }

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { getCreditPackages, getWalletBalance, getWalletBalanceLegacy } from '@lad/frontend-features/billing';
+import { rechargeWallet } from '../../../sdk/features/billing/api';
 interface WalletData {
   balance: number;
   currency: string;
@@ -42,22 +44,10 @@ export const WalletBalance: React.FC = () => {
   }, []);
   const fetchWalletData = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/billing/wallet`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!response.ok) {
-        // Fall back to legacy endpoint if new endpoint not available
-        const legacyResponse = await fetch(`${getApiBaseUrl()}/api/wallet/balance`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!legacyResponse.ok) {
-          throw new Error('Failed to fetch wallet data');
-        }
-        const legacyData = await legacyResponse.json();
+
+      const responseWallet = await getWalletBalance()
+      if (!responseWallet.walletId) {
+        const legacyData = await getWalletBalanceLegacy()
         setWallet({
           balance: legacyData.balance || 0,
           currency: legacyData.currency || 'USD',
@@ -65,17 +55,14 @@ export const WalletBalance: React.FC = () => {
         });
         return;
       }
-      const data = await response.json();
       // Transform new API response to wallet data
-      // The new endpoint returns { wallet: { availableBalance, ... } }
       setWallet({
-        balance: data.wallet?.availableBalance || data.wallet?.currentBalance || data.balance || 0,
-        currency: data.wallet?.currency || data.currency || 'USD',
-        transactions: data.transactions || []
+        balance: responseWallet?.availableBalance || responseWallet?.currentBalance || responseWallet.balance || 0,
+        currency: responseWallet?.currency || responseWallet.currency || 'USD',
+        transactions: responseWallet.transactions || []
       });
     } catch (error) {
       console.error('Error fetching wallet:', error);
-      // Show zero balance on error
       setWallet({
         balance: 0,
         currency: 'USD',
@@ -87,42 +74,21 @@ export const WalletBalance: React.FC = () => {
   };
   const fetchCreditPackages = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/packages`, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch credit packages');
-      }
-      const data = await response.json();
-      setPackages(data.packages || []);
+      const packageData = await getCreditPackages()
+      setPackages(packageData || []);
     } catch (error) {
       console.error('Error fetching packages:', error);
-      // Show empty packages on error
       setPackages([]);
     }
   };
   const handleRecharge = async (packageId: string) => {
     setProcessing(true);
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/wallet/recharge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          packageId,
-          successUrl: `${window.location.origin}/wallet/success`,
-          cancelUrl: `${window.location.origin}/wallet/cancel`,
-        }),
+      const { sessionUrl } = await rechargeWallet({
+        packageId,
+        successUrl: `${window.location.origin}/wallet/success`,
+        cancelUrl: `${window.location.origin}/wallet/cancel`,
       });
-      if (!response.ok) {
-        throw new Error('Failed to create recharge session');
-      }
-      const { sessionUrl } = await response.json();
       window.location.href = sessionUrl;
     } catch (error) {
       console.error('Error processing recharge:', error);
@@ -144,22 +110,22 @@ export const WalletBalance: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Wallet Balance Card */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-8 text-white shadow-xl mb-8">
+      <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-8 text-primary-foreground shadow-xl mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Wallet className="h-8 w-8 mr-3" />
-            <h2 className="text-2xl font-bold">Wallet Balance1</h2>
+            <h2 className="text-2xl font-bold">Wallet Balance</h2>
           </div>
           <button
             onClick={() => setShowRechargeModal(true)}
-            className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center"
+            className="bg-white text-primary px-6 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
             Add Credits
@@ -169,101 +135,95 @@ export const WalletBalance: React.FC = () => {
           <span className="text-5xl font-bold">{wallet.balance.toLocaleString()}</span>
           <span className="text-xl ml-3 opacity-80">{wallet.currency}</span>
         </div>
-        <p className="text-blue-100 mt-2">
+        <p className="text-primary-foreground/70 mt-2">
           Available credits for voice calls, data scraping, and AI queries
         </p>
       </div>
       {/* Recharge Modal */}
       {showRechargeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-900">Recharge Wallet</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowRechargeModal(false); setSelectedPackage(null); }}>
+          <div className="bg-card text-card-foreground rounded-2xl max-w-2xl w-full border border-border shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Recharge Wallet</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Select a credit package</p>
+              </div>
               <button
                 onClick={() => {
                   setShowRechargeModal(false);
                   setSelectedPackage(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors"
               >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="p-8">
-              <p className="text-gray-600 mb-6">
-                Select a credit package to recharge your wallet
-              </p>
-              {/* Credit Packages */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+
+            {/* Package Cards - 2x2 grid, compact */}
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-3">
                 {packages.map((pkg) => (
                   <div
                     key={pkg.id}
                     onClick={() => setSelectedPackage(pkg.id)}
-                    className={`relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
-                      selectedPackage === pkg.id
-                        ? 'border-blue-600 bg-blue-50 shadow-lg'
-                        : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
-                    } ${pkg.popular ? 'ring-2 ring-blue-400' : ''}`}
+                    className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${selectedPackage === pkg.id
+                      ? 'border-primary bg-primary/5 shadow-md'
+                      : 'border-border hover:border-primary/40 hover:bg-accent/30'
+                      } ${pkg.popular ? 'ring-2 ring-primary/30' : ''}`}
                   >
                     {pkg.popular && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      <div className="absolute -top-2.5 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-primary text-primary-foreground text-[10px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
                           MOST POPULAR
                         </span>
                       </div>
                     )}
-                    <div>
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h4 className="text-xl font-bold text-gray-900">{pkg.name}</h4>
-                          <p className="text-sm text-gray-500 mt-1">{pkg.description}</p>
-                        </div>
+                    <h4 className="text-sm font-bold text-foreground">{pkg.name}</h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{pkg.description}</p>
+                    <p className="text-2xl font-bold text-foreground mt-2">${pkg.price}</p>
+                    <p className="text-sm font-semibold text-primary mt-1">
+                      {pkg.credits.toLocaleString()} credits
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ${pkg.pricePerCredit.toFixed(3)} per credit
+                    </p>
+                    {pkg.savings > 0 && (
+                      <div className="bg-green-50 border border-green-200 rounded-md px-2 py-1 text-center mt-2">
+                        <span className="text-green-700 font-semibold text-[11px]">
+                          Save {pkg.savings}% vs Starter
+                        </span>
                       </div>
-                      <div className="mb-4">
-                        <div className="flex items-baseline">
-                          <span className="text-4xl font-bold text-gray-900">${pkg.price}</span>
-                        </div>
-                        <div className="text-2xl font-semibold text-blue-600 mt-2">
-                          {pkg.credits.toLocaleString()} credits
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          ${pkg.pricePerCredit.toFixed(3)} per credit
-                        </div>
-                      </div>
-                      {pkg.savings > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-center">
-                          <span className="text-green-700 font-semibold text-sm">
-                            Save {pkg.savings}% vs Starter
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
-              {/* Selected Package Action */}
-              {selectedPackage && (
-                <button
-                  onClick={() => handleRecharge(selectedPackage)}
-                  disabled={processing}
-                  className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                >
-                  {processing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Purchase {packages.find(p => p.id === selectedPackage)?.name} Package
-                      <ArrowUpRight className="h-5 w-5 ml-2" />
-                    </>
-                  )}
-                </button>
-              )}
-              <p className="text-xs text-gray-500 mt-4 text-center">
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-border space-y-2">
+              <button
+                onClick={() => selectedPackage && handleRecharge(selectedPackage)}
+                disabled={!selectedPackage || processing}
+                className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              >
+                {processing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                    Processing...
+                  </>
+                ) : selectedPackage ? (
+                  <>
+                    Purchase {packages.find(p => p.id === selectedPackage)?.name} - ${packages.find(p => p.id === selectedPackage)?.price}
+                    <ArrowUpRight className="h-4 w-4 ml-1.5" />
+                  </>
+                ) : (
+                  'Select a package'
+                )}
+              </button>
+              <p className="text-[11px] text-muted-foreground text-center">
                 Secure payment powered by Stripe. Credits never expire.
               </p>
             </div>
@@ -271,25 +231,24 @@ export const WalletBalance: React.FC = () => {
         </div>
       )}
       {/* Transaction History */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Transaction History</h3>
+      <div className="bg-card text-card-foreground rounded-xl shadow-md overflow-hidden border border-border">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">Transaction History</h3>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-border">
           {wallet.transactions.length === 0 ? (
-            <div className="px-6 py-12 text-center text-gray-500">
+            <div className="px-6 py-12 text-center text-muted-foreground">
               No transactions yet
             </div>
           ) : (
             wallet.transactions.map((transaction) => (
-              <div key={transaction.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              <div key={transaction.id} className="px-6 py-4 hover:bg-accent/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1">
-                    <div className={`rounded-full p-2 mr-4 ${
-                      transaction.type === 'credit' 
-                        ? 'bg-green-100 text-green-600' 
-                        : 'bg-orange-100 text-orange-600'
-                    }`}>
+                    <div className={`rounded-full p-2 mr-4 ${transaction.type === 'credit'
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-orange-100 text-orange-600'
+                      }`}>
                       {transaction.status === 'completed' ? (
                         <CheckCircle2 className="h-5 w-5" />
                       ) : transaction.status === 'pending' ? (
@@ -301,17 +260,16 @@ export const WalletBalance: React.FC = () => {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{transaction.description}</p>
-                      <p className="text-sm text-gray-500">{formatDate(transaction.timestamp)}</p>
+                      <p className="font-medium text-foreground">{transaction.description}</p>
+                      <p className="text-sm text-muted-foreground">{formatDate(transaction.timestamp)}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-lg font-semibold ${
-                      transaction.type === 'credit' ? 'text-green-600' : 'text-orange-600'
-                    }`}>
+                    <p className={`text-lg font-semibold ${transaction.type === 'credit' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
                       {transaction.type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500 capitalize">{transaction.status}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{transaction.status}</p>
                   </div>
                 </div>
               </div>

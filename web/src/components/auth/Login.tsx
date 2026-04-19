@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import {
@@ -18,6 +18,9 @@ const Login: React.FC = () => {
   const dispatch = useDispatch();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // After a successful login, go to redirect_url if present, otherwise the default dashboard
+  const redirectUrl = searchParams.get('redirect_url') || '/onboarding/advanced-search-ai';
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -68,8 +71,9 @@ const Login: React.FC = () => {
       await authService.login(formData);
       const user = await authService.getCurrentUser();
       dispatch(loginSuccess(user));
-      // Verify token is stored before redirecting (use safeStorage, not direct localStorage)
-      router.push("/dashboard");
+      // Honour redirect_url param (e.g. /tenant/onboard/new for super-admin)
+      // Fall back to default dashboard for all other users
+      router.push(redirectUrl);
     } catch (err: any) {
       console.error('[Login] Login failed:', err);
       dispatch(loginFailure(err.message));

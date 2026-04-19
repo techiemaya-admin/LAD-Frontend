@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getLeadBookings as fetchLeadBookingsApi } from '../api';
 import { LeadBooking, GetLeadBookingsParams } from '../types';
 
 export function useLeadBookings(params?: GetLeadBookingsParams) {
@@ -11,7 +11,7 @@ export function useLeadBookings(params?: GetLeadBookingsParams) {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getLeadBookings(params);
+            const response = await fetchLeadBookingsApi(params);
             if (response.success && response.data) {
                 setBookings(response.data);
             } else {

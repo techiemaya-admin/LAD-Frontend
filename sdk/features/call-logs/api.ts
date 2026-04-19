@@ -6,6 +6,7 @@ import type {
   BatchViewApiResponse,
   BatchCallLogsApiResponse,
   GetCallLogsParams,
+  GetCallLogsLeadStatusParams,
   BatchViewParams,
   EndCallParams,
   RetryCallsParams,
@@ -55,6 +56,10 @@ export async function getCallLogs(params?: GetCallLogsParams): Promise<CallLogsR
     query.append("lead_category", params.lead_category);
   }
 
+  if (params?.lead_tag) {
+    query.append("lead_tag", params.lead_tag);
+  }
+
   const queryString = query.toString();
   const url = `/api/voice-agent/calls?${queryString}`;
 
@@ -88,10 +93,6 @@ export async function getCallLead({ callId }: CallLeadParams): Promise<CallLeadR
   const response = await apiGet<CallLeadResponse>(`/api/voice-agent/calls/${callId}/lead`);
   return response.data;
 }
-
-/**
- * Get batch status by job ID
- */
 export async function getBatchStatus(batchJobId: string): Promise<BatchApiResponse> {
   //console.log('[Call Logs API] Fetching batch status for job ID:', batchJobId);
 

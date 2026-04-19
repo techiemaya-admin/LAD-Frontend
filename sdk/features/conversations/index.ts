@@ -16,6 +16,7 @@ export {
   getConversationMessages,
   sendMessage,
   updateConversationStatus,
+  markConversationRead,
   getConversationStats,
   getConversationsOptions,
   getConversationOptions,
@@ -36,7 +37,11 @@ export type {
   UseConversationMessagesReturn,
   UseSendMessageReturn,
   UseConversationStatsReturn,
+  UseConversationsOptions,
 } from './hooks';
+
+// Extended API types
+export type { ConversationQueryOptions } from './api';
 
 // Types
 export type {

@@ -1,8 +1,8 @@
 import { loadingFetch } from "@/lib/loading-fetch";
-import { safeStorage } from "@/utils/storage";
+import { safeStorage } from '@lad/shared/storage';
 import { logger } from "@/lib/logger";
 // Use backend URL directly
-const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app").replace(/\/+$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-160078175457.us-central1.run.app").replace(/\/+$/, "");
 function authHeaders() {
   if (typeof document === "undefined") {
     logger.debug('[API] authHeaders: Running on server, no token');
@@ -129,6 +129,29 @@ export async function apiDelete<T>(path: string): Promise<T> {
   }
   return res.json();
 }
+/**
+ * Like apiPost but routes through the Next.js API proxy (relative URL, no BACKEND_URL base).
+ * Use this for any endpoint that has a matching /app/api/... proxy route.
+ */
+export async function proxyPost<T>(path: string, body: any): Promise<T> {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const res = await loadingFetch(p, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let errorMessage = `POST ${path} ${res.status}`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch (e) { /* ignore */ }
+    throw new Error(errorMessage);
+  }
+  return res.json();
+}
+
 export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, {

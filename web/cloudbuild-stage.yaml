@@ -18,6 +18,7 @@ steps:
         echo "BRANCH_NAME: ${BRANCH_NAME}"
         echo "_API_URL: ${_API_URL}"
         echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
+        echo "_WABA_SERVICE_URL: ${_WABA_SERVICE_URL}"
         echo "Environment: STAGING"
         echo "=== End Debug ==="
 
@@ -35,7 +36,10 @@ steps:
       '--build-arg', 'NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL',
       '--build-arg', 'NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL',
       '--build-arg', 'NEXT_PUBLIC_DISABLE_VAPI=false',
-      '--build-arg', 'NODE_ENV=staging',
+      '--build-arg', 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NODE_ENV=production',
       '-f', 'Dockerfile',
       '.'
     ]
@@ -60,29 +64,12 @@ steps:
       - '-c'
       - |
         BRANCH_LOWER=$(cat /workspace/branch_lower.txt)
-        
-        # Create env-vars file with proper YAML format
-        cat > /workspace/env-vars.yaml << 'EOF'
-        NODE_ENV: "staging"
-        ENVIRONMENT: "staging"
-        BRANCH: "${BRANCH_NAME}"
-        COMMIT_SHA: "${SHORT_SHA}"
-        BUILD_ID: "${BUILD_ID}"
-        NEXT_PUBLIC_BACKEND_URL: "${_API_URL}"
-        NEXT_PUBLIC_ICP_BACKEND_URL: "${_API_URL}"
-        NEXT_PUBLIC_SOCKET_URL: "${_NEXT_PUBLIC_SOCKET_URL}"
-        NEXT_PUBLIC_DISABLE_VAPI: "false"
-        EOF
-        
-        # Substitute environment variables in the YAML file
-        eval "cat <<EOF
-        $(cat /workspace/env-vars.yaml)
-        EOF" > /workspace/env-vars-final.yaml
-        
-        echo "=== Environment Variables File ==="
-        cat /workspace/env-vars-final.yaml
-        echo "=== End File ==="
-        
+
+        echo "=== Deploying with inline env vars ==="
+        echo "API_URL: $_API_URL"
+        echo "SOCKET_URL: $_NEXT_PUBLIC_SOCKET_URL"
+        echo "WABA_URL: $_WABA_SERVICE_URL"
+
         gcloud run deploy $_SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/lad-frontend-stage:$COMMIT_SHA \
           --region $_REGION \
@@ -95,9 +82,9 @@ steps:
           --max-instances 5 \
           --concurrency 80 \
           --timeout 300 \
-          --env-vars-file /workspace/env-vars-final.yaml \
+          --set-env-vars "^@@^NODE_ENV=production@@ENVIRONMENT=staging@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@API_BASE_URL=http://localhost:3000@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL" \
           --update-labels environment=staging,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
-        
+
         echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
 
 # Images to be pushed to Container Registry
@@ -123,3 +110,4 @@ substitutions:
   _ENV: 'staging'
   _API_URL: 'https://lad-backend-stage-741719885039.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-stage-741719885039.us-central1.run.app'
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-stage-741719885039.us-central1.run.app'

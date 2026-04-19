@@ -28,9 +28,9 @@ export const campaignKeys = {
   analytics: (id: string) => [...campaignKeys.all, 'analytics', id] as const,
   leads: (id: string, filters?: { search?: string }) => [...campaignKeys.all, 'leads', id, filters] as const,
   leadSummary: (campaignId: string, leadId: string) => [...campaignKeys.all, 'leadSummary', campaignId, leadId] as const,
-  activityFeed: (campaignId: string, filters?: { limit?: number; offset?: number; platform?: string; actionType?: string; status?: string }) => 
+  activityFeed: (campaignId: string, filters?: { limit?: number; offset?: number; platform?: string; actionType?: string; status?: string }) =>
     [...campaignKeys.all, 'activityFeed', campaignId, filters] as const,
-  inboundLeads: (filters?: { limit?: number; offset?: number; search?: string }) => 
+  inboundLeads: (filters?: { limit?: number; offset?: number; search?: string }) =>
     [...campaignKeys.all, 'inbound', filters] as const,
 } as const;
 // ====================
@@ -147,6 +147,23 @@ export async function pauseCampaign(campaignId: string): Promise<void> {
 export async function stopCampaign(campaignId: string): Promise<void> {
   await apiClient.post(`/api/campaigns/${campaignId}/stop`, {});
 }
+
+/**
+ * Resume a paused or stopped campaign from the last completed step.
+ * Keeps campaign_analytics intact so already-finished steps are not re-executed.
+ * Resets any stopped leads back to pending and re-triggers processing.
+ */
+export async function resumeCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/resume`, {});
+}
+
+/**
+ * Restart a campaign from scratch.
+ * Resets all leads to pending, clears analytics/activity history, and re-runs.
+ */
+export async function restartCampaign(campaignId: string): Promise<void> {
+  await apiClient.post(`/api/campaigns/${campaignId}/restart`, {});
+}
 // ====================
 // Analytics & Leads Functions
 // ====================
@@ -192,16 +209,16 @@ export async function getCampaignActivityFeed(
   if (filters?.platform) params.platform = filters.platform;
   if (filters?.actionType) params.actionType = filters.actionType;
   if (filters?.status) params.status = filters.status;
-  
-  const response = await apiClient.get<{ 
-    success: boolean; 
-    data: { activities: any[]; total: number } 
+
+  const response = await apiClient.get<{
+    success: boolean;
+    data: { activities: any[]; total: number }
   }>(`/api/campaigns/${campaignId}/analytics`, { params });
-  
+
   if (!response.data.success) {
     throw new Error('Failed to fetch activity feed');
   }
-  
+
   return {
     activities: response.data.data.activities || [],
     total: response.data.data.total || 0
@@ -299,12 +316,21 @@ export async function generateLeadProfileSummary(
   campaignId: string,
   leadId: string,
   profileData?: any
-): Promise<{ summary: string }> {
-  const response = await apiClient.post<{ success: boolean; summary: string }>(
+): Promise<{ summary: string; web_presence?: any; recent_posts?: any[] }> {
+  const response = await apiClient.post<{
+    success: boolean;
+    summary: string;
+    web_presence?: any;
+    recent_posts?: any[];
+  }>(
     `/api/campaigns/${campaignId}/leads/${leadId}/summary`,
     profileData ? { leadId, campaignId, profileData } : {}
   );
-  return { summary: response.data.summary };
+  return {
+    summary: response.data.summary,
+    web_presence: response.data.web_presence ?? null,
+    recent_posts: response.data.recent_posts ?? [],
+  };
 }
 
 /**
@@ -315,7 +341,7 @@ export async function getLeadsSummaries(
   leadIds: string[]
 ): Promise<Map<string, string>> {
   const summaryMap = new Map<string, string>();
-  
+
   // Fetch summaries in parallel
   const summaryPromises = leadIds.map(async (leadId) => {
     try {
@@ -328,14 +354,14 @@ export async function getLeadsSummaries(
     }
     return null;
   });
-  
+
   const results = await Promise.all(summaryPromises);
   results.forEach((result) => {
     if (result) {
       summaryMap.set(result.leadId, result.summary);
     }
   });
-  
+
   return summaryMap;
 }
 
@@ -522,7 +548,7 @@ export async function getInboundLeads(filters?: {
   if (filters?.limit) params.limit = String(filters.limit);
   if (filters?.offset) params.offset = String(filters.offset);
   if (filters?.search) params.search = filters.search;
-  
+
   const response = await apiClient.get<{ success: boolean; data: any[] }>(
     '/api/inbound-leads',
     { params }
@@ -567,3 +593,23 @@ export async function cancelLeadBookingsForReNurturing(leadIds: string[]): Promi
   return response.data;
 }
 
+/**
+ * Export campaign leads by filter
+ */
+export async function exportCampaignLeads(
+  campaignId: string,
+  filter: string
+): Promise<any[]> {
+  const response = await apiClient.get<{
+    success: boolean;
+    data: any[];
+  }>(`/api/campaigns/${campaignId}/analytics/export`, {
+    params: { filter }
+  });
+
+  if (!response.data.success) {
+    throw new Error('Failed to export leads');
+  }
+
+  return response.data.data;
+}

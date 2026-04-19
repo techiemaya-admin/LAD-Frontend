@@ -28,15 +28,27 @@ export interface AgentFormData {
   name: string;
   gender: AgentGender;
   language: string;
+  voice_id: string;
   agent_instructions: string;
   system_instructions: string;
   outbound_starter_prompt: string;
+}
+
+export interface Voice {
+  id: string;
+  description: string;
+  gender: AgentGender;
+  accent: string;
+  provider: string;
+  voice_sample_url: string;
+  provider_voice_id: string;
 }
 
 export const DEFAULT_AGENT_FORM: AgentFormData = {
   name: '',
   gender: 'neutral',
   language: 'en-US',
+  voice_id: '',
   agent_instructions: '',
   system_instructions: '',
   outbound_starter_prompt: '',

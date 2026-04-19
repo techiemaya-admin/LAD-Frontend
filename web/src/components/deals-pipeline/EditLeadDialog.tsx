@@ -147,7 +147,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogTitle>Edit Lead</DialogTitle>
-      <DialogContent className="p-6 pt-2">
+      <DialogContent className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -320,6 +320,38 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                       }));
                     }}
                   />
+                </div>
+              </div>
+            </div>
+            {/* Previous Edit Information */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-500">Previous Edit Information</h3>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Original Name:</span>
+                    <p className="font-medium">{lead?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Original Email:</span>
+                    <p className="font-medium">{lead?.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Original Company:</span>
+                    <p className="font-medium">{lead?.company_name || lead?.company || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Original Stage:</span>
+                    <p className="font-medium">{lead?.stage || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Last Updated:</span>
+                    <p className="font-medium">{lead?.updated_at ? new Date(lead.updated_at).toLocaleString() : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Created:</span>
+                    <p className="font-medium">{lead?.created_at ? new Date(lead.created_at).toLocaleString() : 'N/A'}</p>
+                  </div>
                 </div>
               </div>
             </div>

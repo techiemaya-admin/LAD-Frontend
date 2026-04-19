@@ -1,4 +1,3 @@
-
 "use client";
 import { useState } from "react";
 import Image from "next/image";
@@ -15,6 +14,12 @@ import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
 import { useMakeCall, useTriggerBatchCall, useUpdateSummary } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
+import {
+  saveBatchUpload,
+  updateJsonSnapshot,
+  getOriginalFile,
+  BatchUploadEntry,
+} from "@/utils/batchUploadStorage";
 
 // Country codes data with flag emojis and dial codes
 const COUNTRIES = [
@@ -240,19 +245,9 @@ function getFullPhoneNumber(phoneNumber: string, countryDialCode: string): strin
   }
   return `${countryDialCode}${cleanPhone}`;
 }
-type BulkEntry = {
-  to_number: string;
-  lead_name?: string;
-  added_context?: string;
-  lead_id?: string; // V2: UUID string instead of int
-  knowledge_base_store_ids?: string[]; // V2: New field
-  // Legacy/UI fields for backward compatibility
-  name?: string;
-  company_name?: string;
-  summary?: string;
-  requested_id?: string;
-  _extra?: Record<string, any>;
-};
+
+type BulkEntry = BatchUploadEntry;
+
 interface CallOptionsProps {
   useCsv: boolean;
   onUseCsvChange: (useCsv: boolean) => void;
@@ -277,6 +272,10 @@ interface CallOptionsProps {
   dataType?: 'company' | 'employee'; // Track data type for backend updates
   onDataSourceChange?: (source: 'backend' | 'file' | 'localStorage') => void; // Allow updating data source
 }
+
+// Track current batch upload metadata for API submission
+let currentBatchUploadMetadata: { fileName: string; uploadedAt: string } | null = null;
+
 export function CallOptions(props: CallOptionsProps) {
   const {
     useCsv, onUseCsvChange,
@@ -347,6 +346,22 @@ export function CallOptions(props: CallOptionsProps) {
           : (agentId && !Number.isNaN(Number(agentId)) ? Number(agentId) : undefined);
       if (useCsv) {
         if (!hasBulk) throw new Error("No numbers in the bulk list");
+        // Get original file from storage if this is a file-based batch upload
+        let originalFileBase64: string | undefined;
+        let fileMetadata: { file_name?: string; uploaded_at?: string } = {};
+        if (dataSource === 'file' && currentBatchUploadMetadata) {
+          const storedFile = getOriginalFile(currentBatchUploadMetadata.uploadedAt);
+          if (storedFile) {
+            originalFileBase64 = storedFile.base64;
+            fileMetadata = {
+              file_name: storedFile.metadata.file_name,
+              uploaded_at: storedFile.metadata.uploaded_at,
+            };
+            logger.debug('Retrieved original file for batch call', {
+              fileName: storedFile.metadata.file_name,
+            });
+          }
+        }
         // updated bulk payload - include per-row summary and top-level added_context
         const payload = {
           voice_id: "default", // Required by V2 API
@@ -365,6 +380,9 @@ export function CallOptions(props: CallOptionsProps) {
               knowledge_base_store_ids: r.knowledge_base_store_ids || undefined, // V2: New field
             })),
           ...(effectiveInitiator !== undefined ? { initiated_by: String(effectiveInitiator) } : {}),
+          // Include original file for batch upload persistence
+          ...(originalFileBase64 ? { original_file: originalFileBase64 } : {}),
+          ...fileMetadata,
         };
         logger.debug('Sending bulk payload', { entriesCount: payload.entries.length });
         const res = await triggerBatchCallMutation.mutateAsync(payload);
@@ -446,6 +464,11 @@ export function CallOptions(props: CallOptionsProps) {
           logger.warn('Failed to update localStorage', { error: lsError });
         }
       }
+      // 2b. Update JSON snapshot when rows are edited (original file stays unchanged)
+      if (dataSource === 'file') {
+        updateJsonSnapshot(copy);
+        logger.debug('Updated JSON snapshot after row edit', { rows: copy.length });
+      }
       // 3. Persist to database for backend-sourced data
       if (dataSource === 'backend') {
         try {
@@ -512,6 +535,11 @@ export function CallOptions(props: CallOptionsProps) {
   const removeRow = (idx: number) => {
     const copy = bulkEntries.filter((_, i) => i !== idx);
     onBulkEntriesChange?.(copy);
+    // Update JSON snapshot when rows are deleted (original file stays unchanged)
+    if (dataSource === 'file') {
+      updateJsonSnapshot(copy);
+      logger.debug('Updated JSON snapshot after row deletion', { remainingRows: copy.length });
+    }
     // adjust selectedSummaryIndex reliably
     if (selectedSummaryIndex === idx) {
       onRadioChange(null);
@@ -636,7 +664,21 @@ export function CallOptions(props: CallOptionsProps) {
         onBulkEntriesChange?.(parsed);
         onUseCsvChange?.(true as any);
         onDataSourceChange?.('file'); // Mark as file-sourced
-        // Persist to localStorage
+        // Persist original file and JSON snapshot for batch upload
+        try {
+          const stored = await saveBatchUpload(file, parsed);
+          currentBatchUploadMetadata = {
+            fileName: stored.metadata.file_name,
+            uploadedAt: stored.metadata.uploaded_at,
+          };
+          logger.debug('Batch upload saved with original file', {
+            fileName: stored.metadata.file_name,
+            rows: stored.metadata.rows,
+          });
+        } catch (storageError) {
+          logger.warn('Failed to save batch upload storage', { error: storageError });
+        }
+        // Persist to legacy localStorage for compatibility
         try {
           localStorage.setItem('bulk_call_targets', JSON.stringify({ data: parsed }));
           logger.debug('CSV data saved to localStorage');
@@ -715,6 +757,21 @@ export function CallOptions(props: CallOptionsProps) {
       onBulkEntriesChange?.(parsed);
       onUseCsvChange?.(true as any);
       onDataSourceChange?.("file");
+      // Persist original Excel and JSON snapshot for batch upload
+      try {
+        const stored = await saveBatchUpload(file, parsed);
+        currentBatchUploadMetadata = {
+          fileName: stored.metadata.file_name,
+          uploadedAt: stored.metadata.uploaded_at,
+        };
+        logger.debug('Batch upload saved with original file', {
+          fileName: stored.metadata.file_name,
+          rows: stored.metadata.rows,
+        });
+      } catch (storageError) {
+        logger.warn('Failed to save batch upload storage', { error: storageError });
+      }
+      // Also persist to legacy localStorage for compatibility
       try {
         localStorage.setItem("bulk_call_targets", JSON.stringify({ data: parsed }));
       } catch { }
@@ -1120,8 +1177,7 @@ export function CallOptions(props: CallOptionsProps) {
           </div>
           <DialogActions>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button>
-              <Button onClick={saveEditor} disabled={savingSummary}>{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
+              <Button onClick={saveEditor} disabled={savingSummary} className="w-full">{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
             </div>
           </DialogActions>
         </DialogContent>

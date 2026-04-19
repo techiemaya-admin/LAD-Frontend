@@ -20,6 +20,8 @@ import {
   Send,
   GraduationCap,
   MessageSquare,
+  Goal,
+  LayoutTemplate
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
@@ -29,11 +31,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logout as logoutAction } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTenant } from "@/contexts/TenantContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import LAD3DShowcase from "@/app/page";
 type RootState = {
@@ -58,6 +63,7 @@ type NavItem = {
   details: string;
   requiredCapability?: string;
   requiredFeature?: string; // For feature-flag based access
+  children?: Omit<NavItem, 'children'>[];
 };
 export function Sidebar() {
   const pathname = usePathname();
@@ -65,6 +71,7 @@ export function Sidebar() {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
+  const { tenant, setTenantById, tenants } = useTenant();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -98,14 +105,14 @@ export function Sidebar() {
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
     {
-      href: "/dashboard",
+      href: "/overview",
       label: "Overview",
       icon: Home,
       details: "See your overall dashboard and metrics.",
       requiredCapability: "view_overview",
     },
     {
-      href: "/onboarding",
+      href: "/onboarding/advanced-search-ai",
       label: "AI Assistant",
       icon: Search,
       details: "AI-powered ICP assistant and workflow setup",
@@ -114,10 +121,19 @@ export function Sidebar() {
     {
       href: "/campaigns",
       label: "Campaigns",
-      icon: Send,
+      icon: Goal,
       details:
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",
+      children: [
+        {
+          href: "/campaigns/templates",
+          label: "Templates",
+          icon: LayoutTemplate,
+          details: "Create and manage email templates for your campaigns.",
+          requiredCapability: "view_campaigns",
+        },
+      ],
     },
     {
       href: "/conversations",
@@ -139,13 +155,15 @@ export function Sidebar() {
       icon: Phone,
       details: "Place outgoing calls using your assigned numbers.",
       requiredCapability: "view_make_call",
-    },
-    {
-      href: "/call-logs",
-      label: "Call Logs",
-      icon: ChartNoAxesCombined,
-      details: "Review past call history and recordings.",
-      requiredCapability: "view_call_logs",
+      children: [
+        {
+          href: "/call-logs",
+          label: "Call Logs",
+          icon: ChartNoAxesCombined,
+          details: "Review past call history and recordings.",
+          requiredCapability: "view_call_logs",
+        },
+      ],
     },
     {
       href: "/pipeline",
@@ -219,7 +237,7 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-72 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70]",
+          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70]",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -254,7 +272,7 @@ export function Sidebar() {
             const Icon = n.icon;
             const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
             return (
-              <div key={n.href} className="relative group">
+              <div key={n.href} className="relative group/mob">
                 <NavLink
                   href={n.href}
                   className={cn(
@@ -273,35 +291,75 @@ export function Sidebar() {
                   />
                   <span className="ml-3 text-sm font-medium">{n.label}</span>
                 </NavLink>
+                {/* Mobile child items — shown below parent on hover */}
+                {n.children && n.children.length > 0 && (
+                  <div className="overflow-hidden max-h-0 group-hover/mob:max-h-40 transition-all duration-300 ease-in-out pl-10">
+                    {n.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                      return (
+                        <NavLink
+                          key={child.href}
+                          href={child.href}
+                          className={cn(
+                            "flex items-center rounded-xl px-3 h-10 mt-0.5",
+                            childActive
+                              ? "bg-primary/80 text-white"
+                              : "hover:bg-white/10 text-sidebar-foreground",
+                          )}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <ChildIcon className={cn("h-4 w-4", childActive ? "text-white" : "text-sidebar-foreground")} />
+                          <span className="ml-2 text-sm font-medium">{child.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2">
-          <NavLink
-            href="/pricing"
-            className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <DollarSign className="h-4 w-4" />
-            <span>Pricing</span>
-          </NavLink>
-          <NavLink
-            href="/settings"
-            className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2 bg-white/10 hover:bg-white/15 text-sm text-sidebar-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            {isHydrated && user?.avatar ? (
+              <img
+                src={user.avatar}
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                alt="avatar"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-sidebar-foreground truncate">
+                {displayName}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {user?.role || "admin"}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <NavLink
+              href="/settings"
+              className="w-full flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
         </div>
       </div>
       {/* Mobile Backdrop */}
@@ -349,6 +407,7 @@ export function Sidebar() {
           {nav.map((n) => {
             const Icon = n.icon;
             const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
+            const hasChildren = n.children && n.children.length > 0;
             return (
               <div key={n.href} className="relative group">
                 <NavLink
@@ -414,8 +473,8 @@ export function Sidebar() {
                     </span>
                   )}
                 </NavLink>
-                {/* Tooltip for collapsed state */}
-                {!isExpanded && (
+                {/* Flyout: collapsed → tooltip + children; expanded → children below */}
+                {!isExpanded ? (
                   <div
                     className={cn(
                       "absolute left-full ml-3 px-3 py-2 rounded-xl border border-white/10",
@@ -428,10 +487,7 @@ export function Sidebar() {
                   >
                     <span
                       className="block text-xs font-medium text-gray-900"
-                      style={{
-                        color: "oklch(0.145 0 0)",
-                        WebkitTextFillColor: "oklch(0.145 0 0)",
-                      }}
+                      style={{ color: "oklch(0.145 0 0)", WebkitTextFillColor: "oklch(0.145 0 0)" }}
                     >
                       {n.label}
                     </span>
@@ -440,8 +496,62 @@ export function Sidebar() {
                         {n.details}
                       </span>
                     )}
+                    {/* Child items in collapsed flyout */}
+                    {hasChildren && (
+                      <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
+                        {n.children!.map((child) => {
+                          const ChildIcon = child.icon;
+                          const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                          return (
+                            <NavLink
+                              key={child.href}
+                              href={child.href}
+                              className={cn(
+                                "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium pointer-events-auto",
+                                childActive
+                                  ? "bg-primary/90 text-white"
+                                  : "hover:bg-white/10 text-gray-900",
+                              )}
+                              style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
+                            >
+                              <ChildIcon className={cn("h-3.5 w-3.5 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                              {child.label}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
+                ) : hasChildren ? (
+                  /* Expanded sidebar: children slide in below parent on hover */
+                  <div className="overflow-hidden max-h-0 group-hover:max-h-40 transition-all duration-300 ease-in-out pl-10 pr-2 mt-0.5 space-y-0.5">
+                    {n.children!.map((child) => {
+                      const ChildIcon = child.icon;
+                      const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                      return (
+                        <NavLink
+                          key={child.href}
+                          href={child.href}
+                          className={cn(
+                            "relative flex items-center rounded-xl h-10 px-3",
+                            "transition-all duration-200",
+                            childActive
+                              ? "bg-primary/90 text-white"
+                              : "hover:bg-white/10 text-gray-900",
+                          )}
+                        >
+                          <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                          <span
+                            className={cn("ml-2 text-sm font-medium whitespace-nowrap", childActive ? "text-white" : "text-gray-900")}
+                            style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
+                          >
+                            {child.label}
+                          </span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             );
           })}
@@ -495,6 +605,18 @@ export function Sidebar() {
               side="top"
               className="w-56 mb-2 ml-2"
             >
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Tenant</DropdownMenuLabel>
+              {tenants.map((t) => (
+                <DropdownMenuItem
+                  key={t.id}
+                  onClick={() => setTenantById(t.id)}
+                  className={cn("cursor-pointer", tenant.id === t.id && "bg-accent font-medium")}
+                >
+                  {tenant.id === t.id && <span className="mr-1">✓</span>}
+                  <span>{t.name}</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
               {/* <DropdownMenuItem asChild>
                 <NavLink
                   href="/pricing"

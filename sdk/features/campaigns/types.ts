@@ -37,6 +37,15 @@ export interface CampaignStats {
   instagram_connection_rate?: number;
   whatsapp_connection_rate?: number;
   voice_agent_connection_rate?: number;
+  connections_today?: number;
+  connections_yesterday?: number;
+  connections_daily_breakdown?: Array<{ date: string; count: number }>;
+  linkedin_network_size?: number | null;
+  linkedin_rate_limits?: {
+    daily?: { max: number; total: number; account_count: number };
+    weekly?: { max: number; total: number };
+    usage?: { sent_last_7_days: number; daily_breakdown: Array<{ date: string; sent: number }>; weekly_percentage: number | string };
+  };
 }
 export interface CampaignFilters {
   search?: string;
@@ -116,10 +125,12 @@ export interface CampaignAnalytics {
 export interface CampaignLead {
   id: string;
   campaign_id: string;
+  lead_id?: string;
   name: string;
   first_name?: string;
   last_name?: string;
   title?: string;
+  company?: string;
   email?: string;
   phone?: string;
   linkedin_url?: string;
@@ -130,6 +141,10 @@ export interface CampaignLead {
   connected: boolean;
   replied: boolean;
   is_inbound?: boolean;
+  apollo_person_id?: string;
+  has_sent?: boolean;
+  has_connected?: boolean;
+  has_replied?: boolean;
   lead_data?: any;
   profile_summary?: string;
   created_at: string;

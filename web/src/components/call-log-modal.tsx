@@ -568,8 +568,9 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
     );
   }
 
-  // Unwrap: API returns { success, data: { ...lead } }
-  const lead = leadData?.data || leadData?.lead || null;
+  // Unwrap: API typically returns { success, data: { lead: { ... } } }
+  const payload = leadData?.data ?? leadData ?? null;
+  const lead = payload?.lead ?? payload?.data?.lead ?? payload ?? null;
 
   if (!lead) {
     return (
@@ -581,12 +582,16 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
       </ScrollArea>
     );
   }
+  
 
   const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
+  const phoneValue =
+    lead.phone ??
+    ([lead.country_code, lead.base_number].filter(Boolean).join('') || undefined);
 
   const contactFields = [
     { label: 'Full Name', value: fullName },
-    { label: 'Phone', value: lead.to_base_number },
+    { label: 'Phone', value: phoneValue },
     { label: 'Email', value: lead.email },
     { label: 'Company', value: lead.company_name },
     { label: 'Title', value: lead.title },
@@ -608,7 +613,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
   ];
 
   const metaFields = [
-    { label: 'Lead ID', value: lead.lead_id },
+    { label: 'Lead ID', value: lead.id },
     { label: 'Created At', value: lead.created_at ? formatDateTimeUnified(lead.created_at) : undefined },
     { label: 'Updated At', value: lead.updated_at ? formatDateTimeUnified(lead.updated_at) : undefined },
     { label: 'Archived', value: lead.is_archived !== undefined ? (lead.is_archived ? 'Yes' : 'No') : undefined },
@@ -626,7 +631,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
             <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
               <User className="h-4 w-4 text-orange-500" /> Contact Information
             </h4>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {contactFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
             </div>
           </div>
@@ -638,7 +643,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
             <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-orange-500" /> Pipeline & CRM
             </h4>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {pipelineFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
             </div>
           </div>
@@ -649,7 +654,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
           <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
             <Info className="h-4 w-4 text-orange-500" /> Record Info
           </h4>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {metaFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
           </div>
         </div>
@@ -856,46 +861,40 @@ export function CallLogModal({
     <>
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-full max-w-6xl bg-white border-l shadow-2xl flex flex-col overflow-hidden",
-          open ? "translate-x-0" : "translate-x-full",
-          "transition-transform duration-300 ease-in-out rounded-l-3xl"
+          "fixed z-[9999] bg-white shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out rounded-2xl",
+          // Centered modal
+          "inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh]",
+          open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none invisible"
         )}
       >
         {/* Header */}
-        <div className="p-6 border-b flex justify-between items-center shadow-sm">
-          <div className="flex items-center space-x-3">
-            <PhoneCall className="h-6 w-6 text-orange-500" />
-            <div className="flex flex-col space-y-1">
-              <h2 className="text-2xl font-bold text-gray-800">Call Details & Insights</h2>
-              {/* {leadCategory && (
-                <Badge className={cn(
-                  "w-fit text-xs font-semibold",
-                  tagConfig.bgColor,
-                  tagConfig.textColor
-                )}>
-                  {tagConfig.label}
-                </Badge>
-              )} */}
-            </div>
+        {/* <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <PhoneCall className="h-5 w-5 text-orange-500 shrink-0" />
+            <h1 className="text-sm xs:text-base sm:text-xl font-bold text-gray-800 leading-tight">
+              Call Details & Insights
+            </h1>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1 shrink-0">
             {hasAudio && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDownloadRecording}
                 disabled={isDownloadingRecording}
-                className="hover:bg-orange-100"
+                className="hover:bg-orange-100 h-8 px-2 text-[10px] xs:text-xs border-orange-200"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isDownloadingRecording ? "Downloading..." : "Call Recording Download"}
+                <Download className="h-3 w-3 mr-1 text-orange-500" />
+                <span className="text-gray-700">
+                  {isDownloadingRecording ? "..." : "Recording"}
+                </span>
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100">
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100 h-8 w-8 p-0 text-gray-500">
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </div> */}
 
         {/* Body */}
         <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
@@ -940,45 +939,50 @@ export function CallLogModal({
 
 
               <Tabs key={defaultTab} defaultValue="lead" className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="grid grid-cols-5 gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner">
+                <TabsList className="flex items-center gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner overflow-x-auto no-scrollbar w-full justify-start sm:justify-center">
                   <TabsTrigger
                     value="lead"
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                    className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
                   >
-                    <User className="h-4 w-4" /> Lead
+                    <User className="h-4 w-4 shrink-0" />
+                    <span>Profile</span>
                   </TabsTrigger>
                   {hasTranscripts && (
                     <TabsTrigger
                       value="transcripts"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
                     >
-                      <Mic className="h-4 w-4" /> Call Transcript
+                      <Mic className="h-4 w-4 shrink-0" />
+                      <span>Transcript</span>
                     </TabsTrigger>
                   )}
 
                   {hasAnalysis && (
                     <TabsTrigger
                       value="analysis"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
                     >
-                      <Info className="h-4 w-4" /> Analysis
+                      <Info className="h-4 w-4 shrink-0" />
+                      <span>Analysis</span>
                     </TabsTrigger>
                   )}
 
                   {hasAnalysis && (
                     <TabsTrigger
                       value="messages"
-                      className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
                     >
-                      <MessageSquare className="h-4 w-4" /> Messages
+                      <MessageSquare className="h-4 w-4 shrink-0" />
+                      <span>Messages</span>
                     </TabsTrigger>
                   )}
 
                   <TabsTrigger
                     value="cost"
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl"
+                    className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
                   >
-                    <DollarSign className="h-4 w-4" /> Cost
+                    <DollarSign className="h-4 w-4 shrink-0" />
+                    <span>Cost</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -1014,7 +1018,7 @@ export function CallLogModal({
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
+        <div className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
       )}
     </>
   );

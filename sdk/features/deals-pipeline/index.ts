@@ -1,105 +1,119 @@
 /**
- * Deals Pipeline Feature SDK
- * Main entry point for frontend applications
- * 
- * Usage:
- *   import { DealsPipelineAPI, usePipeline, useLeads } from '@maya/features/deals-pipeline';
+ * Deals Pipeline Feature - Frontend SDK Exports
+ *
+ * Central export point for all deals pipeline-related frontend functionality.
+ * Import from this file to use deals pipeline features in your application.
+ *
+ * USAGE:
+ * ```typescript
+ * import {
+ *   useLeads,
+ *   useLead,
+ *   useCreateLead,
+ *   useUpdateLead,
+ *   useDeleteLead,
+ *   useDeleteBookingFollowup,
+ *   useDownloadAttachment,
+ *   useGetAttachmentSignedUrl,
+ *   useStages,
+ *   usePipelineData,
+ *   usePipelineStats,
+ *   type Lead,
+ *   type Stage,
+ *   type PipelineData
+ * } from '@/sdk/features/deals-pipeline';
+ * ```
  */
 
-// Export API client
-export { DealsPipelineAPI, dealsPipelineAPI } from './api';
+// ============================================================================
+// API FUNCTIONS
+// ============================================================================
+export * from "./api";
 
-// Export API functions (for direct service calls)
+// ============================================================================
+// HOOKS - LEADS
+// ============================================================================
+export { useLeads, useLead, useLeadsWithConversations, useLeadsByStage } from "./hooks/useLeads";
 export {
-  getLeads,
-  getLeadById,
-  getLeadsWithConversations,
-  getLeadsByStage,
-  getPipelineData,
-  getPipelineStats,
-  createLead,
-  updateLead,
-  deleteLead,
-  moveLeadToStage,
-  updateLeadStatus,
-  assignLeadsToUser,
-  getLeadActivities,
-  getLeadComments,
-  getLeadNotes,
-  addLeadComment,
-  addLeadNote,
-  updateLeadComment,
-  updateLeadNote,
-  deleteLeadComment,
-  deleteLeadNote,
-  getLeadAttachments,
-  uploadLeadAttachment,
-  deleteLeadAttachment,
-  getStatuses,
-  getSources,
-  getPriorities,
-  getStages,
-  createStage,
-  updateStage,
-  deleteStage,
-  reorderStages,
-  createTag,
-  getLeadTags,
-  addTagToLead,
-  deleteTagFromLead,
-} from './api';
-
-// Export React hooks
-export {
-  usePipelineBoard,
-  useLeads,
-  useLead,
-  useStages,
   useCreateLead,
   useUpdateLead,
   useDeleteLead,
   useMoveLeadToStage,
   useUpdateLeadStatus,
   useAssignLeadsToUser,
-  useStatuses,
-  useSources,
-  usePriorities,
-  useLeadStats,
-  usePipelineStats,
-  useLeadComments,
-  useAddLeadComment,
-  useUpdateLeadComment,
-  useDeleteLeadComment,
+} from "./hooks/useLeadMutations";
+
+// ============================================================================
+// HOOKS - STAGES
+// ============================================================================
+export {
+  useStages,
+  useCreateStage,
+  useUpdateStage,
+  useDeleteStage,
+  useReorderStages,
+} from "./hooks/useStages";
+
+// ============================================================================
+// HOOKS - PIPELINE
+// ============================================================================
+export { usePipelineData, usePipelineStats } from "./hooks/usePipeline";
+export { usePipelineLeads } from "./hooks/usePipelineLeads";
+
+// ============================================================================
+// HOOKS - NOTES
+// ============================================================================
+export {
   useLeadNotes,
   useAddLeadNote,
   useUpdateLeadNote,
   useDeleteLeadNote,
+} from "./hooks/useNotes";
+
+// ============================================================================
+// HOOKS - COMMENTS
+// ============================================================================
+export {
+  useLeadComments,
+  useAddLeadComment,
+  useUpdateLeadComment,
+  useDeleteLeadComment,
+} from "./hooks/useComments";
+
+// ============================================================================
+// HOOKS - ATTACHMENTS
+// ============================================================================
+export {
   useLeadAttachments,
   useUploadLeadAttachment,
   useDeleteLeadAttachment,
-  useLeadActivities,
-  useLeadTags,
-  useAddTagToLead,
-} from './hooks';
+} from "./hooks/useAttachments";
+export {
+  useGetAttachmentSignedUrl,
+  useDownloadAttachment,
+} from "./hooks/useAttachmentDownload";
 
-// Export TypeScript types
-export type {
-  Lead,
-  Stage,
-  Status,
-  Source,
-  Priority,
-  Note,
-  PipelineBoard,
-  LeadStats,
-  CreateLeadPayload,
-  UpdateLeadPayload,
-  CreateStagePayload,
-  UpdateStagePayload,
-  ApiError,
-  ApiResponse,
-  Activity,
-  Attachment,
-  Comment,
-  Tag,
-} from './types';
+// ============================================================================
+// HOOKS - TAGS
+// ============================================================================
+export { useLeadTags, useAddTagToLead, useUpdateLeadTags } from "./hooks/useTags";
+
+// ============================================================================
+// HOOKS - ACTIVITIES
+// ============================================================================
+export { useLeadActivities } from "./hooks/useActivities";
+
+// ============================================================================
+// HOOKS - BOOKING FOLLOWUPS
+// ============================================================================
+export { useDeleteBookingFollowup } from "./hooks/useBookingFollowups";
+
+// ============================================================================
+// HOOKS - REFERENCE DATA
+// ============================================================================
+export { useStatuses, useSources, usePriorities } from "./hooks/useReferenceData";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+export * from "./types";

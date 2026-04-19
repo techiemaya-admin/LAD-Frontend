@@ -29,6 +29,9 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Force light mode — remove any saved dark theme preference
+              document.documentElement.classList.remove('dark');
+              try { localStorage.removeItem('theme'); } catch(e) {}
               // Suppress Chrome extension message passing errors immediately
               window.addEventListener('error', function(event) {
                 if (event.message && event.message.includes('A listener indicated an asynchronous response')) {

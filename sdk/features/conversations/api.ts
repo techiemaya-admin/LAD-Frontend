@@ -52,9 +52,27 @@ function mapChannelFromApi(channel?: string): Channel {
 }
 
 function mapMessageFromApi(raw: any): Message {
-  const role = raw.role || 'user';
-  // Backend returns "AI" for agent messages, "user" for lead, "human_agent" for human takeover
+  const rawRole = raw.role || 'user';
+
+  // WABA stores human-agent messages as role='assistant' with metadata.sender_type='human_agent'
+  // Normalise so callers always see role='human_agent' for human takeover messages.
+  const metadata: Record<string, any> =
+    typeof raw.metadata === 'string'
+      ? (() => { try { return JSON.parse(raw.metadata); } catch { return {}; } })()
+      : (raw.metadata || {});
+
+  const role =
+    metadata.sender_type === 'human_agent' && rawRole === 'assistant'
+      ? 'human_agent'
+      : rawRole;
+
   const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
+
+  // Human-agent display name: prefer metadata, fall back to 'Agent'
+  const senderName: string | undefined =
+    role === 'human_agent'
+      ? (metadata.sender_name || metadata.agent_name || raw.sender_name || undefined)
+      : undefined;
 
   return {
     id: raw.id,
@@ -64,11 +82,16 @@ function mapMessageFromApi(raw: any): Message {
     isOutgoing,
     status: (raw.message_status || 'sent') as MessageStatus,
     sender: {
-      id: isOutgoing ? 'agent' : raw.lead_id || 'user',
-      name: isOutgoing ? (role === 'human_agent' ? 'Agent' : 'AI Agent') : 'Contact',
+      id: isOutgoing ? (metadata.human_agent_id || 'agent') : raw.lead_id || 'user',
+      name: isOutgoing
+        ? (role === 'human_agent' ? (senderName || 'Agent') : 'AI Agent')
+        : 'Contact',
     },
     role,
     intent: raw.intent,
+    senderName,
+    humanAgentId: metadata.human_agent_id || undefined,
+    templateName: metadata.template_name || undefined,
   };
 }
 
@@ -113,36 +136,49 @@ function mapConversationFromApi(raw: any): Conversation {
 // ====================
 
 /**
+ * Extended filters type that includes a backend channel override.
+ * channel: 'personal' → always route to LAD_backend (Baileys / personal WA)
+ * channel: 'waba'     → always route to LAD-WABA-Comms (Meta Business API)
+ * When omitted, falls back to proxyClient's localStorage heuristic.
+ */
+export interface ConversationQueryOptions extends ConversationListFilters {
+  backendChannel?: 'personal' | 'waba';
+}
+
+/**
  * Get all conversations with optional filters
  */
-export async function getConversations(filters?: ConversationListFilters): Promise<Conversation[]> {
+export async function getConversations(filters?: ConversationQueryOptions): Promise<Conversation[]> {
+  const { backendChannel, ...rest } = filters ?? {};
   const params: Record<string, string> = {};
-  if (filters?.search) params.search = filters.search;
-  if (filters?.status && filters.status !== 'all') {
-    params.status = filters.status === 'open' ? 'active' : filters.status;
+  if (rest.search) params.search = rest.search;
+  if (rest.status && rest.status !== 'all') {
+    params.status = rest.status === 'open' ? 'active' : rest.status;
   }
-  if (filters?.owner && filters.owner !== 'all') params.owner = filters.owner;
-  if (filters?.limit) params.limit = String(filters.limit);
-  if (filters?.offset) params.offset = String(filters.offset);
+  if (rest.owner && rest.owner !== 'all') params.owner = rest.owner;
+  if (rest.context_status) params.context_status = rest.context_status;
+  if (rest.limit) params.limit = String(rest.limit);
+  if (rest.offset) params.offset = String(rest.offset);
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
-    { params }
+    { params, channel: backendChannel }
   );
 
   return (response.data.data || []).map(mapConversationFromApi);
 }
 
 /**
- * TanStack Query options for getting conversations
+ * TanStack Query options for getting conversations.
+ * channel is included in the query key so personal/waba instances never share cache.
  */
-export const getConversationsOptions = (filters?: ConversationListFilters) =>
+export const getConversationsOptions = (filters?: ConversationQueryOptions) =>
   queryOptions({
-    queryKey: conversationKeys.list(filters),
+    queryKey: [...conversationKeys.list(filters), filters?.backendChannel ?? 'personal'],
     queryFn: () => getConversations(filters),
-    staleTime: 30 * 1000, // 30 seconds (conversations change frequently)
+    staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 15000, // Poll every 15 seconds for new messages
+    refetchInterval: 15000,
   });
 
 /**
@@ -168,12 +204,34 @@ export const getConversationOptions = (conversationId: string) =>
   });
 
 /**
+ * Deduplicate messages: remove near-duplicate entries that share the same
+ * content, direction (isOutgoing), and fall within a 10-second window.
+ * This guards against historical DB duplicates created by the old TOCTOU
+ * webhook-dedup race condition before it was fixed with try_claim().
+ */
+function deduplicateMessages(messages: Message[]): Message[] {
+  const seen = new Map<string, number>(); // key → first-seen timestamp (ms)
+  return messages.filter((msg) => {
+    // Build a key that identifies "same content sent in roughly the same moment"
+    // 1-second bucket — tight enough to catch real DB duplicates without
+    // incorrectly merging legitimately different messages sent 1-2s apart
+    const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 1000)}`;
+    if (seen.has(bucketKey)) {
+      return false; // near-duplicate — skip
+    }
+    seen.set(bucketKey, msg.timestamp.getTime());
+    return true;
+  });
+}
+
+/**
  * Get messages for a conversation with pagination
  */
 export async function getConversationMessages(
   conversationId: string,
-  pagination?: { limit?: number; offset?: number }
-): Promise<{ messages: Message[]; total: number; hasMore: boolean }> {
+  pagination?: { limit?: number; offset?: number },
+  backendChannel?: 'personal' | 'waba'
+): Promise<{ messages: Message[]; total: number; hasMore: boolean; isAgentTyping: boolean }> {
   const params: Record<string, string> = {};
   if (pagination?.limit) params.limit = String(pagination.limit);
   if (pagination?.offset) params.offset = String(pagination.offset);
@@ -183,12 +241,17 @@ export async function getConversationMessages(
     data: any[];
     total: number;
     has_more: boolean;
-  }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params });
+  }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
+
+  const rawMessages = (response.data.data || []).map(mapMessageFromApi);
+  // Backend returns oldest-first (ORDER BY created_at ASC) — no reverse needed.
+  const messages = deduplicateMessages(rawMessages);
 
   return {
-    messages: (response.data.data || []).map(mapMessageFromApi),
+    messages,
     total: response.data.total || 0,
     hasMore: response.data.has_more || false,
+    isAgentTyping: !!(response.data as any).is_agent_typing,
   };
 }
 
@@ -197,15 +260,16 @@ export async function getConversationMessages(
  */
 export const getConversationMessagesOptions = (
   conversationId: string,
-  pagination?: { limit?: number; offset?: number }
+  pagination?: { limit?: number; offset?: number },
+  backendChannel?: 'personal' | 'waba'
 ) =>
   queryOptions({
-    queryKey: conversationKeys.messages(conversationId, pagination),
-    queryFn: () => getConversationMessages(conversationId, pagination),
-    staleTime: 10 * 1000, // 10 seconds
+    queryKey: [...conversationKeys.messages(conversationId, pagination), backendChannel ?? 'default'],
+    queryFn: () => getConversationMessages(conversationId, pagination, backendChannel),
+    staleTime: 0, // always re-fetch on next poll cycle
     gcTime: 5 * 60 * 1000,
     enabled: !!conversationId,
-    refetchInterval: 10000, // Poll every 10 seconds for new messages
+    refetchInterval: 3000, // Poll every 3 seconds for near-real-time updates
   });
 
 // ====================
@@ -226,6 +290,20 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
     }
   );
   return mapMessageFromApi(response.data.data);
+}
+
+/**
+ * Mark a conversation as read — resets unread_count to 0 in the DB.
+ * The GET /conversations/:id endpoint resets unread_count as a side effect.
+ */
+export async function markConversationRead(
+  conversationId: string,
+  backendChannel?: 'personal' | 'waba'
+): Promise<void> {
+  await proxyClient.get(
+    `/api/whatsapp-conversations/conversations/${conversationId}`,
+    { channel: backendChannel }
+  );
 }
 
 /**

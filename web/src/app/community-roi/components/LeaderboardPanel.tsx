@@ -34,7 +34,7 @@ export default function LeaderboardPanel() {
           <Trophy className="w-5 h-5 text-amber-500" />
           <h2 className="text-lg font-bold text-slate-800">Top Performers</h2>
         </div>
-        <ImportDataDialog />
+        {/* <ImportDataDialog /> */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

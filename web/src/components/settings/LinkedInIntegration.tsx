@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { apiGet, apiPost } from '@/lib/api';
-import { safeStorage } from '@/utils/storage';
+import { safeStorage } from '@lad/shared/storage';  
 import { io } from 'socket.io-client';
 // Helper to get auth headers for fetch calls
 const getAuthHeaders = () => {
@@ -214,9 +214,11 @@ export const LinkedInIntegration: React.FC = () => {
     if (currentCheckpointAccount?.checkpoint?.is_yes_no && showOtpModal && !yesNoPolling) {
       const pollInterval = setInterval(async () => {
         try {
-          const accountId = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
+          const accountId    = currentCheckpointAccount?.unipileAccount?.id || currentCheckpointAccount?.id;
+          const accountEmail = currentCheckpointAccount?.email || email || '';
           if (!accountId) return;
-          const response = await fetch(`${getApiBaseUrl()}/api/campaigns/linkedin/checkpoint-status?account_id=${accountId}`, {
+          const emailParam = accountEmail ? `&email=${encodeURIComponent(accountEmail)}` : '';
+          const response = await fetch(`${getApiBaseUrl()}/api/campaigns/linkedin/checkpoint-status?account_id=${accountId}${emailParam}`, {
             method: 'GET',
             headers: getAuthHeaders(),
           });
@@ -316,8 +318,13 @@ export const LinkedInIntegration: React.FC = () => {
         setConnectionError(errorMessage);
         throw new Error(errorMessage);
       }
-      // Check if checkpoint (OTP or Yes/No) is required
-      if (data.checkpoint && data.checkpoint.required) {
+      // Check if checkpoint (OTP or Yes/No) is required.
+      // Accept either explicit `required: true` OR presence of is_yes_no / is_otp flags
+      // so the UI works even if the backend omits the `required` field.
+      const isCheckpoint =
+        data.checkpoint &&
+        (data.checkpoint.required || data.checkpoint.is_yes_no || data.checkpoint.is_otp);
+      if (isCheckpoint) {
         // Show checkpoint modal instead of closing connection modal
         setShowOtpModal(true);
         setConnectionSuccess(false);
@@ -1018,197 +1025,157 @@ export const LinkedInIntegration: React.FC = () => {
           </div>
         </div>
       )}
-      {/* Checkpoint Verification Modal (OTP or Yes/No) */}
+      {/* Checkpoint Verification Modal (OTP or Yes/No) — LinkedIn-style UI */}
       {showOtpModal && (
-        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            {/* Header */}
-            <div className="border-b border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  {/* Official LinkedIn Icon */}
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify Identity' : 'Verify OTP'}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {currentCheckpointAccount?.checkpoint?.is_yes_no 
-                      ? 'LinkedIn requires identity verification to complete the connection'
-                      : 'LinkedIn requires OTP verification to complete the connection'}
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+
+            {/* ── Header ── */}
+            <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
+              <div className="flex justify-center mb-4">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="#0A66C2">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+                {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {currentCheckpointAccount?.checkpoint?.is_yes_no
+                  ? 'Approve the sign-in request on your mobile device'
+                  : 'We sent a code to complete your sign-in'}
+              </p>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="px-8 py-6">
+              {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
+                <div className="space-y-5">
+
+                  {/* Phone icon + prompt */}
+                  <div className="flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-[#EEF3FB] flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#0A66C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 20.25h3" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      We sent a notification to the <span className="font-semibold text-gray-800">LinkedIn app</span> on your phone.
+                      Tap <span className="font-bold text-[#057642]">Yes</span> to approve this sign-in.
+                    </p>
+                  </div>
+
+                  {/* Steps */}
+                  <ol className="space-y-3">
+                    {[
+                      'Open the LinkedIn app on your phone',
+                      'Find the sign-in approval notification',
+                      <>Tap <strong className="text-[#057642]">Yes</strong> to approve this login</>,
+                    ].map((step, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#0A66C2] text-white text-xs font-semibold flex items-center justify-center mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm text-gray-700">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  {/* Waiting status */}
+                  {yesNoPolling && !autoResolving && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] rounded-lg">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] flex-shrink-0" />
+                      <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval…</p>
+                    </div>
+                  )}
+
+                  {/* Approved status */}
+                  {autoResolving && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] rounded-lg">
+                      <CheckCircle2 className="h-4 w-4 text-[#057642] flex-shrink-0" />
+                      <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account…</p>
+                    </div>
+                  )}
+
+                  {/* Hint */}
+                  <p className="text-xs text-gray-400 text-center leading-relaxed">
+                    Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
                   </p>
                 </div>
-              </div>
-            </div>
-            {/* Content */}
-            <div className="p-6">
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  {currentCheckpointAccount?.checkpoint?.is_yes_no 
-                    ? '📱 Check your phone! LinkedIn sent a notification to verify this login. Open the LinkedIn app and click YES to approve.'
-                    : (currentCheckpointAccount?.checkpoint?.message || 'Please check your email or phone for the OTP code sent by LinkedIn.')}
-                </p>
-              </div>
-              {/* Auto-resolving indicator for Yes/No */}
-              {currentCheckpointAccount?.checkpoint?.is_yes_no && autoResolving && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
-                    <p className="text-sm text-blue-800">
-                      <strong>Monitoring...</strong> We detected you clicked Yes on your phone. Completing connection...
-                    </p>
-                  </div>
-                </div>
-              )}
-              {/* Yes/No Checkpoint */}
-              {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
-                <div className="space-y-4">
-                  {/* Instructions to approve in mobile app */}
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-1">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xl">📱</span>
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-base font-semibold text-gray-900 mb-2">
-                          Action Required on Your Mobile Device
-                        </p>
-                        <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                          <li>Check your phone for a LinkedIn notification</li>
-                          <li>Open the LinkedIn app</li>
-                          <li>Click <strong className="text-green-600">YES</strong> to approve the login</li>
-                          <li>Return here - we'll automatically detect and connect your account within 1 second!</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Auto-detection status */}
-                  {yesNoPolling && !autoResolving && (
-                    <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-green-600" />
-                        <p className="text-sm font-medium text-green-800">
-                          Monitoring for approval... Waiting for you to click YES in the LinkedIn app
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {autoResolving && (
-                    <div className="p-4 bg-green-100 border-2 border-green-400 rounded-lg">
-                      <div className="flex items-center justify-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        <p className="text-sm font-semibold text-green-800">
-                          Approval detected! Connecting your account...
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Troubleshooting */}
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-600">
-                      <strong>Note:</strong> Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
-                    </p>
-                  </div>
-                </div>
               ) : (
-                /* OTP Checkpoint */
+                /* ── OTP Checkpoint ── */
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Enter OTP Code
-                  </label>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {currentCheckpointAccount?.checkpoint?.message || 'Enter the verification code sent to your email or phone.'}
+                  </p>
                   <input
                     type="text"
-                    placeholder="Enter 6-digit OTP"
+                    placeholder="_ _ _ _ _ _"
                     value={otp}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                       setOtp(value);
                       setOtpError(null);
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono"
                     maxLength={6}
                     autoFocus
                   />
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-gray-400 mt-2 text-center">
                     Enter the 6-digit code sent to your email or phone
                   </p>
                 </div>
               )}
-              {/* Error Message */}
+
+              {/* Error */}
               {otpError && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-red-800">Verification Failed</p>
-                      <p className="text-sm text-red-700 mt-1">{otpError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Action Buttons for OTP */}
-              {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowOtpModal(false);
-                      setOtp('');
-                      setOtpError(null);
-                      setShowConnectionModal(false);
-                    }}
-                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleVerifyOtp}
-                    disabled={verifyingOtp || otp.length !== 6}
-                    className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
-                      verifyingOtp || otp.length !== 6
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    {verifyingOtp ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
-                        Verifying...
-                      </>
-                    ) : (
-                      'Verify OTP'
-                    )}
-                  </button>
-                </div>
-              )}
-              {/* Cancel button for Yes/No */}
-              {currentCheckpointAccount?.checkpoint?.is_yes_no && (
-                <div className="mt-6">
-                  <button
-                    onClick={() => {
-                      setShowOtpModal(false);
-                      setOtpError(null);
-                      setShowConnectionModal(false);
-                      // Stop polling
-                      if (yesNoPolling) {
-                        clearInterval(yesNoPolling);
-                        setYesNoPolling(null);
-                      }
-                    }}
-                    className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
+                <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{otpError}</p>
                 </div>
               )}
             </div>
+
+            {/* ── Footer ── */}
+            <div className="px-8 pb-7 space-y-2">
+              {/* Verify button — OTP only */}
+              {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || otp.length !== 6}
+                  className={`w-full py-3 rounded-full text-sm font-semibold transition-colors ${
+                    verifyingOtp || otp.length !== 6
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#0A66C2] text-white hover:bg-[#004182]'
+                  }`}
+                >
+                  {verifyingOtp ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying…
+                    </span>
+                  ) : 'Continue'}
+                </button>
+              )}
+
+              {/* Cancel */}
+              <button
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtp('');
+                  setOtpError(null);
+                  setShowConnectionModal(false);
+                  if (currentCheckpointAccount?.checkpoint?.is_yes_no && yesNoPolling) {
+                    clearInterval(yesNoPolling);
+                    setYesNoPolling(null);
+                  }
+                }}
+                className="w-full py-3 rounded-full text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+
           </div>
         </div>
       )}

@@ -30,9 +30,10 @@ import {
   type SortingState,
   type ColumnFiltersState,
   type PaginationState,
+  type ColumnSizingState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
-import { getStatusColor, renderChannelIcons, renderActionChips, getChannelsUsed, PLATFORM_CONFIG, renderPlatformMetrics } from './campaignUtils';
+import { getStatusColor, renderActionChips } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];
   loading: boolean;
@@ -48,6 +49,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
+  });
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({
+    name: 300,
   });
   
   // Local filter states
@@ -87,11 +91,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     columnHelper.accessor('name', {
       id: 'name',
       header: 'Campaign Name',
-      cell: ({ getValue, row }) => (
-        <span
-          className="text-sm font-semibold text-[#6366F1] cursor-pointer hover:underline capitalize"
-          onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
-        >
+      size: 300,
+      cell: ({ getValue }) => (
+        <span className="text-sm font-semibold capitalize">
           {getValue()}
         </span>
       ),
@@ -115,11 +117,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       },
     }),
     columnHelper.display({
-      id: 'channels',
-      header: 'Channels',
-      cell: ({ row }) => renderChannelIcons(row.original),
-    }),
-    columnHelper.display({
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => renderActionChips(row.original),
@@ -128,34 +125,6 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       id: 'leads_count',
       header: 'Leads',
       cell: ({ getValue }) => getValue() || 0,
-    }),
-    columnHelper.accessor('sent_count', {
-      id: 'sent_count',
-      header: 'Sent',
-      cell: ({ getValue }) => getValue() || 0,
-    }),
-    columnHelper.display({
-      id: 'connected',
-      header: 'Connected',
-      cell: ({ row }) => renderPlatformMetrics(row.original, 'connected'),
-    }),
-    columnHelper.display({
-      id: 'replied',
-      header: 'Replied',
-      cell: ({ row }) => renderPlatformMetrics(row.original, 'replied'),
-    }),
-    columnHelper.display({
-      id: 'credit',
-      header: 'Credits Used',
-      cell: ({ row }) => {
-        const credits = row.original.total_credits_deducted || 0;
-        return (
-          <span className="text-sm text-gray-600 flex items-center gap-1">
-            <Coins className="h-4 w-4 text-amber-600" />
-            {credits}
-          </span>
-        );
-      },
     }),
     columnHelper.accessor(
       (row) => row.created_at as string,
@@ -172,7 +141,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
         <div className="text-right">
           <button
             className="p-1 hover:bg-gray-100 rounded"
-            onClick={(e) => onMenuOpen(e, row.original)}
+            onClick={(e) => { e.stopPropagation(); onMenuOpen(e, row.original); }}
           >
             <MoreVertical className="h-4 w-4" />
           </button>
@@ -191,17 +160,23 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
+    onColumnSizingChange: setColumnSizing,
     state: {
       sorting,
       columnFilters,
       pagination,
+      columnSizing,
+    },
+    columnSizingInfo: {
+      start: 0,
+      delta: 0,
     },
   });
 
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Filters Section */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+      <div className="p-4 border-b border-[#E2E8F0] bg-white">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
           <div className="relative min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
@@ -236,12 +211,8 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 <TableRow className="bg-[#F8FAFC]">
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Campaign Name</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Status</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Channels</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Actions</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Leads</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Sent</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Connected</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Replied</TableHead>
                   <TableHead className="font-semibold text-[#1E293B]">Created</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] text-right"></TableHead>
                 </TableRow>
@@ -257,24 +228,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
                         <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
                         <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
@@ -324,16 +280,16 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="w-full table-fixed">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-[#F8FAFC]">
+                  <TableRow key={headerGroup.id} className="bg-white">
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
-                        className={`font-semibold text-[#1E293B] whitespace-nowrap ${
+                        className={`font-semibold text-[#1E293B] whitespace-nowrap px-6 ${
                           header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                        }`}
+                        } ${header.id === 'name' ? 'w-[300px]' : ''}`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div className="flex items-center gap-2">
@@ -372,9 +328,13 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-gray-50">
+                    <TableRow 
+                      key={row.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
+                    >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} className={`px-6 ${cell.column.id === 'name' ? 'w-[300px]' : ''}`}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -383,10 +343,10 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 )}
               </TableBody>
             </Table>
-            
+
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0]">
                 <div className="flex items-center gap-2 text-sm text-[#64748B]">
                   <span>Show</span>
                   <select

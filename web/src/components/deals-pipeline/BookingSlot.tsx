@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@/components/ui/dialog';
 import * as bookingService from '@/services/bookingService';
 import * as leadsService from '@lad/frontend-features/deals-pipeline';
+import { useDeleteBookingFollowup } from '@lad/frontend-features/deals-pipeline';
 import { selectPipelineSettings } from '@/store/slices/uiSlice';
 import { selectUser } from '@/store/slices/authSlice';
 import { logger } from '@/lib/logger';
@@ -63,6 +64,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   // Get pipeline settings from Redux
   const pipelineSettings = useSelector(selectPipelineSettings);
   const currentUser = useSelector(selectUser);
+  const deleteBookingFollowup = useDeleteBookingFollowup();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -624,8 +626,23 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   const handleCancelBooking = async (slotId: string) => {
     try {
       setLoading(true);
-      // Use bookingService to cancel the booking
-      await bookingService.cancelBooking(slotId);
+      
+      // Find the slot to get booking information
+      const slot = bookedSlots.find(s => s.id === slotId);
+      
+      // If this is a followup booking, use the SDK hook
+      if (slot?.bookingType === 'manual_followup') {
+        // Extract booking ID from slot or use leadId as fallback
+        const bookingId = slot.id || leadId;
+        await deleteBookingFollowup.mutateAsync({
+          bookingId: String(bookingId),
+          followupId: String(slotId)
+        });
+      } else {
+        // Use bookingService for regular bookings
+        await bookingService.cancelBooking(slotId);
+      }
+      
       // Update the slot as available
       setTimeSlots((prevSlots) =>
         prevSlots.map((s) =>

@@ -22,9 +22,10 @@ import { Calendar, MessageSquare, Handshake, TrendingUp } from 'lucide-react'
 interface ActivityHeatmapProps {
   data: any[] // Array of { date: string, count: number, type: 'meeting' | 'referral' | 'revenue' }
   member: any
+  isCollapsed?: boolean
 }
 
-export function ActivityHeatmap({ data, member }: ActivityHeatmapProps) {
+export function ActivityHeatmap({ data, member, isCollapsed = false }: ActivityHeatmapProps) {
   // We want to show the last 12 months like the screenshot
   const months = useMemo(() => {
     const result = []
@@ -101,67 +102,75 @@ export function ActivityHeatmap({ data, member }: ActivityHeatmapProps) {
 
   return (
     <div className="space-y-8">
-      {/* Month-based Heatmap Grid */}
-      <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar">
-        {months.map((month, mIdx) => {
-          const start = startOfMonth(month)
-          const end = endOfMonth(month)
-          const days = eachDayOfInterval({ start, end })
-          
-          return (
-            <div key={mIdx} className="flex flex-col gap-3 min-w-[100px]">
-              <span className="text-[11px] font-bold uppercase text-slate-400 tracking-widest pl-1">
-                {format(month, 'MMM')}
-              </span>
-              
-              <div className="grid grid-rows-7 grid-flow-col gap-1.5">
-                {/* Pad days if month doesn't start on Sunday for alignment */}
-                {Array.from({ length: start.getDay() }).map((_, i) => (
-                  <div key={`pad-${i}`} className="w-4 h-4" />
-                ))}
-                
-                {days.map((day, dIdx) => {
-                  const dot = getDotStyle(day)
-                  return (
-                    <div
-                      key={dIdx}
-                      className={cn(
-                        "w-4 h-4 rounded-sm border-[0.5px] transition-all hover:scale-150 hover:z-10 cursor-help",
-                        dot.className
-                      )}
-                      style={dot.style}
-                      title={`${format(day, 'MMM d, yyyy')}: ${activityMap[format(day, 'yyyy-MM-dd')]?.meetings || 0} meetings, ${activityMap[format(day, 'yyyy-MM-dd')]?.referrals || 0} referrals`}
-                    />
-                  )
-                })}
-              </div>
+
+      {/* ── Heatmap + Legend: hidden when collapsed ── */}
+      {!isCollapsed && (
+        <>
+          {/* Month-based Heatmap Grid */}
+          <div className="flex overflow-x-auto pb-4 gap-6 no-scrollbar">
+            {months.map((month, mIdx) => {
+              const start = startOfMonth(month)
+              const end = endOfMonth(month)
+              const days = eachDayOfInterval({ start, end })
+
+              return (
+                <div key={mIdx} className="flex flex-col gap-3 min-w-[100px]">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 tracking-widest pl-1">
+                    {format(month, 'MMM')}
+                  </span>
+
+                  <div className="grid grid-rows-7 grid-flow-col gap-1.5">
+                    {Array.from({ length: start.getDay() }).map((_, i) => (
+                      <div key={`pad-${i}`} className="w-4 h-4" />
+                    ))}
+
+                    {days.map((day, dIdx) => {
+                      const dot = getDotStyle(day)
+                      return (
+                        <div
+                          key={dIdx}
+                          className={cn(
+                            "w-4 h-4 rounded-sm border-[0.5px] transition-all hover:scale-150 hover:z-10 cursor-help",
+                            dot.className
+                          )}
+                          style={dot.style}
+                          title={`${format(day, 'MMM d, yyyy')}: ${activityMap[format(day, 'yyyy-MM-dd')]?.meetings || 0} meetings, ${activityMap[format(day, 'yyyy-MM-dd')]?.referrals || 0} referrals`}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded-sm bg-slate-50 border border-slate-100" />
+              <span>No activity</span>
             </div>
-          )
-        })}
-      </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#EF4444' }} />
+              <span>Meeting Only</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#EAB308' }} />
+              <span>Referral Only</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#10B981' }} />
+              <span>Both</span>
+            </div>
+          </div>
+        </>
+      )}
 
-      {/* Legend */}
-      <div className="flex items-center gap-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-sm bg-slate-50 border border-slate-100" />
-          <span>No activity</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#EF4444' }} />
-          <span>Meeting Only</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#EAB308' }} />
-          <span>Referral Only</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#10B981' }} />
-          <span>Both</span>
-        </div>
-      </div>
-
-      {/* Aggregate Metrics (Screenshot Style) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-10 border-t border-slate-100">
+      {/* ── Aggregate Metrics — always visible ── */}
+      <div className={cn(
+        "grid grid-cols-2 md:grid-cols-4 gap-8",
+        !isCollapsed && "pt-10 border-t border-slate-100"
+      )}>
         <div className="space-y-3">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Unique Meetings</p>
           <div className="flex items-center gap-3">

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
@@ -36,10 +37,16 @@ import {
   ChevronsRight,
   Linkedin,
   Phone,
+  Mail,
+  MessageCircle,
   LayoutGrid,
   List,
   Calendar,
-  Copy
+  Copy,
+  Globe,
+  Target,
+  UserPlus,
+  Goal
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { useToast } from '@/components/ui/use-toast';
@@ -48,6 +55,7 @@ import PipelineLeadCard from './PipelineLeadCard';
 import { getFieldValue } from '@/utils/fieldMappings';
 import { formatDateTimeUnified } from '@/utils/dateTime';
 import { getTagConfig, normalizeLeadCategory, type LeadTag } from '@/utils/leadCategorization';
+import { useUpdateLeadTags } from '@lad/frontend-features/deals-pipeline';
 // UI-compatible Lead interface for pipeline list view
 interface Lead {
   id: string | number;
@@ -61,8 +69,9 @@ interface Lead {
   amount?: number | string;
   assignee?: string;
   source?: string;
-  lead_tags?: string[];
-  lead_category?: string;
+  tags?: string[]; // API returns this field
+  lead_tags?: string[]; // Legacy field
+  lead_category?: string; // Legacy field
   [key: string]: unknown;
 }
 import {
@@ -79,12 +88,13 @@ import {
   toggleColumnVisibility
 } from '@/store/slices/uiSlice';
 const COLUMN_LABELS: Record<string, string> = {
+  serialNo: 'S.No',
   name: 'Lead Name',
+  company: 'Company',
   email: 'Email',
   phone: 'Phone',
   stage: 'Stage',
   status: 'Status',
-  priority: 'Priority',
   tags: 'Tags',
   closeDate: 'Close Date',
   dueDate: 'Due Date',
@@ -108,6 +118,7 @@ interface PipelineListViewProps {
   stages: Array<{ key: string; label: string; name?: string }>;
   visibleColumns: Record<string, boolean>;
   totalLeadsCount?: number;
+  totalPages?: number;
   isLoading?: boolean;
   searchQuery?: string;
   selectedLead?: unknown;
@@ -132,12 +143,21 @@ interface PipelineListViewProps {
   pageSize?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  labels?: {
+    entity: string;
+    entityPlural: string;
+    pipeline: string;
+    owner: string;
+    deal: string;
+    value: string;
+  };
 }
 const PipelineListView: React.FC<PipelineListViewProps> = ({
   leads,
   stages,
   visibleColumns,
   totalLeadsCount,
+  totalPages: controlledTotalPages,
   isLoading = false,
   searchQuery,
   selectedLead,
@@ -161,13 +181,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   currentPage: controlledCurrentPage,
   pageSize: controlledPageSize,
   onPageChange,
-  onPageSizeChange
+  onPageSizeChange,
+  labels
 }) => {
   // Redux dispatch
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { toast } = useToast();
   const masterDataRequestedRef = useRef<boolean>(false);
+  // SDK hooks for lead mutations
+  const updateLeadTagsMutation = useUpdateLeadTags();
   // Get shared state from Redux
   const globalSearchQuery = useSelector(selectPipelineSearchQuery);
   const globalActiveFilters = useSelector(selectPipelineActiveFilters);
@@ -183,6 +206,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const [columnAnchorEl, setColumnAnchorEl] = useState<HTMLElement | null>(null);
   // Lead details dialog state (component-specific)
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // Optimistic tag updates - track pending tag changes per lead
+  const [optimisticTags, setOptimisticTags] = useState<Record<string | number, string>>({});
   // Helper function to get assignee display name from UUID or return name if already a name
   const getAssigneeDisplayName = useCallback((assigneeValue?: string | null): string => {
     if (!assigneeValue) return '';
@@ -387,7 +412,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   }, [allLeads, localSearch, currentFilters, globalSortConfig, getSortableValue]);
   const DEFAULT_COLUMN_ORDER = useMemo(
     () => [
+      'serialNo',
       'name',
+      'company',
       'email',
       'phone',
       'stage',
@@ -402,10 +429,10 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   );
   const visibleColumnKeys = useMemo(() => {
     const ordered = DEFAULT_COLUMN_ORDER.filter(
-      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] !== false
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && (key === 'serialNo' || visibleColumns[key] !== false)
     );
     const extras = Object.keys(visibleColumns).filter(
-      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
+      (key) => !['assignee', 'amount', 'AssignedTo', 'assignedTo', 'priority'].includes(key) && visibleColumns[key] && !DEFAULT_COLUMN_ORDER.includes(key)
     );
     return [...ordered, ...extras];
   }, [DEFAULT_COLUMN_ORDER, visibleColumns]);
@@ -432,7 +459,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Pagination state - use controlled props if provided, otherwise local state
   const isControlledPagination = controlledCurrentPage !== undefined && onPageChange !== undefined;
   const [localCurrentPage, setLocalCurrentPage] = useState<number>(1);
-  const [localPageSize, setLocalPageSize] = useState<number>(50);
+  const [localPageSize, setLocalPageSize] = useState<number>(20);
 
   const currentPage = isControlledPagination ? controlledCurrentPage : localCurrentPage;
   const pageSize = controlledPageSize !== undefined ? controlledPageSize : localPageSize;
@@ -440,7 +467,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   const displayTotalRecords = typeof totalLeadsCount === 'number' && totalLeadsCount >= 0
     ? totalLeadsCount
     : filteredAndSortedLeads.length;
-  const totalPages = Math.max(1, Math.ceil(displayTotalRecords / pageSize));
+  const totalPages = controlledTotalPages !== undefined
+    ? Math.max(1, controlledTotalPages)
+    : Math.max(1, Math.ceil(displayTotalRecords / pageSize));
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
 
@@ -462,10 +491,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }
   };
   const paginatedLeads = useMemo(() => {
+    // When pagination is server-controlled, the `leads` prop already contains
+    // only the current page's data — skip client-side slicing to avoid returning
+    // an empty array (e.g. page 2: slice(20, 40) on a 20-item array → []).
+    if (isControlledPagination) {
+      return filteredAndSortedLeads;
+    }
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredAndSortedLeads.slice(startIndex, endIndex);
-  }, [filteredAndSortedLeads, currentPage, pageSize]);
+  }, [filteredAndSortedLeads, currentPage, pageSize, isControlledPagination]);
   const handleSort = (field: string) => {
     const isAsc = globalSortConfig && globalSortConfig.field === field && globalSortConfig.direction === 'asc';
     dispatch(setPipelineSortConfig({
@@ -529,6 +564,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       }
     };
     switch (column) {
+      case 'serialNo':
+        return (
+          <p className="text-sm font-medium text-[#64748B]">
+            {(currentPage - 1) * pageSize + (paginatedLeads.findIndex(l => l.id === lead.id) + 1)}
+          </p>
+        );
       case 'name':
         return (
           <div className="flex items-center gap-1 min-w-0">
@@ -536,12 +577,27 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               <p className="text-sm max-w-[125px] truncate font-medium">
                 {lead.name || 'Unnamed Lead'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {lead.company || ''}
-              </p>
             </div>
           </div>
         );
+      case 'company': {
+        // Extract company name from raw_data if company is null
+        const rawData = lead.raw_data as Record<string, unknown> | undefined;
+        const fullData = rawData?._full_data as Record<string, unknown> | undefined;
+        const employeeData = rawData?.employee_data as Record<string, unknown> | undefined;
+        const fullOrg = fullData?.organization as Record<string, string> | undefined;
+        const empOrg = employeeData?.organization as Record<string, string> | undefined;
+        const companyFromRaw = (rawData?.company_name as string) ||
+          (fullData?.company_name as string) ||
+          fullOrg?.name ||
+          empOrg?.name;
+        const displayCompany = lead.company || companyFromRaw || '-';
+        return (
+          <p className="text-sm max-w-[150px] truncate" title={String(displayCompany)}>
+            {displayCompany}
+          </p>
+        );
+      }
       case 'email':
         const handleCopyEmail = async () => {
           if (lead.email) {
@@ -657,9 +713,12 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       case 'tags': {
-        // Derive tag from lead_tags / lead_category fields (same logic as CallLogsTable)
-        const rawTags = lead.lead_tags;
-        const primaryTag = Array.isArray(rawTags) && rawTags.length > 0 ? String(rawTags[0]) : '';
+        // Check for optimistic tag update first
+        const optimisticTag = optimisticTags[lead.id];
+        // Use API tags field, fallback to legacy lead_tags / lead_category
+        const apiTags = lead.tags || [];
+        const rawTags = apiTags.length > 0 ? apiTags : lead.lead_tags;
+        const primaryTag = optimisticTag || (Array.isArray(rawTags) && rawTags.length > 0 ? String(rawTags[0]) : '');
         const normalizedPrimary = primaryTag.toLowerCase();
         let derivedTag: LeadTag = 'unknown';
         if (normalizedPrimary.includes('hot')) derivedTag = 'hot';
@@ -680,10 +739,38 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={derivedTag}
-              onValueChange={(newTag) => {
+              onValueChange={async (newTag) => {
                 const backendLabel = toBackendTagLabel(newTag as LeadTag);
-                if (!backendLabel || !onTagChange) return;
-                onTagChange(lead.id, backendLabel);
+                if (!backendLabel) return;
+                
+                // Optimistically update UI immediately
+                setOptimisticTags(prev => ({ ...prev, [lead.id]: backendLabel }));
+                
+                // Call the SDK mutation to update tags
+                try {
+                  await updateLeadTagsMutation.mutateAsync({
+                    leadId: lead.id,
+                    tags: [backendLabel]
+                  });
+                  
+                  // Notify parent component
+                  if (onTagChange) {
+                    onTagChange(lead.id, backendLabel);
+                  }
+                } catch (error) {
+                  // Revert optimistic update on error
+                  setOptimisticTags(prev => {
+                    const next = { ...prev };
+                    delete next[lead.id];
+                    return next;
+                  });
+                  logger.error('[PipelineListView] Failed to update lead tags:', error);
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to update lead tag. Please try again.',
+                    variant: 'destructive'
+                  });
+                }
               }}
             >
               <SelectTrigger className={`w-24 h-7 text-xs ${tagConfig.bgColor} ${tagConfig.textColor} border ${tagConfig.borderColor} focus:ring-0`}>
@@ -719,60 +806,37 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         );
       }
-      case 'source':
+      case 'source': {
         const sourceValue = (lead.source || 'unknown').toLowerCase();
-        const getSourceStyles = (source: string) => {
-          switch (source) {
-            case 'voice_agent':
-              return 'bg-primary/20 text-primary border border-primary/30';
-            case 'apollo':
-            case 'apollo_io':
-              return 'bg-green-100 text-green-600 border border-green-300';
-            case 'website':
-              return 'bg-purple-100 text-purple-600 border border-purple-300';
-            case 'linkedin':
-              return 'bg-blue-100 text-blue-600 border border-blue-300';
-            default:
-              return 'bg-gray-100 text-gray-600 border border-gray-300';
-          }
+        const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
+          linkedin:    { label: 'LinkedIn',    icon: <Linkedin       className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          email:       { label: 'Email',       icon: <Mail           className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
+          whatsapp:    { label: 'WhatsApp',    icon: <MessageCircle  className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
+          voice_agent: { label: 'Voice',       icon: <Phone          className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
+          apollo:      { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          apollo_io:   { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          website:     { label: 'Website',     icon: <Globe          className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
         };
-        const formatSourceName = (source: string) => {
-          switch (source.toLowerCase()) {
-            case 'apollo_io':
-              return 'Apollo.io';
-            case 'voice_agent':
-              return 'Voice-Agent';
-            case 'linkedin':
-              return 'LinkedIn';
-            default:
-              return source || 'Unknown';
-          }
+        const cfg = sourceConfig[sourceValue] ?? {
+          label: lead.source ? lead.source.charAt(0).toUpperCase() + lead.source.slice(1) : 'Unknown',
+          icon: <span className="w-2 h-2 rounded-full bg-slate-400" />,
+          classes: 'bg-slate-100 text-slate-500 border border-slate-200',
         };
-        const getSourceIcon = (source: string) => {
-          switch (source.toLowerCase()) {
-            case 'linkedin':
-              return <Linkedin className="w-4 h-4" />;
-            case 'voice_agent':
-              return <Phone className="w-4 h-4" />;
-            default:
-              return <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-70" />;
-          }
-        };
-        const sourceName = formatSourceName(lead.source || '');
         return (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${getSourceStyles(sourceValue)}`}>
-                  {getSourceIcon(sourceValue)}
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${cfg.classes}`}>
+                  {cfg.icon}
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{sourceName}</p>
+                <p>{cfg.label}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         );
+      }
       case 'createdAt':
         return (
           <p className="text-sm">
@@ -800,230 +864,212 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Header with Search and Controls */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-        <div className="flex gap-3 flex-col sm:flex-row justify-between sm:items-center">
-          <div className="flex items-center gap-2 justify-start">
-            {/* View mode toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-              <button
-                type="button"
-                onClick={() => onViewModeChange?.('kanban')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'kanban'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Kanban
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange?.('list')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                <List className="h-4 w-4" />
-                List
-              </button>
-            </div>
-
-            <Button
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddStage?.();
-              }}
-              disabled={!onAddStage}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+          
+          {/* Row 1: View mode toggle */}
+          <div className="w-full lg:w-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => onViewModeChange?.('kanban')}
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
             >
-              <Plus />
-              Add Stage
-            </Button>
-            <Button
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddLead?.();
-              }}
-              disabled={!onAddLead}
+              <LayoutGrid className="h-4 w-4" />
+              Kanban
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange?.('list')}
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
             >
-              <Plus />
-              Add Lead
-            </Button>
+              <List className="h-4 w-4" />
+              List
+            </button>
           </div>
-          <div className="flex gap-3 flex-col sm:flex-row justify-end items-center w-full sm:w-auto">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
+          {/* Row 2: Action buttons */}
+          {process.env.NEXT_PUBLIC_SHOW_DEV_FEATURES === 'true' && (
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <Button
+                className="flex-1 lg:flex-none bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddStage?.();
+                }}
+                disabled={!onAddStage}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add Stage
+              </Button>
+              <Button
+                className="flex-1 lg:flex-none bg-primary hover:bg-primary/80 text-white rounded-xl shadow-none h-9 text-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddLead?.();
+                }}
+                disabled={!onAddLead}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add Lead
+              </Button>
+            </div>
+          )}
+
+          {/* Row 3: Search box */}
+          <div className="w-full lg:w-60 lg:ml-auto">
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
+              <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"
                 value={localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search leads..."
-                className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10 h-10"
+                className="border-0 outline-none bg-transparent w-full text-sm text-gray-800 dark:text-gray-200 focus:ring-0 focus:outline-none p-0 h-full placeholder:text-gray-400"
               />
             </div>
+          </div>
+
+          {/* Row 4: Control buttons (Filter, Export, Settings) */}
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <Button
               variant="outline"
-              className="h-10"
+              className="flex-1 lg:flex-none rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 dispatch(setFilterDialogOpen(true));
               }}
             >
-              <Filter className="h-4 w-4" />
+              <Filter className="h-4 w-4 mr-1.5" />
               Filter
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10"
+                  className="flex-1 lg:flex-none rounded-xl text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 h-9 text-sm"
                   disabled={!onExport && !onExportWithDateRange}
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Download className="h-4 w-4 " />
+                  <Download className="h-4 w-4 mr-1.5" />
                   Export
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => onExport?.()}
-                  disabled={!onExport}
-                >
+                <DropdownMenuItem onClick={() => onExport?.()} disabled={!onExport}>
                   All Leads
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('today')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('today')} disabled={!onExportWithDateRange}>
                   Today
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('thisMonth')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('thisMonth')} disabled={!onExportWithDateRange}>
                   This Month
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('thisYear')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('thisYear')} disabled={!onExportWithDateRange}>
                   This Year
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onExportWithDateRange?.('custom')}
-                  disabled={!onExportWithDateRange}
-                >
+                <DropdownMenuItem onClick={() => onExportWithDateRange?.('custom')} disabled={!onExportWithDateRange}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Custom Range
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10"
+
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 dispatch(setSettingsDialogOpen(true));
               }}
-              title="Settings"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0"
             >
               <Settings className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </div>
-      <Table className={compactMode ? 'text-sm' : ''}>
-        <TableHeader>
-          <TableRow className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-            {visibleColumnKeys.map((column) => (
-              <TableHead
-                key={column}
-                className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize ${['name', 'stage', 'status', 'priority', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
-                  }`}
-                onClick={() => handleSort(column)}
-              >
-                <div className="flex items-center gap-2">
-                  {COLUMN_LABELS[column] || column}
-                  {getSortIcon(column)}
-                </div>
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading
-            ? Array.from({ length: 8 }).map((_, rowIndex) => (
-              <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-220px)] border-b border-[#E2E8F0]">
+        <div className="min-w-[800px] w-full relative">
+          <Table className={compactMode ? 'text-sm' : ''}>
+            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
                 {visibleColumnKeys.map((column) => (
-                  <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-            : paginatedLeads.map((lead) => (
-              <TableRow
-                key={lead.id}
-                onClick={(e) => {
-                  if ((e.target as HTMLElement).closest('select, button, input')) {
-                    e.stopPropagation();
-                    return;
-                  }
-                  handleRowClick(lead);
-                }}
-                className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
-              >
-                {visibleColumnKeys.map((column) => (
-                  <TableCell
+                  <TableHead
                     key={column}
-                    className="py-2 whitespace-nowrap px-3"
+                    className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize bg-[#F8FAFC] ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                      }`}
+                    onClick={() => handleSort(column)}
                   >
-                    {renderCellContent(lead, column)}
-                  </TableCell>
+                    <div className="flex items-center gap-2">
+                      {COLUMN_LABELS[column] || column}
+                      {getSortIcon(column)}
+                    </div>
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          {!isLoading && filteredAndSortedLeads.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={visibleColumnKeys.length}
-                className="text-center py-16"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Phone className="w-8 h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                      Trigger a campaign
-                    </h3>
-                    <p className="text-sm text-[#64748B] mb-4">
-                      Start a campaign to create leads and see them appear here
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
+            </TableHeader>
+            <TableBody>
+              {isLoading
+                ? Array.from({ length: 8 }).map((_, rowIndex) => (
+                  <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
+                    {visibleColumnKeys.map((column) => (
+                      <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
+                        <div className="h-4 bg-gray-200 rounded w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+                : paginatedLeads.map((lead) => (
+                  <TableRow
+                    key={lead.id}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      router.push('/campaigns');
+                      if ((e.target as HTMLElement).closest('select, button, input')) {
+                        e.stopPropagation();
+                        return;
+                      }
+                      handleRowClick(lead);
                     }}
-                    className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                    className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
                   >
-                    <Phone className="w-4 h-4" />
-                    Go to Campaigns
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                    {visibleColumnKeys.map((column) => (
+                      <TableCell
+                        key={column}
+                        className="py-2 whitespace-nowrap px-3"
+                      >
+                        {renderCellContent(lead, column)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              {!isLoading && filteredAndSortedLeads.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={visibleColumnKeys.length}
+                    className="text-center py-16"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <UserPlus className="w-8 h-8" />
+                      <div className="text-lg font-semibold text-[#1E293B] mb-2">
+                        No leads found
+                      </div>
+                      
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          <div className="flex items-center gap-4 text-sm text-[#64748B]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+          {/* Left Side: Records per page and total count info */}
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B]">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select
@@ -1031,22 +1077,24 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 onChange={(e) => {
                   handlePageSizeChange(Number(e.target.value));
                 }}
-                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+                className="border border-[#E2E8F0] rounded px-2 py-1 text-xs sm:text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                {[5, 10, 20, 50].map((size) => (
+                {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>
                 ))}
               </select>
+              <span className="whitespace-nowrap">of {displayTotalRecords} {labels?.entityPlural.toLowerCase()}</span>
             </div>
-            <span>
-              {`${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, displayTotalRecords)} of ${displayTotalRecords}`}
-            </span>
+            {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (
+              <span className="hidden md:inline text-xs text-muted-foreground">(filtered from {totalLeadsCount} total)</span>
+            )}
           </div>
 
+          {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
 

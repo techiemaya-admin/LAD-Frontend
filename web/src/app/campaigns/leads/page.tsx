@@ -18,7 +18,7 @@ import {
 } from "@lad/frontend-features/campaigns";
 import { useApolloLeads } from "@lad/frontend-features/apollo-leads";
 import { EmployeeCard, ProfileSummaryDialog } from "@/components/campaigns";
-import { safeStorage } from "@/utils/storage";
+import { safeStorage } from '@lad/shared/storage';  
 import { motion } from "framer-motion";
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
@@ -125,6 +125,8 @@ export default function CampaignLeadsPage() {
   const [selectedEmployee, setSelectedEmployee] =
     useState<ExtendedCampaignLead | null>(null);
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
+  const [profileWebPresence, setProfileWebPresence] = useState<any | null>(null);
+  const [profileRecentPosts, setProfileRecentPosts] = useState<any[] | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   useEffect(() => {
@@ -279,6 +281,8 @@ export default function CampaignLeadsPage() {
     setSelectedEmployee(employee);
     setSummaryDialogOpen(true);
     setProfileSummary(null);
+    setProfileWebPresence(null);
+    setProfileRecentPosts(null);
     setSummaryError(null);
     setSummaryLoading(true);
 
@@ -299,8 +303,10 @@ export default function CampaignLeadsPage() {
           linkedin_url: employee.linkedin_url,
         },
       });
-      
+
       setProfileSummary(result.summary);
+      setProfileWebPresence(result.web_presence || null);
+      setProfileRecentPosts(result.recent_posts?.length ? result.recent_posts : null);
     } catch (error: any) {
       console.error("[Profile Summary] Error:", error);
       setSummaryError(error.message || "Failed to load profile summary");
@@ -317,6 +323,8 @@ export default function CampaignLeadsPage() {
     setSummaryDialogOpen(false);
     setSelectedEmployee(null);
     setProfileSummary(null);
+    setProfileWebPresence(null);
+    setProfileRecentPosts(null);
     setSummaryError(null);
   };
   const filteredLeads = useMemo(() => {
@@ -439,13 +447,14 @@ export default function CampaignLeadsPage() {
                         first_name: lead.first_name,
                         last_name: lead.last_name,
                         title: lead.title,
-                        email: lead.email,
-                        phone: lead.phone,
-                        linkedin_url: lead.linkedin_url,
+                        company: lead.company || lead.lead_data?.company_name,
+                        email: revealedValues[lead.id]?.email || lead.email,
+                        phone: revealedValues[lead.id]?.phone || lead.phone,
+                        linkedin_url: revealedValues[lead.id]?.linkedin_url || lead.linkedin_url,
                         enriched_email: lead.enriched_email,
                         enriched_linkedin_url: lead.enriched_linkedin_url,
-                        photo_url: lead.photo_url, // Backend already extracts this from lead_data.photo_url
-                        is_inbound: lead.is_inbound, // Pass is_inbound flag from backend
+                        photo_url: lead.photo_url,
+                        is_inbound: lead.is_inbound,
                       }}
                       employeeViewMode="grid"
                       revealedContacts={revealedContacts}
@@ -491,6 +500,8 @@ export default function CampaignLeadsPage() {
           onClose={handleCloseSummaryDialog}
           employee={selectedEmployee}
           summary={profileSummary}
+          webPresence={profileWebPresence}
+          recentPosts={profileRecentPosts}
           loading={summaryLoading}
           error={summaryError}
         />

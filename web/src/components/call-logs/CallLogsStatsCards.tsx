@@ -28,7 +28,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 
 // Skeleton loading component
 const SkeletonCard = () => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
@@ -63,7 +63,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected }: StatCardProps) => (
-  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+  <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div 
       className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer' : ''}
@@ -83,7 +83,7 @@ const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected 
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            <p className="text-[10px] sm:text-sm text-slate-500 mb-1">
               {title}
             </p>
             <h5 className="text-2xl font-bold text-slate-800">
@@ -101,13 +101,17 @@ interface CallLogsStatsCardsProps {
   loading?: boolean;
   selectedLeadTag?: "hot" | "warm" | "cold" | null;
   onLeadTagChange?: (tag: "hot" | "warm" | "cold" | null) => void;
+  selectedStatus?: "ended" | "failed" | "ongoing" | "queue" | null;
+  onStatusChange?: (status: "ended" | "failed" | "ongoing" | "queue" | null) => void;
 }
 
 export default function CallLogsStatsCards({ 
   stats, 
   loading = false,
   selectedLeadTag,
-  onLeadTagChange
+  onLeadTagChange,
+  selectedStatus,
+  onStatusChange
 }: CallLogsStatsCardsProps) {
   if (loading) {
     return (
@@ -119,6 +123,24 @@ export default function CallLogsStatsCards({
       </div>
     );
   }
+
+  const handleCardClick = (type: 'status' | 'leadTag', value: any) => {
+    if (type === 'status') {
+      onStatusChange?.(selectedStatus === value ? null : value);
+    } else {
+      onLeadTagChange?.(selectedLeadTag === value ? null : value);
+    }
+
+    // Scroll to table on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) { // Using 1024 for tablet/mobile
+      setTimeout(() => {
+        const tableElement = document.getElementById('call-logs-table');
+        if (tableElement) {
+          tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  };
 
   return (
     <div className="flex gap-4 mb-6 flex-wrap items-stretch">
@@ -136,6 +158,9 @@ export default function CallLogsStatsCards({
         value={stats.completed_calls || 0} 
         icon={<Phone className="w-6 h-6 text-green-600" />} 
         bgColor="bg-green-100" 
+        onClick={() => handleCardClick('status', 'ended')}
+        isLeadTag
+        isSelected={selectedStatus === 'ended'}
       />
       
       {/* Failed Calls */}
@@ -144,6 +169,9 @@ export default function CallLogsStatsCards({
         value={stats.failed_calls || 0} 
         icon={<PhoneMissed className="w-6 h-6 text-red-600" />} 
         bgColor="bg-red-100" 
+        onClick={() => handleCardClick('status', 'failed')}
+        isLeadTag
+        isSelected={selectedStatus === 'failed'}
       />
       
       {/* Ongoing Calls */}
@@ -152,6 +180,9 @@ export default function CallLogsStatsCards({
         value={stats.ongoing || 0} 
         icon={<PhoneCall className="w-6 h-6 text-purple-600" />} 
         bgColor="bg-purple-100" 
+        onClick={() => handleCardClick('status', 'ongoing')}
+        isLeadTag
+        isSelected={selectedStatus === 'ongoing'}
       />
       
       {/* Queue */}
@@ -160,6 +191,9 @@ export default function CallLogsStatsCards({
         value={stats.queue || 0} 
         icon={<Clock className="w-6 h-6 text-amber-600" />} 
         bgColor="bg-amber-100" 
+        onClick={() => handleCardClick('status', 'queue')}
+        isLeadTag
+        isSelected={selectedStatus === 'queue'}
       />
       
       {/* Hot Leads */}
@@ -168,7 +202,7 @@ export default function CallLogsStatsCards({
         value={stats.hot_leads || 0} 
         icon={<Flame className="w-6 h-6 text-orange-600" />} 
         bgColor="bg-orange-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'hot' ? null : 'hot')}
+        onClick={() => handleCardClick('leadTag', 'hot')}
         isLeadTag
         isSelected={selectedLeadTag === 'hot'}
       />
@@ -179,7 +213,7 @@ export default function CallLogsStatsCards({
         value={stats.warm_leads || 0} 
         icon={<Sun className="w-6 h-6 text-yellow-600" />} 
         bgColor="bg-yellow-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'warm' ? null : 'warm')}
+        onClick={() => handleCardClick('leadTag', 'warm')}
         isLeadTag
         isSelected={selectedLeadTag === 'warm'}
       />
@@ -190,7 +224,7 @@ export default function CallLogsStatsCards({
         value={stats.cold_leads || 0} 
         icon={<Snowflake className="w-6 h-6 text-cyan-600" />} 
         bgColor="bg-cyan-100" 
-        onClick={() => onLeadTagChange?.(selectedLeadTag === 'cold' ? null : 'cold')}
+        onClick={() => handleCardClick('leadTag', 'cold')}
         isLeadTag
         isSelected={selectedLeadTag === 'cold'}
       />

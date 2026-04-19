@@ -18,21 +18,33 @@ type RequestOptions = {
 class ApiClient {
   private baseURL: string;
   constructor() {
-    // Use NEXT_PUBLIC_BACKEND_URL (preferred) or NEXT_PUBLIC_API_URL (legacy fallback)
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-    
-    if (!backendUrl && process.env.NODE_ENV === 'production') {
-      throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required in production');
+    // In browser environments, always go through the app's own /api routes.
+    // This keeps requests same-origin and lets Next.js proxy decide backend targets.
+    if (typeof window !== 'undefined') {
+      this.baseURL = `${window.location.origin}/api`;
+      return;
     }
-    
-    // If backend URL is provided, append /api; otherwise use production backend as default
+
+    // Server-side resolution is environment-driven and avoids hardcoded deployment URLs.
+    const backendUrl =
+      process.env.BACKEND_INTERNAL_URL ||
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL;
+
     if (backendUrl) {
-      // Check if URL already contains /api suffix
       this.baseURL = backendUrl.endsWith('/api') ? backendUrl : `${backendUrl}/api`;
-    } else {
-      // Default to production backend instead of localhost
-      this.baseURL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
+      return;
     }
+
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Backend URL is required in production (set BACKEND_INTERNAL_URL, BACKEND_URL, or NEXT_PUBLIC_BACKEND_URL)'
+      );
+    }
+
+    // Local default for development only.
+    this.baseURL = 'http://localhost:3004/api';
   }
   private async request<T>(
     method: string,

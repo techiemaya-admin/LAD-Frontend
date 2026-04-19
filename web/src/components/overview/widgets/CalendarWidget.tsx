@@ -106,11 +106,13 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     <WidgetWrapper
       id={id}
       title="Calendar & Scheduler"
-      headerActions={
-        <div className="flex items-center gap-2">
+    >
+      <div className="h-full flex flex-col">
+        {/* Controls Row: User selector + Month/Week toggle */}
+        <div className="flex items-center gap-2 mb-3">
           {/* User Selector */}
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-[180px] h-7 text-xs">
+            <SelectTrigger className="flex-1 h-8 text-xs">
               <SelectValue placeholder="Select user..." />
             </SelectTrigger>
             <SelectContent>
@@ -122,11 +124,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             </SelectContent>
           </Select>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0">
             <Button
               size="sm"
               variant={calendarViewMode === 'month' ? 'default' : 'ghost'}
-              className="h-7 px-3 text-xs"
+              className="h-8 px-3 text-xs"
               onClick={() => setCalendarViewMode('month')}
             >
               Month
@@ -134,18 +136,15 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
             <Button
               size="sm"
               variant={calendarViewMode === 'week' ? 'default' : 'ghost'}
-              className="h-7 px-3 text-xs"
+              className="h-8 px-3 text-xs"
               onClick={() => setCalendarViewMode('week')}
             >
               Week
             </Button>
           </div>
         </div>
-      }
-    >
-      <div className="h-full flex flex-col">
         {/* Navigation */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <Button
             variant="ghost"
             size="icon"

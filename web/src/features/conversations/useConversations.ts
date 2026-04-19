@@ -27,6 +27,8 @@ export interface UseConversationsReturn {
   selectConversation: (id: string | number) => void;
   channelFilter: string | 'all';
   setChannelFilter: (channel: string | 'all') => void;
+  contextStatusFilter: string | 'all';
+  setContextStatusFilter: (status: string | 'all') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   unreadCounts: Record<string, number>;
@@ -54,24 +56,59 @@ export function useConversations(): UseConversationsReturn {
     activeConversationId || (conversationsFromRedux[0]?.id ?? null)
   );
   const [channelFilter, setChannelFilter] = useState<string | 'all'>('all');
+  const [contextStatusFilter, setContextStatusFilter] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredConversations = useMemo(() => {
     return conversationsFromRedux
       .filter((conv) => {
-        const matchesChannel = channelFilter === 'all' || String(conv.id).includes(channelFilter);
-        const matchesSearch = 
+        // Match by conv.channel field (set from API response)
+        // Normalize: 'whatsapp', 'business_whatsapp', 'personal_whatsapp' → 'whatsapp'
+        const rawChannel = String((conv as Record<string, unknown>).channel || 'whatsapp');
+        const normalizedChannel =
+          rawChannel === 'business_whatsapp' || rawChannel === 'personal_whatsapp'
+            ? 'whatsapp'
+            : rawChannel;
+        const matchesChannel =
+          channelFilter === 'all' || normalizedChannel === channelFilter;
+
+        // Match by context_status field
+        const rawContextStatus = String(
+          (conv as Record<string, unknown>).contextStatus ||
+          (conv as Record<string, unknown>).context_status ||
+          ''
+        );
+        const matchesContextStatus =
+          contextStatusFilter === 'all' || rawContextStatus === contextStatusFilter;
+
+        // Search by contact name, lead name, or last message content
+        const searchLower = searchQuery.toLowerCase();
+        const contactName = String(
+          (conv as Record<string, unknown>).contactName ||
+          (conv as Record<string, unknown>).contact_name ||
+          (conv as Record<string, unknown>).leadName ||
+          (conv as Record<string, unknown>).lead_name ||
+          ''
+        ).toLowerCase();
+        const lastMsgContent = String(
+          (conv as Record<string, unknown>).lastMessageContent ||
+          (conv as Record<string, unknown>).last_message ||
+          ''
+        ).toLowerCase();
+        const matchesSearch =
           searchQuery === '' ||
-          String(conv.id).toLowerCase().includes(searchQuery.toLowerCase());
-        
-        return matchesChannel && matchesSearch;
+          contactName.includes(searchLower) ||
+          lastMsgContent.includes(searchLower) ||
+          String(conv.id).toLowerCase().includes(searchLower);
+
+        return matchesChannel && matchesContextStatus && matchesSearch;
       })
       .sort((a, b) => {
-        const aTime = new Date(a.updatedAt || 0).getTime();
-        const bTime = new Date(b.updatedAt || 0).getTime();
+        const aTime = new Date((a.updatedAt || a.lastMessageTime || 0) as string | number).getTime();
+        const bTime = new Date((b.updatedAt || b.lastMessageTime || 0) as string | number).getTime();
         return bTime - aTime;
       });
-  }, [conversationsFromRedux, channelFilter, searchQuery]);
+  }, [conversationsFromRedux, channelFilter, contextStatusFilter, searchQuery]);
 
   const selectedConversation = useMemo(() => {
     return conversationsFromRedux.find((c) => String(c.id) === String(selectedId)) || null;
@@ -93,13 +130,17 @@ export function useConversations(): UseConversationsReturn {
     dispatch(markConversationRead(id));
   }, [dispatch]);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!selectedId || !content.trim()) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-    };
+    const conv = conversationsFromRedux.find((c) => String(c.id) === String(selectedId));
+    const leadId = conv?.leadId;
 
+    // Optimistically add to local state
+    const tempId = `msg-${Date.now()}`;
+    const newMessage: Message = {
+      id: tempId,
+    };
     dispatch(
       addMessageToConversation({
         conversationId: selectedId,
@@ -107,7 +148,28 @@ export function useConversations(): UseConversationsReturn {
         isActive: true,
       })
     );
-  }, [selectedId, dispatch]);
+
+    // Send to backend API (which sends via WhatsApp)
+    try {
+      const res = await fetch(
+        `/api/whatsapp-conversations/conversations/${selectedId}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: content.trim(),
+            lead_id: leadId ? String(leadId) : undefined,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        console.error('Failed to send message via WhatsApp:', data.error);
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  }, [selectedId, conversationsFromRedux, dispatch]);
 
   const markAsResolved = useCallback((id: string | number) => {
     dispatch(
@@ -133,6 +195,8 @@ export function useConversations(): UseConversationsReturn {
     selectConversation,
     channelFilter,
     setChannelFilter,
+    contextStatusFilter,
+    setContextStatusFilter,
     searchQuery,
     setSearchQuery,
     unreadCounts,

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { dashboardApiService } from '../services/api';
+import { getAvailableNumbers as fetchAvailableNumbersApi } from '../api';
 import { PhoneNumber } from '../types';
 
 export function useAvailableNumbers() {
@@ -11,7 +11,7 @@ export function useAvailableNumbers() {
         setLoading(true);
         setError(null);
         try {
-            const response = await dashboardApiService.getAvailableNumbers();
+            const response = await fetchAvailableNumbersApi();
             if (response.success && response.data) {
                 setNumbers(response.data);
             } else {

@@ -98,7 +98,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ label, options, value, onChan
               >
                 <Checkbox
                   checked={isChecked}
-                  className="mr-2 pointer-events-none"
+                  onCheckedChange={() => handleToggle(option.key)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mr-2"
                 />
                 <span className="text-sm select-none">{option.label}</span>
               </div>
@@ -130,7 +132,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   if (masterDataLoading || hasNoMasterData) {
     return (
       <Dialog open={open}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-primary">Filter Leads</span>
             <button
@@ -194,7 +196,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   };
   return (
     <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto sm:max-w-[640px]">
+      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto sm:max-w-[640px] rounded-3xl">
         <DialogTitle className="flex justify-between items-center pb-1 mt-4">
           <span className="text-lg font-semibold text-primary">Filter Leads</span>
           <button
@@ -290,23 +292,16 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
         </div>
         </div>
         {/* Action Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 pt-4 border-t mt-6">
+        <div className="flex flex-row items-center justify-between gap-2 pt-4 border-t mt-6">
           <Button 
             onClick={onClearFilters}
             variant="outline"
-            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50 sm:mr-auto"
+            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
           >
             <X className="mr-2 h-4 w-4" />
             Clear All
           </Button>
           <div className="flex items-center justify-end gap-2">
-            {/* <Button 
-              onClick={onClose}
-              variant="outline"
-              className="rounded-lg font-semibold bg-white text-gray-600 border-[1.5px] border-gray-300 hover:bg-gray-50"
-            >
-              Cancel
-            </Button> */}
             <Button 
               onClick={onClose}
               className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"

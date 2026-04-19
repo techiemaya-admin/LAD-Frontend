@@ -103,7 +103,10 @@ const conversationSlice = createSlice({
           ...conv,
           owner: (conv.owner !== null && conv.owner !== undefined && conv.owner !== '') ? conv.owner : prev.owner,
           humanAgentId: conv.humanAgentId !== undefined ? conv.humanAgentId : prev.humanAgentId,
-          unread: typeof conv.unread === 'number' ? conv.unread : (typeof prev.unread === 'number' ? prev.unread : 0),
+          // Support both 'unread' (old) and 'unread_count' (new — incoming-only) from API
+          unread: typeof conv.unread_count === 'number' ? conv.unread_count
+                : typeof conv.unread === 'number' ? conv.unread
+                : (typeof prev.unread === 'number' ? prev.unread : 0),
           lastMessage: conv.lastMessage || prev.lastMessage || null,
           lastMessageTime: conv.lastMessageTime || conv.updatedAt || conv.createdAt || prev.lastMessageTime || null,
         };
@@ -118,7 +121,9 @@ const conversationSlice = createSlice({
         const prev = state.conversations[idx];
         state.conversations[idx] = {
           ...prev,
-          unread: typeof updated.unread === 'number' ? updated.unread : prev.unread,
+          unread: typeof updated.unread_count === 'number' ? updated.unread_count
+                : typeof updated.unread === 'number' ? updated.unread
+                : prev.unread,
           lastMessage: updated.lastMessage || prev.lastMessage,
           lastMessageTime: updated.lastMessageTime || updated.updatedAt || updated.createdAt || prev.lastMessageTime || null,
           owner: (updated.owner !== null && updated.owner !== undefined && updated.owner !== '') ? updated.owner : prev.owner,
@@ -165,7 +170,9 @@ const conversationSlice = createSlice({
       const idx = state.conversations.findIndex(c => String(c.id) === String(conversationId));
       if (idx !== -1) {
         state.conversations[idx].lastMessage = message;
-        if (!isActive) {
+        // Only increment unread for INCOMING messages (role='user'), never for outgoing ('assistant'/'agent')
+        const isIncoming = message.role === 'user' || message.role === 'contact';
+        if (!isActive && isIncoming) {
           state.conversations[idx].unread = (state.conversations[idx].unread || 0) + 1;
         }
       }

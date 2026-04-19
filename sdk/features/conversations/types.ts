@@ -8,18 +8,12 @@
 // Enums / Union Types
 // ============================
 
-export type Channel = 'whatsapp' | 'linkedin' | 'gmail';
+export type Channel = 'whatsapp' | 'linkedin' | 'gmail' | 'outlook' | 'instagram';
 export type ConversationStatus = 'open' | 'resolved' | 'muted';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 export type ConversationOwner = 'AI' | 'human_agent';
-export type ConversationState =
-  | 'GREETING'
-  | 'INFO_GATHERING'
-  | 'SLOT_FINALIZING'
-  | 'BOOKING_CONFIRMED'
-  | 'REMINDER'
-  | 'FOLLOWUP'
-  | 'HUMAN_INTERVENTION';
+/** Context status from bni_conversation_manager — dynamic per tenant */
+export type ConversationState = string;
 
 // ============================
 // Core Interfaces
@@ -46,8 +40,15 @@ export interface Message {
     name: string;
   };
   attachments?: Attachment[];
+  /** 'user' = lead | 'assistant' = AI | 'human_agent' = human takeover */
   role?: string;
   intent?: string;
+  /** Display name of the human agent who sent this message (if role='human_agent') */
+  senderName?: string;
+  /** User ID of the human agent (if stored in message metadata) */
+  humanAgentId?: string;
+  /** Template name if this message was sent via a WhatsApp template */
+  templateName?: string;
 }
 
 export interface Attachment {
@@ -83,6 +84,7 @@ export interface ConversationListFilters {
   channel?: Channel | 'all';
   search?: string;
   owner?: ConversationOwner | 'all';
+  context_status?: string;
   limit?: number;
   offset?: number;
 }
@@ -121,6 +123,8 @@ export interface UseConversationsReturn {
   selectConversation: (id: string) => void;
   channelFilter: Channel | 'all';
   setChannelFilter: (filter: Channel | 'all') => void;
+  contextStatusFilter: string;
+  setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   unreadCounts: {

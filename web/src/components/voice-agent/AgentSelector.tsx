@@ -46,9 +46,9 @@ export function AgentSelector({
     });
   }, [agents, searchQuery]);
   return (
-    <div className="glass-card rounded-2xl h-full flex flex-col overflow-hidden shadow-lg">
+    <div className="glass-card w-full min-w-0 max-w-none rounded-2xl h-full flex flex-col overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="p-3 sm:p-4 md:p-5 lg:p-6 border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent">
+      <div className="w-full p-3 sm:p-4 md:p-5 lg:p-6 border-b border-border/50 bg-primary/5">
         <div className="flex items-center gap-2 mb-1">
           <Mic className="h-5 w-5 text-primary" />
           <h2 className="font-display font-bold text-xl text-foreground">Voice Agents</h2>

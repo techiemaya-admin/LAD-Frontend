@@ -94,6 +94,20 @@ export interface WorkflowNode {
   };
 }
 /**
+ * LinkedIn Limits Types
+ */
+export interface LinkedInLimitsResponse {
+  success: boolean;
+  totalDailyLimit: number;
+  remainingDailyLimit: number;
+}
+
+export interface LinkedInLimits {
+  remaining: number;
+  total: number;
+}
+
+/**
  * Leads Upload Types
  */
 export interface LeadsTemplateColumn {

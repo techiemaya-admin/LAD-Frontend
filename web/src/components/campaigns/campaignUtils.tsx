@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Linkedin, Mail, Phone, Eye, UserPlus, MessageSquare, Send } from 'lucide-react';
+import { Linkedin, Mail, Phone, Eye, UserPlus, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
 // Re-export types from SDK for convenience
 export type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
@@ -224,26 +224,179 @@ export const renderActionChips = (campaign: Campaign) => {
     platformActions[action.platform].push(action.name);
   });
   const chips: React.ReactElement[] = [];
+  const pd = (campaign as any).platform_metrics || {};
+
   Object.entries(platformActions).forEach(([platform, actionNames]) => {
     const config = PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] || { name: platform, color: '#64748B', bgColor: '#F1F5F9' };
     const actionText = actionNames.join(', ');
+
+    // Build detailed tooltip content for each platform
+    let tooltipContent: React.ReactElement | string = `${config.name}: ${actionText}`;
+
+    if (platform === 'linkedin') {
+      const li = pd.linkedin || {};
+      const visits = li.profile_views ?? 0;
+      const sent = li.sent ?? 0;
+      const accepted = li.connected ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-gray-400" />
+              <span>Profile Visits: <strong>{visits}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <UserPlus className="w-3 h-3 text-[#0077B5]" />
+              <span>Connections Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Connections: <strong>{accepted}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'email') {
+      const em = pd.email || {};
+      const sent = em.sent ?? 0;
+      const opens = em.opened ?? 0;
+      const replies = em.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#F59E0B]" />
+              <span>Emails Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-gray-400" />
+              <span>Emails Opened: <strong>{opens}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Email Replies: <strong>{replies}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'whatsapp') {
+      const wa = pd.whatsapp || {};
+      const sent = wa.sent ?? 0;
+      const delivered = wa.delivered ?? 0;
+      const replies = wa.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#25D366]" />
+              <span>Messages Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-[#25D366]" />
+              <span>Delivered: <strong>{delivered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Replies: <strong>{replies}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'voice') {
+      const vc = pd.voice || {};
+      const calls = vc.sent ?? 0;
+      const answered = vc.connected ?? 0;
+      const voiceMsgs = vc.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Phone className="w-3 h-3 text-[#8B5CF6]" />
+              <span>Calls Made: <strong>{calls}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Calls Answered: <strong>{answered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Voicemails / Callbacks: <strong>{voiceMsgs}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (platform === 'instagram') {
+      const ig = pd.instagram || {};
+      const sent = ig.sent ?? 0;
+      const delivered = ig.delivered ?? 0;
+      const replies = ig.replied ?? 0;
+      tooltipContent = (
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold text-sm">{config.name}: {actionText}</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Send className="w-3 h-3 text-[#E4405F]" />
+              <span>Messages Sent: <strong>{sent}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3 h-3 text-[#E4405F]" />
+              <span>Delivered: <strong>{delivered}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-500" />
+              <span>Replies: <strong>{replies}</strong></span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Get platform icon
+    let platformIcon: React.ReactElement | null = null;
+    if (platform === 'linkedin') {
+      platformIcon = <Linkedin className="w-4 h-4" />;
+    } else if (platform === 'email') {
+      platformIcon = <Mail className="w-4 h-4" />;
+    } else if (platform === 'whatsapp') {
+      platformIcon = (
+        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+        </svg>
+      );
+    } else if (platform === 'voice') {
+      platformIcon = <Phone className="w-4 h-4" />;
+    } else if (platform === 'instagram') {
+      platformIcon = (
+        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+      );
+    } else {
+      // Default icon for other platforms
+      platformIcon = <span className="text-xs font-bold">◆</span>;
+    }
+
     chips.push(
       <TooltipProvider key={platform}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge
-              className="text-xs h-5.5 font-semibold px-2"
+              className="h-8 w-8 p-0 flex items-center justify-center cursor-default"
               style={{
                 backgroundColor: config.bgColor,
                 color: config.color,
                 border: `1px solid ${config.color}20`
               }}
             >
-              {`${config.name} (${actionNames.length})`}
+              {platformIcon}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            {`${config.name}: ${actionText}`}
+            {tooltipContent}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -467,6 +620,194 @@ export const renderPlatformMetrics = (campaign: Campaign, metricType: 'connected
   }
   return <div className="flex items-center flex-wrap gap-1">{metrics}</div>;
 };
+/**
+ * Renders a compact per-channel activity breakdown.
+ * Replaces the generic Sent / Connected / Replied columns with channel-aware metrics:
+ *   LinkedIn : Visits · Connections Sent · Accepted
+ *   Email    : Sent · Opens · Replies
+ *   Voice    : Calls Made · Answered
+ *   WhatsApp : Sent · Delivered · Replies
+ */
+export const renderActivityBreakdown = (campaign: Campaign): React.ReactElement => {
+  const channels  = getChannelsUsed(campaign);
+  const pd        = (campaign as any).platform_metrics || {};
+  const rows: React.ReactElement[] = [];
+
+  // ── LinkedIn ────────────────────────────────────────────────────────────────
+  if (channels.linkedin) {
+    const li       = pd.linkedin || {};
+    const accepted = li.connected ?? 0;
+    rows.push(
+      <div key="linkedin" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-center w-[18px] h-[18px] rounded bg-[#E8F4FC] shrink-0">
+          <Linkedin className="w-2.5 h-2.5 text-[#0077B5]" />
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <CheckCircle className="w-3 h-3 text-green-500" />{accepted}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Connections Accepted</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Email ───────────────────────────────────────────────────────────────────
+  if (channels.email) {
+    const em      = pd.email || {};
+    const sent    = em.sent    ?? 0;
+    const opens   = em.opened  ?? 0;
+    const replies = em.replied ?? 0;
+    rows.push(
+      <div key="email" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-center w-[18px] h-[18px] rounded bg-[#FEF3C7] shrink-0">
+          <Mail className="w-2.5 h-2.5 text-[#F59E0B]" />
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <Send className="w-3 h-3 text-[#F59E0B]" />{sent}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Emails Sent</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <Eye className="w-3 h-3 text-gray-400" />{opens}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Emails Opened</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <MessageSquare className="w-3 h-3 text-green-500" />{replies}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Email Replies</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Voice ───────────────────────────────────────────────────────────────────
+  if (channels.voice) {
+    const vc       = pd.voice || {};
+    const calls    = vc.sent      ?? 0;
+    const answered = vc.connected ?? 0;
+    const voiceMsgs = vc.replied  ?? 0;
+    rows.push(
+      <div key="voice" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-center w-[18px] h-[18px] rounded bg-[#EDE9FE] shrink-0">
+          <Phone className="w-2.5 h-2.5 text-[#8B5CF6]" />
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <Phone className="w-3 h-3 text-[#8B5CF6]" />{calls}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Calls Made</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <CheckCircle className="w-3 h-3 text-green-500" />{answered}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Calls Answered</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <MessageSquare className="w-3 h-3 text-green-500" />{voiceMsgs}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Voicemails / Callbacks</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    );
+  }
+
+  // ── WhatsApp ────────────────────────────────────────────────────────────────
+  if (channels.whatsapp) {
+    const wa        = pd.whatsapp || {};
+    const sent      = wa.sent      ?? 0;
+    const delivered = wa.delivered ?? 0;
+    const replies   = wa.replied   ?? 0;
+    rows.push(
+      <div key="whatsapp" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-center w-[18px] h-[18px] rounded bg-[#DCFCE7] shrink-0">
+          <svg className="w-2.5 h-2.5 fill-[#25D366]" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+          </svg>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <Send className="w-3 h-3 text-[#25D366]" />{sent}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Messages Sent</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <CheckCircle className="w-3 h-3 text-[#25D366]" />{delivered}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Delivered</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 cursor-default">
+                  <MessageSquare className="w-3 h-3 text-green-500" />{replies}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Replies</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return <span className="text-xs text-gray-400">—</span>;
+  }
+
+  return <div className="flex flex-col gap-1.5">{rows}</div>;
+};
+
 export const getStatusIcon = (status: CampaignStatus) => {
   // This function should return React components, but since this is a utils file,
   // we'll return the icon name and let the component handle rendering

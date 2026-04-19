@@ -1,5 +1,5 @@
-import { safeStorage } from '../utils/storage';
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-741719885039.us-central1.run.app';
+import { safeStorage } from '@lad/shared/storage';  
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
 export const getApiUrl = (path) => `${API_BASE_URL}${path}`;
 export const defaultFetchOptions = () => ({
   headers: {
