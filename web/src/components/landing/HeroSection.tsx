@@ -25,7 +25,7 @@ export default function HeroSection() {
       y: 0,
       opacity: 1,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         stiffness: 100,
         damping: 20
       }
@@ -39,14 +39,13 @@ export default function HeroSection() {
       opacity: 1,
       scale: 1,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         stiffness: 100,
         damping: 15
       }
     },
     hover: {
       scale: 1.1,
-      backgroundColor: 'rgba(11, 25, 87, 0.05)',
       transition: { duration: 0.2 }
     }
   };
@@ -87,7 +86,7 @@ export default function HeroSection() {
             {/* Logo */}
             <motion.div variants={itemVariants}>
               <h1 className="text-6xl lg:text-7xl font-bold text-[#222B45] dark:text-white leading-tight">
-                LAD
+                Mr LAD
               </h1>
               <p className="text-xl text-[#8F9BB3] dark:text-gray-400 font-semibold mt-2">
                 Powered by Techiemaya
@@ -98,19 +97,15 @@ export default function HeroSection() {
               variants={itemVariants}
               className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white leading-tight"
             >
-              AI Agents That{" "}
-              <span className="text-[#1A3F7F]">Close Deals</span>{" "}
-              Automatically
+              Meet your{" "}
+              <span className="text-[#1A3F7F]">AI sales co-pilot</span>
             </motion.h2>
 
             <motion.p
               variants={itemVariants}
               className="text-xl text-[#8F9BB3] dark:text-gray-400 leading-relaxed"
             >
-              Revolutionize your sales process with AI-powered agents that
-              communicate across all channels—voice, email, chat, and social
-              media—to close deals between vendors and consumers, wholesalers
-              and traders.
+              Automatically engage leads on LinkedIn, email, WhatsApp, and voice calls. More outreach, more conversations, more closed deals.
             </motion.p>
 
             <motion.div

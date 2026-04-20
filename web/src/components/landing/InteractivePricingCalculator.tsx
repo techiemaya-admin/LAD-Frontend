@@ -44,7 +44,7 @@ export default function InteractivePricingCalculator() {
       opacity: 1,
       y: 0,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         stiffness: 100,
         damping: 20
       }
@@ -179,7 +179,7 @@ export default function InteractivePricingCalculator() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Total Credits */}
           <motion.div
-            key={totalCredits}
+            key={`total-${totalCredits}`}
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 200 }}
@@ -222,7 +222,7 @@ export default function InteractivePricingCalculator() {
 
           {/* Monthly Cost */}
           <motion.div
-            key={totalCredits}
+            key={`cost-${totalCredits}`}
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}

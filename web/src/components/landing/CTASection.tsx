@@ -25,7 +25,7 @@ export default function CTASection() {
       y: 0,
       opacity: 1,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         stiffness: 100,
         damping: 20
       }
@@ -36,7 +36,7 @@ export default function CTASection() {
     {
       type: 'primary',
       label: 'Start Free Trial',
-      description: 'Get 1000 credits to test',
+      description: 'Get 100 credits to test',
       icon: <Zap className="w-6 h-6" />,
       action: '/onboarding',
       highlight: true
@@ -61,7 +61,7 @@ export default function CTASection() {
 
   const trustPoints = [
     { icon: '🔐', text: 'No credit card required' },
-    { icon: '⏱️', text: '30-day free trial' },
+    { icon: '⏱️', text: '7-day free trial' },
     { icon: '🔄', text: 'Money-back guarantee' },
     { icon: '🙅', text: 'Cancel anytime' }
   ];
