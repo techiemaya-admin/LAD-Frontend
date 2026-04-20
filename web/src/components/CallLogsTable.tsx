@@ -855,30 +855,65 @@ export function CallLogsTable({
     <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
       <div className="p-4 border-b border-[#E2E8F0]">
-        <div className="flex flex-col gap-4">
-          {/* Row 1: Search Bar & Selection Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search Call Logs..."
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div className="relative flex-1 max-w-full lg:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search Call Logs..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+
+          {/* Filters grouped together in one row */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center justify-end">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ended">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="calling">Calling</SelectItem>
+                <SelectItem value="ongoing">Ongoing</SelectItem>
+                <SelectItem value="queue">Queue</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={dateFilter} onValueChange={onDateFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+                <SelectValue placeholder="Date Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={callFilter} onValueChange={onCallFilterChange}>
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+                <SelectValue placeholder="Call Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Calls</SelectItem>
+                <SelectItem value="current">Current Batch</SelectItem>
+                <SelectItem value="batch">Batch View</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Selection Actions - ONLY ON MOBILE */}
             {selectedCalls.size > 0 && (
-              <div className="flex sm:hidden gap-2 items-center w-full">
+              <div className="flex sm:hidden gap-2 items-center w-full mt-2">
                 {failedCount > 0 && onRetrySelected && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onRetrySelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-800 rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
                   >
                     Retry ({failedCount})
                   </button>
@@ -896,44 +931,6 @@ export function CallLogsTable({
                 )}
               </div>
             )}
-          </div>
-          
-          {/* Row 2: Status, Time, and Call Filters grouped together */}
-          <div className="flex flex-wrap sm:flex-nowrap gap-3 items-center justify-end">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ended">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="calling">Calling</SelectItem>
-                <SelectItem value="ongoing">Ongoing</SelectItem>
-                <SelectItem value="queue">Queue</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={dateFilter} onValueChange={onDateFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
-                <SelectValue placeholder="Date Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={callFilter} onValueChange={onCallFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
-                <SelectValue placeholder="Call Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Calls</SelectItem>
-                <SelectItem value="current">Current Batch</SelectItem>
-                <SelectItem value="batch">Batch View</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
         

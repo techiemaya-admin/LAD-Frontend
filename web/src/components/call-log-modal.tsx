@@ -1043,6 +1043,15 @@ export function CallLogModal({
           open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none invisible"
         )}
       >
+        {/* Close Button */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-50/80 hover:bg-gray-100 border border-gray-200 text-gray-400 hover:text-gray-600 transition-all duration-200 z-[10000] group shadow-sm"
+          title="Close Modal"
+        >
+          <X className="h-5 w-5 group-hover:scale-110 transition-transform" />
+        </button>
+
         {/* Header */}
         {/* <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1073,7 +1082,7 @@ export function CallLogModal({
         </div> */}
 
         {/* Body */}
-        <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
+        <div className="flex flex-col h-full pt-12 p-6 space-y-6 overflow-hidden">
 
           {logLoading ? (
             /* ── Skeleton while initial data loads ── */

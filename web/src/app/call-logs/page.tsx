@@ -901,7 +901,7 @@ export default function CallLogsPage() {
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-800 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
               >
                 Retry Failed ({failedCallIds.length})
               </button>
