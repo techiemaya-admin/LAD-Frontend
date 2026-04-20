@@ -226,32 +226,18 @@ export function CallLogsTable({
     }
   };
 
-  // Get lead tag for categorization
+  // Get lead tag for categorization - MUST match CallLogModal and CallLogsPage transformation
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    // Check multiple locations for lead_category
-    const analysis = (item as any).analysis || {};
-    const rawAnalysis = analysis.raw_analysis || {};
-    const score = item.lead_score ?? analysis.lead_score ?? rawAnalysis.lead_score ?? 0;
+    const score = item.lead_score ?? 0;
+    let cat = (item.lead_category || "WARM").toUpperCase();
 
-    const cat = String(
-      item.lead_category || 
-      analysis.lead_category || 
-      analysis.category || 
-      rawAnalysis.lead_category || 
-      rawAnalysis.category || 
-      ""
-    ).toLowerCase();
+    // Score enforcement (identical to modal/page logic)
+    if (score >= 8) cat = "HOT";
+    else if (score > 0 && score <= 3) cat = "COLD";
 
-    // DIRECT DATABASE MAPPING: Category always takes precedence
-    if (cat.includes("hot")) return "hot";
-    if (cat.includes("cold")) return "cold";
-    if (cat.includes("warm")) return "warm";
-    
-    // Safety check for score if category is missing/unknown in DB
-    if (score >= 8) return "hot";
-    if (score > 0 && score <= 3) return "cold";
-
-    return "warm"; // Defaulting to warm per user request to show something meaningful
+    if (cat === "HOT") return "hot";
+    if (cat === "COLD") return "cold";
+    return "warm";
   }, []);
 
   // Helper function to clean lead names from placeholder text
@@ -329,15 +315,24 @@ export function CallLogsTable({
   const getStatusReason = (item: CallLog): string | undefined => {
     const raw: any = (item as any)?.metadata;
     if (!raw) return undefined;
+    
+    let reason: string | undefined;
     if (typeof raw === 'string') {
       try {
         const parsed = JSON.parse(raw);
-        return parsed?.status_reason || parsed?.sip_trail?.status_reason;
+        reason = parsed?.status_reason || parsed?.sip_trail?.status_reason;
       } catch {
-        return undefined;
+        reason = undefined;
       }
+    } else {
+      reason = raw?.status_reason || raw?.sip_trail?.status_reason;
     }
-    return raw?.status_reason || raw?.sip_trail?.status_reason;
+
+    if (reason && typeof reason === 'string') {
+      return reason.replace(/_/g, ' ');
+    }
+    
+    return reason;
   };
 
   // Add computed tag and serial number to items

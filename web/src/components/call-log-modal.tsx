@@ -163,7 +163,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
   const recoList = normalizeList(analysis?.recommendations || analysis?.raw_analysis?.recommendations);
   const summaryText = analysis?.summary ?? "";
   const sentimentText = analysis?.sentiment ?? "";
-  const dispositionText = analysis?.disposition || analysis?.raw_analysis?.disposition || analysis?.raw_analysis?.lead_disposition || analysis?.raw_analysis?.disposition_full?.disposition || log?.disposition || "";
+  const dispositionText = (analysis?.disposition || analysis?.raw_analysis?.disposition || analysis?.raw_analysis?.lead_disposition || analysis?.raw_analysis?.disposition_full?.disposition || log?.disposition || "").replace(/_/g, ' ');
 
   // Data for the boxes
   const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? (log as any)?.lead_score ?? (log as any)?.score ?? 0;
@@ -256,9 +256,9 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
     const compact = lower.replace(/[^a-z0-9]+/g, " ").trim();
     const noPunct = lower.replace(/[^a-z0-9]/g, "");
 
-    // Green
+    // Red (proceed immediately) - Changed from Green as per user request
     if (compact.includes("proceed immediately") || noPunct.includes("proceedimmediately")) {
-      return { color: "bg-green-100 text-green-800 border-green-200", icon: () => null };
+      return { color: "bg-red-100 text-red-800 border-red-200", icon: () => null };
     }
 
     // Yellow (3-7 days)
@@ -276,7 +276,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
       return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
     }
 
-    // Red (don't pursue)
+    // Blue (don't pursue) - Changed from Red as per user request
     if (
       compact.includes("do not pursue") ||
       compact.includes("dont pursue") ||
@@ -288,7 +288,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
       noPunct.includes("dontpurse") ||
       noPunct.includes("donotpurse")
     ) {
-      return { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle };
+      return { color: "bg-blue-100 text-blue-800 border-blue-200", icon: AlertCircle };
     }
 
     return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
@@ -436,12 +436,14 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
               <Lightbulb className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-100">
+            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
               {recoList.length > 0 ? (
                 recoList.map((r, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className={cn("w-1.5 h-1.5 rounded-full mt-1.5", theme.dot)} />
-                    <span>{r}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className={cn("mt-1 flex-shrink-0", theme.text)}>
+                      <CheckCircle className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{r}</span>
                   </div>
                 ))
               ) : (
@@ -471,12 +473,14 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               <MessageSquare className="h-5 w-5 text-orange-500" />
               <h3 className="font-bold text-xl text-gray-800">Prospect Questions</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
+            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
               {questions.length > 0 ? (
                 questions.map((q, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{q}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className="mt-1 flex-shrink-0 text-orange-500">
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{q}</span>
                   </div>
                 ))
               ) : (
@@ -490,12 +494,14 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               <AlertCircle className="h-5 w-5 text-orange-500" />
               <h3 className="font-bold text-xl text-gray-800">Prospect Concerns</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
+            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
               {concerns.length > 0 ? (
                 concerns.map((c, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{c}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className="mt-1 flex-shrink-0 text-red-500">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{c}</span>
                   </div>
                 ))
               ) : (

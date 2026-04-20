@@ -31,6 +31,7 @@ import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
 import { ScrollText } from "lucide-react";
+import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
 
@@ -387,19 +388,48 @@ export default function CallLogsPage() {
 
         const analysis = r.analysis || {};
         const rawAnalysis = (r as any).raw_analysis || analysis?.raw_analysis || {};
-        const score = r.lead_score ?? analysis?.lead_score ?? rawAnalysis?.lead_score ?? (r as any).score ?? 0;
 
+        // Score is the ultimate source of truth for temperature buckets
+        const score = 
+          r.lead_score ?? 
+          r.score ?? 
+          analysis?.lead_score ?? 
+          rawAnalysis?.lead_score ?? 
+          (r as any).leadScore ??
+          0;
+
+        // 1. Get duration-based tag (heuristic)
+        const durationTag = categorizeLead({ 
+          status: r.status, 
+          duration: r.duration_seconds || r.call_duration || 0 
+        });
+
+        // Direct mapping from the latest database "tags" column (category:xxx)
+        const extractCategoryFromTags = (tags?: string[]) => {
+          if (!tags || !Array.isArray(tags)) return null;
+          const catTag = tags.find(t => String(t).toLowerCase().startsWith("category:"));
+          if (catTag) {
+            const val = String(catTag).split(":")[1]?.toLowerCase();
+            if (val === "hot") return "HOT";
+            if (val === "cold") return "COLD";
+            if (val === "warm") return "WARM";
+          }
+          return null;
+        };
+
+        // 2. Determine category - Priority: Specific Call Analysis > Lead Tags (fallback) > Heuristics
         let category = (
           r.lead_category ||
           analysis?.lead_category ||
           analysis?.category ||
           rawAnalysis?.lead_category ||
           rawAnalysis?.category ||
-          (r.lead_tags?.length ? r.lead_tags[0] : "") ||
-          "WARM"
+          r.category ||
+          extractCategoryFromTags(r.lead_tags) || // Use the Lead's current tag only if call analysis is missing
+          (durationTag === "cold" ? "COLD" : "WARM")
         ).toUpperCase();
 
-        // Safety Nets: Force status based on score thresholds
+        // Safety Nets: Force status based on score thresholds (MUST match modal exactly)
         if (score >= 8) category = "HOT";
         else if (score > 0 && score <= 3) category = "COLD";
 
