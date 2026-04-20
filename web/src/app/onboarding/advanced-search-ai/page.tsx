@@ -3676,6 +3676,29 @@ export default function AdvancedSearchAIPage() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <button
                                                     onClick={() => fileInputRef.current?.click()}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#0b1957', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    Import your leads & create outreach journey
+                                                </button>
+                                                <button
+                                                    onClick={downloadTemplate}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    Download CSV Template
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Upload More
+                                            </button>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
                                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#172560', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                                     Import your leads & create outreach journey
@@ -3876,12 +3899,31 @@ export default function AdvancedSearchAIPage() {
                                         </svg>
                                         {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
                                     </button>
+                                    {/* Premium Search toggle — uses Serper X-Ray + Sales Navigator */}
+                                    <button
+                                        onClick={() => setUseSalesNav(v => !v)}
+                                        title={useSalesNav ? 'Premium Search ON — Google X-Ray + Sales Navigator (1 credit/search)' : 'Enable Premium Search: Google X-Ray + Sales Navigator (1 credit/search)'}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                            padding: '3px 8px', borderRadius: '12px', border: 'none',
+                                            cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                                            transition: 'all 0.15s',
+                                            background: useSalesNav ? '#0a66c2' : '#f1f5f9',
+                                            color: useSalesNav ? '#fff' : '#64748b',
+                                            boxShadow: useSalesNav ? '0 1px 4px rgba(10,102,194,.35)' : 'none',
+                                        }}
+                                    >
+                                        {/* Star icon for Premium */}
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                        </svg>
+                                        {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
+                                    </button>
                                     <button className="adv-send-circle adv-send-sm" disabled={!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10)} onClick={onChatSend}
-                                        style={{ background: !input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) ? '#e5e7eb' : '#172560', boxShadow: !input.trim() || busy ? 'none' : '0 2px 8px rgba(23,37,96,.3)' }}>
+                                        style={{ background: !input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10) ? '#e5e7eb' : '#0b1957', boxShadow: !input.trim() || busy ? 'none' : '0 2px 8px rgba(11,25,87,.3)' }}>
                                         {busy ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
                                     </button>
-                                </div>
-                                <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
+                                    <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
                             </div>
                         </div>
                     )}
@@ -5952,21 +5994,16 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
 
                 {/* ── Modern action buttons (Example 1 style) ── */}
                 {msg.targeting && (
-                    <div className="adv-action-btns" style={{ display: "flex", alignItems: "stretch", gap: "24px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "16px", marginTop: "4px" }}>
-                        {/* Refine Button */}
-                        <button
-                            className="adv-act-btn-refine"
-                            onClick={() => onOpt('Refine my targeting criteria')}
-                        >
-                            🔍 Refine Filters
-                        </button>
-
-                        {/* Create Journey Group */}
-                        <button
-                            className="adv-act-btn-journey"
-                            onClick={onStartCheckpoints}
-                        >
+                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px", justifyContent:"space-between" }}>
+                        <button className="adv-act-btn" style={{
+                            padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
+                        }} onClick={() => onOpt('Refine my targeting criteria')}>🔍 Refine Filters</button>
+                        <button className="adv-act-btn" style={{
+                            padding: "9px 20px", background: "#0b1957", border: "none", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "#fff",
+                            boxShadow: "0 2px 8px rgba(11,25,87,0.35)", display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.01em"
+                        }} onClick={onStartCheckpoints}>
                             🚀 Create Outreach Journey
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </button>
                     </div>
                         </button>
@@ -5983,10 +6020,10 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             boxShadow: '0 4px 12px rgba(16,185,129,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap'
                         }}><Download size={16} /> Download</button>
                         <button onClick={() => onUploadClick?.()} style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', padding: '10px 8px',
+                            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
                             background: '#fff', color: '#0b1957', border: '2px solid #0b1957', borderRadius: '12px',
-                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap'
-                        }}><Upload size={16} /> Upload CSV</button>
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
+                        }}><Upload size={16} /> Upload CSV File</button>
                     </div>
                 )}
 
@@ -6023,10 +6060,10 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.outreach_journey && msg.outreach_journey.length > 0 && (
                     <div style={{ marginTop: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                             Suggested Outreach Journey
                         </div>
-                        <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'hidden', paddingBottom: '4px', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px', justifyContent:"center" }}>
                             {msg.outreach_journey.map((step, si) => {
                                 const channelConfig = {
                                     linkedin: {
@@ -6053,7 +6090,12 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                     },
                                 };
                                 const config = channelConfig[step.channel as keyof typeof channelConfig] || channelConfig.email;
-                                const bgColor = step.recommended ? config.color : '#f3f4f6';
+                                const bgColor = step.recommended
+                                    ? step.channel === 'linkedin' ? '#0a66c2'
+                                        : step.channel === 'email' ? '#0b1957'
+                                        : step.channel === 'whatsapp' ? '#25d366'
+                                        : '#f97316'
+                                    : '#f3f4f6';
                                 return (
                                     <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100px' }}>
@@ -8395,49 +8437,49 @@ function CheckpointFormInline({
                     const dispTotal = skipsIcp ? 3 : totalSteps;
                     const isFirstStep = skipsIcp ? step <= 1 : step <= 0;
                     return (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
-                            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <button
-                                    disabled={isFirstStep}
-                                    onClick={handleBack}
-                                    style={{
-                                        width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
-                                        background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                    }}
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                                </button>
-                                {step < totalSteps - 1 ? (
-                                    <button
-                                        disabled={!canNext()}
-                                        onClick={handleNext}
-                                        style={{
-                                            width: '36px', height: '36px', borderRadius: '10px', border: 'none',
-                                            background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                        }}
-                                    >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
-                                    </button>
-                                ) : (
-                                    <button
-                                        disabled={!canNext() || launching}
-                                        onClick={launchCampaign}
-                                        style={{
-                                            padding: '8px 20px', borderRadius: '10px', border: 'none',
-                                            background: canNext() && !launching ? '#10b981' : '#e5e7eb',
-                                            color: canNext() && !launching ? '#fff' : '#9ca3af',
-                                            fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
-                                            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
-                                        }}
-                                    >
-                                        {launching ? 'Launching...' : 'Launch Campaign'}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
+                    <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                            disabled={isFirstStep}
+                            onClick={handleBack}
+                            style={{
+                                width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
+                                background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                        </button>
+                        {step < totalSteps - 1 ? (
+                            <button
+                                disabled={!canNext()}
+                                onClick={handleNext}
+                                style={{
+                                    width: '36px', height: '36px', borderRadius: '10px', border: 'none',
+                                    background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                                }}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                            </button>
+                        ) : (
+                            <button
+                                disabled={!canNext() || launching}
+                                onClick={launchCampaign}
+                                style={{
+                                    padding: '8px 20px', borderRadius: '10px', border: 'none',
+                                    background: canNext() && !launching ? '#10b981' : '#e5e7eb',
+                                    color: canNext() && !launching ? '#fff' : '#9ca3af',
+                                    fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
+                                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
+                                }}
+                            >
+                                {launching ? 'Launching...' : 'Launch Campaign'}
+                            </button>
+                        )}
+                    </div>
+                </div>
                     );
                 })()}
 
