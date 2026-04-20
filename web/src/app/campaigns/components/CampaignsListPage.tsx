@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, RadioTower, Gauge, Zap, Trophy, Activity } from "lucide-react";
+import { Plus, RadioTower, Gauge, Zap, Trophy, Activity, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/app-toaster";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -63,7 +63,43 @@ export default function CampaignsListPage() {
     ),
   );
 
-  const { stats, error: statsError } = useCampaignStats();
+  const { stats, error: statsError, refetch: refetchStats } = useCampaignStats();
+  const [syncing, setSyncing] = useState(false);
+
+  const handleRefreshConnections = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/campaigns/linkedin/sync-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Sync failed");
+
+      const upserted  = data.upserted  ?? 0;
+      const triggered = data.triggered ?? 0;
+      let description = data.mode === "incremental"
+        ? `${upserted} new connection${upserted !== 1 ? "s" : ""} synced`
+        : `${upserted} connection${upserted !== 1 ? "s" : ""} synced`;
+      if (triggered > 0) {
+        description += ` · ${triggered} follow-up${triggered !== 1 ? "s" : ""} sent`;
+      }
+      push({
+        variant: "success",
+        title: "Connections Refreshed",
+        description,
+      });
+      refetchStats();
+    } catch (err: any) {
+      push({
+        variant: "error",
+        title: "Refresh Failed",
+        description: err?.message || "Could not sync LinkedIn connections",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
   // Handle errors from SDK hooks
   useEffect(() => {
     if (campaignsError) {
@@ -225,6 +261,17 @@ export default function CampaignsListPage() {
           </p>
         </div>
         <div className="flex gap-3 flex-col sm:flex-row">
+          {/* Refresh LinkedIn accepted connections */}
+          <Button
+            onClick={handleRefreshConnections}
+            disabled={syncing}
+            variant="outline"
+            className="rounded-xl font-semibold px-3 py-1.5 w-full sm:w-auto border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/10 hover:cursor-pointer disabled:opacity-60"
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Refresh Connections"}
+          </Button>
+
           <Button
             onClick={() => router.push("/campaigns/templates/create")}
             className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] w-full sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
